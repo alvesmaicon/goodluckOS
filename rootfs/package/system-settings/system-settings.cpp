@@ -2,6 +2,7 @@
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_sdlrenderer2.h"
+#include <algorithm>
 #include <fstream>
 #include <vector>
 #include <fcntl.h>
@@ -12,7 +13,12 @@ const char* ALSA_MIXER_NAME = "Headphone";
 const char* ALSA_CARD = "GA36mbAudio";
 
 int get_brightness() {
-    return 5;
+    std::ifstream file("/sys/class/backlight/backlight/brightness");
+    int brightness = 5;
+    if (file.is_open()) {
+        file >> brightness;
+    }
+    return std::clamp(brightness, 1, 10);
 }
 void set_brightness(int brightness) {
     std::ofstream file("/sys/class/backlight/backlight/brightness");
@@ -39,7 +45,7 @@ long get_alsa_volume() {
     if (elem) {
         snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
         snd_mixer_selem_get_playback_volume(elem, SND_MIXER_SCHN_FRONT_LEFT, &vol);
-        vol = (vol * 100) / max;
+        if (max > min) vol = ((vol - min) * 100) / (max - min);
     }
     snd_mixer_close(handle);
     return vol;
@@ -61,7 +67,7 @@ void set_alsa_volume(long volume) {
     snd_mixer_elem_t* elem = snd_mixer_find_selem(handle, sid);
     if (elem) {
         snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
-        long scaled_vol = (volume * max) / 100;
+        long scaled_vol = min + (volume * (max - min)) / 100;
         snd_mixer_selem_set_playback_volume_all(elem, scaled_vol);
     }
     snd_mixer_close(handle);
