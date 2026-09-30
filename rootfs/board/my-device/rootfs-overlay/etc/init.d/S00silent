@@ -1,0 +1,6 @@
+#!/bin/sh
+# Silent boot: stop kernel messages on the console and clear the screen before the launcher starts.
+[ "$1" = "stop" ] && exit 0
+dmesg -n 1
+printf "\033[2J\033[H\033[?25l" > /dev/tty1 2>/dev/null
+exit 0
