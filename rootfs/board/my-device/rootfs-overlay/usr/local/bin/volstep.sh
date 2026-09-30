@@ -15,3 +15,5 @@ if [ "$new" -eq 0 ]; then
 else
     amixer -q -c "$CARD" sset "$CONTROL" "${new}%" unmute
 fi
+
+/usr/local/bin/persist-settings.sh later

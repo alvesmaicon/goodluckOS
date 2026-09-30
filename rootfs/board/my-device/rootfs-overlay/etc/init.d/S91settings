@@ -1,0 +1,8 @@
+#!/bin/sh
+# Restore saved brightness on boot (after S90backlight) and save brightness/volume on shutdown.
+
+case "$1" in
+    start) /usr/local/bin/persist-settings.sh restore ;;
+    stop)  /usr/local/bin/persist-settings.sh save ;;
+esac
+exit 0

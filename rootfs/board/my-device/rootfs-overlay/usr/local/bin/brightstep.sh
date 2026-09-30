@@ -10,3 +10,5 @@ case "$1" in
 esac
 
 echo "$new" > "$BL/brightness"
+
+/usr/local/bin/persist-settings.sh later
