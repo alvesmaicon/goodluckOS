@@ -1138,19 +1138,26 @@ private:
             // while searching, clearing the search is more useful than starting a new one
             if (m.query.empty()) hints.push_back({"X", "Search"});
             else hints.push_back({"B", "Clear"});
+            hints.push_back({"SELECT", "Autolaunch"});
             if (m.hasSettings) hints.push_back({"START", "Settings"});
         }
 
-        // Button in the highlight colour, followed by what it does
+        // Button in the highlight colour, followed by what it does. The gap between hints shrinks
+        // when they wouldn't fit on one line (e.g. "Y Remove" is wider than "Y My List").
         const int y = top + (kFooterH - TTF_FontHeight(smallFont)) / 2;
+        const int keyGap = 6;
+        int textW = 0;
+        for (const auto& h : hints) textW += textWidth(smallFont, h.first) + keyGap + textWidth(smallFont, h.second);
+        const int slots = std::max(1, (int)hints.size() - 1);
+        const int gap = std::clamp((kScreenW - 2 * kMargin - textW) / slots, 4, 16);
         int x = kScreenW - kMargin;
         for (auto it = hints.rbegin(); it != hints.rend(); ++it) {
             x -= textWidth(smallFont, it->second);
             drawText(renderer, smallFont, it->second, x, y, kGrey);
             int keyW = textWidth(smallFont, it->first);
-            x -= 6 + keyW;
+            x -= keyGap + keyW;
             drawText(renderer, smallFont, it->first, x, y, kYellow);
-            x -= 16;
+            x -= gap;
         }
     }
 
