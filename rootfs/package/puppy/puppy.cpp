@@ -154,22 +154,25 @@ static std::string shellQuote(const std::string& s) {
     return out;
 }
 
-static void drawSurface(SDL_Renderer* r, SDL_Surface* s, int x, int y, int maxW = 0) {
+// srcX skips that many pixels of the surface's left side (scrolling text).
+static void drawSurface(SDL_Renderer* r, SDL_Surface* s, int x, int y, int maxW = 0, int srcX = 0) {
     SDL_Texture* t = SDL_CreateTextureFromSurface(r, s);
     if (!t) return;
     SDL_SetTextureBlendMode(t, SDL_BLENDMODE_BLEND);
-    int w = (maxW > 0) ? std::min(s->w, maxW) : s->w;   // clip, don't squash
-    SDL_Rect src{0, 0, w, s->h};
+    srcX = std::clamp(srcX, 0, s->w);
+    int w = (maxW > 0) ? std::min(s->w - srcX, maxW) : s->w - srcX;   // clip, don't squash
+    SDL_Rect src{srcX, 0, w, s->h};
     SDL_Rect dst{x, y, w, s->h};
     SDL_RenderCopy(r, t, &src, &dst);
     SDL_DestroyTexture(t);
 }
 
-static void drawText(SDL_Renderer* r, TTF_Font* font, const std::string& text, int x, int y, SDL_Color color, int maxW = 0) {
+static void drawText(SDL_Renderer* r, TTF_Font* font, const std::string& text, int x, int y, SDL_Color color, int maxW = 0,
+                     int scrollX = 0) {
     if (!font || text.empty()) return;
     SDL_Surface* s = TTF_RenderUTF8_Blended(font, text.c_str(), color);
     if (!s) return;
-    drawSurface(r, s, x, y, maxW);
+    drawSurface(r, s, x, y, maxW, scrollX);
     SDL_FreeSurface(s);
 }
 
@@ -1268,9 +1271,11 @@ public:
 
     bool ok() const { return ok_; }
     bool animating() const { return tabOffset != 0.0f; }
+    Uint32 marqueeDue() const { return marqueeNext; }   // when the scrolling name needs a frame (0: never)
     int descMaxScroll() const { return descMax; }   // of the description drawn in the last frame
 
     void render(const Model& m, const Keyboard& kb, const Osd& osd, int battery) {
+        marqueeNext = 0;    // set again below if the selected name is still scrolling
         setColor(kClear);
         SDL_RenderClear(renderer);
 
@@ -1285,6 +1290,7 @@ public:
         if (m.menuOpen) renderMenu(m);
         if (!m.status.empty()) renderStatus(m.status);
         if (osd.visible && !osd.kind.empty()) renderOsd(osd, bodyTop(m.showTabs));
+        if (!marqueeNext) marqueeKey.clear();   // coming back to the same name starts it over
 
         SDL_RenderPresent(renderer);
     }
@@ -1637,6 +1643,32 @@ private:
     }
     std::map<std::string, int> pillWidths;
 
+    // The selected list row's name, when it doesn't fit, scrolls left to show the rest: it waits a
+    // moment, scrolls to the end, waits again and starts over.
+    static constexpr Uint32 kMarqueeHoldMs = 1200;
+    static constexpr int kMarqueeSpeed = 40;            // pixels per second
+    static constexpr Uint32 kMarqueeFrameMs = 33;
+    std::string marqueeKey;
+    Uint32 marqueeStart = 0, marqueeNext = 0;
+
+    int marqueeOffset(const std::string& key, int overflow) {
+        const Uint32 now = SDL_GetTicks();
+        if (key != marqueeKey) { marqueeKey = key; marqueeStart = now; }
+        const Uint32 scrollMs = (Uint32)overflow * 1000 / kMarqueeSpeed;
+        Uint32 t = now - marqueeStart;
+        if (t >= 2 * kMarqueeHoldMs + scrollMs) { marqueeStart = now; t = 0; }
+        if (t < kMarqueeHoldMs) {
+            marqueeNext = marqueeStart + kMarqueeHoldMs;
+            return 0;
+        }
+        if (t < kMarqueeHoldMs + scrollMs) {
+            marqueeNext = now + kMarqueeFrameMs;
+            return (int)((t - kMarqueeHoldMs) * kMarqueeSpeed / 1000);
+        }
+        marqueeNext = marqueeStart + 2 * kMarqueeHoldMs + scrollMs;
+        return overflow;
+    }
+
     void renderList(const Model& m) {
         const Category& c = m.cur();
         if (c.sel < c.scroll) c.scroll = c.sel;
@@ -1675,8 +1707,13 @@ private:
                 right -= 8;
             }
             if (m.isFavorite(e)) star(r.x + 12 + starW / 2, r.y + r.h / 2, 7, kYellow);
+            int scrollX = 0;
+            if (k == c.sel) {
+                const int overflow = textWidth(descFont, e.name) - (right - nameX);
+                if (overflow > 0) scrollX = marqueeOffset(c.name + "\x1f" + e.category + "\x1f" + e.id, overflow);
+            }
             drawText(renderer, descFont, e.name, nameX, r.y + (r.h - fontH) / 2, k == c.sel ? kWhite : kGrey,
-                     right - nameX);
+                     right - nameX, scrollX);
         }
 
         // Scrollbar, only when the tab doesn't fit on one screen
@@ -2128,6 +2165,14 @@ int main(int argc, char** argv) {
         if (ui.animating()) {   // keep drawing until the tab strip has slid into place (paced by vsync)
             dirty = true;
             timeout = 0;
+        }
+        if (Uint32 due = ui.marqueeDue()) {   // a long selected name is scrolling
+            if ((Sint32)(now - due) >= 0) {
+                dirty = true;
+                timeout = 0;
+            } else {
+                timeout = std::min(timeout, (int)(due - now));
+            }
         }
 
         SDL_Event ev;
