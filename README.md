@@ -46,6 +46,16 @@ If the above page does not confirm support, please do not attempt to flash a goo
 - Mount device storage via USB
 - CPU overclocking
 - Improve performance of PPSSPP emulator core. 
+- Portable Puppy for other firmwares (see below)
+
+### Portable Puppy (planned)
+Puppy could also run as an optional frontend on other handheld firmwares that use EmulationStation (e.g. dArkOS on the original R36S, ROCKNIX, Knulli), next to the existing frontends rather than replacing them. Plan:
+1. **Config file (`puppy.conf`)**: rom folders, where `apps.puppy`, the cache and the settings live, and the commands for restart / power off / display off / settings. Defaults keep goodluckOS working exactly as it does now.
+2. **Systems from `es_systems.cfg`**: build the tabs from the EmulationStation system list every ES-based firmware already has (folders, extensions and `%ROM%` launch commands), so it works with no manual setup. Scraped `gamelist.xml` collections already work.
+3. **Self-contained launching**: ship a small `puppy-run.sh` that does the launch loop `puppy-bootstrap.sh` does on goodluckOS, so any system can start games from it.
+4. **aarch64 build and packaging**: 64-bit builds for RK3326 devices, an install script that switches the frontend to Puppy with an easy way back, and a PortMaster package.
+
+Steps 1 to 3 are also improvements for goodluckOS itself. Step 4 needs testers with an original R36S or other RK3326 device: if that's you, open an issue!
 
 ## Supported Devices
 - GA36-MB v1.2
