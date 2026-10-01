@@ -7,6 +7,8 @@
 #include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <functional>
+#include <iterator>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -27,7 +29,8 @@ static const char* kStateFile     = "/dev/shm/launcher_state";
 static const char* kAutoStartFile = "/home/player/autolaunch";
 
 static const char* kSettingsFile  = "/home/player/.config/puppy/settings";
-static const char* kFavoritesFile = "/home/player/.config/puppy/favorites";   // "category<TAB>name" lines
+static const char* kFavoritesFile = "/home/player/.config/puppy/favorites";   // "category<TAB>id" lines
+static const char* kThumbCacheDir = "/home/player/.cache/puppy/thumbs";   // downscaled covers
 static const char* kMyListName    = "My List";
 static const char* kMenuCategory  = "System";   // apps.puppy category taken out of the tabs
 static const char* kSettingsName  = "System Settings";   // entry of that category opened by START
@@ -160,7 +163,8 @@ public:
     };
 
     // Images larger than boxW x boxH are scaled down: cropped to cover the box, or with 'fit' shrunk
-    // to fit inside it. Smaller images are kept at their size.
+    // to fit inside it. Smaller images are kept at their size. Scaled images are saved in
+    // kThumbCacheDir, so big covers (e.g. 800x600 scraper images) are only decoded and scaled once.
     IconCache(SDL_Renderer* r, const std::string& fallbackPath, int boxW, int boxH, bool fit)
         : renderer(r), boxW(boxW), boxH(boxH), fit(fit) {
         fallback = load(fallbackPath);
@@ -206,9 +210,27 @@ private:
     std::map<std::string, Slot> slots;
     uint64_t clock = 0;
 
+    // Name of the scaled copy of an image for this cache's box; changes when the image does.
+    std::string thumbPath(const std::string& path) const {
+        std::error_code ec;
+        auto size = fs::file_size(path, ec);
+        auto time = fs::last_write_time(path, ec).time_since_epoch().count();
+        std::string key = path + "|" + std::to_string(size) + "|" + std::to_string(time) + "|" +
+                          std::to_string(boxW) + "x" + std::to_string(boxH) + (fit ? "f" : "c");
+        char name[32];
+        snprintf(name, sizeof(name), "%016zx.png", std::hash<std::string>{}(key));
+        return std::string(kThumbCacheDir) + "/" + name;
+    }
+
     Icon load(const std::string& path) {
         Icon icon;
-        SDL_Surface* loaded = IMG_Load(path.c_str());
+        const std::string thumb = thumbPath(path);
+        bool fromThumb = true;
+        SDL_Surface* loaded = IMG_Load(thumb.c_str());
+        if (!loaded) {
+            fromThumb = false;
+            loaded = IMG_Load(path.c_str());
+        }
         if (!loaded) return icon;
         SDL_Surface* src = SDL_ConvertSurfaceFormat(loaded, SDL_PIXELFORMAT_RGBA32, 0);
         SDL_FreeSurface(loaded);
@@ -239,6 +261,11 @@ private:
             SDL_SoftStretchLinear(src, &crop, out, nullptr);
             SDL_FreeSurface(src);
             result = out;
+            if (!fromThumb) {
+                std::error_code ec;
+                fs::create_directories(kThumbCacheDir, ec);
+                IMG_SavePNG(result, thumb.c_str());
+            }
         }
 
         icon.w = result->w;
@@ -260,8 +287,12 @@ private:
 
 struct Entry {
     std::string category;
+    std::string id;         // stable identity (the ROM file name without extension, or the app name),
+                            // used for favourites, autolaunch and the cursor; the name can come from a gamelist
     std::string name;
-    std::string description;
+    std::string description;    // the system or app description
+    std::string synopsis;       // from gamelist.xml
+    std::string meta;           // "year · genre · players", from gamelist.xml
     std::string command;
     std::string iconPath;
     std::string searchKey;  // lowercase name, filled once the catalog is loaded
@@ -291,7 +322,7 @@ struct Model {
     std::string autoCategory, autoName;   // the autolaunch entry
     std::set<std::string> favorites;      // "category<TAB>name" of the entries in My List
 
-    static std::string favoriteKey(const Entry& e) { return e.category + "\t" + e.name; }
+    static std::string favoriteKey(const Entry& e) { return e.category + "\t" + e.id; }
     bool isFavorite(const Entry& e) const { return favorites.count(favoriteKey(e)) > 0; }
 
     // START opens System Settings; POWER opens the power menu (both from any tab)
@@ -353,7 +384,7 @@ struct Model {
     }
 
     bool isAutoStart(const Entry& e) const {
-        return !autoName.empty() && e.category == autoCategory && e.name == autoName;
+        return !autoName.empty() && e.category == autoCategory && e.id == autoName;
     }
 
     // Finds an entry (by its category and name) in the tab called tabName.
@@ -363,7 +394,7 @@ struct Model {
             if (categories[t].name != tabName) continue;
             for (size_t e = 0; e < categories[t].entries.size(); ++e) {
                 const Entry& entry = categories[t].entries[e];
-                if (entry.category == category && entry.name == name) {
+                if (entry.category == category && entry.id == name) {
                     outTab = (int)t;
                     outEntry = (int)e;
                     return true;
@@ -418,6 +449,7 @@ static void parseAppsFile(const std::string& path, std::vector<Record>& records)
             Record rec;
             rec.entry.category    = get("CATEGORY").empty() ? "Applications" : get("CATEGORY");
             rec.entry.name        = get("NAME");
+            rec.entry.id          = rec.entry.name;
             rec.entry.description = get("DESCRIPTION");
             rec.entry.command     = get("COMMAND");
             rec.entry.iconPath    = get("ICON");
@@ -477,6 +509,7 @@ static std::string buildArchiveCommand(const std::string& tmpl, const std::strin
     return out;
 }
 
+// Image with the ROM's name in one of the archive's icon folders, or "".
 static std::string findArchiveIcon(const Archive& a, const std::string& stem) {
     static const char* kExts[] = {"png", "jpg", "jpeg"};
     for (const auto& dir : a.iconDirs) {
@@ -486,7 +519,101 @@ static std::string findArchiveIcon(const Archive& a, const std::string& stem) {
             if (fs::is_regular_file(p, ec)) return p.string();
         }
     }
-    return a.defaultIcon;
+    return {};
+}
+
+// What an EmulationStation/Skraper gamelist.xml says about one ROM.
+struct GameInfo {
+    std::string name, synopsis, image, meta;
+};
+
+static void appendUtf8(std::string& out, unsigned long cp) {
+    if (cp < 0x80) out += (char)cp;
+    else if (cp < 0x800) { out += (char)(0xC0 | (cp >> 6)); out += (char)(0x80 | (cp & 0x3F)); }
+    else if (cp < 0x10000) { out += (char)(0xE0 | (cp >> 12)); out += (char)(0x80 | ((cp >> 6) & 0x3F)); out += (char)(0x80 | (cp & 0x3F)); }
+    else { out += (char)(0xF0 | (cp >> 18)); out += (char)(0x80 | ((cp >> 12) & 0x3F)); out += (char)(0x80 | ((cp >> 6) & 0x3F)); out += (char)(0x80 | (cp & 0x3F)); }
+}
+
+static std::string xmlUnescape(const std::string& s) {
+    static const std::pair<const char*, const char*> kEntities[] = {
+        {"&amp;", "&"}, {"&lt;", "<"}, {"&gt;", ">"}, {"&quot;", "\""}, {"&apos;", "'"}};
+    std::string out;
+    out.reserve(s.size());
+    for (size_t i = 0; i < s.size();) {
+        if (s[i] == '&') {
+            size_t semi = s.find(';', i);
+            if (semi != std::string::npos && semi - i <= 10) {
+                const std::string ent = s.substr(i, semi - i + 1);
+                bool done = false;
+                for (const auto& [k, v] : kEntities) {
+                    if (ent == k) { out += v; done = true; break; }
+                }
+                if (!done && ent.size() > 3 && ent[1] == '#') {
+                    unsigned long cp = (ent[2] == 'x' || ent[2] == 'X') ? strtoul(ent.c_str() + 3, nullptr, 16)
+                                                                       : strtoul(ent.c_str() + 2, nullptr, 10);
+                    if (cp) { appendUtf8(out, cp); done = true; }
+                }
+                if (done) { i = semi + 1; continue; }
+            }
+        }
+        out += s[i++];
+    }
+    return out;
+}
+
+// Text of <tag>...</tag> inside one <game> block.
+static std::string xmlTag(const std::string& block, const std::string& tag) {
+    const std::string open = "<" + tag + ">", close = "</" + tag + ">";
+    size_t a = block.find(open);
+    if (a == std::string::npos) return {};
+    a += open.size();
+    size_t b = block.find(close, a);
+    if (b == std::string::npos) return {};
+    return trim(xmlUnescape(block.substr(a, b - a)));
+}
+
+static std::string stripDotSlash(std::string p) {
+    if (p.compare(0, 2, "./") == 0) p.erase(0, 2);
+    return p;
+}
+
+// Reads dir/gamelist.xml (as written by Skraper or EmulationStation), keyed by ROM file name.
+static std::map<std::string, GameInfo> loadGamelist(const fs::path& dir) {
+    std::map<std::string, GameInfo> out;
+    std::ifstream in(dir / "gamelist.xml", std::ios::binary);
+    if (!in) return out;
+    const std::string xml((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+
+    for (size_t pos = 0; (pos = xml.find("<game", pos)) != std::string::npos;) {
+        // "<game>" or "<game id=...>", not "<gameList>"
+        char next = pos + 5 < xml.size() ? xml[pos + 5] : '\0';
+        if (next != '>' && next != ' ' && next != '\t') { pos += 5; continue; }
+        size_t end = xml.find("</game>", pos);
+        if (end == std::string::npos) break;
+        const std::string block = xml.substr(pos, end - pos);
+        pos = end + 7;
+
+        const std::string path = stripDotSlash(xmlTag(block, "path"));
+        if (path.empty()) continue;
+
+        GameInfo g;
+        g.name = xmlTag(block, "name");
+        g.synopsis = xmlTag(block, "desc");
+        const std::string image = stripDotSlash(xmlTag(block, "image"));
+        if (!image.empty()) g.image = (image[0] == '/' ? fs::path(image) : dir / image).string();
+
+        std::vector<std::string> meta;
+        const std::string date = xmlTag(block, "releasedate");
+        if (date.size() >= 4) meta.push_back(date.substr(0, 4));
+        const std::string genre = xmlTag(block, "genre");
+        if (!genre.empty()) meta.push_back(genre);
+        const std::string players = xmlTag(block, "players");
+        if (!players.empty()) meta.push_back(players + (players == "1" ? " player" : " players"));
+        for (size_t i = 0; i < meta.size(); ++i) g.meta += (i ? "  \u00b7  " : "") + meta[i];
+
+        out[path] = std::move(g);
+    }
+    return out;
 }
 
 static std::vector<Entry> expandArchive(const Archive& a) {
@@ -498,6 +625,7 @@ static std::vector<Entry> expandArchive(const Archive& a) {
 
     std::vector<Entry> out;
     for (const auto& dir : a.dirs) {
+        const auto gamelist = loadGamelist(dir);
         std::error_code ec;
         for (fs::directory_iterator it(dir, ec), end; !ec && it != end; it.increment(ec)) {
             std::error_code ec2;
@@ -512,10 +640,23 @@ static std::vector<Entry> expandArchive(const Archive& a) {
 
             Entry e;
             e.category    = a.name;
-            e.name        = p.stem().string();
+            e.id          = p.stem().string();
+            e.name        = e.id;
             e.description = a.description;
             e.command     = buildArchiveCommand(a.command, p.string());
-            e.iconPath    = findArchiveIcon(a, e.name);
+            // Cover: the icons folder wins (small, hand-picked), then the gamelist's image
+            e.iconPath    = findArchiveIcon(a, e.id);
+
+            auto info = gamelist.find(p.filename().string());
+            if (info != gamelist.end()) {
+                const GameInfo& g = info->second;
+                if (!g.name.empty()) e.name = g.name;
+                e.synopsis = g.synopsis;
+                e.meta = g.meta;
+                std::error_code ec3;
+                if (e.iconPath.empty() && !g.image.empty() && fs::is_regular_file(g.image, ec3)) e.iconPath = g.image;
+            }
+            if (e.iconPath.empty()) e.iconPath = a.defaultIcon;
             out.push_back(std::move(e));
         }
     }
@@ -575,7 +716,7 @@ static std::vector<Category> loadCatalog() {
 
 static void writeAutoStart(const Entry& e) {
     std::ofstream out(kAutoStartFile);
-    if (out) out << "# " << e.category << "\t" << e.name << "\n" << e.command << "\n";
+    if (out) out << "# " << e.category << "\t" << e.id << "\n" << e.command << "\n";
 }
 
 static void clearAutoStart() {
@@ -604,14 +745,14 @@ static void toggleAutoStart(Model& m) {
     } else {
         writeAutoStart(*e);
         m.autoCategory = e->category;
-        m.autoName = e->name;
+        m.autoName = e->id;
     }
 }
 
 static void launch(const Model& m, const Entry& e) {
     { std::ofstream out(kLaunchFile); if (out) out << e.command << "\n"; }
     std::ofstream state(kStateFile);
-    if (state) state << m.cur().name << "\n" << e.category << "\n" << e.name << "\n";
+    if (state) state << m.cur().name << "\n" << e.category << "\n" << e.id << "\n";
 }
 
 static void restoreCursor(Model& m) {
@@ -900,6 +1041,7 @@ public:
     ~Ui() {
         gridIcons.reset();
         previewIcons.reset();
+        if (clipTex) SDL_DestroyTexture(clipTex);
         for (TTF_Font* f : {uiFont, titleFont, descFont, smallFont}) if (f) TTF_CloseFont(f);
         if (renderer) SDL_DestroyRenderer(renderer);
         if (window) SDL_DestroyWindow(window);
@@ -937,6 +1079,9 @@ private:
     SDL_Renderer* renderer = nullptr;
     TTF_Font *uiFont = nullptr, *titleFont = nullptr, *descFont = nullptr, *smallFont = nullptr;
     std::unique_ptr<IconCache> gridIcons, previewIcons;
+    SDL_Texture* clipTex = nullptr;     // drawWrappedClipped's last text
+    std::string clipText;
+    int clipWidth = 0, clipW = 0, clipH = 0;
     int lastTab = -1;           // tab drawn in the previous frame, to animate the strip
     float tabOffset = 0.0f;     // remaining slide of the tab strip, in pixels
 
@@ -1016,6 +1161,30 @@ private:
         drawSurface(renderer, s, x, y);
         SDL_FreeSurface(s);
         return h;
+    }
+
+    // Wrapped text cut to the whole lines that fit in maxH. The last texture is kept, since a long
+    // synopsis is expensive to lay out again on every frame.
+    void drawWrappedClipped(TTF_Font* font, const std::string& text, int x, int y, SDL_Color color, int width, int maxH) {
+        if (!font || text.empty() || maxH <= 0) return;
+        if (text != clipText || width != clipWidth || !clipTex) {
+            if (clipTex) SDL_DestroyTexture(clipTex);
+            clipTex = nullptr;
+            clipText = text;
+            clipWidth = width;
+            SDL_Surface* surf = TTF_RenderUTF8_Blended_Wrapped(font, text.c_str(), color, width);
+            if (!surf) return;
+            clipTex = SDL_CreateTextureFromSurface(renderer, surf);
+            clipW = surf->w;
+            clipH = surf->h;
+            SDL_FreeSurface(surf);
+            if (!clipTex) return;
+        }
+        const int line = std::max(1, TTF_FontLineSkip(font));
+        const int h = std::min(clipH, maxH / line * line);
+        if (h <= 0) return;
+        SDL_Rect src{0, 0, clipW, h}, dst{x, y, clipW, h};
+        SDL_RenderCopy(renderer, clipTex, &src, &dst);
     }
 
     int wrappedHeight(TTF_Font* font, const std::string& text, int width) {
@@ -1210,13 +1379,14 @@ private:
         if (!e) return;
         const int bottom = kScreenH - kFooterH;
         const int textW = kScreenW - 2 * kMargin;
-        int descH = wrappedHeight(descFont, e->description, textW);
+        const std::string& sub = e->meta.empty() ? e->description : e->meta;
+        int descH = sub.empty() ? 0 : TTF_FontHeight(descFont);
         int titleH = TTF_FontHeight(titleFont);
         int textTop = bottom - 8 - descH - titleH;
         gradient({0, textTop - 70, kScreenW, 70}, kClear);
         fill(kClear, {0, textTop, kScreenW, bottom - textTop});
         drawText(renderer, titleFont, e->name, kMargin, textTop, kWhite, textW);
-        drawWrapped(descFont, e->description, kMargin, textTop + titleH, kGrey, textW);
+        drawText(renderer, descFont, sub, kMargin, textTop + titleH, kGrey, textW);
     }
 
     void renderList(const Model& m) {
@@ -1273,8 +1443,14 @@ private:
         fill(kTile, box);
         drawIcon(*previewIcons, e->iconPath, box);
         int y = box.y + box.h + 10;
-        y += drawWrapped(uiFont, e->name, kPreviewX, y, kWhite, kPreviewW) + 6;
-        drawWrapped(smallFont, e->description, kPreviewX, y, kGrey, kPreviewW);
+        y += drawWrapped(uiFont, e->name, kPreviewX, y, kWhite, kPreviewW) + 4;
+        if (!e->meta.empty()) {
+            drawText(renderer, smallFont, e->meta, kPreviewX, y, kYellow, kPreviewW);
+            y += TTF_FontLineSkip(smallFont) + 4;
+        }
+        const int textBottom = kScreenH - kFooterH - TTF_FontHeight(smallFont) - 10;   // above the "n / total"
+        drawWrappedClipped(smallFont, e->synopsis.empty() ? e->description : e->synopsis,
+                           kPreviewX, y, kGrey, kPreviewW, textBottom - y);
 
         std::string pos = std::to_string(c.sel + 1) + " / " + std::to_string(total);
         drawText(renderer, smallFont, pos, kScreenW - kMargin - textWidth(smallFont, pos),
@@ -1412,7 +1588,7 @@ int main() {
         return 1;
     }
     for (auto& c : model.categories)
-        for (auto& e : c.entries) e.searchKey = lower(e.name);
+        for (auto& e : c.entries) e.searchKey = lower(e.id == e.name ? e.name : e.name + " " + e.id);
     extractSystemMenu(model);
     addAllGamesTab(model);   // first tab, and the one shown at boot
     loadFavorites(model);
