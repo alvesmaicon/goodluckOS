@@ -3,7 +3,9 @@
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_sdlrenderer2.h"
 #include <algorithm>
+#include <cstdio>
 #include <fstream>
+#include <string>
 #include <vector>
 #include <fcntl.h>
 #include <unistd.h>
@@ -11,6 +13,12 @@
 
 const char* ALSA_MIXER_NAME = "Headphone";
 const char* ALSA_CARD = "hw:GA36mbAudio";
+
+// Restored on boot by S91settings / persist-settings.sh
+const char* BRIGHTNESS_STATE_FILE = "/etc/player-flags/brightness";
+// Handled by the root power-manager, which stores the ALSA state
+const char* POWER_REQUEST_FIFO = "/run/power-request";
+const Uint32 SAVE_DELAY_MS = 800;
 
 int get_brightness() {
     std::ifstream file("/sys/class/backlight/backlight/brightness");
@@ -25,6 +33,25 @@ void set_brightness(int brightness) {
     if (file.is_open()) {
         file << brightness;
     }
+}
+
+void save_brightness(int brightness) {
+    std::string tmp = std::string(BRIGHTNESS_STATE_FILE) + ".tmp";
+    {
+        std::ofstream file(tmp);
+        if (!file.is_open()) return;
+        file << brightness << "\n";
+    }
+    rename(tmp.c_str(), BRIGHTNESS_STATE_FILE);
+}
+
+void request_volume_save() {
+    int fd = open(POWER_REQUEST_FIFO, O_WRONLY | O_NONBLOCK);
+    if (fd < 0) return;
+    const char cmd[] = "save-settings\n";
+    ssize_t written = write(fd, cmd, sizeof(cmd) - 1);
+    (void)written;
+    close(fd);
 }
 
 long get_alsa_volume() {
@@ -163,18 +190,29 @@ int main(int argc, char* argv[]) {
     int current_volume = get_alsa_volume();
     bool current_mute = get_alsa_mute();
 
+    // Changes are saved SAVE_DELAY_MS after the last edit, so holding the d-pad doesn't hammer the SD card
+    bool brightness_dirty = false;
+    bool volume_dirty = false;
+    Uint32 last_change = 0;
 
     bool running = true;
     while (running) {
         SDL_Event event;
 
-        if (SDL_WaitEvent(&event)) {
+        bool pending = brightness_dirty || volume_dirty;
+        if (pending ? SDL_WaitEventTimeout(&event, 100) : SDL_WaitEvent(&event)) {
             do {
                 ImGui_ImplSDL2_ProcessEvent(&event);
                 if (event.type == SDL_QUIT) {
                     running = false;
                 }
             } while (SDL_PollEvent(&event));
+        }
+
+        if (pending && SDL_GetTicks() - last_change >= SAVE_DELAY_MS) {
+            if (brightness_dirty) save_brightness(display_brightness);
+            if (volume_dirty) request_volume_save();
+            brightness_dirty = volume_dirty = false;
         }
 
         ImGui_ImplSDLRenderer2_NewFrame();
@@ -195,6 +233,8 @@ int main(int argc, char* argv[]) {
         section_headear("Display");
         if (ImGui::SliderInt("Brightness", &display_brightness, 1, 10)) {
             set_brightness(display_brightness);
+            brightness_dirty = true;
+            last_change = SDL_GetTicks();
         }
 
         section_headear("Audio Settings");
@@ -205,10 +245,14 @@ int main(int argc, char* argv[]) {
                 current_mute = false;
                 set_alsa_mute(current_mute);
             }
+            volume_dirty = true;
+            last_change = SDL_GetTicks();
         }
 
         if (ImGui::Checkbox("Global Mute", &current_mute)) {
             set_alsa_mute(current_mute);
+            volume_dirty = true;
+            last_change = SDL_GetTicks();
         }
 
         if (ImGui::Button("System Settings")) {
@@ -240,6 +284,9 @@ int main(int argc, char* argv[]) {
         ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), renderer);
         SDL_RenderPresent(renderer);
     }
+
+    if (brightness_dirty) save_brightness(display_brightness);
+    if (volume_dirty) request_volume_save();
 
     if (controller) SDL_GameControllerClose(controller);
 

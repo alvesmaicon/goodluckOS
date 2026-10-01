@@ -21,5 +21,8 @@ while true; do
         poweroff|reboot)
             do_shutdown "$cmd"
             ;;
+        save-settings)   # sent by unprivileged apps (e.g. system-settings) after changing volume
+            /usr/local/bin/persist-settings.sh save
+            ;;
     esac
 done

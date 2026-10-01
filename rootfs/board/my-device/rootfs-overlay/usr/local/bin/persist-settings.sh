@@ -12,7 +12,9 @@ STAMP=/tmp/.persist-stamp
 
 save() {
     mkdir -p "$STATE_DIR"
-    cat "$BL/brightness" > "$BRIGHT_FILE.tmp" && mv "$BRIGHT_FILE.tmp" "$BRIGHT_FILE"
+    # brightness 0 means the screen was blanked with the power button, not a user preference
+    b=$(cat "$BL/brightness")
+    if [ "$b" -ge 1 ] 2>/dev/null; then echo "$b" > "$BRIGHT_FILE.tmp" && mv "$BRIGHT_FILE.tmp" "$BRIGHT_FILE"; fi
     alsactl store -f "$ALSA_STATE"
     sync
 }
