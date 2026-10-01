@@ -335,6 +335,7 @@ const char* const SHORTCUTS[][2] = {
     {"POWER", "Screen off / on"},
     {"SELECT + START", "Close the app"},
     {"FN + SELECT + START", "Force close the app"},
+    {"FN + UP", "FPS / CPU overlay"},
     {"Launcher", nullptr},
     {"L1 / R1", "Previous / next tab"},
     {"D-pad / left stick", "Move"},

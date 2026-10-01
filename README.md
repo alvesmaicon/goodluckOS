@@ -104,11 +104,35 @@ Each system and app category gets its own tab, plus an "All Games" tab with ever
 | Y | Add to / remove from My List (your favourites tab) |
 | SELECT | Set / clear autolaunch |
 | X | Search by name with the on-screen keyboard (the search applies to every tab) |
-| B | Clear the search |
+| B | Clear the search, or close the keyboard / power options |
 | START | System Settings |
-| POWER | Power menu: display off, restart, shut down (in other apps it turns the screen off/on) |
+| POWER | Power options: display off, restart, shut down |
 
-Grid or list view and whether the tabs are shown are set in System Settings.
+Grid or list view and whether the tabs are shown are set in System Settings. In list view, a selected name that doesn't fit scrolls to show the rest.
+
+### Shortcuts that work everywhere
+| Buttons | Action |
+|---|---|
+| VOL+ / VOL- | Volume, with an on-screen level bar (a notification in RetroArch) |
+| FN + VOL+ / VOL- | Brightness, with an on-screen level bar (a notification in RetroArch) |
+| POWER | Screen off / on (in the launcher it opens the power options) |
+| SELECT + START | Close the active app cleanly (RetroArch saves first) and go back to the launcher |
+| FN + SELECT + START | Force close the active app |
+| FN + D-pad up | Show / hide a live FPS and CPU overlay |
+
+### RetroArch
+FN is the hotkey:
+
+| Buttons | Action |
+|---|---|
+| FN + X | RetroArch menu |
+| FN + R1 / L1 | Save / load state |
+| FN + LEFT / RIGHT | Previous / next state slot |
+| FN + Y | Pause |
+| FN + R2 | Fast forward |
+| FN + START | Quit the game |
+
+The same list is in System Settings -> Input Settings, next to a button tester.
 
 ## System Settings
 Opened with START from the launcher. It has brightness, volume and mute, a performance mode (keeps the CPU at full speed, uses more battery), the launcher options (tabs, grid or list view), the interface language, `Resize Home`, a System Info page and Input Settings, with the list of every shortcut and a button tester. Changes are saved as soon as you make them.
