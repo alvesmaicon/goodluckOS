@@ -10,6 +10,7 @@ RESIZE_HOME_DEPENDENCIES = sdl2 imgui
 
 define RESIZE_HOME_BUILD_CMDS
 	$(TARGET_CXX) $(TARGET_CXXFLAGS) -std=c++17 \
+		-I$(RESIZE_HOME_PKGDIR)/../common \
 		-I$(STAGING_DIR)/usr/include/SDL2 \
 		-o $(@D)/resize-home $(@D)/resize-home.cpp \
 		$(TARGET_LDFLAGS) \

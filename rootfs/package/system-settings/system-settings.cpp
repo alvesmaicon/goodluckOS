@@ -589,10 +589,10 @@ int main(int argc, char* argv[]) {
             for (size_t i = 0; i < languages.size(); ++i)
                 if (languages[i].code == i18n::current()) current_lang = (int)i;
             ImGui::SetNextItemWidth(ImGui::GetFontSize() * 11.0f);
-            if (ImGui::BeginCombo("##language", languages[current_lang].name.c_str())) {
+            if (ImGui::BeginCombo("##language", languages[current_lang].display().c_str())) {
                 for (size_t i = 0; i < languages.size(); ++i) {
                     bool selected = (int)i == current_lang;
-                    if (ImGui::Selectable(languages[i].name.c_str(), selected) && !selected) {
+                    if (ImGui::Selectable(languages[i].display().c_str(), selected) && !selected) {
                         launcher.language = languages[i].code;
                         save_launcher_settings(launcher);
                         i18n::load(launcher.language);

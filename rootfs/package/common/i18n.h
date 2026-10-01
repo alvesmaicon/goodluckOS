@@ -2,7 +2,8 @@
 //
 // Strings are looked up by their English text in /usr/share/goodluck/lang/<code>.lang, a UTF-8
 // file with one "English text = Translation" per line ("\n" for a line break, "#" comments).
-// Its "language = <Name>" line names the language in the settings. English needs no file, and any
+// Its "language = <native name>" and "language_en = <English name>" lines name the language; the
+// settings show tr(<English name>), so each language can name the others. English needs no file, and any
 // missing translation falls back to the English text. The language comes from
 // ~/.config/puppy/settings ("language=<code>"), shared with the launcher options.
 //
@@ -23,8 +24,11 @@ inline const char* langDir() { return "/usr/share/goodluck/lang"; }
 inline const char* settingsFile() { return "/home/player/.config/puppy/settings"; }
 
 struct Language {
-    std::string code;   // file name without ".lang", e.g. "pt-BR"
-    std::string name;   // shown in the settings, e.g. "Português (Brasil)"
+    std::string code;       // file name without ".lang", e.g. "pt-BR"
+    std::string name;       // native name, e.g. "Português (Brasil)"
+    std::string english;    // English name, e.g. "Portuguese (Brazil)"; shown translated by display()
+
+    std::string display() const;
 };
 
 inline std::map<std::string, std::string>& table() {
@@ -74,7 +78,9 @@ inline std::vector<Language> available() {
             l.name = l.code;
             forEachEntry(std::string(langDir()) + "/" + file, [&](const std::string& k, const std::string& v) {
                 if (k == "language") l.name = v;
+                else if (k == "language_en") l.english = v;
             });
+            if (l.english.empty()) l.english = l.name;
             if (l.code != "en") langs.push_back(l);
         }
         closedir(dir);
@@ -83,6 +89,7 @@ inline std::vector<Language> available() {
     Language en;
     en.code = "en";
     en.name = "English";
+    en.english = "English";
     langs.insert(langs.begin(), en);
     return langs;
 }
@@ -107,7 +114,7 @@ inline void load(const std::string& code) {
     current() = code;
     if (code == "en" || code.empty() || code.find('/') != std::string::npos) return;
     forEachEntry(std::string(langDir()) + "/" + code + ".lang", [](const std::string& k, const std::string& v) {
-        if (k != "language" && !v.empty()) table()[k] = v;
+        if (k != "language" && k != "language_en" && !v.empty()) table()[k] = v;
     });
 }
 
@@ -123,5 +130,8 @@ inline std::string tr(const std::string& english) {
     std::map<std::string, std::string>::const_iterator it = table().find(english);
     return it == table().end() ? english : it->second;
 }
+
+// The language's name in the current language ("Portuguese (Brazil)" while in English).
+inline std::string Language::display() const { return tr(english); }
 
 }  // namespace i18n

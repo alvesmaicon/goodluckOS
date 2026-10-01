@@ -2,6 +2,11 @@
 # Format: "English text = Translation", one per line (see rootfs/package/common/i18n.h).
 # Keep the launcher hints short: the bottom bar is nearly full.
 language = Português (Brasil)
+language_en = Portuguese (Brazil)
+
+# --- Language names (shown in the Language selector)
+English = Inglês
+Portuguese (Brazil) = Português (Brasil)
 
 # --- Launcher: tabs and header
 All Games = Todos os Jogos
@@ -154,3 +159,36 @@ Last pressed: %s (button %d) = Último apertado: %s (botão %d)
 Press any button = Aperte qualquer botão
 Sticks:  L %+4d %+4d   R %+4d %+4d = Analógicos:  E %+4d %+4d   D %+4d %+4d
 Hold B to go back = Segure B para voltar
+
+# --- Resize Home
+Resize HOME Partition Utility = Expandir a partição HOME
+This utility resizes your HOME partition to fill the remaining space on your microSD card. = Este utilitário expande a partição HOME para ocupar todo o espaço livre do cartão microSD.
+microSD card total size: %s = Tamanho total do cartão: %s
+HOME partition size: %s = Tamanho da partição HOME: %s
+HOME filesystem size: %s = Tamanho do sistema de arquivos da HOME: %s
+HOME used: %s = HOME usada: %s
+HOME free: %s = HOME livre: %s
+HOME is not currently mounted. = A HOME não está montada no momento.
+Unused space on card: %s = Espaço sem uso no cartão: %s
+Last resize attempt: %s = Última tentativa: %s
+success = sucesso
+failed = falhou
+Resize HOME Partition = Expandir a partição HOME
+Refresh = Atualizar
+Are you sure? = Tem certeza?
+You will gain %s after resizing. This backs up your files, expands the partition to fill the card, reformats it, and restores your files. The device will reboot to do this. = Você vai ganhar %s. Seus arquivos são copiados, a partição é expandida até ocupar o cartão, formatada e os arquivos voltam. O aparelho reinicia para fazer isso.
+Heads up: there's no unused space left to reclaim. = Atenção: não sobrou espaço sem uso para aproveitar.
+You probably don't need to do this, but it's safe to run anyway. = Provavelmente não é necessário, mas é seguro fazer assim mesmo.
+Do It. = Expandir
+A resize is already scheduled for the next boot. = Já há uma expansão agendada para o próximo boot.
+Reboot the device to apply it. If you didn't request this, you can cancel the request below. = Reinicie o aparelho para aplicar. Se você não pediu isso, pode cancelar abaixo.
+Cancel Resize Request = Cancelar a expansão
+Rebooting... = Reiniciando...
+Please wait while the device restarts. = Aguarde enquanto o aparelho reinicia.
+Something went wrong = Algo deu errado
+Okay = OK
+Could not read partition table information from sysfs. = Não foi possível ler a tabela de partições.
+Could not create resize-home flag file: %s = Não foi possível criar o arquivo de pedido: %s
+Could not remove request flag: %s = Não foi possível remover o pedido: %s
+Request flag was not found (it may have already been removed). = O pedido não foi encontrado (talvez já tenha sido removido).
+Failed to reboot. Does this app have permission to run 'doas reboot'? = Falha ao reiniciar. Este app tem permissão para reiniciar o aparelho?

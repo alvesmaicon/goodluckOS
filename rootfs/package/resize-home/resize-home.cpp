@@ -2,6 +2,7 @@
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_sdlrenderer2.h"
+#include "i18n.h"
 
 #include <cerrno>
 #include <cstdint>
@@ -20,6 +21,15 @@
 #include <unistd.h>
 
 namespace fs = std::filesystem;
+using i18n::tr;
+
+// tr() of a sentence with one "%s" placeholder, filled with value (e.g. a size).
+static std::string trf(const char* english, const std::string& value) {
+    std::string text = tr(english);
+    size_t pos = text.find("%s");
+    if (pos != std::string::npos) text.replace(pos, 2, value);
+    return text;
+}
 
 namespace {
 
@@ -82,7 +92,7 @@ std::string human_size_kb(uint64_t kb) {
 bool write_request_flag(std::string& err) {
     int fd = open(kRequestFlag, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (fd < 0) {
-        err = std::string("Could not create resize-home flag file: ") + strerror(errno);
+        err = trf("Could not create resize-home flag file: %s", strerror(errno));
         return false;
     }
 
@@ -151,20 +161,23 @@ float content_width() {
 }
 
 // centers a single line of text
-void center_text(const std::string& text) {
+void center_text(const std::string& english) {
+    const std::string text = tr(english);
     float x = (ImGui::GetWindowWidth() - ImGui::CalcTextSize(text.c_str()).x) * 0.5f;
     ImGui::SetCursorPosX(x > kSidePadding ? x : kSidePadding);
     ImGui::TextUnformatted(text.c_str());
 }
 
-void center_text_colored(const ImVec4& color, const std::string& text) {
+void center_text_colored(const ImVec4& color, const std::string& english) {
+    const std::string text = tr(english);
     float x = (ImGui::GetWindowWidth() - ImGui::CalcTextSize(text.c_str()).x) * 0.5f;
     ImGui::SetCursorPosX(x > kSidePadding ? x : kSidePadding);
     ImGui::TextColored(color, "%s", text.c_str());
 }
 
 // centers a multi-line wrapped string
-void center_wrapped(const std::string& text, float width_fraction = 0.85f) {
+void center_wrapped(const std::string& english, float width_fraction = 0.85f) {
+    const std::string text = tr(english);
     float width = ImGui::GetWindowWidth() * width_fraction;
     float x = (ImGui::GetWindowWidth() - width) * 0.5f;
     ImGui::SetCursorPosX(x);
@@ -176,16 +189,16 @@ void center_wrapped(const std::string& text, float width_fraction = 0.85f) {
 // A single button spanning the full width of the screen
 bool full_width_button(const char* label, float height = kButtonHeight) {
     ImGui::SetCursorPosX(kSidePadding);
-    return ImGui::Button(label, ImVec2(content_width(), height));
+    return ImGui::Button(tr(label), ImVec2(content_width(), height));
 }
 
 // Two buttons sharing a row, each filling half the content width.
 void two_button_row(const char* left_label, const char* right_label, bool& left_clicked, bool& right_clicked, float height = kButtonHeight) {
     float button_width = (content_width() - kRowSpacing) / 2.0f;
     ImGui::SetCursorPosX(kSidePadding);
-    left_clicked = ImGui::Button(left_label, ImVec2(button_width, height));
+    left_clicked = ImGui::Button(tr(left_label), ImVec2(button_width, height));
     ImGui::SameLine(0.0f, kRowSpacing);
-    right_clicked = ImGui::Button(right_label, ImVec2(button_width, height));
+    right_clicked = ImGui::Button(tr(right_label), ImVec2(button_width, height));
 }
 
 void anchor_to_bottom(float area_height) {
@@ -247,10 +260,9 @@ Page render_confirm(AppState& state) {
 
     center_text("Are you sure?");
     ImGui::Spacing();
-    center_wrapped("You will gain " + human_size_kb(state.stats.free_unallocated_kb) +
-                    " after resizing. This backs up your files, expands the partition "
-                    "to fill the card, reformats it, and restores your files. The "
-                    "device will reboot to do this.");
+    center_wrapped(trf("You will gain %s after resizing. This backs up your files, expands the partition "
+                       "to fill the card, reformats it, and restores your files. The device will reboot to do this.",
+                       human_size_kb(state.stats.free_unallocated_kb)));
 
     if (state.stats.free_unallocated_kb == 0) {
         ImGui::Spacing();
@@ -298,7 +310,7 @@ Page render_pending_reboot(AppState& state) {
         std::error_code ec;
         bool removed = fs::remove(kRequestFlag, ec);
         if (ec) {
-            state.error_message = "Could not remove request flag: " + ec.message();
+            state.error_message = trf("Could not remove request flag: %s", ec.message());
             next = Page::ERROR_PAGE;
         } else if (!removed) {
             state.error_message = "Request flag was not found (it may have already been removed).";
@@ -322,19 +334,19 @@ Page render_main(AppState& state) {
     if (!stats.valid) {
         center_text_colored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), stats.error);
     } else {
-        center_text("microSD card total size: " + human_size_kb(stats.disk_sectors * stats.sector_size / 1024));
-        center_text("HOME partition size: " + human_size_kb(stats.part_size_kb));
+        center_text(trf("microSD card total size: %s", human_size_kb(stats.disk_sectors * stats.sector_size / 1024)));
+        center_text(trf("HOME partition size: %s", human_size_kb(stats.part_size_kb)));
 
         if (stats.fs_mounted) {
-            center_text("HOME filesystem size: " + human_size_kb(stats.fs_total_kb));
-            center_text("HOME used: " + human_size_kb(stats.fs_used_kb));
-            center_text("HOME free: " + human_size_kb(stats.fs_free_kb));
+            center_text(trf("HOME filesystem size: %s", human_size_kb(stats.fs_total_kb)));
+            center_text(trf("HOME used: %s", human_size_kb(stats.fs_used_kb)));
+            center_text(trf("HOME free: %s", human_size_kb(stats.fs_free_kb)));
         } else {
             center_text_colored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "HOME is not currently mounted.");
         }
 
         ImGui::Spacing();
-        center_text("Unused space on card: " + human_size_kb(stats.free_unallocated_kb));
+        center_text(trf("Unused space on card: %s", human_size_kb(stats.free_unallocated_kb)));
         ImGui::Spacing();
         ImGui::Separator();
 
@@ -344,7 +356,7 @@ Page render_main(AppState& state) {
             std::string res = res_it != state.last_status.end() ? res_it->second : "unknown";
             std::string time = time_it != state.last_status.end() ? time_it->second : "";
             ImVec4 color = (res == "success") ? ImVec4(0.4f, 0.9f, 0.4f, 1.0f) : ImVec4(1.0f, 0.4f, 0.4f, 1.0f);
-            center_text_colored(color, "Last resize attempt: " + res + " (" + time + ")");
+            center_text_colored(color, trf("Last resize attempt: %s", tr(res) + " (" + time + ")"));
             ImGui::Spacing();
         }
     }
@@ -394,6 +406,12 @@ int main(int argc, char* argv[]) {
     ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
     ImGui_ImplSDLRenderer2_Init(renderer);
     ImGui::GetStyle().FontScaleMain = 1.65;
+    i18n::loadConfigured();
+    // ImGui's built-in font has no accented letters; use the launcher's font when it's there
+    if (FILE* font = fopen("/usr/share/fonts/Inter_24pt-Medium.ttf", "rb")) {
+        fclose(font);
+        ImGui::GetIO().Fonts->AddFontFromFileTTF("/usr/share/fonts/Inter_24pt-Medium.ttf", 13.0f);
+    }
 
     SDL_GameController* controller = nullptr;
     for (int i = 0; i < SDL_NumJoysticks(); ++i) {
