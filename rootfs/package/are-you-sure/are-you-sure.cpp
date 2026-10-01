@@ -70,6 +70,8 @@ int main(int argc, char* argv[]) {
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad | ImGuiConfigFlags_NavEnableKeyboard;
     // Show the focused button (Cancel) right away instead of only after the first d-pad press
     io.ConfigNavCursorVisibleAlways = true;
+    // B means Cancel (see main loop) instead of just clearing the highlight
+    io.ConfigNavEscapeClearFocusItem = false;
 
     ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
     ImGui_ImplSDLRenderer2_Init(renderer);
@@ -88,11 +90,22 @@ int main(int argc, char* argv[]) {
     std::string errorOutput = "";
     int exitCode = 0;
 
+    // ImGui applies the initial focus a couple of frames after the window appears, so render those
+    // frames right away instead of waiting for the first input event
+    int startup_frames = 3;
+
     bool running = true;
     while (running) {
         SDL_Event event;
 
-        if (SDL_WaitEvent(&event)) {
+        bool got_event;
+        if (startup_frames > 0) {
+            startup_frames--;
+            got_event = SDL_PollEvent(&event);
+        } else {
+            got_event = SDL_WaitEvent(&event);
+        }
+        if (got_event) {
             do {
                 ImGui_ImplSDL2_ProcessEvent(&event);
                 if (event.type == SDL_QUIT) {
@@ -104,6 +117,10 @@ int main(int argc, char* argv[]) {
         ImGui_ImplSDLRenderer2_NewFrame();
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
+
+        if (ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false) || ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
+            running = false;
+        }
 
         ImGui::SetNextWindowPos(ImVec2(0, 0));
         ImGui::SetNextWindowSize(io.DisplaySize);

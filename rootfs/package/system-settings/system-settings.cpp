@@ -173,6 +173,8 @@ int main(int argc, char* argv[]) {
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad | ImGuiConfigFlags_NavEnableKeyboard;
     // Show the focused item (the first slider) right away instead of only after the first d-pad press
     io.ConfigNavCursorVisibleAlways = true;
+    // B leaves the app (see main loop) instead of just clearing the highlight
+    io.ConfigNavEscapeClearFocusItem = false;
 
     ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
     ImGui_ImplSDLRenderer2_Init(renderer);
@@ -200,12 +202,23 @@ int main(int argc, char* argv[]) {
     bool volume_dirty = false;
     Uint32 last_change = 0;
 
+    // ImGui applies the default focus a couple of frames after the window appears, so render those
+    // frames right away instead of waiting for the first input event
+    int startup_frames = 3;
+
     bool running = true;
     while (running) {
         SDL_Event event;
 
         bool pending = brightness_dirty || volume_dirty;
-        if (pending ? SDL_WaitEventTimeout(&event, 100) : SDL_WaitEvent(&event)) {
+        bool got_event;
+        if (startup_frames > 0) {
+            startup_frames--;
+            got_event = SDL_PollEvent(&event);
+        } else {
+            got_event = pending ? SDL_WaitEventTimeout(&event, 100) : SDL_WaitEvent(&event);
+        }
+        if (got_event) {
             do {
                 ImGui_ImplSDL2_ProcessEvent(&event);
                 if (event.type == SDL_QUIT) {
@@ -220,9 +233,17 @@ int main(int argc, char* argv[]) {
             brightness_dirty = volume_dirty = false;
         }
 
+        // B first cancels an active edit; only with nothing active does it leave the app
+        bool editing = ImGui::IsAnyItemActive();
+
         ImGui_ImplSDLRenderer2_NewFrame();
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
+
+        if (!editing && (ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false) ||
+                         ImGui::IsKeyPressed(ImGuiKey_Escape, false))) {
+            running = false;
+        }
 
         ImGui::SetNextWindowPos(ImVec2(0, 0));
         ImGui::SetNextWindowSize(io.DisplaySize);
