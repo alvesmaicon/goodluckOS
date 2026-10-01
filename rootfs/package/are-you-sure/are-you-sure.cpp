@@ -41,17 +41,21 @@ std::string ExecuteCommand(const char* cmd, int& out_exit_code) {
 
 enum class AppState {
     Prompt,
+    Done,   // command succeeded and a status message was given: show it until we're killed
     Error
 };
 
 int main(int argc, char* argv[]) {
     if (argc < 3) {
-        std::cerr << "Usage: are-you-sure \"<Message>\" \"<command>\"" << std::endl;
+        std::cerr << "Usage: are-you-sure \"<Message>\" \"<command>\" [\"<message once confirmed>\"]" << std::endl;
         return -1;
     }
 
     const char* message = argv[1];
     const char* command = argv[2];
+    // e.g. "Shutting down...": stays on screen after a successful command, for commands like
+    // reboot/poweroff that end this process themselves
+    const char* done_message = argc > 3 ? argv[3] : nullptr;
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) != 0) {
         return -1;
@@ -121,7 +125,8 @@ int main(int argc, char* argv[]) {
         // Paint the focused item as selected from the first frame, not only after the first d-pad move
         ImGui::GetCurrentContext()->NavHighlightItemUnderNav = true;
 
-        if (ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false) || ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
+        if (state != AppState::Done &&
+            (ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false) || ImGui::IsKeyPressed(ImGuiKey_Escape, false))) {
             running = false;
         }
 
@@ -161,10 +166,18 @@ int main(int argc, char* argv[]) {
 
                 if (exitCode != 0) {
                     state = AppState::Error;
+                } else if (done_message) {
+                    state = AppState::Done;
+                    startup_frames = 2;   // draw the message now, not on the next input event
                 } else {
                     running = false;
                 }
             }
+        }
+        else if (state == AppState::Done) {
+            ImVec2 textSize = ImGui::CalcTextSize(done_message);
+            ImGui::SetCursorPos(ImVec2((windowSize.x - textSize.x) * 0.5f, (windowSize.y - textSize.y) * 0.5f));
+            ImGui::Text("%s", done_message);
         }
         else if (state == AppState::Error) {
             float buttonWidth = 140.0f;
