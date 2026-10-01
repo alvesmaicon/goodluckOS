@@ -250,6 +250,7 @@ struct Entry {
     std::string command;
     std::string iconPath;
     std::string searchKey;  // lowercase name, filled once the catalog is loaded
+    std::string tag;        // short system name, shown next to the entry in the "All Games" tab
 };
 
 // One tab of the launcher (a console or an apps category).
@@ -257,6 +258,7 @@ struct Category {
     std::string name;
     std::string label;          // short name for the tab strip (TAB= in apps.puppy), defaults to the name
     bool isArchive = false;     // games from a ROM folder, as opposed to apps
+    bool mixed = false;         // the "All Games" tab: entries from every system
     std::vector<Entry> entries;
     std::vector<int> visible;   // indices of the entries matching the search, in display order
     int sel = 0;                // position in 'visible'
@@ -270,7 +272,7 @@ struct Model {
     int tab = 0;
     View view = View::Grid;
     std::string query;
-    int autoTab = -1, autoEntry = -1;
+    std::string autoCategory, autoName;   // the autolaunch entry
 
     Category& cur() { return categories[tab]; }
     const Category& cur() const { return categories[tab]; }
@@ -322,13 +324,18 @@ struct Model {
         }
     }
 
-    bool isAutoStart(int t, int entry) const { return t == autoTab && entry == autoEntry; }
+    bool isAutoStart(const Entry& e) const {
+        return !autoName.empty() && e.category == autoCategory && e.name == autoName;
+    }
 
-    bool find(const std::string& category, const std::string& name, int& outTab, int& outEntry) const {
+    // Finds an entry (by its category and name) in the tab called tabName.
+    bool find(const std::string& tabName, const std::string& category, const std::string& name,
+              int& outTab, int& outEntry) const {
         for (size_t t = 0; t < categories.size(); ++t) {
-            if (categories[t].name != category) continue;
+            if (categories[t].name != tabName) continue;
             for (size_t e = 0; e < categories[t].entries.size(); ++e) {
-                if (categories[t].entries[e].name == name) {
+                const Entry& entry = categories[t].entries[e];
+                if (entry.category == category && entry.name == name) {
                     outTab = (int)t;
                     outEntry = (int)e;
                     return true;
@@ -562,29 +569,54 @@ static bool readAutoStartId(std::string& category, std::string& name) {
 static void toggleAutoStart(Model& m) {
     const Entry* e = m.selected();
     if (!e) return;
-    int entry = m.selectedIndex();
-    if (m.isAutoStart(m.tab, entry)) {
+    if (m.isAutoStart(*e)) {
         clearAutoStart();
-        m.autoTab = m.autoEntry = -1;
+        m.autoCategory.clear();
+        m.autoName.clear();
     } else {
         writeAutoStart(*e);
-        m.autoTab = m.tab;
-        m.autoEntry = entry;
+        m.autoCategory = e->category;
+        m.autoName = e->name;
     }
 }
 
-static void launch(const Entry& e) {
+static void launch(const Model& m, const Entry& e) {
     { std::ofstream out(kLaunchFile); if (out) out << e.command << "\n"; }
     std::ofstream state(kStateFile);
-    if (state) state << e.category << "\n" << e.name << "\n";
+    if (state) state << m.cur().name << "\n" << e.category << "\n" << e.name << "\n";
 }
 
 static void restoreCursor(Model& m) {
     std::ifstream in(kStateFile);
-    std::string category, name;
-    if (!in || !std::getline(in, category) || !std::getline(in, name)) return;
+    std::string tabName, category, name;
+    if (!in || !std::getline(in, tabName) || !std::getline(in, category)) return;
+    if (!std::getline(in, name)) {   // older two-line format: category, name
+        name = category;
+        category = tabName;
+    }
     int t, e;
-    if (m.find(category, name, t, e)) m.select(t, e);
+    if (m.find(tabName, category, name, t, e)) m.select(t, e);
+}
+
+// Prepends an "All Games" tab with the games of every system, sorted by name.
+static void addAllGamesTab(Model& m) {
+    Category all;
+    all.name = "All Games";
+    all.label = "All Games";
+    all.isArchive = true;
+    all.mixed = true;
+    for (const auto& c : m.categories) {
+        if (!c.isArchive) continue;
+        for (Entry e : c.entries) {
+            e.tag = c.label;
+            all.entries.push_back(std::move(e));
+        }
+    }
+    if (all.entries.empty()) return;
+    std::stable_sort(all.entries.begin(), all.entries.end(), [](const Entry& l, const Entry& r) {
+        return l.searchKey < r.searchKey;
+    });
+    m.categories.insert(m.categories.begin(), std::move(all));
 }
 
 static View loadView() {
@@ -688,6 +720,7 @@ public:
     Ui& operator=(const Ui&) = delete;
 
     bool ok() const { return ok_; }
+    bool animating() const { return tabOffset != 0.0f; }
 
     void render(const Model& m, const Keyboard& kb, int battery) {
         setColor(kClear);
@@ -711,6 +744,8 @@ private:
     SDL_Renderer* renderer = nullptr;
     TTF_Font *uiFont = nullptr, *titleFont = nullptr, *descFont = nullptr, *smallFont = nullptr;
     std::unique_ptr<IconCache> gridIcons, previewIcons;
+    int lastTab = -1;           // tab drawn in the previous frame, to animate the strip
+    float tabOffset = 0.0f;     // remaining slide of the tab strip, in pixels
 
     void setColor(SDL_Color c) { SDL_SetRenderDrawColor(renderer, c.r, c.g, c.b, c.a); }
 
@@ -823,21 +858,14 @@ private:
         const int gap = 18, pad = 8;
         auto width = [&](int t) { return textWidth(smallFont, m.categories[t].label) + 2 * pad; };
 
-        // Grow outwards from the current tab while the neighbours fit
-        int first = m.tab, last = m.tab, total = width(m.tab);
-        for (bool grew = true; grew;) {
-            grew = false;
-            if (last + 1 < n && total + gap + width(last + 1) <= right - left) { total += gap + width(++last); grew = true; }
-            if (first - 1 >= 0 && total + gap + width(first - 1) <= right - left) { total += gap + width(--first); grew = true; }
+        // Slide: start the new tab where it was drawn before the switch and ease it to the centre
+        if (lastTab >= 0 && lastTab != m.tab && lastTab < n) {
+            int dir = (lastTab + 1) % n == m.tab ? 1 : ((m.tab + 1) % n == lastTab ? -1 : 0);
+            tabOffset += dir * (width(lastTab) / 2.0f + gap + width(m.tab) / 2.0f);
         }
+        lastTab = m.tab;
 
-        // Keep the current tab centred when there's room, otherwise pack against the edge
-        int curOffset = 0;
-        for (int t = first; t < m.tab; ++t) curOffset += width(t) + gap;
-        int x = (left + right) / 2 - width(m.tab) / 2 - curOffset;
-        x = std::clamp(x, left, right - total);
-
-        for (int t = first; t <= last; ++t) {
+        auto drawTab = [&](int t, int x) {
             int w = width(t);
             if (t == m.tab) {
                 fill(kRowSel, {x, pillY - 2, w, pillH + 4});
@@ -846,8 +874,40 @@ private:
             } else {
                 drawText(renderer, smallFont, m.categories[t].label, x + pad, pillY + 2, kGrey);
             }
-            x += w + gap;
+        };
+
+        // A ring: the current tab in the middle, neighbours on both sides wrapping around, each tab
+        // drawn once. Tabs cut by the edges are clipped.
+        SDL_Rect clip{left, top, right - left, kTabsH};
+        SDL_RenderSetClipRect(renderer, &clip);
+        const int cx = (left + right) / 2 + (int)std::lround(tabOffset);
+        drawTab(m.tab, cx - width(m.tab) / 2);
+        int xr = cx + (width(m.tab) + 1) / 2 + gap;
+        int xl = cx - width(m.tab) / 2 - gap;
+        int used = 1;
+        for (int i = 1; used < n; ++i) {
+            bool placed = false;
+            if (xr < right && used < n) {
+                int t = (m.tab + i) % n;
+                drawTab(t, xr);
+                xr += width(t) + gap;
+                ++used;
+                placed = true;
+            }
+            if (xl > left && used < n) {
+                int t = ((m.tab - i) % n + n) % n;
+                xl -= width(t);
+                drawTab(t, xl);
+                xl -= gap;
+                ++used;
+                placed = true;
+            }
+            if (!placed) break;
         }
+        SDL_RenderSetClipRect(renderer, nullptr);
+
+        tabOffset *= 0.6f;
+        if (std::fabs(tabOffset) < 0.5f) tabOffset = 0.0f;
     }
 
     void renderFooter(const Model& m, const Keyboard& kb) {
@@ -863,14 +923,17 @@ private:
             if (!m.query.empty()) hints.push_back({"B", "Clear"});
         }
 
-        const int y = top + (kFooterH - TTF_FontHeight(smallFont) - 4) / 2;
+        // Button in the highlight colour, underlined, followed by what it does
+        const int y = top + (kFooterH - TTF_FontHeight(smallFont)) / 2 - 1;
         int x = kScreenW - kMargin;
         for (auto it = hints.rbegin(); it != hints.rend(); ++it) {
             x -= textWidth(smallFont, it->second);
-            drawText(renderer, smallFont, it->second, x, y + 2, kWhite);
-            x -= 5 + textWidth(smallFont, it->first) + 12;
-            pill(it->first, x, y, kYellow, kBlack);
-            x -= 10;
+            drawText(renderer, smallFont, it->second, x, y, kGrey);
+            int keyW = textWidth(smallFont, it->first);
+            x -= 6 + keyW;
+            drawText(renderer, smallFont, it->first, x, y, kYellow);
+            fill(kYellow, {x, y + TTF_FontHeight(smallFont), keyW, 2});
+            x -= 16;
         }
     }
 
@@ -900,7 +963,12 @@ private:
             fill(kTile, cell);
             drawIcon(*gridIcons, c.entries[c.visible[k]].iconPath, cell);
             if (k == c.sel) frame(kYellow, cell, kBorder);
-            if (m.isAutoStart(m.tab, c.visible[k])) pill("autolaunch", cell.x, cell.y, kYellow, kBlack);
+            const Entry& entry = c.entries[c.visible[k]];
+            if (m.isAutoStart(entry)) pill("autolaunch", cell.x, cell.y, kYellow, kBlack);
+            if (c.mixed) {
+                int w = textWidth(smallFont, entry.tag) + 12;
+                pill(entry.tag, cell.x + cell.w - w, cell.y + cell.h - TTF_FontHeight(smallFont) - 4, kBar, kGrey);
+            }
         }
 
         const Entry* e = m.selected();
@@ -931,9 +999,18 @@ private:
                 fill(kYellow, {r.x, r.y, 4, r.h});
             }
             int maxW = r.w - 22;
-            if (m.isAutoStart(m.tab, c.visible[k])) {
+            int tagX = r.x + r.w - 4;
+            const int tagY = r.y + (r.h - TTF_FontHeight(smallFont) - 4) / 2;
+            if (c.mixed) {
+                int w = textWidth(smallFont, e.tag) + 12;
+                tagX -= w;
+                pill(e.tag, tagX, tagY, kTile, kGrey);
+                maxW -= w + 8;
+            }
+            if (m.isAutoStart(e)) {
                 int w = textWidth(smallFont, "auto") + 12;
-                pill("auto", r.x + r.w - w - 4, r.y + (r.h - TTF_FontHeight(smallFont) - 4) / 2, kYellow, kBlack);
+                tagX -= w + 4;
+                pill("auto", tagX, tagY, kYellow, kBlack);
                 maxW -= w + 8;
             }
             drawText(renderer, descFont, e.name, r.x + 14, r.y + (r.h - fontH) / 2, k == c.sel ? kWhite : kGrey, maxW);
@@ -1042,13 +1119,14 @@ int main() {
     }
     for (auto& c : model.categories)
         for (auto& e : c.entries) e.searchKey = lower(e.name);
+    addAllGamesTab(model);   // first tab, and the one shown at boot
 
     model.view = loadView();
     model.applyFilter();
     restoreCursor(model);
     {
         std::string cat, name;
-        if (readAutoStartId(cat, name)) model.find(cat, name, model.autoTab, model.autoEntry);
+        if (readAutoStartId(cat, name)) { model.autoCategory = cat; model.autoName = name; }
     }
 
     Ui ui;
@@ -1118,7 +1196,7 @@ int main() {
             case Action::ToggleAutoStart: toggleAutoStart(model); break;
             case Action::Launch:
                 if (const Entry* e = model.selected()) {
-                    launch(*e);
+                    launch(model, *e);
                     running = false;
                 }
                 break;
@@ -1137,6 +1215,10 @@ int main() {
         Uint32 elapsed = now - lastActivity;
         int timeout = elapsed >= kIdleCheckMs ? 0 : (int)(kIdleCheckMs - elapsed);
         if (held != Action::None) timeout = std::min(timeout, (int)std::max<Sint32>(0, (Sint32)(nextRepeat - now)));
+        if (ui.animating()) {   // keep drawing until the tab strip has slid into place (paced by vsync)
+            dirty = true;
+            timeout = 0;
+        }
 
         SDL_Event ev;
         if (!SDL_WaitEventTimeout(&ev, timeout)) {
