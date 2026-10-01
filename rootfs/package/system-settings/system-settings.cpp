@@ -413,6 +413,11 @@ int main(int argc, char* argv[]) {
     bool volume_dirty = false;
     Uint32 last_change = 0;
 
+    // The volume/brightness hotkeys change the levels behind our back (triggerhappy scripts): after
+    // one is pressed, re-read the levels for a moment so the sliders follow
+    const Uint32 HOTKEY_FOLLOW_MS = 600, HOTKEY_POLL_MS = 100;
+    Uint32 follow_until = 0;
+
     // ImGui applies the default focus a couple of frames after the window appears, so render those
     // frames right away instead of waiting for the first input event
     int startup_frames = 3;
@@ -434,6 +439,7 @@ int main(int argc, char* argv[]) {
         SDL_Event event;
 
         bool pending = brightness_dirty || volume_dirty;
+        bool following = (Sint32)(follow_until - SDL_GetTicks()) > 0;
         bool got_event;
         if (startup_frames > 0) {
             startup_frames--;
@@ -441,6 +447,7 @@ int main(int argc, char* argv[]) {
         } else {
             // the tester redraws continuously to show the sticks and the hold-B progress
             if (page == PAGE_TESTER) got_event = SDL_WaitEventTimeout(&event, 33);
+            else if (following) got_event = SDL_WaitEventTimeout(&event, HOTKEY_POLL_MS);
             else got_event = pending ? SDL_WaitEventTimeout(&event, 100) : SDL_WaitEvent(&event);
         }
         if (got_event) {
@@ -449,7 +456,19 @@ int main(int argc, char* argv[]) {
                 if (event.type == SDL_QUIT) {
                     running = false;
                 }
+                if (event.type == SDL_KEYDOWN &&
+                    (event.key.keysym.sym == SDLK_VOLUMEUP || event.key.keysym.sym == SDLK_VOLUMEDOWN)) {
+                    follow_until = SDL_GetTicks() + HOTKEY_FOLLOW_MS;
+                    following = true;
+                }
             } while (SDL_PollEvent(&event));
+        }
+
+        // Don't overwrite a value the user is editing here or hasn't saved yet
+        if (following && !pending && !ImGui::IsAnyItemActive()) {
+            display_brightness = get_brightness();
+            current_volume = get_alsa_volume();
+            current_mute = get_alsa_mute();
         }
 
         if (pending && SDL_GetTicks() - last_change >= SAVE_DELAY_MS) {
