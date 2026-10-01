@@ -10,6 +10,7 @@ ARE_YOU_SURE_DEPENDENCIES = sdl2 imgui
 
 define ARE_YOU_SURE_BUILD_CMDS
 	$(TARGET_CXX) $(TARGET_CXXFLAGS) -std=c++11 \
+		-I$(ARE_YOU_SURE_PKGDIR)/../common \
 		-I$(@D)/imgui \
 		-I$(@D)/imgui/backends \
 		-I$(STAGING_DIR)/usr/include/SDL2 \

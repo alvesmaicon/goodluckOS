@@ -1,6 +1,7 @@
 #include <SDL2/SDL.h>
 #include "imgui.h"
 #include "imgui_internal.h"
+#include "i18n.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_sdlrenderer2.h"
 #include <cstdlib>
@@ -70,6 +71,15 @@ int main(int argc, char* argv[]) {
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    // The message and the status come in English (e.g. from apps.puppy) and are translated here
+    i18n::loadConfigured();
+    message = i18n::tr(message);
+    if (done_message) done_message = i18n::tr(done_message);
+    // ImGui's built-in font has no accented letters; use the launcher's font when it's there
+    if (FILE* font = fopen("/usr/share/fonts/Inter_24pt-Medium.ttf", "rb")) {
+        fclose(font);
+        ImGui::GetIO().Fonts->AddFontFromFileTTF("/usr/share/fonts/Inter_24pt-Medium.ttf", 13.0f);
+    }
     ImGuiIO& io = ImGui::GetIO(); (void)io;
 
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad | ImGuiConfigFlags_NavEnableKeyboard;
@@ -155,13 +165,13 @@ int main(int argc, char* argv[]) {
                 ImGui::SetKeyboardFocusHere();
             }
 
-            if (ImGui::Button("Cancel", ImVec2(buttonWidth, buttonHeight))) {
+            if (ImGui::Button(i18n::tr("Cancel"), ImVec2(buttonWidth, buttonHeight))) {
                 running = false;
             }
 
             ImGui::SameLine(0.0f, spacing);
 
-            if (ImGui::Button("Confirm", ImVec2(buttonWidth, buttonHeight))) {
+            if (ImGui::Button(i18n::tr("Confirm"), ImVec2(buttonWidth, buttonHeight))) {
                 errorOutput = ExecuteCommand(command, exitCode);
 
                 if (exitCode != 0) {
@@ -183,13 +193,13 @@ int main(int argc, char* argv[]) {
             float buttonWidth = 140.0f;
             float buttonHeight = 50.0f;
 
-            ImGui::Text("Command Failed (Exit Code: %d)", exitCode);
+            ImGui::Text(i18n::tr("Command Failed (Exit Code: %d)"), exitCode);
             ImGui::Separator();
 
             // Create a scrollable child region for the error text in case it's long
             ImGui::BeginChild("ErrorTextRegion", ImVec2(0, windowSize.y - buttonHeight - 60.0f), true);
             if (errorOutput.empty()) {
-                ImGui::TextWrapped("No output returned.");
+                ImGui::TextWrapped("%s", i18n::tr("No output returned."));
             } else {
                 ImGui::TextWrapped("%s", errorOutput.c_str());
             }
@@ -201,7 +211,7 @@ int main(int argc, char* argv[]) {
                 ImGui::SetKeyboardFocusHere();
             }
 
-            if (ImGui::Button("Close", ImVec2(buttonWidth, buttonHeight))) {
+            if (ImGui::Button(i18n::tr("Close"), ImVec2(buttonWidth, buttonHeight))) {
                 running = false;
             }
         }

@@ -10,6 +10,7 @@ SYSTEM_SETTINGS_DEPENDENCIES = sdl2 imgui
 
 define SYSTEM_SETTINGS_BUILD_CMDS
 	$(TARGET_CXX) $(TARGET_CXXFLAGS) -std=c++11 \
+		-I$(SYSTEM_SETTINGS_PKGDIR)/../common \
 		-I$(STAGING_DIR)/usr/include/SDL2 \
 		-o $(@D)/system-settings $(@D)/system-settings.cpp \
 		$(TARGET_LDFLAGS) \

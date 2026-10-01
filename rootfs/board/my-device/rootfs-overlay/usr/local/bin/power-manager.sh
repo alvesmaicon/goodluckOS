@@ -7,7 +7,8 @@ exec 3<>"$FIFO"
 
 # Centred on the text console (80x30), which is what's left on screen once the apps are closed
 console_message() {
-    printf "\033[2J\033[?25l\033[15;%dH%s" $(( (80 - ${#1}) / 2 + 1 )) "$1" > /dev/tty1 2>/dev/null
+    msg=$(/usr/local/bin/gl-tr "$1")
+    printf "\033[2J\033[?25l\033[15;%dH%s" $(( (80 - ${#msg}) / 2 + 1 )) "$msg" > /dev/tty1 2>/dev/null
 }
 
 do_shutdown() {

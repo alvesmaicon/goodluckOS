@@ -1,6 +1,7 @@
 #include <SDL2/SDL.h>
 #include "imgui.h"
 #include "imgui_internal.h"
+#include "i18n.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_sdlrenderer2.h"
 #include <algorithm>
@@ -15,6 +16,8 @@
 #include <sys/statvfs.h>
 #include <sys/utsname.h>
 #include <alsa/asoundlib.h>
+
+using i18n::tr;
 
 const char* ALSA_MIXER_NAME = "Headphone";
 const char* ALSA_CARD = "hw:GA36mbAudio";
@@ -94,6 +97,7 @@ const char* LAUNCHER_SETTINGS_FILE = "/home/player/.config/puppy/settings";
 struct LauncherSettings {
     bool show_tabs = true;
     bool list_view = false;
+    std::string language = "en";
 };
 
 LauncherSettings load_launcher_settings() {
@@ -104,6 +108,7 @@ LauncherSettings load_launcher_settings() {
         else if (line == "view=grid") s.list_view = false;
         else if (line == "tabs=off") s.show_tabs = false;
         else if (line == "tabs=on") s.show_tabs = true;
+        else if (line.compare(0, 9, "language=") == 0 && line.size() > 9) s.language = line.substr(9);
     }
     return s;
 }
@@ -114,11 +119,13 @@ void save_launcher_settings(const LauncherSettings& s) {
     {
         std::ifstream file(LAUNCHER_SETTINGS_FILE);
         for (std::string line; std::getline(file, line);) {
-            if (line.compare(0, 5, "view=") != 0 && line.compare(0, 5, "tabs=") != 0 && !line.empty()) lines.push_back(line);
+            if (line.compare(0, 5, "view=") != 0 && line.compare(0, 5, "tabs=") != 0 &&
+                line.compare(0, 9, "language=") != 0 && !line.empty()) lines.push_back(line);
         }
     }
     lines.push_back(std::string("view=") + (s.list_view ? "list" : "grid"));
     lines.push_back(std::string("tabs=") + (s.show_tabs ? "on" : "off"));
+    lines.push_back("language=" + s.language);
 
     mkdir("/home/player/.config", 0755);
     mkdir(LAUNCHER_SETTINGS_DIR, 0755);
@@ -362,7 +369,8 @@ void input_chip(const char* label, bool pressed, float width) {
     ImGui::Dummy(size);
 }
 
-void section_headear(const char* text) {
+void section_headear(const char* english) {
+    const char* text = tr(english);
     float windowWidth = ImGui::GetWindowSize().x;
     float textWidth = ImGui::CalcTextSize(text).x;
 
@@ -386,6 +394,12 @@ int main(int argc, char* argv[]) {
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    i18n::loadConfigured();
+    // ImGui's built-in font has no accented letters; use the launcher's font when it's there
+    if (FILE* font = fopen("/usr/share/fonts/Inter_24pt-Medium.ttf", "rb")) {
+        fclose(font);
+        ImGui::GetIO().Fonts->AddFontFromFileTTF("/usr/share/fonts/Inter_24pt-Medium.ttf", 13.0f);
+    }
     ImGuiIO& io = ImGui::GetIO(); (void)io;
 
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad | ImGuiConfigFlags_NavEnableKeyboard;
@@ -439,6 +453,7 @@ int main(int argc, char* argv[]) {
     SystemInfo info = gather_system_info();
     bool performance_mode = info.governor == PERFORMANCE_GOVERNOR;
     LauncherSettings launcher = load_launcher_settings();
+    const std::vector<i18n::Language> languages = i18n::available();
     bool launch_resize_home = false;
 
     bool running = true;
@@ -511,20 +526,20 @@ int main(int argc, char* argv[]) {
 
         if (page == PAGE_MAIN) {
             ImGui::Begin("Settings", nullptr, window_flags);
-            ImGui::Text("System Settings");
+            ImGui::Text("%s", tr("System Settings"));
             ImGui::Separator();
             ImGui::Spacing();
 
-            section_headear("Display");
-            if (ImGui::SliderInt("Brightness", &display_brightness, 1, 10)) {
+            // One header for both, so the page (with the Options section) still fits the 480px screen
+            section_headear("Display & Audio");
+            if (ImGui::SliderInt(tr("Brightness"), &display_brightness, 1, 10)) {
                 set_brightness(display_brightness);
                 brightness_dirty = true;
                 last_change = SDL_GetTicks();
             }
             ImGui::SetItemDefaultFocus();
 
-            section_headear("Audio Settings");
-            if (ImGui::SliderInt("Master Volume", &current_volume, 0, 100)) {
+            if (ImGui::SliderInt(tr("Master Volume"), &current_volume, 0, 100)) {
                 set_alsa_volume(current_volume);
 
                 if (current_mute && current_volume > 0) {
@@ -535,7 +550,7 @@ int main(int argc, char* argv[]) {
                 last_change = SDL_GetTicks();
             }
 
-            if (ImGui::Checkbox("Global Mute", &current_mute)) {
+            if (ImGui::Checkbox(tr("Global Mute"), &current_mute)) {
                 set_alsa_mute(current_mute);
                 volume_dirty = true;
                 last_change = SDL_GetTicks();
@@ -544,26 +559,47 @@ int main(int argc, char* argv[]) {
             // CPU and launcher options share one section so the page still fits the 480px screen
             section_headear("Options");
             if (!info.normal_governor.empty()) {
-                if (ImGui::Checkbox("Performance mode (uses more battery)", &performance_mode)) {
+                if (ImGui::Checkbox(tr("Performance mode (uses more battery)"), &performance_mode)) {
                     send_power_request(std::string("set-governor ") +
                                        (performance_mode ? PERFORMANCE_GOVERNOR : info.normal_governor));
                 }
             }
 
-            if (ImGui::Checkbox("Show launcher tabs", &launcher.show_tabs)) {
+            if (ImGui::Checkbox(tr("Show launcher tabs"), &launcher.show_tabs)) {
                 save_launcher_settings(launcher);
             }
             ImGui::AlignTextToFramePadding();
-            ImGui::Text("Launcher view:");
+            ImGui::Text("%s", tr("Launcher view:"));
             ImGui::SameLine();
-            if (ImGui::RadioButton("Grid", !launcher.list_view)) {
+            if (ImGui::RadioButton(tr("Grid"), !launcher.list_view)) {
                 launcher.list_view = false;
                 save_launcher_settings(launcher);
             }
             ImGui::SameLine();
-            if (ImGui::RadioButton("List", launcher.list_view)) {
+            if (ImGui::RadioButton(tr("List"), launcher.list_view)) {
                 launcher.list_view = true;
                 save_launcher_settings(launcher);
+            }
+
+            // Languages come from the files in /usr/share/goodluck/lang (see i18n.h)
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("%s", tr("Language:"));
+            ImGui::SameLine();
+            int current_lang = 0;
+            for (size_t i = 0; i < languages.size(); ++i)
+                if (languages[i].code == i18n::current()) current_lang = (int)i;
+            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 11.0f);
+            if (ImGui::BeginCombo("##language", languages[current_lang].name.c_str())) {
+                for (size_t i = 0; i < languages.size(); ++i) {
+                    bool selected = (int)i == current_lang;
+                    if (ImGui::Selectable(languages[i].name.c_str(), selected) && !selected) {
+                        launcher.language = languages[i].code;
+                        save_launcher_settings(launcher);
+                        i18n::load(launcher.language);
+                    }
+                    if (selected) ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
             }
 
             ImGui::Spacing();
@@ -573,20 +609,20 @@ int main(int argc, char* argv[]) {
             bool can_grow = info.card_unused_kb >= RESIZE_MIN_FREE_KB;
             bool fits = info.home_used_kb < info.tmp_free_kb;
             ImGui::BeginDisabled(can_grow && !fits);
-            if (ImGui::Button("Resize Home")) {
+            if (ImGui::Button(tr("Resize Home"))) {
                 launch_resize_home = true;
                 running = false;
             }
             ImGui::EndDisabled();
             if (can_grow && !fits) {
-                ImGui::TextWrapped("Too much data in HOME to resize. Resize right after flashing, before copying games.");
+                ImGui::TextWrapped("%s", tr("Too much data in HOME to resize. Resize right after flashing, before copying games."));
             }
 
             if (focus_system_button) {
                 ImGui::SetKeyboardFocusHere();
                 focus_system_button = false;
             }
-            if (ImGui::Button("System Info")) {
+            if (ImGui::Button(tr("System Info"))) {
                 info = gather_system_info();
                 next_page = PAGE_SYSTEM;
             }
@@ -594,19 +630,19 @@ int main(int argc, char* argv[]) {
                 ImGui::SetKeyboardFocusHere();
                 focus_input_button = false;
             }
-            if (ImGui::Button("Input Settings")) {
+            if (ImGui::Button(tr("Input Settings"))) {
                 next_page = PAGE_INPUT;
             }
             // TODO: Date/Time (the RTC has no backup battery, so the clock resets on every boot)
 
             ImGui::Spacing();
-            if (ImGui::Button("Back")) {
+            if (ImGui::Button(tr("Back"))) {
                 running = false;
             }
             ImGui::End();
         } else if (page == PAGE_INPUT) {
             ImGui::Begin("Input", nullptr, window_flags);
-            ImGui::Text("Input Settings");
+            ImGui::Text("%s", tr("Input Settings"));
             ImGui::Separator();
             ImGui::Spacing();
 
@@ -630,12 +666,12 @@ int main(int argc, char* argv[]) {
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
                     if (!row[1]) {
-                        ImGui::TextColored(ImVec4(0.45f, 0.70f, 1.0f, 1.0f), "%s", row[0]);
+                        ImGui::TextColored(ImVec4(0.45f, 0.70f, 1.0f, 1.0f), "%s", tr(row[0]));
                         continue;
                     }
-                    ImGui::Text("  %s", row[0]);
+                    ImGui::Text("  %s", tr(row[0]));
                     ImGui::TableNextColumn();
-                    ImGui::TextUnformatted(row[1]);
+                    ImGui::TextUnformatted(tr(row[1]));
                 }
                 ImGui::EndTable();
             }
@@ -647,20 +683,20 @@ int main(int argc, char* argv[]) {
                 ImGui::SetKeyboardFocusHere();
                 focus_tester_button = false;
             }
-            if (ImGui::Button("Button Tester")) {
+            if (ImGui::Button(tr("Button Tester"))) {
                 last_button = -1;
                 b_hold_start = 0;
                 next_page = PAGE_TESTER;
             }
             ImGui::SetItemDefaultFocus();
             ImGui::SameLine();
-            if (ImGui::Button("Back")) {
+            if (ImGui::Button(tr("Back"))) {
                 next_page = PAGE_MAIN;
             }
             ImGui::End();
         } else if (page == PAGE_TESTER) {
             ImGui::Begin("Tester", nullptr, window_flags);
-            ImGui::Text("Button Tester");
+            ImGui::Text("%s", tr("Button Tester"));
             ImGui::Separator();
             ImGui::Spacing();
 
@@ -693,15 +729,15 @@ int main(int argc, char* argv[]) {
 
             ImGui::Spacing();
             if (!joystick) {
-                ImGui::Text("No gamepad found.");
+                ImGui::Text("%s", tr("No gamepad found."));
             } else {
                 if (SDL_JoystickNumAxes(joystick) >= 4) {
-                    ImGui::Text("Sticks:  L %+4d %+4d   R %+4d %+4d",
+                    ImGui::Text(tr("Sticks:  L %+4d %+4d   R %+4d %+4d"),
                                 SDL_JoystickGetAxis(joystick, 0) * 100 / 32767, SDL_JoystickGetAxis(joystick, 1) * 100 / 32767,
                                 SDL_JoystickGetAxis(joystick, 2) * 100 / 32767, SDL_JoystickGetAxis(joystick, 3) * 100 / 32767);
                 }
-                if (last_button >= 0) ImGui::Text("Last pressed: %s (button %d)", GAMEPAD_BUTTON_NAMES[last_button], last_button);
-                else ImGui::Text("Press any button");
+                if (last_button >= 0) ImGui::Text(tr("Last pressed: %s (button %d)"), GAMEPAD_BUTTON_NAMES[last_button], last_button);
+                else ImGui::Text("%s", tr("Press any button"));
             }
 
             bool b_down = pressed(GAMEPAD_BUTTON_B) || keys[SDL_SCANCODE_ESCAPE];
@@ -710,36 +746,54 @@ int main(int argc, char* argv[]) {
             else if (b_hold_start == 0) b_hold_start = now;
             float hold = b_hold_start ? std::min(1.0f, (now - b_hold_start) / (float)TESTER_EXIT_HOLD_MS) : 0.0f;
             ImGui::Spacing();
-            ImGui::ProgressBar(hold, ImVec2(-1.0f, 0.0f), "Hold B to go back");
+            ImGui::ProgressBar(hold, ImVec2(-1.0f, 0.0f), tr("Hold B to go back"));
             if (hold >= 1.0f) next_page = PAGE_INPUT;
             ImGui::End();
         } else {
             ImGui::Begin("System", nullptr, window_flags);
-            ImGui::Text("System Info");
+            ImGui::Text("%s", tr("System Info"));
             ImGui::Separator();
             ImGui::Spacing();
 
-            ImGui::Text("Device:   %s", info.model.empty() ? "unknown" : info.model.c_str());
-            ImGui::Text("System:   %s", info.os.c_str());
-            ImGui::Text("Kernel:   Linux %s", info.kernel.c_str());
-            if (info.cpu_mhz > 0) {
-                if (info.temp_c > -1000) ImGui::Text("CPU:      %d / %d MHz, %d C", info.cpu_mhz, info.cpu_max_mhz, info.temp_c);
-                else ImGui::Text("CPU:      %d / %d MHz", info.cpu_mhz, info.cpu_max_mhz);
-            }
-            if (info.mem_total_kb > 0) {
-                ImGui::Text("Memory:   %s free of %s", human_size_kb(info.mem_avail_kb).c_str(),
-                            human_size_kb(info.mem_total_kb).c_str());
-            }
-            if (info.battery >= 0) ImGui::Text("Battery:  %d%% (%s)", info.battery, info.battery_status.c_str());
-
-            ImGui::Text("Storage:  %s used of %s", human_size_kb(info.home_used_kb).c_str(),
-                        human_size_kb(info.home_total_kb).c_str());
-            if (info.card_unused_kb >= RESIZE_MIN_FREE_KB) {
-                ImGui::Text("Unused:   %s on the card (see Resize Home)", human_size_kb(info.card_unused_kb).c_str());
+            char value[160];
+            auto row = [&](const char* label, const char* text) {
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted(tr(label));
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted(text);
+            };
+            if (ImGui::BeginTable("info", 2, ImGuiTableFlags_SizingFixedFit)) {
+                row("Device", info.model.empty() ? tr("unknown") : info.model.c_str());
+                row("System", info.os.c_str());
+                snprintf(value, sizeof(value), "Linux %s", info.kernel.c_str());
+                row("Kernel", value);
+                if (info.cpu_mhz > 0) {
+                    if (info.temp_c > -1000) snprintf(value, sizeof(value), "%d / %d MHz, %d C", info.cpu_mhz, info.cpu_max_mhz, info.temp_c);
+                    else snprintf(value, sizeof(value), "%d / %d MHz", info.cpu_mhz, info.cpu_max_mhz);
+                    row("CPU", value);
+                }
+                if (info.mem_total_kb > 0) {
+                    snprintf(value, sizeof(value), tr("%s free of %s"), human_size_kb(info.mem_avail_kb).c_str(),
+                             human_size_kb(info.mem_total_kb).c_str());
+                    row("Memory", value);
+                }
+                if (info.battery >= 0) {
+                    snprintf(value, sizeof(value), "%d%% (%s)", info.battery, tr(info.battery_status.c_str()));
+                    row("Battery", value);
+                }
+                snprintf(value, sizeof(value), tr("%s used of %s"), human_size_kb(info.home_used_kb).c_str(),
+                         human_size_kb(info.home_total_kb).c_str());
+                row("Storage", value);
+                if (info.card_unused_kb >= RESIZE_MIN_FREE_KB) {
+                    snprintf(value, sizeof(value), tr("%s on the card (see Resize Home)"), human_size_kb(info.card_unused_kb).c_str());
+                    row("Unused", value);
+                }
+                ImGui::EndTable();
             }
 
             ImGui::Spacing();
-            if (ImGui::Button("Back")) {
+            if (ImGui::Button(tr("Back"))) {
                 next_page = PAGE_MAIN;
             }
             ImGui::End();

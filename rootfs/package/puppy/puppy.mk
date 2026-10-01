@@ -11,6 +11,7 @@ PUPPY_DEPENDENCIES = sdl2 sdl2_image sdl2_ttf
 
 define PUPPY_BUILD_CMDS
 	$(TARGET_CXX) $(TARGET_CXXFLAGS) \
+		-I$(PUPPY_PKGDIR)/../common \
 		-o $(@D)/puppy $(@D)/puppy.cpp \
 		$(TARGET_LDFLAGS) \
 		-lpthread -lSDL2 -lSDL2_image -lSDL2_ttf

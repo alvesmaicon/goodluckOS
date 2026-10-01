@@ -16,10 +16,13 @@
 #include <string>
 #include <vector>
 
+#include "i18n.h"
+
 #include <fcntl.h>
 #include <unistd.h>
 
 namespace fs = std::filesystem;
+using i18n::tr;
 
 static const char* kFontFile      = "/usr/share/fonts/Inter_24pt-Medium.ttf";
 static const char* kAppsFiles[]   = {"/usr/share/puppy/apps.puppy", "/home/player/apps.puppy"};
@@ -615,7 +618,7 @@ static std::map<std::string, GameInfo> loadGamelist(const fs::path& dir) {
         const std::string genre = xmlTag(block, "genre");
         if (!genre.empty()) meta.push_back(genre);
         const std::string players = xmlTag(block, "players");
-        if (!players.empty()) meta.push_back(players + (players == "1" ? " player" : " players"));
+        if (!players.empty()) meta.push_back(players + " " + tr(players == "1" ? "player" : "players"));
         for (size_t i = 0; i < meta.size(); ++i) g.meta += (i ? "  \u00b7  " : "") + meta[i];
 
         out[path] = std::move(g);
@@ -1237,14 +1240,16 @@ private:
 
         // "686 games", or "12 of 686 games" while searching
         std::string count = std::to_string(c.visible.size());
-        if (!m.query.empty()) count += " of " + std::to_string(c.entries.size());
-        count += c.isArchive ? (c.entries.size() == 1 ? " game" : " games") : (c.entries.size() == 1 ? " app" : " apps");
+        if (!m.query.empty()) count += std::string(" ") + tr("of") + " " + std::to_string(c.entries.size());
+        count += std::string(" ") + tr(c.isArchive ? (c.entries.size() == 1 ? "game" : "games")
+                                                   : (c.entries.size() == 1 ? "app" : "apps"));
         if (!m.query.empty()) count += "  \u00b7  \"" + m.query + "\"";
         int countW = textWidth(smallFont, count);
 
         int maxNameW = batX - 24 - countW - 10 - kMargin;
-        int nameW = std::min(textWidth(uiFont, c.name), maxNameW);
-        drawText(renderer, uiFont, c.name, kMargin, nameY, kWhite, maxNameW);
+        const std::string title = tr(c.name);
+        int nameW = std::min(textWidth(uiFont, title), maxNameW);
+        drawText(renderer, uiFont, title, kMargin, nameY, kWhite, maxNameW);
         drawText(renderer, smallFont, count, kMargin + nameW + 10,
                  nameY + TTF_FontAscent(uiFont) - TTF_FontAscent(smallFont), m.query.empty() ? kGrey : kYellow);
 
@@ -1267,7 +1272,7 @@ private:
 
         const int n = (int)m.categories.size();
         const int gap = 18, pad = 8;
-        auto width = [&](int t) { return textWidth(smallFont, m.categories[t].label) + 2 * pad; };
+        auto width = [&](int t) { return textWidth(smallFont, tr(m.categories[t].label)) + 2 * pad; };
 
         // Slide: start the new tab where it was drawn before the switch and ease it to the centre
         if (lastTab >= 0 && lastTab != m.tab && lastTab < n) {
@@ -1281,9 +1286,9 @@ private:
             if (t == m.tab) {
                 fill(kRowSel, {x, pillY - 2, w, pillH + 4});
                 fill(kYellow, {x, pillY + pillH + 1, w, 2});
-                drawText(renderer, smallFont, m.categories[t].label, x + pad, pillY + 2, kWhite);
+                drawText(renderer, smallFont, tr(m.categories[t].label), x + pad, pillY + 2, kWhite);
             } else {
-                drawText(renderer, smallFont, m.categories[t].label, x + pad, pillY + 2, kGrey);
+                drawText(renderer, smallFont, tr(m.categories[t].label), x + pad, pillY + 2, kGrey);
             }
         };
 
@@ -1327,18 +1332,18 @@ private:
 
         std::vector<std::pair<std::string, std::string>> hints;
         if (m.menuOpen) {
-            hints = {{"A", "Select"}, {"B", "Close"}};
+            hints = {{"A", tr("Select")}, {"B", tr("Close")}};
         } else if (kb.open) {
-            hints = {{"A", "Type"}, {"B", "Delete"}, {"START", "Done"}};
+            hints = {{"A", tr("Type")}, {"B", tr("Delete")}, {"START", tr("Done")}};
         } else {
             const Entry* sel = m.selected();
-            hints = {{"L1", "Prev"}, {"R1", "Next"}, {"A", "Launch"},
-                     {"Y", sel && m.isFavorite(*sel) ? "Remove" : "My List"}};
+            hints = {{"L1", tr("Prev")}, {"R1", tr("Next")}, {"A", tr("Launch")},
+                     {"Y", tr(sel && m.isFavorite(*sel) ? "Remove" : "My List")}};
             // while searching, clearing the search is more useful than starting a new one
-            if (m.query.empty()) hints.push_back({"X", "Search"});
-            else hints.push_back({"B", "Clear"});
-            hints.push_back({"SELECT", "Autolaunch"});
-            if (m.hasSettings) hints.push_back({"START", "Settings"});
+            if (m.query.empty()) hints.push_back({"X", tr("Search")});
+            else hints.push_back({"B", tr("Clear")});
+            hints.push_back({"SELECT", tr("Autolaunch")});
+            if (m.hasSettings) hints.push_back({"START", tr("Settings")});
         }
 
         // Button in the highlight colour, followed by what it does. The gap between hints shrinks
@@ -1362,17 +1367,17 @@ private:
 
     void renderEmpty(const Model& m) {
         if (m.query.empty() && m.cur().name == kMyListName) {
-            std::string s = "Your list is empty";
-            std::string hint = "Press Y on any game to add it here";
+            std::string s = tr("Your list is empty");
+            std::string hint = tr("Press Y on any game to add it here");
             drawText(renderer, uiFont, s, (kScreenW - textWidth(uiFont, s)) / 2, kScreenH / 2 - 40, kGrey);
             drawText(renderer, smallFont, hint, (kScreenW - textWidth(smallFont, hint)) / 2, kScreenH / 2, kGrey);
             return;
         }
-        std::string s = m.query.empty() ? "Nothing here" : "No matches for \"" + m.query + "\"";
+        std::string s = m.query.empty() ? tr("Nothing here") : tr("No matches for") + std::string(" \"") + m.query + "\"";
         int w = textWidth(uiFont, s);
         drawText(renderer, uiFont, s, std::max(kMargin, (kScreenW - w) / 2), kScreenH / 2 - 40, kGrey, kScreenW - 2 * kMargin);
         if (!m.query.empty()) {
-            std::string hint = "L1/R1 to search other tabs";
+            std::string hint = tr("L1/R1 to search other tabs");
             drawText(renderer, smallFont, hint, (kScreenW - textWidth(smallFont, hint)) / 2, kScreenH / 2, kGrey);
         }
     }
@@ -1394,7 +1399,7 @@ private:
             drawIcon(*gridIcons, c.entries[c.visible[k]].iconPath, cell);
             if (k == c.sel) frame(kYellow, cell, kBorder);
             const Entry& entry = c.entries[c.visible[k]];
-            if (m.isAutoStart(entry)) pill("autolaunch", cell.x, cell.y, kYellow, kBlack);
+            if (m.isAutoStart(entry)) pill(tr("autolaunch"), cell.x, cell.y, kYellow, kBlack);
             if (m.isFavorite(entry)) {
                 fill(kBar, {cell.x + cell.w - 26, cell.y + 2, 24, 24});
                 star(cell.x + cell.w - 14, cell.y + 14, 9, kYellow);
@@ -1409,7 +1414,7 @@ private:
         if (!e) return;
         const int bottom = kScreenH - kFooterH;
         const int textW = kScreenW - 2 * kMargin;
-        const std::string& sub = e->meta.empty() ? e->description : e->meta;
+        const std::string sub = e->meta.empty() ? tr(e->description) : e->meta;
         int descH = sub.empty() ? 0 : TTF_FontHeight(descFont);
         int titleH = TTF_FontHeight(titleFont);
         int textTop = bottom - 8 - descH - titleH;
@@ -1444,9 +1449,9 @@ private:
                 maxW -= w + 8;
             }
             if (m.isAutoStart(e)) {
-                int w = textWidth(smallFont, "auto") + 12;
+                int w = textWidth(smallFont, tr("auto")) + 12;
                 tagX -= w + 4;
-                pill("auto", tagX, tagY, kYellow, kBlack);
+                pill(tr("auto"), tagX, tagY, kYellow, kBlack);
                 maxW -= w + 8;
             }
             if (m.isFavorite(e)) {
@@ -1479,7 +1484,7 @@ private:
             y += TTF_FontLineSkip(smallFont) + 4;
         }
         const int textBottom = kScreenH - kFooterH - TTF_FontHeight(smallFont) - 10;   // above the "n / total"
-        descMax = drawWrappedClipped(smallFont, e->synopsis.empty() ? e->description : e->synopsis,
+        descMax = drawWrappedClipped(smallFont, e->synopsis.empty() ? tr(e->description) : e->synopsis,
                                      kPreviewX, y, kGrey, kPreviewW - 16, textBottom - y, m.descScroll);
 
         std::string pos = std::to_string(c.sel + 1) + " / " + std::to_string(total);
@@ -1493,8 +1498,8 @@ private:
         fill({12, 12, 14, 235}, panel);
         frame(kTile, panel, 2);
 
-        std::string label = osd.kind == "brightness" ? "Brightness" : (osd.kind == "volume" ? "Volume" : osd.kind);
-        std::string value = osd.muted ? "Muted" : std::to_string(osd.percent) + "%";
+        std::string label = osd.kind == "brightness" ? tr("Brightness") : (osd.kind == "volume" ? tr("Volume") : osd.kind);
+        std::string value = osd.muted ? tr("Muted") : std::to_string(osd.percent) + "%";
         drawText(renderer, descFont, label, panel.x + pad, panel.y + 8, kWhite);
         drawText(renderer, descFont, value, panel.x + w - pad - textWidth(descFont, value), panel.y + 8, kYellow);
 
@@ -1519,7 +1524,7 @@ private:
         fill({0, 0, 0, 150}, {0, kHeaderH, kScreenW, kScreenH - kFooterH - kHeaderH});   // dim the tab behind
         fill(kBar, panel);
         frame(kTile, panel, 2);
-        drawText(renderer, uiFont, "Power options", panel.x + pad + 4, panel.y + pad, kWhite);
+        drawText(renderer, uiFont, tr("Power options"), panel.x + pad + 4, panel.y + pad, kWhite);
 
         const int fontH = TTF_FontHeight(descFont);
         for (int i = 0; i < kPowerItemCount; ++i) {
@@ -1529,7 +1534,7 @@ private:
                 fill(kRowSel, r);
                 fill(kYellow, {r.x, r.y, 4, r.h});
             }
-            drawText(renderer, descFont, kPowerItems[i].label, r.x + 16, r.y + (r.h - fontH) / 2,
+            drawText(renderer, descFont, tr(kPowerItems[i].label), r.x + 16, r.y + (r.h - fontH) / 2,
                      sel ? kWhite : kGrey, r.w - 24);
         }
     }
@@ -1543,7 +1548,7 @@ private:
         fill({12, 12, 14, 240}, panel);
         frame(kTile, panel, 2);
 
-        drawText(renderer, uiFont, "Search: " + m.query + "_", panel.x + pad, panel.y + pad, kWhite, panelW - 2 * pad);
+        drawText(renderer, uiFont, tr("Search:") + std::string(" ") + m.query + "_", panel.x + pad, panel.y + pad, kWhite, panelW - 2 * pad);
 
         for (int r = 0; r < Keyboard::kRows; ++r) {
             const auto& keys = Keyboard::keys(r);
@@ -1553,8 +1558,8 @@ private:
                            (int)(key.w * unit) - gap, keyH};
                 bool sel = r == kb.row && c == kb.col;
                 fill(sel ? kYellow : kTile, k);
-                std::string label = key.label;
-                TTF_Font* f = label.size() > 1 ? smallFont : uiFont;
+                std::string label = key.label.size() > 1 ? tr(key.label) : key.label;   // space / del / ok
+                TTF_Font* f = key.label.size() > 1 ? smallFont : uiFont;
                 if (label.size() == 1) label = upper(label);
                 drawText(renderer, f, label, k.x + (k.w - textWidth(f, label)) / 2,
                          k.y + (k.h - TTF_FontHeight(f)) / 2, sel ? kBlack : kWhite);
@@ -1635,6 +1640,7 @@ static Action actionFromButton(Uint8 b) {
 }
 
 int main() {
+    i18n::loadConfigured();
     Model model;
     model.categories = loadCatalog();
     if (model.categories.empty()) {
@@ -1712,7 +1718,7 @@ int main() {
                             break;
                         }
                     }
-                    if (item.status) model.status = item.status;
+                    if (item.status) model.status = tr(item.status);
                     sendPowerRequest(item.request);
                     break;
                 }
