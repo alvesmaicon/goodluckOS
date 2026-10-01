@@ -20,8 +20,11 @@
 
 namespace i18n {
 
-inline const char* langDir() { return "/usr/share/goodluck/lang"; }
-inline const char* settingsFile() { return "/home/player/.config/puppy/settings"; }
+// The paths can be changed before loading (Puppy takes them from its puppy.conf).
+inline std::string& langDirPath() { static std::string p = "/usr/share/goodluck/lang"; return p; }
+inline std::string& settingsPath() { static std::string p = "/home/player/.config/puppy/settings"; return p; }
+inline const char* langDir() { return langDirPath().c_str(); }
+inline const char* settingsFile() { return settingsPath().c_str(); }
 
 struct Language {
     std::string code;       // file name without ".lang", e.g. "pt-BR"

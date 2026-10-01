@@ -48,16 +48,16 @@ If the above page does not confirm support, please do not attempt to flash a goo
 - Mount device storage via USB
 - CPU overclocking
 - Improve performance of PPSSPP emulator core. 
-- Portable Puppy for other firmwares (see below)
+- Portable Puppy for other firmwares (see below; config file, es_systems.cfg support and runner done)
 
-### Portable Puppy (planned)
-Puppy could also run as an optional frontend on other handheld firmwares that use EmulationStation (e.g. dArkOS on the original R36S, ROCKNIX, Knulli), next to the existing frontends rather than replacing them. Plan:
-1. **Config file (`puppy.conf`)**: rom folders, where `apps.puppy`, the cache and the settings live, and the commands for restart / power off / display off / settings. Defaults keep goodluckOS working exactly as it does now.
-2. **Systems from `es_systems.cfg`**: build the tabs from the EmulationStation system list every ES-based firmware already has (folders, extensions and `%ROM%` launch commands), so it works with no manual setup. Scraped `gamelist.xml` collections already work.
-3. **Self-contained launching**: ship a small `puppy-run.sh` that does the launch loop `puppy-bootstrap.sh` does on goodluckOS, so any system can start games from it.
-4. **aarch64 build and packaging**: 64-bit builds for RK3326 devices, an install script that switches the frontend to Puppy with an easy way back, and a PortMaster package.
+### Portable Puppy (in development)
+Puppy can also run as an optional frontend on other handheld firmwares that use EmulationStation (e.g. dArkOS on the original R36S, ROCKNIX, Knulli), next to the existing frontends rather than replacing them. Progress:
+1. **Config file (`puppy.conf`)** - done: fonts, assets, languages, where `apps.puppy`, the cache and the settings live, and the commands for restart / power off / display off / settings. Without one, Puppy uses the goodluckOS defaults, so goodluckOS works exactly as before. Puppy reads the file given with `--config`, else `$PUPPY_CONFIG`, else `/etc/puppy.conf`. A documented example is in [`rootfs/package/puppy/portable/puppy.conf`](rootfs/package/puppy/portable/puppy.conf).
+2. **Systems from `es_systems.cfg`** - done: the tabs come from the EmulationStation system list the firmware already has (folders, extensions and launch commands, with `%ROM%`, `%BASENAME%`, `%SYSTEM%`, and the default `%EMULATOR%` / `%CORE%` of ES forks that have a core choice), so it works with no manual setup. Systems without games are left out, and scraped `gamelist.xml` collections work as on goodluckOS.
+3. **Self-contained launching** - done: [`puppy-run.sh`](rootfs/package/puppy/portable/puppy-run.sh) shows Puppy, runs what was picked and comes back, like `puppy-bootstrap.sh` does on goodluckOS. A "Quit Puppy" power option (`quit = on`) goes back to the frontend Puppy was started from. Without a settings app, START opens the power options.
+4. **aarch64 build and packaging** - to do: 64-bit builds for RK3326 devices (built against an older glibc, or with the libraries shipped next to Puppy in `libs/`), an install script, and a PortMaster package.
 
-Steps 1 to 3 are also improvements for goodluckOS itself. Step 4 needs testers with an original R36S or other RK3326 device: if that's you, open an issue!
+The portable folder looks like this: `puppy`, `puppy-run.sh`, `puppy.conf`, `assets/` (`Inter_24pt-Medium.ttf`, `fallback.png`), `lang/` (the `.lang` files) and an optional `apps/` folder of `*.puppy` files. So far it has been tested only on a PC with an ArkOS-style `es_systems.cfg`. Step 4 needs testers with an original R36S or other RK3326 device: if that's you, open an issue!
 
 ## Supported Devices
 - GA36-MB v1.2

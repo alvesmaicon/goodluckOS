@@ -19,27 +19,44 @@
 #include "i18n.h"
 
 #include <fcntl.h>
+#include <signal.h>
 #include <unistd.h>
 
 namespace fs = std::filesystem;
 using i18n::tr;
 
-static const char* kFontFile      = "/usr/share/fonts/Inter_24pt-Medium.ttf";
-static const char* kAppsFiles[]   = {"/usr/share/puppy/apps.puppy", "/home/player/apps.puppy"};
-static const char* kPuppyFiles[]   = {"/home/player/.local/share/applications"};
-static const char* kLaunchFile    = "/dev/shm/launch";
-static const char* kStateFile     = "/dev/shm/launcher_state";
-static const char* kAutoStartFile = "/home/player/autolaunch";
+// Files and commands, from puppy.conf (see loadConfig). The defaults are goodluckOS's own layout, so
+// goodluckOS needs no config file; on other firmwares a puppy.conf points Puppy at their files.
+struct Config {
+    std::string font          = "/usr/share/fonts/Inter_24pt-Medium.ttf";
+    std::string fallbackIcon  = "/usr/share/puppy/assets/fallback.png";
+    std::vector<std::string> apps     = {"/usr/share/puppy/apps.puppy", "/home/player/apps.puppy"};
+    std::vector<std::string> appsDirs = {"/home/player/.local/share/applications"};   // *.puppy files
+    std::vector<std::string> esSystems;     // EmulationStation es_systems.cfg files to take systems from
+    std::string launchFile    = "/dev/shm/launch";      // the picked command, run by the bootstrap
+    std::string stateFile     = "/dev/shm/launcher_state";
+    std::string autoStartFile = "/home/player/autolaunch";
+    std::string configDir     = "/home/player/.config/puppy";   // settings, favorites
+    std::string cacheDir      = "/home/player/.cache/puppy";    // downscaled covers
+    std::string langDir       = "/usr/share/goodluck/lang";
+    std::string language;                   // overrides the one in the settings file
+    std::string view, tabs;                 // defaults for the settings file's view= and tabs=
+    std::string powerFifo     = "/run/power-request";   // root power-manager.sh
+    std::string backlight     = "/sys/class/backlight/backlight/brightness";
+    std::string osdFile       = "/dev/shm/osd";  // "volume|brightness <percent> [muted]", from osd-notify.sh
+    // When set, these replace the System entries of apps.puppy and the power-manager.sh requests
+    std::string settingsCommand, restartCommand, shutdownCommand, screenOffCommand;
+    bool quit = false;      // a "Quit Puppy" power option, for when Puppy is started from another frontend
 
-static const char* kSettingsFile  = "/home/player/.config/puppy/settings";
-static const char* kFavoritesFile = "/home/player/.config/puppy/favorites";   // "category<TAB>id" lines
-static const char* kThumbCacheDir = "/home/player/.cache/puppy/thumbs";   // downscaled covers
+    std::string settingsFile() const  { return configDir + "/settings"; }
+    std::string favoritesFile() const { return configDir + "/favorites"; }   // "category<TAB>id" lines
+    std::string thumbDir() const      { return cacheDir + "/thumbs"; }
+};
+static Config cfg;
+
 static const char* kMyListName    = "My List";
 static const char* kMenuCategory  = "System";   // apps.puppy category taken out of the tabs
 static const char* kSettingsName  = "System Settings";   // entry of that category opened by START
-static const char* kPowerFifo     = "/run/power-request";   // root power-manager.sh
-static const char* kBacklight     = "/sys/class/backlight/backlight/brightness";
-static const char* kOsdFile       = "/dev/shm/osd";  // "volume|brightness <percent> [muted]", from osd-notify.sh
 
 constexpr int kScreenW              = 640;
 constexpr int kScreenH              = 480;
@@ -171,7 +188,7 @@ public:
 
     // Images larger than boxW x boxH are scaled down: cropped to cover the box, or with 'fit' shrunk
     // to fit inside it. Smaller images are kept at their size. Scaled images are saved in
-    // kThumbCacheDir, so big covers (e.g. 800x600 scraper images) are only decoded and scaled once.
+    // cfg.thumbDir(), so big covers (e.g. 800x600 scraper images) are only decoded and scaled once.
     IconCache(SDL_Renderer* r, const std::string& fallbackPath, int boxW, int boxH, bool fit)
         : renderer(r), boxW(boxW), boxH(boxH), fit(fit) {
         fallback = load(fallbackPath);
@@ -226,7 +243,7 @@ private:
                           std::to_string(boxW) + "x" + std::to_string(boxH) + (fit ? "f" : "c");
         char name[32];
         snprintf(name, sizeof(name), "%016zx.png", std::hash<std::string>{}(key));
-        return std::string(kThumbCacheDir) + "/" + name;
+        return cfg.thumbDir() + "/" + name;
     }
 
     Icon load(const std::string& path) {
@@ -270,7 +287,7 @@ private:
             result = out;
             if (!fromThumb) {
                 std::error_code ec;
-                fs::create_directories(kThumbCacheDir, ec);
+                fs::create_directories(cfg.thumbDir(), ec);
                 IMG_SavePNG(result, thumb.c_str());
             }
         }
@@ -320,6 +337,16 @@ struct Category {
 
 enum class View { Grid, List };
 
+// One action of the POWER menu (see powerItems).
+struct PowerItem {
+    const char* label;
+    const char* request;    // for the root power-manager.sh (nullptr: none)
+    const char* status;     // shown while it happens (nullptr: nothing to wait for)
+    const char* confirmEntry;   // System entry to launch (nullptr: none)
+    const std::string* command; // puppy.conf command (nullptr: none)
+    bool quit = false;      // leave Puppy without launching anything
+};
+
 struct Model {
     std::vector<Category> categories;
     int tab = 0;
@@ -337,6 +364,7 @@ struct Model {
     bool hasSettings = false;
     std::vector<Entry> systemEntries;   // the System category, e.g. Reboot/Power Off with their are-you-sure
     bool menuOpen = false;
+    std::vector<PowerItem> menuItems;   // filled when the menu opens
     int menuSel = 0;
     std::string status;     // full-screen message while restarting / shutting down
     int descScroll = 0;     // lines the list preview's description is scrolled (right stick)
@@ -418,6 +446,8 @@ struct Model {
 struct Archive {
     std::string name, tab, description, command, defaultIcon;
     std::vector<std::string> dirs, exts, iconDirs;
+    bool es = false;    // from es_systems.cfg: the command uses %ROM%-style placeholders
+    std::string system, emulator, core;     // for %SYSTEM%, %EMULATOR% and %CORE%
 };
 
 struct Record {
@@ -501,6 +531,121 @@ static void parseAppsFile(const std::string& path, std::vector<Record>& records)
         kv[upper(trim(line.substr(0, eq)))] = trim(line.substr(eq + 1));
     }
     flush();
+}
+
+static std::string homeDir() {
+    const char* home = getenv("HOME");
+    return home && *home ? home : "/root";
+}
+
+// "~/x" -> "$HOME/x"
+static std::string expandHome(const std::string& path) {
+    if (path == "~" || path.compare(0, 2, "~/") == 0) return homeDir() + path.substr(1);
+    return path;
+}
+
+// Short tab labels for EmulationStation's usual system names; other systems show their full name.
+static std::string esTabLabel(const std::string& name, const std::string& fullname) {
+    static const std::map<std::string, std::string> kLabels = {
+        {"3do", "3DO"}, {"amiga", "Amiga"}, {"arcade", "Arcade"}, {"atari2600", "2600"}, {"atari7800", "7800"},
+        {"atarilynx", "Lynx"}, {"cps1", "CPS1"}, {"cps2", "CPS2"}, {"cps3", "CPS3"}, {"dreamcast", "DC"},
+        {"famicom", "FC"}, {"fbneo", "FBNeo"}, {"fds", "FDS"}, {"gamegear", "GG"}, {"gb", "GB"}, {"gba", "GBA"},
+        {"gbc", "GBC"}, {"genesis", "Genesis"}, {"mame", "MAME"}, {"mastersystem", "SMS"}, {"megadrive", "MD"},
+        {"msx", "MSX"}, {"n64", "N64"}, {"nds", "NDS"}, {"neogeo", "Neo Geo"}, {"nes", "NES"}, {"ngp", "NGP"},
+        {"ngpc", "NGPC"}, {"pcengine", "PCE"}, {"pico8", "PICO-8"}, {"ports", "Ports"}, {"psp", "PSP"},
+        {"psx", "PS1"}, {"saturn", "Saturn"}, {"sega32x", "32X"}, {"segacd", "Sega CD"}, {"sfc", "SFC"},
+        {"snes", "SNES"}, {"tg16", "TG16"}, {"wonderswan", "WS"}, {"wonderswancolor", "WSC"},
+    };
+    auto it = kLabels.find(lower(name));
+    return it != kLabels.end() ? it->second : (fullname.empty() ? name : fullname);
+}
+
+// Text of <tag>...</tag> inside one <game> block.
+static std::string xmlTag(const std::string& block, const std::string& tag);
+
+// Adds the systems of an EmulationStation es_systems.cfg as archives (one tab per system with games).
+static void parseEsSystems(const std::string& path, std::vector<Record>& records) {
+    std::ifstream in(path, std::ios::binary);
+    if (!in) return;
+    std::string xml((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    // drop comments, so commented-out systems stay out
+    for (size_t a; (a = xml.find("<!--")) != std::string::npos;) {
+        size_t b = xml.find("-->", a);
+        xml.erase(a, b == std::string::npos ? std::string::npos : b + 3 - a);
+    }
+
+    for (size_t pos = 0; (pos = xml.find("<system>", pos)) != std::string::npos;) {
+        size_t end = xml.find("</system>", pos);
+        if (end == std::string::npos) break;
+        const std::string block = xml.substr(pos, end - pos);
+        pos = end + 9;
+
+        Record rec;
+        rec.isArchive = true;
+        Archive& a = rec.archive;
+        a.es = true;
+        a.system = xmlTag(block, "name");
+        const std::string fullname = xmlTag(block, "fullname");
+        a.name = fullname.empty() ? a.system : fullname;
+        a.tab = esTabLabel(a.system, fullname);
+        a.description = fullname;
+        a.command = xmlTag(block, "command");
+        const std::string dir = expandHome(xmlTag(block, "path"));
+        if (a.name.empty() || dir.empty() || a.command.empty()) continue;
+        a.dirs = {dir};
+        a.iconDirs = {dir + "/icons"};
+        // ".nes .NES .zip"
+        std::string ext;
+        for (char c : xmlTag(block, "extension") + " ") {
+            if (std::isspace((unsigned char)c)) {
+                if (!ext.empty() && std::find(a.exts.begin(), a.exts.end(), lower(ext)) == a.exts.end())
+                    a.exts.push_back(lower(ext));
+                ext.clear();
+            } else {
+                ext += c;
+            }
+        }
+        // ES forks with an emulator/core choice: use the first (default) ones
+        size_t em = block.find("<emulator ");
+        if (em != std::string::npos) {
+            size_t q1 = block.find("name=\"", em), close = block.find('>', em);
+            if (q1 != std::string::npos && q1 < close) {
+                q1 += 6;
+                a.emulator = block.substr(q1, block.find('"', q1) - q1);
+            }
+            a.core = xmlTag(block.substr(em), "core");
+        }
+        upsert(records, rec);
+    }
+}
+
+// An es_systems.cfg command for one ROM. %ROM% is quoted for the shell; placeholders Puppy doesn't
+// know (e.g. %GOVERNOR%) are removed.
+static std::string buildEsCommand(const Archive& a, const fs::path& rom) {
+    const std::map<std::string, std::string> values = {
+        {"ROM", shellQuote(rom.string())}, {"ROM_RAW", rom.string()}, {"BASENAME", rom.stem().string()},
+        {"SYSTEM", a.system}, {"EMULATOR", a.emulator}, {"CORE", a.core}, {"HOME", homeDir()},
+    };
+    std::string out;
+    for (size_t i = 0; i < a.command.size();) {
+        if (a.command[i] == '%') {
+            size_t j = a.command.find('%', i + 1);
+            if (j != std::string::npos) {
+                const std::string key = a.command.substr(i + 1, j - i - 1);
+                bool placeholder = !key.empty() && std::all_of(key.begin(), key.end(), [](char c) {
+                    return std::isupper((unsigned char)c) || c == '_';
+                });
+                if (placeholder) {
+                    auto it = values.find(key);
+                    if (it != values.end()) out += it->second;
+                    i = j + 1;
+                    continue;
+                }
+            }
+        }
+        out += a.command[i++];
+    }
+    return out;
 }
 
 static std::string buildArchiveCommand(const std::string& tmpl, const std::string& path) {
@@ -674,7 +819,7 @@ static std::vector<Entry> expandArchive(const Archive& a) {
             e.id          = p.stem().string();
             e.name        = e.id;
             e.description = a.description;
-            e.command     = buildArchiveCommand(a.command, p.string());
+            e.command     = a.es ? buildEsCommand(a, p) : buildArchiveCommand(a.command, p.string());
             // Cover: the icons folder wins (small, hand-picked), then the gamelist's image
             e.iconPath    = findArchiveIcon(a, e.id);
 
@@ -715,17 +860,19 @@ static void addToCategory(std::vector<Category>& cats, const Entry& e) {
 
 static std::vector<Category> loadCatalog() {
     std::vector<Record> records;
-    for (const char* path : kAppsFiles) parseAppsFile(path, records);
+    for (const auto& path : cfg.apps) parseAppsFile(path, records);
 
-    //parse indiviual .puppy files in ~/.local/share/applications
-    for (const auto& path : kPuppyFiles) {
-        if (!fs::exists(path) || !fs::is_directory(path)) continue;
-        for (const auto& entry : fs::directory_iterator(path)) {
+    // individual .puppy files, e.g. in ~/.local/share/applications
+    for (const auto& path : cfg.appsDirs) {
+        std::error_code ec;
+        if (!fs::is_directory(path, ec)) continue;
+        for (const auto& entry : fs::directory_iterator(path, ec)) {
             if (entry.path().extension() == ".puppy") {
                 parseAppsFile(entry.path().string(), records);
             }
         }
     }
+    for (const auto& path : cfg.esSystems) parseEsSystems(path, records);
 
     std::vector<Category> cats;
     std::map<std::string, std::string> archiveTabs;
@@ -746,17 +893,17 @@ static std::vector<Category> loadCatalog() {
 }
 
 static void writeAutoStart(const Entry& e) {
-    std::ofstream out(kAutoStartFile);
+    std::ofstream out(cfg.autoStartFile);
     if (out) out << "# " << e.category << "\t" << e.id << "\n" << e.command << "\n";
 }
 
 static void clearAutoStart() {
     std::error_code ec;
-    fs::remove(kAutoStartFile, ec);
+    fs::remove(cfg.autoStartFile, ec);
 }
 
 static bool readAutoStartId(std::string& category, std::string& name) {
-    std::ifstream in(kAutoStartFile);
+    std::ifstream in(cfg.autoStartFile);
     std::string line;
     if (!in || !std::getline(in, line) || line.compare(0, 2, "# ") != 0) return false;
     size_t tab = line.find('\t', 2);
@@ -781,13 +928,13 @@ static void toggleAutoStart(Model& m) {
 }
 
 static void launch(const Model& m, const Entry& e) {
-    { std::ofstream out(kLaunchFile); if (out) out << e.command << "\n"; }
-    std::ofstream state(kStateFile);
+    { std::ofstream out(cfg.launchFile); if (out) out << e.command << "\n"; }
+    std::ofstream state(cfg.stateFile);
     if (state) state << m.cur().name << "\n" << e.category << "\n" << e.id << "\n";
 }
 
 static void restoreCursor(Model& m) {
-    std::ifstream in(kStateFile);
+    std::ifstream in(cfg.stateFile);
     std::string tabName, category, name;
     if (!in || !std::getline(in, tabName) || !std::getline(in, category)) return;
     if (!std::getline(in, name)) {   // older two-line format: category, name
@@ -823,7 +970,7 @@ static void addAllGamesTab(Model& m) {
 }
 
 static void loadFavorites(Model& m) {
-    std::ifstream in(kFavoritesFile);
+    std::ifstream in(cfg.favoritesFile());
     for (std::string line; std::getline(in, line);) {
         if (line.find('\t') != std::string::npos) m.favorites.insert(line);
     }
@@ -831,14 +978,14 @@ static void loadFavorites(Model& m) {
 
 static void saveFavorites(const Model& m) {
     std::error_code ec;
-    fs::create_directories(fs::path(kFavoritesFile).parent_path(), ec);
-    const std::string tmp = std::string(kFavoritesFile) + ".tmp";
+    fs::create_directories(cfg.configDir, ec);
+    const std::string tmp = cfg.favoritesFile() + ".tmp";
     {
         std::ofstream out(tmp);
         if (!out) return;
         for (const auto& key : m.favorites) out << key << "\n";
     }
-    fs::rename(tmp, kFavoritesFile, ec);
+    fs::rename(tmp, cfg.favoritesFile(), ec);
 }
 
 static int myListTab(const Model& m) {
@@ -906,25 +1053,54 @@ static void extractSystemMenu(Model& m) {
     m.categories.erase(sys);
 }
 
-// The POWER menu. Restart and Shut down open the System entry of the same action, which asks for
-// confirmation (are-you-sure); the request below is only used if apps.puppy has no such entry.
-struct PowerItem {
-    const char* label;
-    const char* request;    // for the root power-manager.sh
-    const char* status;     // shown while it happens (nullptr: nothing to wait for)
-    const char* confirmEntry;   // System entry to launch instead (nullptr: act right away)
-};
-static const PowerItem kPowerItems[] = {
-    {"Display off", "screen-off", nullptr, nullptr},
-    {"Restart", "reboot", "Restarting...", "Reboot"},
-    {"Shut down", "poweroff", "Shutting down...", "Power Off"},
-};
-constexpr int kPowerItemCount = sizeof(kPowerItems) / sizeof(kPowerItems[0]);
+// puppy.conf's settings_command replaces the System Settings entry.
+static void applySettingsCommand(Model& m) {
+    if (cfg.settingsCommand.empty()) return;
+    m.settings = Entry();
+    m.settings.category = kMenuCategory;
+    m.settings.name = m.settings.id = kSettingsName;
+    m.settings.command = cfg.settingsCommand;
+    m.hasSettings = true;
+}
+
+// The POWER menu. Each action, in order of preference: the puppy.conf command (run in the
+// background); the System entry of apps.puppy (launched, so Reboot/Power Off ask for confirmation
+// with are-you-sure); the request for the root power-manager.sh. Actions with none are left out.
+static std::vector<PowerItem> powerItems(const Model& m) {
+    std::error_code ec;
+    const bool fifo = fs::exists(cfg.powerFifo, ec);
+    const PowerItem all[] = {
+        {"Display off", "screen-off", nullptr, nullptr, &cfg.screenOffCommand},
+        {"Restart", "reboot", "Restarting...", "Reboot", &cfg.restartCommand},
+        {"Shut down", "poweroff", "Shutting down...", "Power Off", &cfg.shutdownCommand},
+        {"Quit Puppy", nullptr, nullptr, nullptr, nullptr, true},
+    };
+    std::vector<PowerItem> items;
+    for (const PowerItem& item : all) {
+        bool entry = item.confirmEntry && std::any_of(m.systemEntries.begin(), m.systemEntries.end(),
+                                                      [&](const Entry& e) { return e.name == item.confirmEntry; });
+        bool available = item.quit ? cfg.quit
+                       : !item.command->empty() || entry || (item.request && fifo);
+        if (available) items.push_back(item);
+    }
+    return items;
+}
+
+// Runs a shell command without waiting for it (screen off, restart... from puppy.conf).
+static void runDetached(const std::string& command) {
+    signal(SIGCHLD, SIG_IGN);   // no zombies
+    pid_t pid = fork();
+    if (pid == 0) {
+        setsid();
+        execl("/bin/sh", "sh", "-c", command.c_str(), (char*)nullptr);
+        _exit(127);
+    }
+}
 
 // Non-blocking: if power-manager.sh isn't reading (e.g. being respawned), drop the request rather
 // than freeze the launcher.
 static void sendPowerRequest(const char* request) {
-    int fd = open(kPowerFifo, O_WRONLY | O_NONBLOCK);
+    int fd = open(cfg.powerFifo.c_str(), O_WRONLY | O_NONBLOCK);
     if (fd < 0) return;
     std::string line = std::string(request) + "\n";
     ssize_t written = write(fd, line.c_str(), line.size());
@@ -933,16 +1109,21 @@ static void sendPowerRequest(const char* request) {
 }
 
 static bool screenOn() {
-    std::ifstream in(kBacklight);
+    std::ifstream in(cfg.backlight);
     int level = 1;
     in >> level;
     return level > 0;
 }
 
-// Launcher options, set in System Settings: "view=grid|list" and "tabs=on|off".
+// Launcher options, set in System Settings: "view=grid|list" and "tabs=on|off" (puppy.conf can give
+// the defaults).
 static void loadSettings(Model& m) {
-    std::ifstream in(kSettingsFile);
-    for (std::string line; std::getline(in, line);) {
+    std::vector<std::string> lines;
+    if (!cfg.view.empty()) lines.push_back("view=" + cfg.view);
+    if (!cfg.tabs.empty()) lines.push_back("tabs=" + cfg.tabs);
+    std::ifstream in(cfg.settingsFile());
+    for (std::string line; std::getline(in, line);) lines.push_back(line);
+    for (std::string line : lines) {
         line = trim(line);
         if (line == "view=list") m.view = View::List;
         else if (line == "view=grid") m.view = View::Grid;
@@ -972,7 +1153,7 @@ struct Osd {
     bool muted = false;
 
     void read() {
-        std::ifstream in(kOsdFile);
+        std::ifstream in(cfg.osdFile);
         std::string flag;
         if (!(in >> kind >> percent)) { kind.clear(); return; }
         muted = (in >> flag) && flag == "muted";
@@ -1057,15 +1238,16 @@ public:
         SDL_RenderSetLogicalSize(renderer, kScreenW, kScreenH);
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
-        uiFont    = TTF_OpenFont(kFontFile, 22);
-        titleFont = TTF_OpenFont(kFontFile, 30);
-        descFont  = TTF_OpenFont(kFontFile, 20);
-        smallFont = TTF_OpenFont(kFontFile, 15);
+        const char* font = cfg.font.c_str();
+        uiFont    = TTF_OpenFont(font, 22);
+        titleFont = TTF_OpenFont(font, 30);
+        descFont  = TTF_OpenFont(font, 20);
+        smallFont = TTF_OpenFont(font, 15);
         if (!uiFont || !titleFont || !descFont || !smallFont)
-            std::cerr << "Warning: could not load font " << kFontFile << "\n";
+            std::cerr << "Warning: could not load font " << cfg.font << "\n";
 
-        gridIcons    = std::make_unique<IconCache>(renderer, "/usr/share/puppy/assets/fallback.png", kCellWidth, kCellHeight, false);
-        previewIcons = std::make_unique<IconCache>(renderer, "/usr/share/puppy/assets/fallback.png", kPreviewW, kPreviewH, true);
+        gridIcons    = std::make_unique<IconCache>(renderer, cfg.fallbackIcon, kCellWidth, kCellHeight, false);
+        previewIcons = std::make_unique<IconCache>(renderer, cfg.fallbackIcon, kPreviewW, kPreviewH, true);
         ok_ = true;
     }
 
@@ -1539,7 +1721,8 @@ private:
         const int pad = 12, rowH = 40;
         const int titleH = TTF_FontHeight(uiFont) + 14;
         const int panelW = 320;
-        const int panelH = titleH + kPowerItemCount * rowH + 2 * pad;
+        const int count = (int)m.menuItems.size();
+        const int panelH = titleH + count * rowH + 2 * pad;
         const int bodyY = bodyTop(m.showTabs);
         SDL_Rect panel{(kScreenW - panelW) / 2, bodyY + (kScreenH - kFooterH - bodyY - panelH) / 2, panelW, panelH};
         fill({0, 0, 0, 150}, {0, kHeaderH, kScreenW, kScreenH - kFooterH - kHeaderH});   // dim the tab behind
@@ -1548,14 +1731,14 @@ private:
         drawText(renderer, uiFont, tr("Power options"), panel.x + pad + 4, panel.y + pad, kWhite);
 
         const int fontH = TTF_FontHeight(descFont);
-        for (int i = 0; i < kPowerItemCount; ++i) {
+        for (int i = 0; i < count; ++i) {
             SDL_Rect r{panel.x + pad, panel.y + pad + titleH + i * rowH, panelW - 2 * pad, rowH - 4};
             bool sel = i == m.menuSel;
             if (sel) {
                 fill(kRowSel, r);
                 fill(kYellow, {r.x, r.y, 4, r.h});
             }
-            drawText(renderer, descFont, tr(kPowerItems[i].label), r.x + 16, r.y + (r.h - fontH) / 2,
+            drawText(renderer, descFont, tr(m.menuItems[i].label), r.x + 16, r.y + (r.h - fontH) / 2,
                      sel ? kWhite : kGrey, r.w - 24);
         }
     }
@@ -1660,22 +1843,91 @@ static Action actionFromButton(Uint8 b) {
     }
 }
 
-int main() {
-    i18n::loadConfigured();
+// Reads puppy.conf: "key = value" lines, "#" comments, lists separated by ";". Relative paths are
+// relative to the file, "~/" is the home folder. The file is the one given with --config, else
+// $PUPPY_CONFIG, else /etc/puppy.conf; without one, the goodluckOS defaults stay.
+static bool loadConfig(int argc, char** argv) {
+    std::string path;
+    for (int i = 1; i < argc; ++i) {
+        const std::string arg = argv[i];
+        if ((arg == "--config" || arg == "-c") && i + 1 < argc) path = argv[++i];
+        else if (arg.compare(0, 9, "--config=") == 0) path = arg.substr(9);
+        else { std::cerr << "Usage: puppy [--config puppy.conf]\n"; return false; }
+    }
+    const bool given = !path.empty() || getenv("PUPPY_CONFIG");
+    if (path.empty() && getenv("PUPPY_CONFIG")) path = getenv("PUPPY_CONFIG");
+    if (path.empty()) path = "/etc/puppy.conf";
+
+    std::ifstream in(path);
+    if (!in) {
+        if (given) { std::cerr << "Can't read " << path << "\n"; return false; }
+        return true;
+    }
+    const fs::path base = fs::absolute(fs::path(path)).parent_path();
+    auto file = [&](const std::string& v) {
+        if (v.empty()) return v;
+        const std::string p = expandHome(v);
+        return p[0] == '/' ? p : (base / p).lexically_normal().string();
+    };
+    auto files = [&](const std::string& v) {
+        std::vector<std::string> out;
+        for (const auto& item : splitList(v)) out.push_back(file(item));
+        return out;
+    };
+    std::map<std::string, std::string*> paths = {
+        {"font", &cfg.font}, {"fallback_icon", &cfg.fallbackIcon}, {"launch_file", &cfg.launchFile},
+        {"state_file", &cfg.stateFile}, {"autolaunch_file", &cfg.autoStartFile}, {"config_dir", &cfg.configDir},
+        {"cache_dir", &cfg.cacheDir}, {"lang_dir", &cfg.langDir}, {"power_fifo", &cfg.powerFifo},
+        {"backlight", &cfg.backlight}, {"osd_file", &cfg.osdFile},
+    };
+    std::map<std::string, std::string*> texts = {
+        {"language", &cfg.language}, {"view", &cfg.view}, {"tabs", &cfg.tabs},
+        {"settings_command", &cfg.settingsCommand}, {"restart_command", &cfg.restartCommand},
+        {"shutdown_command", &cfg.shutdownCommand}, {"screen_off_command", &cfg.screenOffCommand},
+    };
+    std::map<std::string, std::vector<std::string>*> lists = {
+        {"apps", &cfg.apps}, {"apps_dirs", &cfg.appsDirs}, {"es_systems", &cfg.esSystems},
+    };
+
+    int lineNo = 0;
+    for (std::string line; std::getline(in, line);) {
+        ++lineNo;
+        line = trim(line);
+        if (line.empty() || line[0] == '#') continue;
+        size_t eq = line.find('=');
+        if (eq == std::string::npos) { std::cerr << path << ":" << lineNo << ": expected key = value\n"; continue; }
+        const std::string key = lower(trim(line.substr(0, eq))), value = trim(line.substr(eq + 1));
+        if (auto it = paths.find(key); it != paths.end()) *it->second = file(value);
+        else if (auto it = texts.find(key); it != texts.end()) *it->second = value;
+        else if (auto it = lists.find(key); it != lists.end()) *it->second = files(value);
+        else if (key == "quit") cfg.quit = value == "on" || value == "yes" || value == "true" || value == "1";
+        else std::cerr << path << ":" << lineNo << ": unknown setting " << key << "\n";
+    }
+    return true;
+}
+
+int main(int argc, char** argv) {
+    if (!loadConfig(argc, argv)) return 2;
+    i18n::langDirPath() = cfg.langDir;
+    i18n::settingsPath() = cfg.settingsFile();
+    if (!cfg.language.empty()) i18n::load(cfg.language);
+    else i18n::loadConfigured();
+
     Model model;
     model.categories = loadCatalog();
     if (model.categories.empty()) {
-        std::cerr << "No entries found in apps.puppy files!\n";
+        std::cerr << "Nothing to show: no entries in the apps files and no games in the es_systems.cfg systems\n";
         return 1;
     }
     for (auto& c : model.categories)
         for (auto& e : c.entries) e.searchKey = lower(e.id == e.name ? e.name : e.name + " " + e.id);
     extractSystemMenu(model);
+    applySettingsCommand(model);
     addAllGamesTab(model);   // first tab, and the one shown at boot
     loadFavorites(model);
     addMyListTab(model);
     if (model.categories.empty()) {
-        std::cerr << "No entries found in apps.puppy files!\n";
+        std::cerr << "Nothing to show\n";
         return 1;
     }
 
@@ -1723,13 +1975,22 @@ int main() {
         if (!model.status.empty()) return;   // restarting / shutting down
 
         if (model.menuOpen) {
-            const int n = kPowerItemCount;
+            const int n = (int)model.menuItems.size();
             switch (a) {
                 case Action::Up:     model.menuSel = (model.menuSel + n - 1) % n; break;
                 case Action::Down:   model.menuSel = (model.menuSel + 1) % n;     break;
                 case Action::Launch: {
-                    const PowerItem& item = kPowerItems[model.menuSel];
+                    const PowerItem item = model.menuItems[model.menuSel];
                     model.menuOpen = false;
+                    if (item.quit) {
+                        running = false;
+                        break;
+                    }
+                    if (item.command && !item.command->empty()) {
+                        if (item.status) model.status = tr(item.status);
+                        runDetached(*item.command);
+                        break;
+                    }
                     if (item.confirmEntry) {
                         auto confirm = std::find_if(model.systemEntries.begin(), model.systemEntries.end(),
                                                     [&](const Entry& e) { return e.name == item.confirmEntry; });
@@ -1740,7 +2001,7 @@ int main() {
                         }
                     }
                     if (item.status) model.status = tr(item.status);
-                    sendPowerRequest(item.request);
+                    if (item.request) sendPowerRequest(item.request);
                     break;
                 }
                 case Action::Back:
@@ -1749,19 +2010,27 @@ int main() {
             }
             return;
         }
+        auto openMenu = [&]() {
+            model.menuItems = powerItems(model);
+            if (model.menuItems.empty()) return;
+            kb.open = false;
+            model.menuOpen = true;
+            model.menuSel = 0;
+        };
         if (a == Action::Power) {
             // with the screen off, toggle-screen.sh turns it back on; don't open a menu in the dark
-            if (screenOn()) {
-                kb.open = false;
-                model.menuOpen = true;
-                model.menuSel = 0;
-            }
+            if (screenOn()) openMenu();
             return;
         }
-        if (a == Action::Start && !kb.open && model.hasSettings) {
-            launch(model, model.settings);
-            running = false;
-            return;
+        if (a == Action::Start && !kb.open) {
+            if (model.hasSettings) {
+                launch(model, model.settings);
+                running = false;
+                return;
+            }
+            // no settings app (e.g. on other firmwares, where POWER may suspend): START opens the menu
+            openMenu();
+            if (model.menuOpen) return;
         }
 
         switch (a) {
