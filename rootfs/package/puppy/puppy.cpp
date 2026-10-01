@@ -347,7 +347,11 @@ static void parseAppsFile(const std::string& path, std::vector<Record>& records)
             rec.entry.description = get("DESCRIPTION");
             rec.entry.command     = get("COMMAND");
             rec.entry.iconPath    = get("ICON");
-            if (!rec.entry.name.empty() && !rec.entry.command.empty()) upsert(records, rec);
+            // HIDE_IF_EXISTS=<path>: one-time entries (e.g. Resize Home) disappear once their job is done
+            std::error_code ec;
+            const std::string hideIf = get("HIDE_IF_EXISTS");
+            bool hidden = !hideIf.empty() && fs::exists(hideIf, ec);
+            if (!hidden && !rec.entry.name.empty() && !rec.entry.command.empty()) upsert(records, rec);
         } else if (section == "ARCHIVE") {
             Record rec;
             rec.isArchive = true;

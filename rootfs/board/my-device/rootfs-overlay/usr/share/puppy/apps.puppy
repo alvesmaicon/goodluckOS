@@ -22,9 +22,10 @@ ICON=/usr/share/icons/system-settings.png
 [ENTRY]
 CATEGORY=System
 NAME=Resize Home
-DESCRIPTION=Resize your HOME partition
+DESCRIPTION=Resize your HOME partition (also in System Settings)
 COMMAND=resize-home
 ICON=/usr/share/icons/resize-home.png
+HIDE_IF_EXISTS=/etc/player-flags/.home_resize_status
 
 [ENTRY]
 CATEGORY=Emulators/Frontends
