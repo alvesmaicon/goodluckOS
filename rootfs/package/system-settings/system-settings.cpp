@@ -10,7 +10,7 @@
 #include <alsa/asoundlib.h>
 
 const char* ALSA_MIXER_NAME = "Headphone";
-const char* ALSA_CARD = "GA36mbAudio";
+const char* ALSA_CARD = "hw:GA36mbAudio";
 
 int get_brightness() {
     std::ifstream file("/sys/class/backlight/backlight/brightness");
@@ -18,7 +18,7 @@ int get_brightness() {
     if (file.is_open()) {
         file >> brightness;
     }
-    return std::clamp(brightness, 1, 10);
+    return std::max(1, std::min(brightness, 10));
 }
 void set_brightness(int brightness) {
     std::ofstream file("/sys/class/backlight/backlight/brightness");
