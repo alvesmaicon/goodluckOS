@@ -287,6 +287,7 @@ struct Model {
     // START opens System Settings; POWER opens the power menu (both from any tab)
     Entry settings;
     bool hasSettings = false;
+    std::vector<Entry> systemEntries;   // the System category, e.g. Reboot/Power Off with their are-you-sure
     bool menuOpen = false;
     int menuSel = 0;
     std::string status;     // full-screen message while restarting / shutting down
@@ -649,19 +650,22 @@ static void extractSystemMenu(Model& m) {
     for (const Entry& e : sys->entries) {
         if (e.name == kSettingsName) { m.settings = e; m.hasSettings = true; }
     }
+    m.systemEntries = sys->entries;
     m.categories.erase(sys);
 }
 
-// The POWER menu. Each item is a request for the root power-manager.sh.
+// The POWER menu. Restart and Shut down open the System entry of the same action, which asks for
+// confirmation (are-you-sure); the request below is only used if apps.puppy has no such entry.
 struct PowerItem {
     const char* label;
-    const char* request;
+    const char* request;    // for the root power-manager.sh
     const char* status;     // shown while it happens (nullptr: nothing to wait for)
+    const char* confirmEntry;   // System entry to launch instead (nullptr: act right away)
 };
 static const PowerItem kPowerItems[] = {
-    {"Display off", "screen-off", nullptr},
-    {"Restart", "reboot", "Restarting..."},
-    {"Shut down", "poweroff", "Shutting down..."},
+    {"Display off", "screen-off", nullptr, nullptr},
+    {"Restart", "reboot", "Restarting...", "Reboot"},
+    {"Shut down", "poweroff", "Shutting down...", "Power Off"},
 };
 constexpr int kPowerItemCount = sizeof(kPowerItems) / sizeof(kPowerItems[0]);
 
@@ -1332,6 +1336,15 @@ int main() {
                 case Action::Launch: {
                     const PowerItem& item = kPowerItems[model.menuSel];
                     model.menuOpen = false;
+                    if (item.confirmEntry) {
+                        auto confirm = std::find_if(model.systemEntries.begin(), model.systemEntries.end(),
+                                                    [&](const Entry& e) { return e.name == item.confirmEntry; });
+                        if (confirm != model.systemEntries.end()) {
+                            launch(model, *confirm);
+                            running = false;
+                            break;
+                        }
+                    }
                     if (item.status) model.status = item.status;
                     sendPowerRequest(item.request);
                     break;
