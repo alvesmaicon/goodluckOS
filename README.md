@@ -65,7 +65,7 @@ Puppy uses a ini-formatted `apps.puppy` files to populate it's application list.
 
 Add a new entry by modifying the `apps.puppy` file in your HOME partition. Take a look at the comments at the top of that file for syntax/examples
 
-Each system and app category gets its own tab. Controls:
+Each system and app category gets its own tab, plus an "All Games" tab with every system's games. Controls:
 
 | Button | Action |
 |---|---|
@@ -76,6 +76,7 @@ Each system and app category gets its own tab. Controls:
 | X | Search by name with the on-screen keyboard (the search applies to every tab) |
 | B | Clear the search |
 | SELECT | Switch between grid and list view (remembered across reboots) |
+| START | Menu with the System entries: reboot, power off, System Settings |
 
 ## What's wrong with the stock firmware?
 Stock firmware:

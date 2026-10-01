@@ -23,6 +23,7 @@ static const char* kStateFile     = "/dev/shm/launcher_state";
 static const char* kAutoStartFile = "/home/player/autolaunch";
 
 static const char* kSettingsFile  = "/home/player/.config/puppy/settings";
+static const char* kMenuCategory  = "System";   // apps.puppy category shown in the START menu
 
 constexpr int kScreenW              = 640;
 constexpr int kScreenH              = 480;
@@ -273,6 +274,11 @@ struct Model {
     View view = View::Grid;
     std::string query;
     std::string autoCategory, autoName;   // the autolaunch entry
+
+    // START menu with the System entries (reboot, power off, settings...), reachable from any tab
+    std::vector<Entry> menu;
+    bool menuOpen = false;
+    int menuSel = 0;
 
     Category& cur() { return categories[tab]; }
     const Category& cur() const { return categories[tab]; }
@@ -595,7 +601,10 @@ static void restoreCursor(Model& m) {
         category = tabName;
     }
     int t, e;
-    if (m.find(tabName, category, name, t, e)) m.select(t, e);
+    if (m.find(tabName, category, name, t, e)) { m.select(t, e); return; }
+    // started from the START menu: just go back to the tab that was open
+    for (size_t i = 0; i < m.categories.size(); ++i)
+        if (m.categories[i].name == tabName) m.tab = (int)i;
 }
 
 // Prepends an "All Games" tab with the games of every system, sorted by name.
@@ -618,10 +627,16 @@ static void addAllGamesTab(Model& m) {
     });
     m.categories.insert(m.categories.begin(), std::move(all));
 
-    // The System tab goes last, so the ring of tabs shows it right before (left of) All Games
+}
+
+// Moves the System category out of the tabs into the START menu, so powering off or opening the
+// settings doesn't mean scrolling through every tab.
+static void extractSystemMenu(Model& m) {
     auto sys = std::find_if(m.categories.begin(), m.categories.end(),
-                            [](const Category& c) { return c.name == "System"; });
-    if (sys != m.categories.end()) std::rotate(sys, sys + 1, m.categories.end());
+                            [](const Category& c) { return c.name == kMenuCategory; });
+    if (sys == m.categories.end()) return;
+    m.menu = sys->entries;
+    m.categories.erase(sys);
 }
 
 static View loadView() {
@@ -739,6 +754,7 @@ public:
         renderHeader(m, battery);
         renderFooter(m, kb);
         if (kb.open) renderKeyboard(m, kb);
+        if (m.menuOpen) renderMenu(m);
 
         SDL_RenderPresent(renderer);
     }
@@ -920,12 +936,17 @@ private:
         fill(kBar, {0, top, kScreenW, kFooterH});
 
         std::vector<std::pair<std::string, std::string>> hints;
-        if (kb.open) {
+        if (m.menuOpen) {
+            hints = {{"A", "Select"}, {"B", "Close"}};
+        } else if (kb.open) {
             hints = {{"A", "Type"}, {"B", "Delete"}, {"START", "Done"}};
         } else {
-            hints = {{"L1", "Prev"}, {"R1", "Next"}, {"A", "Launch"}, {"Y", "Autolaunch"}, {"X", "Search"},
-                     {"SELECT", m.view == View::Grid ? "List" : "Grid"}};
-            if (!m.query.empty()) hints.push_back({"B", "Clear"});
+            hints = {{"L1", "Prev"}, {"R1", "Next"}, {"A", "Launch"}, {"Y", "Autolaunch"}};
+            // while searching, clearing the search is more useful than starting a new one
+            if (m.query.empty()) hints.push_back({"X", "Search"});
+            else hints.push_back({"B", "Clear"});
+            hints.push_back({"SELECT", m.view == View::Grid ? "List" : "Grid"});
+            if (!m.menu.empty()) hints.push_back({"START", "Menu"});
         }
 
         // Button in the highlight colour, followed by what it does
@@ -1044,6 +1065,30 @@ private:
                  kScreenH - kFooterH - TTF_FontHeight(smallFont) - 6, kGrey);
     }
 
+    void renderMenu(const Model& m) {
+        const int pad = 12, rowH = 40;
+        const int titleH = TTF_FontHeight(uiFont) + 14;
+        const int panelW = 320;
+        const int panelH = titleH + (int)m.menu.size() * rowH + 2 * pad;
+        SDL_Rect panel{(kScreenW - panelW) / 2, kBodyTop + (kScreenH - kFooterH - kBodyTop - panelH) / 2, panelW, panelH};
+        fill({0, 0, 0, 150}, {0, kHeaderH, kScreenW, kScreenH - kFooterH - kHeaderH});   // dim the tab behind
+        fill(kBar, panel);
+        frame(kTile, panel, 2);
+        drawText(renderer, uiFont, "Menu", panel.x + pad + 4, panel.y + pad, kWhite);
+
+        const int fontH = TTF_FontHeight(descFont);
+        for (int i = 0; i < (int)m.menu.size(); ++i) {
+            SDL_Rect r{panel.x + pad, panel.y + pad + titleH + i * rowH, panelW - 2 * pad, rowH - 4};
+            bool sel = i == m.menuSel;
+            if (sel) {
+                fill(kRowSel, r);
+                fill(kYellow, {r.x, r.y, 4, r.h});
+            }
+            drawText(renderer, descFont, m.menu[i].name, r.x + 16, r.y + (r.h - fontH) / 2,
+                     sel ? kWhite : kGrey, r.w - 24);
+        }
+    }
+
     void renderKeyboard(const Model& m, const Keyboard& kb) {
         const int pad = 12, gap = 4, keyW = 54, keyH = 40;
         const int queryH = TTF_FontHeight(uiFont) + 12;
@@ -1123,7 +1168,12 @@ int main() {
     }
     for (auto& c : model.categories)
         for (auto& e : c.entries) e.searchKey = lower(e.name);
+    extractSystemMenu(model);
     addAllGamesTab(model);   // first tab, and the one shown at boot
+    if (model.categories.empty()) {
+        std::cerr << "No entries found in apps.puppy files!\n";
+        return 1;
+    }
 
     model.view = loadView();
     model.applyFilter();
@@ -1160,6 +1210,28 @@ int main() {
 
     auto apply = [&](Action a) {
         const bool grid = model.view == View::Grid;
+
+        if (model.menuOpen) {
+            const int n = (int)model.menu.size();
+            switch (a) {
+                case Action::Up:     model.menuSel = (model.menuSel + n - 1) % n; break;
+                case Action::Down:   model.menuSel = (model.menuSel + 1) % n;     break;
+                case Action::Launch:
+                    launch(model, model.menu[model.menuSel]);
+                    running = false;
+                    break;
+                case Action::Back:
+                case Action::Start:  model.menuOpen = false; break;
+                default: break;
+            }
+            return;
+        }
+        if (a == Action::Start && !kb.open && !model.menu.empty()) {
+            model.menuOpen = true;
+            model.menuSel = 0;
+            return;
+        }
+
         switch (a) {
             case Action::PrevTab:    model.switchTab(-1); return;
             case Action::NextTab:    model.switchTab(1);  return;
