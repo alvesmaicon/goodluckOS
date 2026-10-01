@@ -28,6 +28,8 @@ constexpr int kScreenW              = 640;
 constexpr int kScreenH              = 480;
 
 constexpr int kHeaderH              = 44;
+constexpr int kTabsH                = 30;   // tab strip under the header
+constexpr int kBodyTop              = kHeaderH + kTabsH;
 constexpr int kFooterH              = 30;
 constexpr int kMargin               = 16;
 constexpr int kBorder               = 3;
@@ -37,12 +39,12 @@ constexpr int kCellWidth            = 192;
 constexpr int kCellHeight           = 128;
 constexpr int kGridCols             = 3;
 constexpr int kGridGap              = 16;
-constexpr int kGridTop              = kHeaderH + 12;
+constexpr int kGridTop              = kBodyTop + 8;
 constexpr int kGridPitchY           = kCellHeight + kGridGap;
 constexpr int kGridFullRows         = 2;    // rows kept fully visible above the title area
 
 // List view: names on the left, a preview of the selected entry on the right.
-constexpr int kListTop              = kHeaderH + 8;
+constexpr int kListTop              = kBodyTop + 6;
 constexpr int kListRowH             = 32;
 constexpr int kListRows             = (kScreenH - kFooterH - kListTop - 4) / kListRowH;
 constexpr int kListWidth            = 352;
@@ -253,6 +255,8 @@ struct Entry {
 // One tab of the launcher (a console or an apps category).
 struct Category {
     std::string name;
+    std::string label;          // short name for the tab strip (TAB= in apps.puppy), defaults to the name
+    bool isArchive = false;     // games from a ROM folder, as opposed to apps
     std::vector<Entry> entries;
     std::vector<int> visible;   // indices of the entries matching the search, in display order
     int sel = 0;                // position in 'visible'
@@ -336,7 +340,7 @@ struct Model {
 };
 
 struct Archive {
-    std::string name, description, command, defaultIcon;
+    std::string name, tab, description, command, defaultIcon;
     std::vector<std::string> dirs, exts, iconDirs;
 };
 
@@ -398,6 +402,7 @@ static void parseAppsFile(const std::string& path, std::vector<Record>& records)
             a.dirs        = splitList(get("ENTRY_DIRECTORIES"));
             a.exts        = splitList(get("ENTRY_EXTENSIONS"));
             a.iconDirs    = splitList(get("ENTRY_ICONS_DIRECTORIES"));
+            a.tab         = get("TAB");
             if (!a.name.empty() && !a.dirs.empty()) upsert(records, rec);
         }
         kv.clear();
@@ -495,7 +500,10 @@ static void addToCategory(std::vector<Category>& cats, const Entry& e) {
         c.entries.push_back(e);
         return;
     }
-    cats.push_back({e.category, {e}});
+    Category c;
+    c.name = e.category;
+    c.entries.push_back(e);
+    cats.push_back(std::move(c));
 }
 
 static std::vector<Category> loadCatalog() {
@@ -513,12 +521,19 @@ static std::vector<Category> loadCatalog() {
     }
 
     std::vector<Category> cats;
+    std::map<std::string, std::string> archiveTabs;
     for (const auto& rec : records) {
         if (rec.isArchive) {
+            archiveTabs[rec.archive.name] = rec.archive.tab;
             for (const auto& e : expandArchive(rec.archive)) addToCategory(cats, e);
         } else {
             addToCategory(cats, rec.entry);
         }
+    }
+    for (auto& c : cats) {
+        auto it = archiveTabs.find(c.name);
+        c.isArchive = it != archiveTabs.end();
+        c.label = (c.isArchive && !it->second.empty()) ? it->second : c.name;
     }
     return cats;
 }
@@ -767,21 +782,71 @@ private:
 
     void renderHeader(const Model& m, int battery) {
         fill(kBar, {0, 0, kScreenW, kHeaderH});
-        const int pillY = (kHeaderH - TTF_FontHeight(smallFont) - 4) / 2;
+        const Category& c = m.cur();
+        const int nameY = (kHeaderH - TTF_FontHeight(uiFont)) / 2;
 
         std::string bat = battery >= 0 ? std::to_string(battery) + "%" : "??";
         int batX = kScreenW - kMargin - textWidth(uiFont, bat);
-        drawText(renderer, uiFont, bat, batX, (kHeaderH - TTF_FontHeight(uiFont)) / 2, kWhite);
+        drawText(renderer, uiFont, bat, batX, nameY, kWhite);
 
-        int r1X = batX - 20 - (textWidth(smallFont, "R1") + 12);
-        pill("R1", r1X, pillY, kTile, kWhite);
-        std::string count = std::to_string(m.tab + 1) + "/" + std::to_string(m.categories.size());
-        int countX = r1X - 8 - textWidth(smallFont, count);
-        drawText(renderer, smallFont, count, countX, pillY + 2, kGrey);
+        // "686 games", or "12 of 686 games" while searching
+        std::string count = std::to_string(c.visible.size());
+        if (!m.query.empty()) count += " of " + std::to_string(c.entries.size());
+        count += c.isArchive ? (c.entries.size() == 1 ? " game" : " games") : (c.entries.size() == 1 ? " app" : " apps");
+        int countW = textWidth(smallFont, count);
 
-        int x = kMargin;
-        x += pill("L1", x, pillY, kTile, kWhite) + 10;
-        drawText(renderer, uiFont, m.cur().name, x, (kHeaderH - TTF_FontHeight(uiFont)) / 2, kWhite, countX - 10 - x);
+        int maxNameW = batX - 24 - countW - 10 - kMargin;
+        int nameW = std::min(textWidth(uiFont, c.name), maxNameW);
+        drawText(renderer, uiFont, c.name, kMargin, nameY, kWhite, maxNameW);
+        drawText(renderer, smallFont, count, kMargin + nameW + 10,
+                 nameY + TTF_FontAscent(uiFont) - TTF_FontAscent(smallFont), kGrey);
+
+        renderTabs(m);
+    }
+
+    // Strip with the neighbouring tabs around the current one and the L1/R1 buttons at the ends,
+    // so it's clear the shoulder buttons switch tabs.
+    void renderTabs(const Model& m) {
+        const int top = kHeaderH;
+        fill(kClear, {0, top, kScreenW, kTabsH});
+        fill(kTile, {0, top + kTabsH - 1, kScreenW, 1});
+        const int pillH = TTF_FontHeight(smallFont) + 4;
+        const int pillY = top + (kTabsH - pillH) / 2;
+
+        int l1W = pill("L1 \u2039", kMargin, pillY, kYellow, kBlack);
+        int r1W = textWidth(smallFont, "\u203a R1") + 12;
+        pill("\u203a R1", kScreenW - kMargin - r1W, pillY, kYellow, kBlack);
+        const int left = kMargin + l1W + 10, right = kScreenW - kMargin - r1W - 10;
+
+        const int n = (int)m.categories.size();
+        const int gap = 18, pad = 8;
+        auto width = [&](int t) { return textWidth(smallFont, m.categories[t].label) + 2 * pad; };
+
+        // Grow outwards from the current tab while the neighbours fit
+        int first = m.tab, last = m.tab, total = width(m.tab);
+        for (bool grew = true; grew;) {
+            grew = false;
+            if (last + 1 < n && total + gap + width(last + 1) <= right - left) { total += gap + width(++last); grew = true; }
+            if (first - 1 >= 0 && total + gap + width(first - 1) <= right - left) { total += gap + width(--first); grew = true; }
+        }
+
+        // Keep the current tab centred when there's room, otherwise pack against the edge
+        int curOffset = 0;
+        for (int t = first; t < m.tab; ++t) curOffset += width(t) + gap;
+        int x = (left + right) / 2 - width(m.tab) / 2 - curOffset;
+        x = std::clamp(x, left, right - total);
+
+        for (int t = first; t <= last; ++t) {
+            int w = width(t);
+            if (t == m.tab) {
+                fill(kRowSel, {x, pillY - 2, w, pillH + 4});
+                fill(kYellow, {x, pillY + pillH + 1, w, 2});
+                drawText(renderer, smallFont, m.categories[t].label, x + pad, pillY + 2, kWhite);
+            } else {
+                drawText(renderer, smallFont, m.categories[t].label, x + pad, pillY + 2, kGrey);
+            }
+            x += w + gap;
+        }
     }
 
     void renderFooter(const Model& m, const Keyboard& kb) {

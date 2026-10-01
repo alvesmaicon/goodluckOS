@@ -43,6 +43,7 @@ COMMAND=chocolate-doom
 
 [ARCHIVE]
 NAME=Playstation
+TAB=PS1
 Description=Sony Playstation
 ENTRY_DIRECTORIES=/home/player/roms/psx
 ENTRY_EXTENSIONS=bin;cue;chd;m3u;iso
@@ -52,6 +53,7 @@ COMMAND=retroarch -L /usr/lib/libretro/pcsx_rearmed_libretro.so %s
 
 [ARCHIVE]
 NAME=Game Boy (Color)
+TAB=GB/GBC
 Description=Game Boy / Game Boy Color
 ENTRY_DIRECTORIES=/home/player/roms/gb;/home/player/roms/gbc
 ENTRY_EXTENSIONS=gb;gbc;zip;7z
@@ -61,15 +63,17 @@ COMMAND=retroarch -L /usr/lib/libretro/gambatte_libretro.so %s
 
 [ARCHIVE]
 NAME=Super Nintendo
+TAB=SNES
 Description=SNES (Super Nintendo Entertainment System)
-ENTRY_DIRECTORIES=/home/player/roms/snes
+ENTRY_DIRECTORIES=/home/player/roms/snes;/home/player/roms/sfc
 ENTRY_EXTENSIONS=sfc;smc;zip;7z
-ENTRY_ICONS_DIRECTORIES=/home/player/roms/snes/icons
+ENTRY_ICONS_DIRECTORIES=/home/player/roms/snes/icons;/home/player/roms/sfc/icons
 DEFAULT_ICON=/usr/share/icons/snes.png
 COMMAND=retroarch -L /usr/lib/libretro/snes9x2005_libretro.so %s
 
 [ARCHIVE]
 NAME=Game Boy Advance
+TAB=GBA
 Description=GBA (Game Boy Advance)
 ENTRY_DIRECTORIES=/home/player/roms/gba
 ENTRY_EXTENSIONS=gba;zip;7z
@@ -79,15 +83,17 @@ COMMAND=retroarch -L /usr/lib/libretro/mgba_libretro.so %s
 
 [ARCHIVE]
 NAME=Nintendo Entertainment System
+TAB=NES
 Description=NES (Nintendo Entertainment System)
-ENTRY_DIRECTORIES=/home/player/roms/nes
+ENTRY_DIRECTORIES=/home/player/roms/nes;/home/player/roms/famicom
 ENTRY_EXTENSIONS=nes;fds;unf;unif;zip;7z
-ENTRY_ICONS_DIRECTORIES=/home/player/roms/nes/icons
+ENTRY_ICONS_DIRECTORIES=/home/player/roms/nes/icons;/home/player/roms/famicom/icons
 DEFAULT_ICON=/usr/share/icons/nes.png
 COMMAND=retroarch -L /usr/lib/libretro/fceumm_libretro.so %s
 
 [ARCHIVE]
 NAME=DOSBox
+TAB=DOS
 Description=DOS
 ENTRY_DIRECTORIES=/home/player/roms/dos
 ENTRY_EXTENSIONS=exe;com;bat;conf;
@@ -97,6 +103,7 @@ COMMAND=retroarch -L /usr/lib/libretro/dosbox_libretro.so %s
 
 [ARCHIVE]
 NAME=PSP
+TAB=PSP
 Description=PSP (Playstation Portable)
 ENTRY_DIRECTORIES=/home/player/roms/psp
 ENTRY_EXTENSIONS=iso;cso;chd
@@ -106,33 +113,37 @@ COMMAND=retroarch -L /usr/lib/libretro/ppsspp_libretro.so %s
 
 [ARCHIVE]
 NAME=Sega Genesis
+TAB=Genesis
 Description=Sega Genesis / Mega Drive
-ENTRY_DIRECTORIES=/home/player/roms/genesis
+ENTRY_DIRECTORIES=/home/player/roms/genesis;/home/player/roms/megadrive
 ENTRY_EXTENSIONS=md;smd;gen;bin;zip;7z
-ENTRY_ICONS_DIRECTORIES=/home/player/roms/genesis/icons
+ENTRY_ICONS_DIRECTORIES=/home/player/roms/genesis/icons;/home/player/roms/megadrive/icons
 DEFAULT_ICON=/usr/share/icons/genesis.png
 COMMAND=retroarch -L /usr/lib/libretro/genesis_plus_gx_libretro.so %s
 
 [ARCHIVE]
 NAME=Sega Master System
+TAB=SMS
 Description=Sega Master System (SMS)
-ENTRY_DIRECTORIES=/home/player/roms/sms
+ENTRY_DIRECTORIES=/home/player/roms/sms;/home/player/roms/mastersystem
 ENTRY_EXTENSIONS=sms;zip;7z
-ENTRY_ICONS_DIRECTORIES=/home/player/roms/sms/icons
+ENTRY_ICONS_DIRECTORIES=/home/player/roms/sms/icons;/home/player/roms/mastersystem/icons
 DEFAULT_ICON=/usr/share/icons/sms.png
 COMMAND=retroarch -L /usr/lib/libretro/genesis_plus_gx_libretro.so %s
 
 [ARCHIVE]
 NAME=Sega Game Gear
+TAB=Game Gear
 Description=Sega Game Gear (GG)
-ENTRY_DIRECTORIES=/home/player/roms/gg
+ENTRY_DIRECTORIES=/home/player/roms/gg;/home/player/roms/gamegear
 ENTRY_EXTENSIONS=gg;zip;7z
-ENTRY_ICONS_DIRECTORIES=/home/player/roms/gg/icons
+ENTRY_ICONS_DIRECTORIES=/home/player/roms/gg/icons;/home/player/roms/gamegear/icons
 DEFAULT_ICON=/usr/share/icons/gg.png
 COMMAND=retroarch -L /usr/lib/libretro/genesis_plus_gx_libretro.so %s
 
 [ARCHIVE]
 NAME=Sega CD
+TAB=Sega CD
 Description=Sega CD / Mega CD
 ENTRY_DIRECTORIES=/home/player/roms/segacd
 ENTRY_EXTENSIONS=cue;chd;iso
@@ -142,6 +153,7 @@ COMMAND=retroarch -L /usr/lib/libretro/genesis_plus_gx_libretro.so %s
 
 [ARCHIVE]
 NAME=Doom
+TAB=Doom
 Description=Doom WADs
 ENTRY_DIRECTORIES=/home/player/roms/doom
 ENTRY_EXTENSIONS=wad;iwad;
