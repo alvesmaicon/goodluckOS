@@ -65,14 +65,15 @@ Puppy uses a ini-formatted `apps.puppy` files to populate it's application list.
 
 Add a new entry by modifying the `apps.puppy` file in your HOME partition. Take a look at the comments at the top of that file for syntax/examples
 
-Each system and app category gets its own tab, plus an "All Games" tab with every system's games. Controls:
+Each system and app category gets its own tab, plus an "All Games" tab with every system's games and a "My List" tab with your favourites. Controls:
 
 | Button | Action |
 |---|---|
 | L1 / R1 | Previous / next tab |
 | D-pad | Move (hold to scroll). In list view, left/right jump a page |
 | A | Launch |
-| Y | Set / clear autolaunch |
+| Y | Add to / remove from My List (your favourites tab) |
+| SELECT | Set / clear autolaunch |
 | X | Search by name with the on-screen keyboard (the search applies to every tab) |
 | B | Clear the search |
 | START | System Settings |

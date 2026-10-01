@@ -10,6 +10,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -26,6 +27,8 @@ static const char* kStateFile     = "/dev/shm/launcher_state";
 static const char* kAutoStartFile = "/home/player/autolaunch";
 
 static const char* kSettingsFile  = "/home/player/.config/puppy/settings";
+static const char* kFavoritesFile = "/home/player/.config/puppy/favorites";   // "category<TAB>name" lines
+static const char* kMyListName    = "My List";
 static const char* kMenuCategory  = "System";   // apps.puppy category taken out of the tabs
 static const char* kSettingsName  = "System Settings";   // entry of that category opened by START
 static const char* kPowerFifo     = "/run/power-request";   // root power-manager.sh
@@ -286,6 +289,10 @@ struct Model {
     bool showTabs = true;
     std::string query;
     std::string autoCategory, autoName;   // the autolaunch entry
+    std::set<std::string> favorites;      // "category<TAB>name" of the entries in My List
+
+    static std::string favoriteKey(const Entry& e) { return e.category + "\t" + e.name; }
+    bool isFavorite(const Entry& e) const { return favorites.count(favoriteKey(e)) > 0; }
 
     // START opens System Settings; POWER opens the power menu (both from any tab)
     Entry settings;
@@ -641,7 +648,77 @@ static void addAllGamesTab(Model& m) {
         return l.searchKey < r.searchKey;
     });
     m.categories.insert(m.categories.begin(), std::move(all));
+}
 
+static void loadFavorites(Model& m) {
+    std::ifstream in(kFavoritesFile);
+    for (std::string line; std::getline(in, line);) {
+        if (line.find('\t') != std::string::npos) m.favorites.insert(line);
+    }
+}
+
+static void saveFavorites(const Model& m) {
+    std::error_code ec;
+    fs::create_directories(fs::path(kFavoritesFile).parent_path(), ec);
+    const std::string tmp = std::string(kFavoritesFile) + ".tmp";
+    {
+        std::ofstream out(tmp);
+        if (!out) return;
+        for (const auto& key : m.favorites) out << key << "\n";
+    }
+    fs::rename(tmp, kFavoritesFile, ec);
+}
+
+static int myListTab(const Model& m) {
+    for (size_t t = 0; t < m.categories.size(); ++t)
+        if (m.categories[t].name == kMyListName) return (int)t;
+    return -1;
+}
+
+// Fills My List with the favourite entries of every tab (except the mixed ones), sorted by name.
+static void rebuildMyList(Model& m) {
+    int t = myListTab(m);
+    if (t < 0) return;
+    std::vector<Entry> list;
+    for (const auto& c : m.categories) {
+        if (c.mixed) continue;
+        for (Entry e : c.entries) {
+            if (!m.isFavorite(e)) continue;
+            e.tag = c.label;
+            list.push_back(std::move(e));
+        }
+    }
+    std::stable_sort(list.begin(), list.end(), [](const Entry& l, const Entry& r) {
+        return l.searchKey < r.searchKey;
+    });
+    m.categories[t].entries = std::move(list);
+}
+
+// Adds the My List tab right after All Games (one R1 press from the boot tab).
+static void addMyListTab(Model& m) {
+    Category list;
+    list.name = kMyListName;
+    list.label = kMyListName;
+    list.isArchive = true;
+    list.mixed = true;
+    bool hasAll = !m.categories.empty() && m.categories[0].name == "All Games";
+    m.categories.insert(m.categories.begin() + (hasAll ? 1 : 0), std::move(list));
+    rebuildMyList(m);
+}
+
+static void toggleFavorite(Model& m) {
+    const Entry* e = m.selected();
+    if (!e) return;
+    const std::string key = Model::favoriteKey(*e);
+    if (!m.favorites.erase(key)) m.favorites.insert(key);
+    saveFavorites(m);
+
+    // Removing from inside My List shrinks it: keep the cursor at the same position
+    const bool inMyList = m.cur().name == kMyListName;
+    const int oldSel = m.cur().sel;
+    rebuildMyList(m);
+    m.applyFilter();
+    if (inMyList && !m.cur().visible.empty()) m.cur().sel = std::min(oldSel, (int)m.cur().visible.size() - 1);
 }
 
 // Takes the System category out of the tabs: its settings entry opens with START and the power
@@ -895,6 +972,25 @@ private:
         SDL_RenderGeometry(renderer, nullptr, v, 4, idx, 6);
     }
 
+    // Filled five-pointed star centred on (cx, cy), the My List badge.
+    void star(int cx, int cy, int r, SDL_Color c) {
+        SDL_Vertex v[11];
+        v[0].position = {(float)cx, (float)cy};
+        for (int i = 0; i < 10; ++i) {
+            float a = (float)M_PI * (-0.5f + i * 0.2f);
+            float rad = (i % 2 == 0) ? r : r * 0.45f;
+            v[i + 1].position = {cx + rad * std::cos(a), cy + rad * std::sin(a)};
+        }
+        int idx[30];
+        for (int i = 0; i < 10; ++i) {
+            idx[i * 3] = 0;
+            idx[i * 3 + 1] = i + 1;
+            idx[i * 3 + 2] = (i + 1) % 10 + 1;
+        }
+        for (auto& vert : v) { vert.color = c; vert.tex_coord = {0, 0}; }
+        SDL_RenderGeometry(renderer, nullptr, v, 11, idx, 30);
+    }
+
     // Text on a rounded-looking label; returns its width.
     int pill(const std::string& text, int x, int y, SDL_Color bg, SDL_Color fg) {
         const int padX = 6, padY = 2;
@@ -1036,7 +1132,9 @@ private:
         } else if (kb.open) {
             hints = {{"A", "Type"}, {"B", "Delete"}, {"START", "Done"}};
         } else {
-            hints = {{"L1", "Prev"}, {"R1", "Next"}, {"A", "Launch"}, {"Y", "Autolaunch"}};
+            const Entry* sel = m.selected();
+            hints = {{"L1", "Prev"}, {"R1", "Next"}, {"A", "Launch"},
+                     {"Y", sel && m.isFavorite(*sel) ? "Remove" : "My List"}};
             // while searching, clearing the search is more useful than starting a new one
             if (m.query.empty()) hints.push_back({"X", "Search"});
             else hints.push_back({"B", "Clear"});
@@ -1057,6 +1155,13 @@ private:
     }
 
     void renderEmpty(const Model& m) {
+        if (m.query.empty() && m.cur().name == kMyListName) {
+            std::string s = "Your list is empty";
+            std::string hint = "Press Y on any game to add it here";
+            drawText(renderer, uiFont, s, (kScreenW - textWidth(uiFont, s)) / 2, kScreenH / 2 - 40, kGrey);
+            drawText(renderer, smallFont, hint, (kScreenW - textWidth(smallFont, hint)) / 2, kScreenH / 2, kGrey);
+            return;
+        }
         std::string s = m.query.empty() ? "Nothing here" : "No matches for \"" + m.query + "\"";
         int w = textWidth(uiFont, s);
         drawText(renderer, uiFont, s, std::max(kMargin, (kScreenW - w) / 2), kScreenH / 2 - 40, kGrey, kScreenW - 2 * kMargin);
@@ -1084,6 +1189,10 @@ private:
             if (k == c.sel) frame(kYellow, cell, kBorder);
             const Entry& entry = c.entries[c.visible[k]];
             if (m.isAutoStart(entry)) pill("autolaunch", cell.x, cell.y, kYellow, kBlack);
+            if (m.isFavorite(entry)) {
+                fill(kBar, {cell.x + cell.w - 26, cell.y + 2, 24, 24});
+                star(cell.x + cell.w - 14, cell.y + 14, 9, kYellow);
+            }
             if (c.mixed) {
                 int w = textWidth(smallFont, entry.tag) + 12;
                 pill(entry.tag, cell.x + cell.w - w, cell.y + cell.h - TTF_FontHeight(smallFont) - 4, kBar, kGrey);
@@ -1132,6 +1241,11 @@ private:
                 tagX -= w + 4;
                 pill("auto", tagX, tagY, kYellow, kBlack);
                 maxW -= w + 8;
+            }
+            if (m.isFavorite(e)) {
+                tagX -= 22;
+                star(tagX + 9, r.y + r.h / 2, 8, kYellow);
+                maxW -= 22;
             }
             drawText(renderer, descFont, e.name, r.x + 14, r.y + (r.h - fontH) / 2, k == c.sel ? kWhite : kGrey, maxW);
         }
@@ -1236,13 +1350,14 @@ private:
     }
 };
 
-enum class Action { None, Up, Down, Left, Right, Launch, Back, ToggleAutoStart, Search, PrevTab, NextTab, Start, Power };
+enum class Action { None, Up, Down, Left, Right, Launch, Back, ToggleAutoStart, ToggleFavorite, Search, PrevTab, NextTab, Start, Power };
 
 static bool isRepeatable(Action a) {
     return a == Action::Up || a == Action::Down || a == Action::Left || a == Action::Right;
 }
 
-// Keyboard bindings, mostly for running the launcher on a PC: F1/F2 = L1/R1, F4 = X, F5 = Start,
+// Keyboard bindings, mostly for running the launcher on a PC: F1/F2 = L1/R1, Space = Y, F3 = Select,
+// F4 = X, F5 = Start,
 // F6 = POWER (the real power key arrives as SDLK_POWER).
 static Action actionFromKey(SDL_Keycode k) {
     switch (k) {
@@ -1253,7 +1368,8 @@ static Action actionFromKey(SDL_Keycode k) {
         case SDLK_RETURN:    return Action::Launch;
         case SDLK_ESCAPE:
         case SDLK_BACKSPACE: return Action::Back;
-        case SDLK_SPACE:     return Action::ToggleAutoStart;
+        case SDLK_SPACE:     return Action::ToggleFavorite;
+        case SDLK_F3:        return Action::ToggleAutoStart;
         case SDLK_F1:        return Action::PrevTab;
         case SDLK_F2:        return Action::NextTab;
         case SDLK_F4:        return Action::Search;
@@ -1273,7 +1389,7 @@ static Action actionFromButton(Uint8 b) {
         case SDL_CONTROLLER_BUTTON_A:             return Action::Launch;
         case SDL_CONTROLLER_BUTTON_B:             return Action::Back;
         case SDL_CONTROLLER_BUTTON_X:             return Action::Search;
-        case SDL_CONTROLLER_BUTTON_Y:             return Action::ToggleAutoStart;
+        case SDL_CONTROLLER_BUTTON_Y:             return Action::ToggleFavorite;
         case SDL_CONTROLLER_BUTTON_START:         return Action::Start;
         case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:  return Action::PrevTab;
         case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: return Action::NextTab;
@@ -1292,6 +1408,8 @@ int main() {
         for (auto& e : c.entries) e.searchKey = lower(e.name);
     extractSystemMenu(model);
     addAllGamesTab(model);   // first tab, and the one shown at boot
+    loadFavorites(model);
+    addMyListTab(model);
     if (model.categories.empty()) {
         std::cerr << "No entries found in apps.puppy files!\n";
         return 1;
@@ -1316,6 +1434,7 @@ int main() {
     Keyboard kb;
     Osd osd;
     bool consoleCleared = false;
+    bool selectHeld = false, selectCombo = false;
     Uint32 osdUntil = 0, osdNextRead = 0;
     bool running = true;
     bool dirty = true;
@@ -1414,6 +1533,7 @@ int main() {
                 if (!model.query.empty()) { model.query.clear(); model.applyFilter(); }
                 break;
             case Action::ToggleAutoStart: toggleAutoStart(model); break;
+            case Action::ToggleFavorite:  toggleFavorite(model);  break;
             case Action::Launch:
                 if (const Entry* e = model.selected()) {
                     launch(model, *e);
@@ -1506,9 +1626,25 @@ int main() {
                     if (actionFromKey(ev.key.keysym.sym) == held) held = Action::None;
                     break;
                 case SDL_CONTROLLERBUTTONDOWN:
+                    // SELECT toggles autolaunch when released on its own: SELECT + START is the
+                    // close-app shortcut, which must neither set autolaunch nor open the settings
+                    if (ev.cbutton.button == SDL_CONTROLLER_BUTTON_BACK) {
+                        selectHeld = true;
+                        selectCombo = false;
+                        break;
+                    }
+                    if (selectHeld) {
+                        selectCombo = true;
+                        break;
+                    }
                     action = actionFromButton(ev.cbutton.button);
                     break;
                 case SDL_CONTROLLERBUTTONUP:
+                    if (ev.cbutton.button == SDL_CONTROLLER_BUTTON_BACK) {
+                        if (selectHeld && !selectCombo) action = Action::ToggleAutoStart;
+                        selectHeld = false;
+                        break;
+                    }
                     if (actionFromButton(ev.cbutton.button) == held) held = Action::None;
                     break;
             }
