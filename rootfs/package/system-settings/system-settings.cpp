@@ -325,17 +325,21 @@ const char* const SHORTCUTS[][2] = {
     {"Any app", nullptr},
     {"VOL+ / VOL-", "Volume"},
     {"FN + VOL+ / VOL-", "Brightness"},
-    {"POWER", "Screen off / on (launcher: power menu)"},
+    {"POWER", "Screen off / on"},
     {"SELECT + START", "Close the app"},
     {"FN + SELECT + START", "Force close the app"},
     {"Launcher", nullptr},
     {"L1 / R1", "Previous / next tab"},
-    {"Left stick", "Move, like the d-pad"},
+    {"D-pad / left stick", "Move"},
+    {"LEFT / RIGHT (list)", "Previous / next page"},
     {"Right stick up/down", "Scroll the description"},
-    {"X", "Search by name"},
-    {"START", "System Settings"},
+    {"A", "Launch"},
     {"Y", "Add to / remove from My List"},
+    {"X", "Search by name"},
+    {"B", "Clear the search"},
     {"SELECT", "Autolaunch on boot"},
+    {"START", "System Settings"},
+    {"POWER", "Display off / restart / shut down"},
     {"RetroArch", nullptr},
     {"FN + X", "Menu"},
     {"FN + R1 / L1", "Save / load state"},
@@ -450,6 +454,8 @@ int main(int argc, char* argv[]) {
         } else {
             // the tester redraws continuously to show the sticks and the hold-B progress
             if (page == PAGE_TESTER) got_event = SDL_WaitEventTimeout(&event, 33);
+            // the shortcut list scrolls while the d-pad / right stick is held
+            else if (page == PAGE_INPUT) got_event = SDL_WaitEventTimeout(&event, 50);
             else if (following) got_event = SDL_WaitEventTimeout(&event, HOTKEY_POLL_MS);
             else got_event = pending ? SDL_WaitEventTimeout(&event, 100) : SDL_WaitEvent(&event);
         }
@@ -604,6 +610,20 @@ int main(int argc, char* argv[]) {
             ImGui::Separator();
             ImGui::Spacing();
 
+            // The list scrolls with d-pad up/down and the right stick; the buttons sit side by side at
+            // the bottom, so left/right picks one and up/down stay free for scrolling
+            const float buttons_h = ImGui::GetFrameHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y;
+            ImGui::BeginChild("shortcut_list", ImVec2(0, ImGui::GetContentRegionAvail().y - buttons_h), ImGuiChildFlags_None,
+                              ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoNavFocus);
+            const float step = ImGui::GetTextLineHeightWithSpacing() * 0.75f;
+            if (ImGui::IsKeyPressed(ImGuiKey_GamepadDpadDown, true) || ImGui::IsKeyPressed(ImGuiKey_DownArrow, true) ||
+                ImGui::IsKeyDown(ImGuiKey_GamepadRStickDown)) {
+                ImGui::SetScrollY(ImGui::GetScrollY() + step);
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_GamepadDpadUp, true) || ImGui::IsKeyPressed(ImGuiKey_UpArrow, true) ||
+                ImGui::IsKeyDown(ImGuiKey_GamepadRStickUp)) {
+                ImGui::SetScrollY(ImGui::GetScrollY() - step);
+            }
             ImGui::PushFont(nullptr, ImGui::GetStyle().FontSizeBase * 0.75f);
             if (ImGui::BeginTable("shortcuts", 2, ImGuiTableFlags_SizingStretchProp)) {
                 for (const auto& row : SHORTCUTS) {
@@ -620,6 +640,7 @@ int main(int argc, char* argv[]) {
                 ImGui::EndTable();
             }
             ImGui::PopFont();
+            ImGui::EndChild();
 
             ImGui::Spacing();
             if (focus_tester_button) {
@@ -632,7 +653,7 @@ int main(int argc, char* argv[]) {
                 next_page = PAGE_TESTER;
             }
             ImGui::SetItemDefaultFocus();
-            ImGui::Spacing();
+            ImGui::SameLine();
             if (ImGui::Button("Back")) {
                 next_page = PAGE_MAIN;
             }
