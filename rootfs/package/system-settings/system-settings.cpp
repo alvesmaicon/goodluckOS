@@ -425,11 +425,26 @@ int main(int argc, char* argv[]) {
             }
 
             ImGui::Spacing();
+            // Always offered here (the launcher hides it after the first run); resize-home shows the
+            // details and asks before doing anything. It reformats HOME after backing it up to the RAM
+            // disk, so it only works while HOME is still nearly empty (right after flashing).
+            bool can_grow = info.card_unused_kb >= RESIZE_MIN_FREE_KB;
+            bool fits = info.home_used_kb < info.tmp_free_kb;
+            ImGui::BeginDisabled(can_grow && !fits);
+            if (ImGui::Button("Resize Home")) {
+                launch_resize_home = true;
+                running = false;
+            }
+            ImGui::EndDisabled();
+            if (can_grow && !fits) {
+                ImGui::TextWrapped("Too much data in HOME to resize. Resize right after flashing, before copying games.");
+            }
+
             if (focus_system_button) {
                 ImGui::SetKeyboardFocusHere();
                 focus_system_button = false;
             }
-            if (ImGui::Button("System & Storage")) {
+            if (ImGui::Button("System Info")) {
                 info = gather_system_info();
                 next_page = PAGE_SYSTEM;
             }
@@ -443,7 +458,7 @@ int main(int argc, char* argv[]) {
             ImGui::End();
         } else {
             ImGui::Begin("System", nullptr, window_flags);
-            ImGui::Text("System & Storage");
+            ImGui::Text("System Info");
             ImGui::Separator();
             ImGui::Spacing();
 
@@ -460,31 +475,11 @@ int main(int argc, char* argv[]) {
             }
             if (info.battery >= 0) ImGui::Text("Battery:  %d%% (%s)", info.battery, info.battery_status.c_str());
 
-            section_headear("Storage");
-            ImGui::Text("HOME:     %s used of %s", human_size_kb(info.home_used_kb).c_str(),
+            ImGui::Text("Storage:  %s used of %s", human_size_kb(info.home_used_kb).c_str(),
                         human_size_kb(info.home_total_kb).c_str());
-            // The resize reformats HOME after backing it up to the RAM disk, so it only works
-            // while HOME is still nearly empty (e.g. right after flashing, before copying games)
-            bool can_grow = info.card_unused_kb >= RESIZE_MIN_FREE_KB;
-            bool fits = info.home_used_kb < info.tmp_free_kb;
-            if (!can_grow) {
-                ImGui::Text("HOME already uses the whole card.");
-            } else {
-                ImGui::Text("Unused space on the card: %s", human_size_kb(info.card_unused_kb).c_str());
-                if (!fits) {
-                    ImGui::TextWrapped("HOME has too much data to resize (it must fit in %s of RAM). "
-                                       "Resize right after flashing, before copying games.",
-                                       human_size_kb(info.tmp_free_kb).c_str());
-                }
+            if (info.card_unused_kb >= RESIZE_MIN_FREE_KB) {
+                ImGui::Text("Unused:   %s on the card (see Resize Home)", human_size_kb(info.card_unused_kb).c_str());
             }
-            // Always offered here (the launcher hides it after the first run); resize-home shows the
-            // details and asks before doing anything
-            ImGui::BeginDisabled(can_grow && !fits);
-            if (ImGui::Button("Resize Home")) {
-                launch_resize_home = true;
-                running = false;
-            }
-            ImGui::EndDisabled();
 
             ImGui::Spacing();
             if (ImGui::Button("Back")) {
