@@ -1,5 +1,6 @@
 #include <SDL2/SDL.h>
 #include "imgui.h"
+#include "imgui_internal.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_sdlrenderer2.h"
 #include <cstdlib>
@@ -117,6 +118,8 @@ int main(int argc, char* argv[]) {
         ImGui_ImplSDLRenderer2_NewFrame();
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
+        // Paint the focused item as selected from the first frame, not only after the first d-pad move
+        ImGui::GetCurrentContext()->NavHighlightItemUnderNav = true;
 
         if (ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false) || ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
             running = false;

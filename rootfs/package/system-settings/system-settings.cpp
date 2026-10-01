@@ -1,5 +1,6 @@
 #include <SDL2/SDL.h>
 #include "imgui.h"
+#include "imgui_internal.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_sdlrenderer2.h"
 #include <algorithm>
@@ -330,8 +331,8 @@ int main(int argc, char* argv[]) {
     enum Page { PAGE_MAIN, PAGE_SYSTEM };
     Page page = PAGE_MAIN;
     bool focus_system_button = false;   // coming back from the System page
-    SystemInfo info;
-    bool performance_mode = false;
+    SystemInfo info = gather_system_info();
+    bool performance_mode = info.governor == PERFORMANCE_GOVERNOR;
     bool launch_resize_home = false;
 
     bool running = true;
@@ -367,6 +368,8 @@ int main(int argc, char* argv[]) {
         ImGui_ImplSDLRenderer2_NewFrame();
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
+        // Paint the focused item as selected from the first frame, not only after the first d-pad move
+        ImGui::GetCurrentContext()->NavHighlightItemUnderNav = true;
 
         Page next_page = page;
         if (!editing && (ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false) ||
@@ -413,6 +416,14 @@ int main(int argc, char* argv[]) {
                 last_change = SDL_GetTicks();
             }
 
+            if (!info.normal_governor.empty()) {
+                section_headear("Performance");
+                if (ImGui::Checkbox("Performance mode (uses more battery)", &performance_mode)) {
+                    send_power_request(std::string("set-governor ") +
+                                       (performance_mode ? PERFORMANCE_GOVERNOR : info.normal_governor));
+                }
+            }
+
             ImGui::Spacing();
             if (focus_system_button) {
                 ImGui::SetKeyboardFocusHere();
@@ -420,7 +431,6 @@ int main(int argc, char* argv[]) {
             }
             if (ImGui::Button("System & Storage")) {
                 info = gather_system_info();
-                performance_mode = info.governor == PERFORMANCE_GOVERNOR;
                 next_page = PAGE_SYSTEM;
             }
             // TODO: Input Settings (swap A/B, input tester) and Date/Time (the RTC has no backup
@@ -450,36 +460,31 @@ int main(int argc, char* argv[]) {
             }
             if (info.battery >= 0) ImGui::Text("Battery:  %d%% (%s)", info.battery, info.battery_status.c_str());
 
-            if (!info.normal_governor.empty()) {
-                ImGui::Spacing();
-                if (ImGui::Checkbox("Performance mode (uses more battery)", &performance_mode)) {
-                    send_power_request(std::string("set-governor ") +
-                                       (performance_mode ? PERFORMANCE_GOVERNOR : info.normal_governor));
-                }
-            }
-
             section_headear("Storage");
             ImGui::Text("HOME:     %s used of %s", human_size_kb(info.home_used_kb).c_str(),
                         human_size_kb(info.home_total_kb).c_str());
-            if (info.card_unused_kb >= RESIZE_MIN_FREE_KB) {
+            // The resize reformats HOME after backing it up to the RAM disk, so it only works
+            // while HOME is still nearly empty (e.g. right after flashing, before copying games)
+            bool can_grow = info.card_unused_kb >= RESIZE_MIN_FREE_KB;
+            bool fits = info.home_used_kb < info.tmp_free_kb;
+            if (!can_grow) {
+                ImGui::Text("HOME already uses the whole card.");
+            } else {
                 ImGui::Text("Unused space on the card: %s", human_size_kb(info.card_unused_kb).c_str());
-                // The resize reformats HOME after backing it up to the RAM disk, so it only works
-                // while HOME is still nearly empty (e.g. right after flashing, before copying games)
-                bool fits = info.home_used_kb < info.tmp_free_kb;
                 if (!fits) {
                     ImGui::TextWrapped("HOME has too much data to resize (it must fit in %s of RAM). "
                                        "Resize right after flashing, before copying games.",
                                        human_size_kb(info.tmp_free_kb).c_str());
                 }
-                ImGui::BeginDisabled(!fits);
-                if (ImGui::Button("Resize Home")) {
-                    launch_resize_home = true;
-                    running = false;
-                }
-                ImGui::EndDisabled();
-            } else {
-                ImGui::Text("HOME already uses the whole card.");
             }
+            // Always offered here (the launcher hides it after the first run); resize-home shows the
+            // details and asks before doing anything
+            ImGui::BeginDisabled(can_grow && !fits);
+            if (ImGui::Button("Resize Home")) {
+                launch_resize_home = true;
+                running = false;
+            }
+            ImGui::EndDisabled();
 
             ImGui::Spacing();
             if (ImGui::Button("Back")) {
