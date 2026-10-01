@@ -23,7 +23,7 @@ If the above page does not confirm support, please do not attempt to flash a goo
 - Great battery life
 - No swap on SD card (massively improves the life of your card over the stock f/w)
 - Built-in `Resize Home` app which grows your HOME partition to fill all the available space on your microSD card.
-- FN+Vol buttons adjust the screen brightness from anywhere, with an on-screen level bar (a notification in RetroArch)
+- Volume buttons change the volume and FN+Vol the screen brightness from anywhere, and both now show feedback: an on-screen level bar in the launcher and a notification in RetroArch
 - Brightness, volume and CPU mode are kept across reboots
 - SELECT+START closes the active application cleanly (RetroArch saves first), bringing you right back to the launcher
 - FN+START+SELECT force-kills the active application
@@ -78,6 +78,12 @@ Puppy is goodluckOS' application launcher. It's what you see when you start good
 | Grid view | List view |
 | --- | --- |
 | ![Puppy in grid view](docs/screenshots/puppy-grid.png) | ![Puppy in list view](docs/screenshots/puppy-list.png) |
+
+Changing the brightness (FN+Vol) or the volume shows a level bar for a moment:
+
+| Brightness | Volume |
+| --- | --- |
+| ![Brightness level bar](docs/screenshots/osd-brightness.png) | ![Volume level bar](docs/screenshots/osd-volume.png) |
 
 It starts up fast, uses very little power, launches applications instantly, and uses zero RAM and CPU after launching an application.
 
