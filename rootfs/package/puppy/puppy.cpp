@@ -617,6 +617,11 @@ static void addAllGamesTab(Model& m) {
         return l.searchKey < r.searchKey;
     });
     m.categories.insert(m.categories.begin(), std::move(all));
+
+    // The System tab goes last, so the ring of tabs shows it right before (left of) All Games
+    auto sys = std::find_if(m.categories.begin(), m.categories.end(),
+                            [](const Category& c) { return c.name == "System"; });
+    if (sys != m.categories.end()) std::rotate(sys, sys + 1, m.categories.end());
 }
 
 static View loadView() {
@@ -923,8 +928,8 @@ private:
             if (!m.query.empty()) hints.push_back({"B", "Clear"});
         }
 
-        // Button in the highlight colour, underlined, followed by what it does
-        const int y = top + (kFooterH - TTF_FontHeight(smallFont)) / 2 - 1;
+        // Button in the highlight colour, followed by what it does
+        const int y = top + (kFooterH - TTF_FontHeight(smallFont)) / 2;
         int x = kScreenW - kMargin;
         for (auto it = hints.rbegin(); it != hints.rend(); ++it) {
             x -= textWidth(smallFont, it->second);
@@ -932,7 +937,6 @@ private:
             int keyW = textWidth(smallFont, it->first);
             x -= 6 + keyW;
             drawText(renderer, smallFont, it->first, x, y, kYellow);
-            fill(kYellow, {x, y + TTF_FontHeight(smallFont), keyW, 2});
             x -= 16;
         }
     }
