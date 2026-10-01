@@ -75,7 +75,8 @@ Each system and app category gets its own tab, plus an "All Games" tab with ever
 | Y | Set / clear autolaunch |
 | X | Search by name with the on-screen keyboard (the search applies to every tab) |
 | B | Clear the search |
-| START | Menu with the System entries: reboot, power off, System Settings |
+| START | System Settings |
+| POWER | Power menu: display off, restart, shut down (in other apps it turns the screen off/on) |
 
 Grid or list view and whether the tabs are shown are set in System Settings.
 

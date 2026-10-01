@@ -23,7 +23,10 @@ static const char* kStateFile     = "/dev/shm/launcher_state";
 static const char* kAutoStartFile = "/home/player/autolaunch";
 
 static const char* kSettingsFile  = "/home/player/.config/puppy/settings";
-static const char* kMenuCategory  = "System";   // apps.puppy category shown in the START menu
+static const char* kMenuCategory  = "System";   // apps.puppy category taken out of the tabs
+static const char* kSettingsName  = "System Settings";   // entry of that category opened by START
+static const char* kPowerFifo     = "/run/power-request";   // root power-manager.sh
+static const char* kBacklight     = "/sys/class/backlight/backlight/brightness";
 static const char* kOsdFile       = "/dev/shm/osd";  // "volume|brightness <percent> [muted]", from osd-notify.sh
 
 constexpr int kScreenW              = 640;
@@ -281,10 +284,12 @@ struct Model {
     std::string query;
     std::string autoCategory, autoName;   // the autolaunch entry
 
-    // START menu with the System entries (reboot, power off, settings...), reachable from any tab
-    std::vector<Entry> menu;
+    // START opens System Settings; POWER opens the power menu (both from any tab)
+    Entry settings;
+    bool hasSettings = false;
     bool menuOpen = false;
     int menuSel = 0;
+    std::string status;     // full-screen message while restarting / shutting down
 
     Category& cur() { return categories[tab]; }
     const Category& cur() const { return categories[tab]; }
@@ -635,14 +640,41 @@ static void addAllGamesTab(Model& m) {
 
 }
 
-// Moves the System category out of the tabs into the START menu, so powering off or opening the
-// settings doesn't mean scrolling through every tab.
+// Takes the System category out of the tabs: its settings entry opens with START and the power
+// actions live in the POWER menu, so they don't mean scrolling through every tab.
 static void extractSystemMenu(Model& m) {
     auto sys = std::find_if(m.categories.begin(), m.categories.end(),
                             [](const Category& c) { return c.name == kMenuCategory; });
     if (sys == m.categories.end()) return;
-    m.menu = sys->entries;
+    for (const Entry& e : sys->entries) {
+        if (e.name == kSettingsName) { m.settings = e; m.hasSettings = true; }
+    }
     m.categories.erase(sys);
+}
+
+// The POWER menu. Each item is a request for the root power-manager.sh.
+struct PowerItem {
+    const char* label;
+    const char* request;
+    const char* status;     // shown while it happens (nullptr: nothing to wait for)
+};
+static const PowerItem kPowerItems[] = {
+    {"Display off", "screen-off", nullptr},
+    {"Restart", "reboot", "Restarting..."},
+    {"Shut down", "poweroff", "Shutting down..."},
+};
+constexpr int kPowerItemCount = sizeof(kPowerItems) / sizeof(kPowerItems[0]);
+
+static void sendPowerRequest(const char* request) {
+    std::ofstream fifo(kPowerFifo);
+    if (fifo) fifo << request << "\n";
+}
+
+static bool screenOn() {
+    std::ifstream in(kBacklight);
+    int level = 1;
+    in >> level;
+    return level > 0;
 }
 
 // Launcher options, set in System Settings: "view=grid|list" and "tabs=on|off".
@@ -803,6 +835,7 @@ public:
         renderFooter(m, kb);
         if (kb.open) renderKeyboard(m, kb);
         if (m.menuOpen) renderMenu(m);
+        if (!m.status.empty()) renderStatus(m.status);
         if (osd.visible && !osd.kind.empty()) renderOsd(osd, bodyTop(m.showTabs));
 
         SDL_RenderPresent(renderer);
@@ -994,7 +1027,7 @@ private:
             // while searching, clearing the search is more useful than starting a new one
             if (m.query.empty()) hints.push_back({"X", "Search"});
             else hints.push_back({"B", "Clear"});
-            if (!m.menu.empty()) hints.push_back({"START", "Menu"});
+            if (m.hasSettings) hints.push_back({"START", "Settings"});
         }
 
         // Button in the highlight colour, followed by what it does
@@ -1130,27 +1163,33 @@ private:
         fill(kYellow, {track.x, track.y, osd.muted ? 0 : track.w * osd.percent / 100, track.h});
     }
 
+    void renderStatus(const std::string& text) {
+        fill(kClear, {0, 0, kScreenW, kScreenH});
+        drawText(renderer, titleFont, text, (kScreenW - textWidth(titleFont, text)) / 2,
+                 (kScreenH - TTF_FontHeight(titleFont)) / 2, kWhite);
+    }
+
     void renderMenu(const Model& m) {
         const int pad = 12, rowH = 40;
         const int titleH = TTF_FontHeight(uiFont) + 14;
         const int panelW = 320;
-        const int panelH = titleH + (int)m.menu.size() * rowH + 2 * pad;
+        const int panelH = titleH + kPowerItemCount * rowH + 2 * pad;
         const int bodyY = bodyTop(m.showTabs);
         SDL_Rect panel{(kScreenW - panelW) / 2, bodyY + (kScreenH - kFooterH - bodyY - panelH) / 2, panelW, panelH};
         fill({0, 0, 0, 150}, {0, kHeaderH, kScreenW, kScreenH - kFooterH - kHeaderH});   // dim the tab behind
         fill(kBar, panel);
         frame(kTile, panel, 2);
-        drawText(renderer, uiFont, "Menu", panel.x + pad + 4, panel.y + pad, kWhite);
+        drawText(renderer, uiFont, "Power", panel.x + pad + 4, panel.y + pad, kWhite);
 
         const int fontH = TTF_FontHeight(descFont);
-        for (int i = 0; i < (int)m.menu.size(); ++i) {
+        for (int i = 0; i < kPowerItemCount; ++i) {
             SDL_Rect r{panel.x + pad, panel.y + pad + titleH + i * rowH, panelW - 2 * pad, rowH - 4};
             bool sel = i == m.menuSel;
             if (sel) {
                 fill(kRowSel, r);
                 fill(kYellow, {r.x, r.y, 4, r.h});
             }
-            drawText(renderer, descFont, m.menu[i].name, r.x + 16, r.y + (r.h - fontH) / 2,
+            drawText(renderer, descFont, kPowerItems[i].label, r.x + 16, r.y + (r.h - fontH) / 2,
                      sel ? kWhite : kGrey, r.w - 24);
         }
     }
@@ -1184,13 +1223,14 @@ private:
     }
 };
 
-enum class Action { None, Up, Down, Left, Right, Launch, Back, ToggleAutoStart, Search, PrevTab, NextTab, Start };
+enum class Action { None, Up, Down, Left, Right, Launch, Back, ToggleAutoStart, Search, PrevTab, NextTab, Start, Power };
 
 static bool isRepeatable(Action a) {
     return a == Action::Up || a == Action::Down || a == Action::Left || a == Action::Right;
 }
 
-// Keyboard bindings, mostly for running the launcher on a PC: F1/F2 = L1/R1, F4 = X, F5 = Start.
+// Keyboard bindings, mostly for running the launcher on a PC: F1/F2 = L1/R1, F4 = X, F5 = Start,
+// F6 = POWER (the real power key arrives as SDLK_POWER).
 static Action actionFromKey(SDL_Keycode k) {
     switch (k) {
         case SDLK_UP:        return Action::Up;
@@ -1205,6 +1245,8 @@ static Action actionFromKey(SDL_Keycode k) {
         case SDLK_F2:        return Action::NextTab;
         case SDLK_F4:        return Action::Search;
         case SDLK_F5:        return Action::Start;
+        case SDLK_POWER:
+        case SDLK_F6:        return Action::Power;
         default:             return Action::None;
     }
 }
@@ -1280,24 +1322,38 @@ int main() {
     auto apply = [&](Action a) {
         const bool grid = model.view == View::Grid;
 
+        if (!model.status.empty()) return;   // restarting / shutting down
+
         if (model.menuOpen) {
-            const int n = (int)model.menu.size();
+            const int n = kPowerItemCount;
             switch (a) {
                 case Action::Up:     model.menuSel = (model.menuSel + n - 1) % n; break;
                 case Action::Down:   model.menuSel = (model.menuSel + 1) % n;     break;
-                case Action::Launch:
-                    launch(model, model.menu[model.menuSel]);
-                    running = false;
+                case Action::Launch: {
+                    const PowerItem& item = kPowerItems[model.menuSel];
+                    model.menuOpen = false;
+                    if (item.status) model.status = item.status;
+                    sendPowerRequest(item.request);
                     break;
+                }
                 case Action::Back:
-                case Action::Start:  model.menuOpen = false; break;
+                case Action::Power:  model.menuOpen = false; break;
                 default: break;
             }
             return;
         }
-        if (a == Action::Start && !kb.open && !model.menu.empty()) {
-            model.menuOpen = true;
-            model.menuSel = 0;
+        if (a == Action::Power) {
+            // with the screen off, toggle-screen.sh turns it back on; don't open a menu in the dark
+            if (screenOn()) {
+                kb.open = false;
+                model.menuOpen = true;
+                model.menuSel = 0;
+            }
+            return;
+        }
+        if (a == Action::Start && !kb.open && model.hasSettings) {
+            launch(model, model.settings);
+            running = false;
             return;
         }
 

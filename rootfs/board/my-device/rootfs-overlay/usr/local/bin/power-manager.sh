@@ -24,6 +24,9 @@ while true; do
         save-settings)   # sent by unprivileged apps (e.g. system-settings) after changing volume
             /usr/local/bin/persist-settings.sh save
             ;;
+        screen-off)      # Puppy's power menu: "Display off"
+            /usr/local/bin/toggle-screen.sh off
+            ;;
         set-governor\ *) # sent by system-settings; persist-settings.sh only accepts governors the kernel offers
             /usr/local/bin/persist-settings.sh governor "${cmd#set-governor }"
             ;;
