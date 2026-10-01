@@ -170,12 +170,17 @@ int main(int argc, char* argv[]) {
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
 
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad | ImGuiConfigFlags_NavEnableKeyboard;
+    // Show the focused item (the first slider) right away instead of only after the first d-pad press
+    io.ConfigNavCursorVisibleAlways = true;
 
     ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
     ImGui_ImplSDLRenderer2_Init(renderer);
 
     ImGui::GetStyle().FontScaleMain = 1.65;
+    // Integer sliders size the grab to one unit, so the 1-10 brightness grab was much wider than
+    // the 0-100 volume one. A fixed minimum makes them match.
+    ImGui::GetStyle().GrabMinSize = 40.0f;
 
     SDL_GameController* controller = nullptr;
     for (int i = 0; i < SDL_NumJoysticks(); ++i) {
@@ -236,6 +241,7 @@ int main(int argc, char* argv[]) {
             brightness_dirty = true;
             last_change = SDL_GetTicks();
         }
+        ImGui::SetItemDefaultFocus();
 
         section_headear("Audio Settings");
         if (ImGui::SliderInt("Master Volume", &current_volume, 0, 100)) {
@@ -272,7 +278,7 @@ int main(int argc, char* argv[]) {
         }
 
         ImGui::Spacing();
-        if (ImGui::Button("Exit Application")) {
+        if (ImGui::Button("Back")) {
             running = false;
         }
 

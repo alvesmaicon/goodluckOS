@@ -67,7 +67,9 @@ int main(int argc, char* argv[]) {
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
 
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad | ImGuiConfigFlags_NavEnableKeyboard;
+    // Show the focused button (Cancel) right away instead of only after the first d-pad press
+    io.ConfigNavCursorVisibleAlways = true;
 
     ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
     ImGui_ImplSDLRenderer2_Init(renderer);
@@ -134,7 +136,7 @@ int main(int argc, char* argv[]) {
 
             ImGui::SameLine(0.0f, spacing);
 
-            if (ImGui::Button("Accept", ImVec2(buttonWidth, buttonHeight))) {
+            if (ImGui::Button("Confirm", ImVec2(buttonWidth, buttonHeight))) {
                 errorOutput = ExecuteCommand(command, exitCode);
 
                 if (exitCode != 0) {
