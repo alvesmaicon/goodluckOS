@@ -1,6 +1,8 @@
 #!/bin/sh
 # Silent boot: stop kernel messages on the console and clear the screen before the launcher starts.
+# A centred "Starting system..." fills the few seconds until Puppy draws its first frame
+# (the console is 80x30 characters: 640x480 with the 8x16 font).
 [ "$1" = "stop" ] && exit 0
 dmesg -n 1
-printf "\033[2J\033[H\033[?25l" > /dev/tty1 2>/dev/null
+printf "\033[2J\033[H\033[?25l\033[15;32HStarting system..." > /dev/tty1 2>/dev/null
 exit 0
