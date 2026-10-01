@@ -1179,7 +1179,7 @@ private:
         fill({0, 0, 0, 150}, {0, kHeaderH, kScreenW, kScreenH - kFooterH - kHeaderH});   // dim the tab behind
         fill(kBar, panel);
         frame(kTile, panel, 2);
-        drawText(renderer, uiFont, "Power", panel.x + pad + 4, panel.y + pad, kWhite);
+        drawText(renderer, uiFont, "Power options", panel.x + pad + 4, panel.y + pad, kWhite);
 
         const int fontH = TTF_FontHeight(descFont);
         for (int i = 0; i < kPowerItemCount; ++i) {
