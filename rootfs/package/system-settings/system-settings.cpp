@@ -7,8 +7,11 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <dirent.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/statvfs.h>
+#include <sys/utsname.h>
 #include <alsa/asoundlib.h>
 
 const char* ALSA_MIXER_NAME = "Headphone";
@@ -45,13 +48,131 @@ void save_brightness(int brightness) {
     rename(tmp.c_str(), BRIGHTNESS_STATE_FILE);
 }
 
-void request_volume_save() {
+void send_power_request(const std::string& cmd) {
     int fd = open(POWER_REQUEST_FIFO, O_WRONLY | O_NONBLOCK);
     if (fd < 0) return;
-    const char cmd[] = "save-settings\n";
-    ssize_t written = write(fd, cmd, sizeof(cmd) - 1);
+    std::string line = cmd + "\n";
+    ssize_t written = write(fd, line.c_str(), line.size());
     (void)written;
     close(fd);
+}
+
+void request_volume_save() {
+    send_power_request("save-settings");
+}
+
+std::string read_line(const std::string& path) {
+    std::ifstream file(path.c_str());
+    std::string line;
+    std::getline(file, line);
+    // device-tree strings end with a NUL
+    line.erase(std::remove(line.begin(), line.end(), '\0'), line.end());
+    while (!line.empty() && (line.back() == ' ' || line.back() == '\n')) line.pop_back();
+    return line;
+}
+
+long long read_number(const std::string& path, long long fallback = -1) {
+    std::ifstream file(path.c_str());
+    long long value;
+    return (file >> value) ? value : fallback;
+}
+
+std::string human_size_kb(unsigned long long kb) {
+    char buf[32];
+    if (kb >= 1024ULL * 1024) snprintf(buf, sizeof(buf), "%.1f GB", kb / (1024.0 * 1024.0));
+    else if (kb >= 1024) snprintf(buf, sizeof(buf), "%.0f MB", kb / 1024.0);
+    else snprintf(buf, sizeof(buf), "%llu KB", kb);
+    return buf;
+}
+
+const char* HOME_MOUNT = "/home/player";
+const char* CARD_SYSFS = "/sys/class/block/mmcblk0";
+const char* HOME_PART_SYSFS = "/sys/class/block/mmcblk0p2";
+const char* CPUFREQ_SYSFS = "/sys/devices/system/cpu/cpu0/cpufreq";
+const char* PERFORMANCE_GOVERNOR = "performance";
+// S01resize-home grows the partition and leaves less than this untouched
+const unsigned long long RESIZE_MIN_FREE_KB = 8192;
+
+struct SystemInfo {
+    std::string model, os, kernel;
+    int cpu_mhz = -1, cpu_max_mhz = -1, temp_c = -1000;
+    std::string governor, normal_governor;   // normal_governor: what "Performance mode" off means
+    long long mem_total_kb = -1, mem_avail_kb = -1;
+    int battery = -1;
+    std::string battery_status;
+    unsigned long long home_total_kb = 0, home_used_kb = 0;
+    unsigned long long card_unused_kb = 0;
+    unsigned long long tmp_free_kb = 0;
+};
+
+SystemInfo gather_system_info() {
+    SystemInfo s;
+    s.model = read_line("/proc/device-tree/model");
+
+    std::ifstream os_release("/etc/os-release");
+    for (std::string line; std::getline(os_release, line);) {
+        if (line.compare(0, 12, "PRETTY_NAME=") != 0) continue;
+        s.os = line.substr(12);
+        s.os.erase(std::remove(s.os.begin(), s.os.end(), '"'), s.os.end());
+    }
+
+    struct utsname uts;
+    if (uname(&uts) == 0) s.kernel = uts.release;
+
+    std::string cpufreq = CPUFREQ_SYSFS;
+    long long cur = read_number(cpufreq + "/scaling_cur_freq");
+    long long max = read_number(cpufreq + "/cpuinfo_max_freq");
+    if (cur > 0) s.cpu_mhz = (int)(cur / 1000);
+    if (max > 0) s.cpu_max_mhz = (int)(max / 1000);
+    long long temp = read_number("/sys/class/thermal/thermal_zone0/temp", -1000000);
+    if (temp > -1000000) s.temp_c = (int)(temp / 1000);
+
+    s.governor = read_line(cpufreq + "/scaling_governor");
+    std::ifstream governors((cpufreq + "/scaling_available_governors").c_str());
+    bool has_performance = false;
+    for (std::string g; governors >> g;) {
+        if (g == PERFORMANCE_GOVERNOR) has_performance = true;
+        else if (s.normal_governor.empty() || g == "schedutil") s.normal_governor = g;
+    }
+    if (!has_performance) s.normal_governor.clear();
+
+    std::ifstream meminfo("/proc/meminfo");
+    for (std::string key; meminfo >> key;) {
+        long long value;
+        if (!(meminfo >> value)) break;
+        if (key == "MemTotal:") s.mem_total_kb = value;
+        else if (key == "MemAvailable:") s.mem_avail_kb = value;
+        meminfo.ignore(64, '\n');
+    }
+
+    if (DIR* dir = opendir("/sys/class/power_supply")) {
+        while (struct dirent* d = readdir(dir)) {
+            std::string base = std::string("/sys/class/power_supply/") + d->d_name;
+            if (d->d_name[0] == '.' || read_line(base + "/type") != "Battery") continue;
+            s.battery = (int)read_number(base + "/capacity");
+            s.battery_status = read_line(base + "/status");
+            break;
+        }
+        closedir(dir);
+    }
+
+    struct statvfs vfs;
+    if (statvfs(HOME_MOUNT, &vfs) == 0) {
+        s.home_total_kb = (unsigned long long)vfs.f_blocks * vfs.f_frsize / 1024;
+        s.home_used_kb = s.home_total_kb - (unsigned long long)vfs.f_bfree * vfs.f_frsize / 1024;
+    }
+    // resize-home backs HOME up to /tmp (a small RAM disk) while it reformats the partition
+    if (statvfs("/tmp", &vfs) == 0) {
+        s.tmp_free_kb = (unsigned long long)vfs.f_bavail * vfs.f_frsize / 1024;
+    }
+
+    long long disk = read_number(std::string(CARD_SYSFS) + "/size");
+    long long start = read_number(std::string(HOME_PART_SYSFS) + "/start");
+    long long size = read_number(std::string(HOME_PART_SYSFS) + "/size");
+    if (disk > 0 && start > 0 && size > 0 && disk > start + size) {
+        s.card_unused_kb = (unsigned long long)(disk - start - size) * 512 / 1024;
+    }
+    return s;
 }
 
 long get_alsa_volume() {
@@ -206,6 +327,13 @@ int main(int argc, char* argv[]) {
     // frames right away instead of waiting for the first input event
     int startup_frames = 3;
 
+    enum Page { PAGE_MAIN, PAGE_SYSTEM };
+    Page page = PAGE_MAIN;
+    bool focus_system_button = false;   // coming back from the System page
+    SystemInfo info;
+    bool performance_mode = false;
+    bool launch_resize_home = false;
+
     bool running = true;
     while (running) {
         SDL_Event event;
@@ -240,9 +368,11 @@ int main(int argc, char* argv[]) {
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
 
+        Page next_page = page;
         if (!editing && (ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false) ||
                          ImGui::IsKeyPressed(ImGuiKey_Escape, false))) {
-            running = false;
+            if (page == PAGE_SYSTEM) next_page = PAGE_MAIN;
+            else running = false;
         }
 
         ImGui::SetNextWindowPos(ImVec2(0, 0));
@@ -251,59 +381,118 @@ int main(int argc, char* argv[]) {
                                         ImGuiWindowFlags_NoMove |
                                         ImGuiWindowFlags_NoSavedSettings;
 
-        ImGui::Begin("Settings", nullptr, window_flags);
-        ImGui::Text("System Settings");
-        ImGui::Separator();
-        ImGui::Spacing();
+        if (page == PAGE_MAIN) {
+            ImGui::Begin("Settings", nullptr, window_flags);
+            ImGui::Text("System Settings");
+            ImGui::Separator();
+            ImGui::Spacing();
 
-        section_headear("Display");
-        if (ImGui::SliderInt("Brightness", &display_brightness, 1, 10)) {
-            set_brightness(display_brightness);
-            brightness_dirty = true;
-            last_change = SDL_GetTicks();
-        }
-        ImGui::SetItemDefaultFocus();
-
-        section_headear("Audio Settings");
-        if (ImGui::SliderInt("Master Volume", &current_volume, 0, 100)) {
-            set_alsa_volume(current_volume);
-
-            if (current_mute && current_volume > 0) {
-                current_mute = false;
-                set_alsa_mute(current_mute);
+            section_headear("Display");
+            if (ImGui::SliderInt("Brightness", &display_brightness, 1, 10)) {
+                set_brightness(display_brightness);
+                brightness_dirty = true;
+                last_change = SDL_GetTicks();
             }
-            volume_dirty = true;
-            last_change = SDL_GetTicks();
+            ImGui::SetItemDefaultFocus();
+
+            section_headear("Audio Settings");
+            if (ImGui::SliderInt("Master Volume", &current_volume, 0, 100)) {
+                set_alsa_volume(current_volume);
+
+                if (current_mute && current_volume > 0) {
+                    current_mute = false;
+                    set_alsa_mute(current_mute);
+                }
+                volume_dirty = true;
+                last_change = SDL_GetTicks();
+            }
+
+            if (ImGui::Checkbox("Global Mute", &current_mute)) {
+                set_alsa_mute(current_mute);
+                volume_dirty = true;
+                last_change = SDL_GetTicks();
+            }
+
+            ImGui::Spacing();
+            if (focus_system_button) {
+                ImGui::SetKeyboardFocusHere();
+                focus_system_button = false;
+            }
+            if (ImGui::Button("System & Storage")) {
+                info = gather_system_info();
+                performance_mode = info.governor == PERFORMANCE_GOVERNOR;
+                next_page = PAGE_SYSTEM;
+            }
+            // TODO: Input Settings (swap A/B, input tester) and Date/Time (the RTC has no backup
+            // battery, so the clock resets on every boot)
+
+            ImGui::Spacing();
+            if (ImGui::Button("Back")) {
+                running = false;
+            }
+            ImGui::End();
+        } else {
+            ImGui::Begin("System", nullptr, window_flags);
+            ImGui::Text("System & Storage");
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            ImGui::Text("Device:   %s", info.model.empty() ? "unknown" : info.model.c_str());
+            ImGui::Text("System:   %s", info.os.c_str());
+            ImGui::Text("Kernel:   Linux %s", info.kernel.c_str());
+            if (info.cpu_mhz > 0) {
+                if (info.temp_c > -1000) ImGui::Text("CPU:      %d / %d MHz, %d C", info.cpu_mhz, info.cpu_max_mhz, info.temp_c);
+                else ImGui::Text("CPU:      %d / %d MHz", info.cpu_mhz, info.cpu_max_mhz);
+            }
+            if (info.mem_total_kb > 0) {
+                ImGui::Text("Memory:   %s free of %s", human_size_kb(info.mem_avail_kb).c_str(),
+                            human_size_kb(info.mem_total_kb).c_str());
+            }
+            if (info.battery >= 0) ImGui::Text("Battery:  %d%% (%s)", info.battery, info.battery_status.c_str());
+
+            if (!info.normal_governor.empty()) {
+                ImGui::Spacing();
+                if (ImGui::Checkbox("Performance mode (uses more battery)", &performance_mode)) {
+                    send_power_request(std::string("set-governor ") +
+                                       (performance_mode ? PERFORMANCE_GOVERNOR : info.normal_governor));
+                }
+            }
+
+            section_headear("Storage");
+            ImGui::Text("HOME:     %s used of %s", human_size_kb(info.home_used_kb).c_str(),
+                        human_size_kb(info.home_total_kb).c_str());
+            if (info.card_unused_kb >= RESIZE_MIN_FREE_KB) {
+                ImGui::Text("Unused space on the card: %s", human_size_kb(info.card_unused_kb).c_str());
+                // The resize reformats HOME after backing it up to the RAM disk, so it only works
+                // while HOME is still nearly empty (e.g. right after flashing, before copying games)
+                bool fits = info.home_used_kb < info.tmp_free_kb;
+                if (!fits) {
+                    ImGui::TextWrapped("HOME has too much data to resize (it must fit in %s of RAM). "
+                                       "Resize right after flashing, before copying games.",
+                                       human_size_kb(info.tmp_free_kb).c_str());
+                }
+                ImGui::BeginDisabled(!fits);
+                if (ImGui::Button("Resize Home")) {
+                    launch_resize_home = true;
+                    running = false;
+                }
+                ImGui::EndDisabled();
+            } else {
+                ImGui::Text("HOME already uses the whole card.");
+            }
+
+            ImGui::Spacing();
+            if (ImGui::Button("Back")) {
+                next_page = PAGE_MAIN;
+            }
+            ImGui::End();
         }
 
-        if (ImGui::Checkbox("Global Mute", &current_mute)) {
-            set_alsa_mute(current_mute);
-            volume_dirty = true;
-            last_change = SDL_GetTicks();
+        if (next_page != page) {
+            if (next_page == PAGE_MAIN) focus_system_button = true;
+            page = next_page;
+            startup_frames = 3;
         }
-
-        if (ImGui::Button("System Settings")) {
-            // CPU Governer [select box]
-            // CPU info [label]
-            // Ram info [label]
-            // Show free space on SD card
-            // Maybe move this to a dedicated System Info app?
-        }
-        if (ImGui::Button("Input Settings")) {
-            // Swap A/B [toggle]
-            // Input Tester (maybe this should be it's own app?)
-        }
-        if (ImGui::Button("Date/Time")) {
-            // Set date
-            // Set Time
-        }
-
-        ImGui::Spacing();
-        if (ImGui::Button("Back")) {
-            running = false;
-        }
-
-        ImGui::End();
 
         ImGui::Render();
         SDL_SetRenderDrawColor(renderer, 45, 45, 45, 255);
@@ -324,6 +513,12 @@ int main(int argc, char* argv[]) {
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
+
+    if (launch_resize_home) {
+        // Replace this process so the launcher keeps waiting on the same PID and the display is free
+        execl("/usr/bin/resize-home", "resize-home", (char*)nullptr);
+        return 1;
+    }
 
     return 0;
 }
