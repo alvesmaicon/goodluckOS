@@ -22,24 +22,39 @@ static const char* kLaunchFile    = "/dev/shm/launch";
 static const char* kStateFile     = "/dev/shm/launcher_state";
 static const char* kAutoStartFile = "/home/player/autolaunch";
 
+static const char* kSettingsFile  = "/home/player/.config/puppy/settings";
+
 constexpr int kScreenW              = 640;
 constexpr int kScreenH              = 480;
 
-constexpr int kCellWidth            = 192;
-constexpr int kCellHeight           = 128;
-constexpr int kGap                  = 32;
-constexpr int kPitchX               = kCellWidth  + kGap;
-constexpr int kPitchY               = kCellHeight + kGap;
-
-// Screen position of the currently selected entry.
-constexpr int kSelX                 = 64;
-constexpr int kSelY                 = 164;
-
-constexpr int kHeaderTextYMargin    = 9;
-constexpr int kTextMargin           = 16;
+constexpr int kHeaderH              = 44;
+constexpr int kFooterH              = 30;
+constexpr int kMargin               = 16;
 constexpr int kBorder               = 3;
 
+// Grid view: tiles in columns, the selected entry's name over a gradient at the bottom.
+constexpr int kCellWidth            = 192;
+constexpr int kCellHeight           = 128;
+constexpr int kGridCols             = 3;
+constexpr int kGridGap              = 16;
+constexpr int kGridTop              = kHeaderH + 12;
+constexpr int kGridPitchY           = kCellHeight + kGridGap;
+constexpr int kGridFullRows         = 2;    // rows kept fully visible above the title area
+
+// List view: names on the left, a preview of the selected entry on the right.
+constexpr int kListTop              = kHeaderH + 8;
+constexpr int kListRowH             = 32;
+constexpr int kListRows             = (kScreenH - kFooterH - kListTop - 4) / kListRowH;
+constexpr int kListWidth            = 352;
+constexpr int kPreviewX             = kMargin + kListWidth + kMargin;
+constexpr int kPreviewW             = kScreenW - kPreviewX - kMargin;
+constexpr int kPreviewH             = kPreviewW * 3 / 4;
+
+constexpr int kMaxQueryLength       = 32;
+
 constexpr Uint32 kIdleCheckMs       = 60000;
+constexpr Uint32 kRepeatDelayMs     = 350;  // holding the d-pad repeats the move after this...
+constexpr Uint32 kRepeatRateMs      = 60;   // ...and then this often
 constexpr size_t kMaxCachedIcons    = 64;
 
 constexpr SDL_Color kWhite  {255, 255, 255, 255};
@@ -47,6 +62,8 @@ constexpr SDL_Color kGrey   {170, 170, 170, 255};
 constexpr SDL_Color kBlack  {0, 0, 0, 255};
 constexpr SDL_Color kYellow {255, 205, 60, 255};
 constexpr SDL_Color kTile   {40, 40, 44, 255};
+constexpr SDL_Color kRowSel {56, 56, 64, 255};
+constexpr SDL_Color kBar    {12, 12, 14, 255};
 constexpr SDL_Color kClear  {24, 24, 28, 255};
 
 // String helper functions
@@ -125,7 +142,10 @@ public:
         int w = 0, h = 0;
     };
 
-    IconCache(SDL_Renderer* r, const std::string& fallbackPath) : renderer(r) {
+    // Images larger than boxW x boxH are scaled down: cropped to cover the box, or with 'fit' shrunk
+    // to fit inside it. Smaller images are kept at their size.
+    IconCache(SDL_Renderer* r, const std::string& fallbackPath, int boxW, int boxH, bool fit)
+        : renderer(r), boxW(boxW), boxH(boxH), fit(fit) {
         fallback = load(fallbackPath);
         if (!fallback.tex) std::cerr << "Warning: missing fallback icon: " << fallbackPath << "\n";
     }
@@ -163,6 +183,8 @@ private:
     };
 
     SDL_Renderer* renderer;
+    int boxW, boxH;
+    bool fit;
     Icon fallback;
     std::map<std::string, Slot> slots;
     uint64_t clock = 0;
@@ -177,16 +199,23 @@ private:
 
         SDL_Surface* result = src;
 
-        if (src->w > kCellWidth || src->h > kCellHeight) {
-            // Scale and crop so icons cover the cell if they're too large.
-            float scale = std::max((float)kCellWidth / src->w, (float)kCellHeight / src->h);
-            SDL_Rect crop;
-            crop.w = std::min(src->w, (int)std::lround(kCellWidth  / scale));
-            crop.h = std::min(src->h, (int)std::lround(kCellHeight / scale));
-            crop.x = (src->w - crop.w) / 2;
-            crop.y = (src->h - crop.h) / 2;
+        if (src->w > boxW || src->h > boxH) {
+            SDL_Rect crop{0, 0, src->w, src->h};
+            int outW = boxW, outH = boxH;
+            if (fit) {
+                float scale = std::min((float)boxW / src->w, (float)boxH / src->h);
+                outW = std::max(1, (int)std::lround(src->w * scale));
+                outH = std::max(1, (int)std::lround(src->h * scale));
+            } else {
+                // Scale and crop so icons cover the cell if they're too large.
+                float scale = std::max((float)boxW / src->w, (float)boxH / src->h);
+                crop.w = std::min(src->w, (int)std::lround(boxW / scale));
+                crop.h = std::min(src->h, (int)std::lround(boxH / scale));
+                crop.x = (src->w - crop.w) / 2;
+                crop.y = (src->h - crop.h) / 2;
+            }
 
-            SDL_Surface* out = SDL_CreateRGBSurfaceWithFormat(0, kCellWidth, kCellHeight, 32, SDL_PIXELFORMAT_RGBA32);
+            SDL_Surface* out = SDL_CreateRGBSurfaceWithFormat(0, outW, outH, 32, SDL_PIXELFORMAT_RGBA32);
             if (!out) { SDL_FreeSurface(src); return icon; }
 
             SDL_SetSurfaceBlendMode(src, SDL_BLENDMODE_NONE);
@@ -218,80 +247,86 @@ struct Entry {
     std::string description;
     std::string command;
     std::string iconPath;
-
-    void render(SDL_Renderer* r, IconCache& icons, TTF_Font* badgeFont, int x, int y, bool selected, bool autostart) const {
-        SDL_Rect cell{x, y, kCellWidth, kCellHeight};
-        SDL_SetRenderDrawColor(r, kTile.r, kTile.g, kTile.b, kTile.a);
-        SDL_RenderFillRect(r, &cell);
-
-        IconCache::Icon icon = icons.get(iconPath);
-        if (icon.tex) {
-            SDL_Rect dst{x + (kCellWidth - icon.w) / 2, y + (kCellHeight - icon.h) / 2, icon.w, icon.h};
-            SDL_RenderCopy(r, icon.tex, nullptr, &dst);
-        }
-
-        if (selected) {
-            SDL_SetRenderDrawColor(r, kYellow.r, kYellow.g, kYellow.b, kYellow.a);
-            SDL_Rect strips[4] = {
-                {x, y, kCellWidth, kBorder},                                // top
-                {x, y + kCellHeight - kBorder, kCellWidth, kBorder},        // bottom
-                {x, y, kBorder, kCellHeight},                               // left
-                {x + kCellWidth - kBorder, y, kBorder, kCellHeight},        // right
-            };
-            SDL_RenderFillRects(r, strips, 4);
-        }
-
-        if (autostart && badgeFont) {
-            static const std::string label = "autolaunch";
-            const int padX = 6, padY = 2;
-            int tw = textWidth(badgeFont, label);
-            int th = TTF_FontHeight(badgeFont);
-            SDL_Rect badge{x, y, tw + padX * 2, th + padY * 2};
-            SDL_SetRenderDrawColor(r, kYellow.r, kYellow.g, kYellow.b, kYellow.a);
-            SDL_RenderFillRect(r, &badge);
-            drawText(r, badgeFont, label, badge.x + padX, badge.y + padY, kBlack);
-        }
-    }
+    std::string searchKey;  // lowercase name, filled once the catalog is loaded
 };
 
+// One tab of the launcher (a console or an apps category).
 struct Category {
     std::string name;
     std::vector<Entry> entries;
-    int col = 0;
+    std::vector<int> visible;   // indices of the entries matching the search, in display order
+    int sel = 0;                // position in 'visible'
+    mutable int scroll = 0;     // first list row / grid row on screen, kept in view by the renderer
 };
+
+enum class View { Grid, List };
 
 struct Model {
     std::vector<Category> categories;
-    int row = 0;
-    int& col() { return categories[row].col; }
-    int  col() const { return categories[row].col; }
-    int autoRow = -1, autoCol = -1;
+    int tab = 0;
+    View view = View::Grid;
+    std::string query;
+    int autoTab = -1, autoEntry = -1;
+
+    Category& cur() { return categories[tab]; }
+    const Category& cur() const { return categories[tab]; }
+
+    int selectedIndex() const {
+        if (categories.empty()) return -1;
+        const Category& c = cur();
+        if (c.visible.empty()) return -1;
+        return c.visible[std::clamp(c.sel, 0, (int)c.visible.size() - 1)];
+    }
 
     const Entry* selected() const {
-        if (categories.empty()) return nullptr;
-        const auto& entries = categories[row].entries;
-        int c = categories[row].col;
-        if (c < 0 || c >= (int)entries.size()) return nullptr;
-        return &entries[c];
+        int i = selectedIndex();
+        return i < 0 ? nullptr : &cur().entries[i];
     }
 
-    void move(int dx, int dy) {
-        if (categories.empty()) return;
-        row = std::clamp(row + dy, 0, (int)categories.size() - 1);
-        Category& cat = categories[row];
-        int last = std::max((int)cat.entries.size() - 1, 0);
-        cat.col = std::clamp(cat.col + dx, 0, last);
+    // Rebuilds every tab's visible entries from the query, keeping the selection when it still matches.
+    void applyFilter() {
+        const std::string q = lower(query);
+        for (auto& c : categories) {
+            int keep = c.visible.empty() ? -1 : c.visible[std::clamp(c.sel, 0, (int)c.visible.size() - 1)];
+            c.visible.clear();
+            for (int i = 0; i < (int)c.entries.size(); ++i) {
+                if (q.empty() || c.entries[i].searchKey.find(q) != std::string::npos) c.visible.push_back(i);
+            }
+            c.sel = 0;
+            for (int k = 0; k < (int)c.visible.size(); ++k) {
+                if (c.visible[k] == keep) { c.sel = k; break; }
+            }
+        }
     }
 
-    bool isAutoStart(int r, int c) const { return r == autoRow && c == autoCol; }
+    void switchTab(int delta) {
+        int n = (int)categories.size();
+        if (n > 0) tab = ((tab + delta) % n + n) % n;
+    }
 
-    bool find(const std::string& category, const std::string& name, int& outRow, int& outCol) const {
-        for (size_t r = 0; r < categories.size(); ++r) {
-            if (categories[r].name != category) continue;
-            for (size_t c = 0; c < categories[r].entries.size(); ++c) {
-                if (categories[r].entries[c].name == name) {
-                    outRow = (int)r;
-                    outCol = (int)c;
+    void moveSel(int delta) {
+        Category& c = cur();
+        if (c.visible.empty()) return;
+        c.sel = std::clamp(c.sel + delta, 0, (int)c.visible.size() - 1);
+    }
+
+    void select(int t, int entry) {
+        tab = t;
+        Category& c = categories[t];
+        for (int k = 0; k < (int)c.visible.size(); ++k) {
+            if (c.visible[k] == entry) { c.sel = k; return; }
+        }
+    }
+
+    bool isAutoStart(int t, int entry) const { return t == autoTab && entry == autoEntry; }
+
+    bool find(const std::string& category, const std::string& name, int& outTab, int& outEntry) const {
+        for (size_t t = 0; t < categories.size(); ++t) {
+            if (categories[t].name != category) continue;
+            for (size_t e = 0; e < categories[t].entries.size(); ++e) {
+                if (categories[t].entries[e].name == name) {
+                    outTab = (int)t;
+                    outEntry = (int)e;
                     return true;
                 }
             }
@@ -512,29 +547,44 @@ static bool readAutoStartId(std::string& category, std::string& name) {
 static void toggleAutoStart(Model& m) {
     const Entry* e = m.selected();
     if (!e) return;
-    if (m.isAutoStart(m.row, m.col())) {
+    int entry = m.selectedIndex();
+    if (m.isAutoStart(m.tab, entry)) {
         clearAutoStart();
-        m.autoRow = m.autoCol = -1;
+        m.autoTab = m.autoEntry = -1;
     } else {
         writeAutoStart(*e);
-        m.autoRow = m.row;
-        m.autoCol = m.col();
+        m.autoTab = m.tab;
+        m.autoEntry = entry;
     }
 }
 
-static void launch(const Model& m, const Entry& e) {
+static void launch(const Entry& e) {
     { std::ofstream out(kLaunchFile); if (out) out << e.command << "\n"; }
     std::ofstream state(kStateFile);
     if (state) state << e.category << "\n" << e.name << "\n";
-    (void)m;
 }
 
 static void restoreCursor(Model& m) {
     std::ifstream in(kStateFile);
     std::string category, name;
     if (!in || !std::getline(in, category) || !std::getline(in, name)) return;
-    int r, c;
-    if (m.find(category, name, r, c)) { m.row = r; m.categories[r].col = c; }
+    int t, e;
+    if (m.find(category, name, t, e)) m.select(t, e);
+}
+
+static View loadView() {
+    std::ifstream in(kSettingsFile);
+    for (std::string line; std::getline(in, line);) {
+        if (trim(line) == "view=list") return View::List;
+    }
+    return View::Grid;
+}
+
+static void saveView(View v) {
+    std::error_code ec;
+    fs::create_directories(fs::path(kSettingsFile).parent_path(), ec);
+    std::ofstream out(kSettingsFile);
+    if (out) out << "view=" << (v == View::List ? "list" : "grid") << "\n";
 }
 
 static int readBattery() {
@@ -549,6 +599,32 @@ static int readBattery() {
     }
     return -1; // no battery
 }
+
+// On-screen keyboard for the name search, driven by the d-pad.
+struct Keyboard {
+    static constexpr int kCols = 10;
+    static constexpr int kRows = 4;
+
+    bool open = false;
+    int row = 0, col = 0;
+
+    static const char* key(int r, int c) {
+        static const char* kKeys[kRows][kCols] = {
+            {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"},
+            {"k", "l", "m", "n", "o", "p", "q", "r", "s", "t"},
+            {"u", "v", "w", "x", "y", "z", "0", "1", "2", "3"},
+            {"4", "5", "6", "7", "8", "9", "-", "space", "del", "ok"},
+        };
+        return kKeys[r][c];
+    }
+
+    const char* current() const { return key(row, col); }
+
+    void move(int dx, int dy) {
+        col = (col + dx + kCols) % kCols;
+        row = (row + dy + kRows) % kRows;
+    }
+};
 
 class Ui {
 public:
@@ -573,24 +649,21 @@ public:
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
         uiFont    = TTF_OpenFont(kFontFile, 22);
-        titleFont = TTF_OpenFont(kFontFile, 34);
+        titleFont = TTF_OpenFont(kFontFile, 30);
         descFont  = TTF_OpenFont(kFontFile, 20);
-        badgeFont = TTF_OpenFont(kFontFile, 14);
-        if (!uiFont || !titleFont || !descFont || !badgeFont)
+        smallFont = TTF_OpenFont(kFontFile, 15);
+        if (!uiFont || !titleFont || !descFont || !smallFont)
             std::cerr << "Warning: could not load font " << kFontFile << "\n";
 
-        overlay = IMG_LoadTexture(renderer, "/usr/share/puppy/assets/overlay.png");
-        if (overlay) SDL_SetTextureBlendMode(overlay, SDL_BLENDMODE_BLEND);
-        else std::cerr << "Warning: could not load /usr/share/puppy/assets/overlay.png\n";
-
-        icons = std::make_unique<IconCache>(renderer, "/usr/share/puppy/assets/fallback.png");
+        gridIcons    = std::make_unique<IconCache>(renderer, "/usr/share/puppy/assets/fallback.png", kCellWidth, kCellHeight, false);
+        previewIcons = std::make_unique<IconCache>(renderer, "/usr/share/puppy/assets/fallback.png", kPreviewW, kPreviewH, true);
         ok_ = true;
     }
 
     ~Ui() {
-        icons.reset();
-        if (overlay) SDL_DestroyTexture(overlay);
-        for (TTF_Font* f : {uiFont, titleFont, descFont, badgeFont}) if (f) TTF_CloseFont(f);
+        gridIcons.reset();
+        previewIcons.reset();
+        for (TTF_Font* f : {uiFont, titleFont, descFont, smallFont}) if (f) TTF_CloseFont(f);
         if (renderer) SDL_DestroyRenderer(renderer);
         if (window) SDL_DestroyWindow(window);
         if (sdlUp) { TTF_Quit(); IMG_Quit(); SDL_Quit(); }
@@ -601,26 +674,19 @@ public:
 
     bool ok() const { return ok_; }
 
-    void render(const Model& m, int battery) {
-        SDL_SetRenderDrawColor(renderer, kClear.r, kClear.g, kClear.b, kClear.a);
+    void render(const Model& m, const Keyboard& kb, int battery) {
+        setColor(kClear);
         SDL_RenderClear(renderer);
 
-        for (int r = 0; r < (int)m.categories.size(); ++r) {
-            int y = kSelY + (r - m.row) * kPitchY;
-            if (y >= kScreenH || y + kCellHeight <= 0) continue;
+        if (m.cur().visible.empty()) renderEmpty(m);
+        else if (m.view == View::Grid) renderGrid(m);
+        else renderList(m);
 
-            const auto& entries = m.categories[r].entries;
-            int rowCol = m.categories[r].col;
-            for (int c = 0; c < (int)entries.size(); ++c) {
-                int x = kSelX + (c - rowCol) * kPitchX;
-                if (x >= kScreenW || x + kCellWidth <= 0) continue;
-                entries[c].render(renderer, *icons, badgeFont, x, y,
-                                  r == m.row && c == rowCol, m.isAutoStart(r, c));
-            }
-        }
+        // Bars are drawn last so long descriptions or scrolled tiles never spill over them
+        renderHeader(m, battery);
+        renderFooter(m, kb);
+        if (kb.open) renderKeyboard(m, kb);
 
-        if (overlay) SDL_RenderCopy(renderer, overlay, nullptr, nullptr);
-        drawText_(m, battery);
         SDL_RenderPresent(renderer);
     }
 
@@ -628,67 +694,281 @@ private:
     bool sdlUp = false, ok_ = false;
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
-    SDL_Texture* overlay = nullptr;
-    TTF_Font *uiFont = nullptr, *titleFont = nullptr, *descFont = nullptr, *badgeFont = nullptr;
-    std::unique_ptr<IconCache> icons;
+    TTF_Font *uiFont = nullptr, *titleFont = nullptr, *descFont = nullptr, *smallFont = nullptr;
+    std::unique_ptr<IconCache> gridIcons, previewIcons;
 
-    void drawText_(const Model& m, int battery) {
-        const int maxW = kScreenW - 2 * kTextMargin;
+    void setColor(SDL_Color c) { SDL_SetRenderDrawColor(renderer, c.r, c.g, c.b, c.a); }
 
-        if (!m.categories.empty())
-            drawText(renderer, uiFont, m.categories[m.row].name, kTextMargin, kHeaderTextYMargin, kWhite, maxW);
+    void fill(SDL_Color c, const SDL_Rect& r) {
+        setColor(c);
+        SDL_RenderFillRect(renderer, &r);
+    }
 
-        std::string s;
-        if (battery >= 0) {
-            s = std::to_string(battery);
-        } else {
-            s = "??";
+    void frame(SDL_Color c, const SDL_Rect& r, int t) {
+        setColor(c);
+        SDL_Rect strips[4] = {
+            {r.x, r.y, r.w, t},                 // top
+            {r.x, r.y + r.h - t, r.w, t},       // bottom
+            {r.x, r.y, t, r.h},                 // left
+            {r.x + r.w - t, r.y, t, r.h},       // right
+        };
+        SDL_RenderFillRects(renderer, strips, 4);
+    }
+
+    // Vertical fade from transparent (top) to the colour (bottom).
+    void gradient(const SDL_Rect& r, SDL_Color c) {
+        SDL_Vertex v[4];
+        const float xs[2] = {(float)r.x, (float)(r.x + r.w)};
+        const float ys[2] = {(float)r.y, (float)(r.y + r.h)};
+        for (int i = 0; i < 4; ++i) {
+            v[i].position = {xs[i % 2], ys[i / 2]};
+            v[i].color = {c.r, c.g, c.b, (Uint8)(i < 2 ? 0 : 255)};
+            v[i].tex_coord = {0, 0};
         }
-        drawText(renderer, uiFont, s, kScreenW - kTextMargin - textWidth(uiFont, s), kHeaderTextYMargin, kWhite);
+        const int idx[6] = {0, 1, 2, 1, 3, 2};
+        SDL_RenderGeometry(renderer, nullptr, v, 4, idx, 6);
+    }
+
+    // Text on a rounded-looking label; returns its width.
+    int pill(const std::string& text, int x, int y, SDL_Color bg, SDL_Color fg) {
+        const int padX = 6, padY = 2;
+        SDL_Rect r{x, y, textWidth(smallFont, text) + padX * 2, TTF_FontHeight(smallFont) + padY * 2};
+        fill(bg, r);
+        drawText(renderer, smallFont, text, x + padX, y + padY, fg);
+        return r.w;
+    }
+
+    void drawIcon(IconCache& cache, const std::string& path, const SDL_Rect& box) {
+        IconCache::Icon icon = cache.get(path);
+        if (!icon.tex) return;
+        SDL_Rect dst{box.x + (box.w - icon.w) / 2, box.y + (box.h - icon.h) / 2, icon.w, icon.h};
+        SDL_RenderCopy(renderer, icon.tex, nullptr, &dst);
+    }
+
+    // Draws wrapped text and returns its height.
+    int drawWrapped(TTF_Font* font, const std::string& text, int x, int y, SDL_Color color, int width) {
+        if (!font || text.empty()) return 0;
+        SDL_Surface* s = TTF_RenderUTF8_Blended_Wrapped(font, text.c_str(), color, width);
+        if (!s) return 0;
+        int h = s->h;
+        drawSurface(renderer, s, x, y);
+        SDL_FreeSurface(s);
+        return h;
+    }
+
+    int wrappedHeight(TTF_Font* font, const std::string& text, int width) {
+        if (!font || text.empty()) return 0;
+        SDL_Surface* s = TTF_RenderUTF8_Blended_Wrapped(font, text.c_str(), kWhite, width);
+        if (!s) return 0;
+        int h = s->h;
+        SDL_FreeSurface(s);
+        return h;
+    }
+
+    void renderHeader(const Model& m, int battery) {
+        fill(kBar, {0, 0, kScreenW, kHeaderH});
+        const int pillY = (kHeaderH - TTF_FontHeight(smallFont) - 4) / 2;
+
+        std::string bat = battery >= 0 ? std::to_string(battery) + "%" : "??";
+        int batX = kScreenW - kMargin - textWidth(uiFont, bat);
+        drawText(renderer, uiFont, bat, batX, (kHeaderH - TTF_FontHeight(uiFont)) / 2, kWhite);
+
+        int r1X = batX - 20 - (textWidth(smallFont, "R1") + 12);
+        pill("R1", r1X, pillY, kTile, kWhite);
+        std::string count = std::to_string(m.tab + 1) + "/" + std::to_string(m.categories.size());
+        int countX = r1X - 8 - textWidth(smallFont, count);
+        drawText(renderer, smallFont, count, countX, pillY + 2, kGrey);
+
+        int x = kMargin;
+        x += pill("L1", x, pillY, kTile, kWhite) + 10;
+        drawText(renderer, uiFont, m.cur().name, x, (kHeaderH - TTF_FontHeight(uiFont)) / 2, kWhite, countX - 10 - x);
+    }
+
+    void renderFooter(const Model& m, const Keyboard& kb) {
+        const int top = kScreenH - kFooterH;
+        fill(kBar, {0, top, kScreenW, kFooterH});
+
+        std::vector<std::pair<std::string, std::string>> hints;
+        if (kb.open) {
+            hints = {{"A", "Type"}, {"B", "Delete"}, {"START", "Done"}};
+        } else {
+            hints = {{"A", "Launch"}, {"Y", "Autolaunch"}, {"X", "Search"},
+                     {"SELECT", m.view == View::Grid ? "List" : "Grid"}};
+            if (!m.query.empty()) hints.push_back({"B", "Clear"});
+        }
+
+        const int y = top + (kFooterH - TTF_FontHeight(smallFont) - 4) / 2;
+        int x = kScreenW - kMargin;
+        for (auto it = hints.rbegin(); it != hints.rend(); ++it) {
+            x -= textWidth(smallFont, it->second);
+            drawText(renderer, smallFont, it->second, x, y + 2, kWhite);
+            x -= 5 + textWidth(smallFont, it->first) + 12;
+            pill(it->first, x, y, kYellow, kBlack);
+            x -= 14;
+        }
+
+        if (!m.query.empty() && !kb.open) {
+            std::string s = "\"" + m.query + "\": " + std::to_string(m.cur().visible.size());
+            drawText(renderer, smallFont, s, kMargin, y + 2, kYellow, x - kMargin);
+        }
+    }
+
+    void renderEmpty(const Model& m) {
+        std::string s = m.query.empty() ? "Nothing here" : "No matches for \"" + m.query + "\"";
+        int w = textWidth(uiFont, s);
+        drawText(renderer, uiFont, s, std::max(kMargin, (kScreenW - w) / 2), kScreenH / 2 - 40, kGrey, kScreenW - 2 * kMargin);
+        if (!m.query.empty()) {
+            std::string hint = "L1/R1 to search other tabs";
+            drawText(renderer, smallFont, hint, (kScreenW - textWidth(smallFont, hint)) / 2, kScreenH / 2, kGrey);
+        }
+    }
+
+    void renderGrid(const Model& m) {
+        const Category& c = m.cur();
+        int selRow = c.sel / kGridCols;
+        if (selRow < c.scroll) c.scroll = selRow;
+        if (selRow >= c.scroll + kGridFullRows) c.scroll = selRow - kGridFullRows + 1;
+
+        const int totalW = kGridCols * kCellWidth + (kGridCols - 1) * kGridGap;
+        const int x0 = (kScreenW - totalW) / 2;
+        for (int k = c.scroll * kGridCols; k < (int)c.visible.size(); ++k) {
+            int row = k / kGridCols - c.scroll;
+            if (row > kGridFullRows) break;    // one extra, partly hidden row hints that the list goes on
+            int col = k % kGridCols;
+            SDL_Rect cell{x0 + col * (kCellWidth + kGridGap), kGridTop + row * kGridPitchY, kCellWidth, kCellHeight};
+            fill(kTile, cell);
+            drawIcon(*gridIcons, c.entries[c.visible[k]].iconPath, cell);
+            if (k == c.sel) frame(kYellow, cell, kBorder);
+            if (m.isAutoStart(m.tab, c.visible[k])) pill("autolaunch", cell.x, cell.y, kYellow, kBlack);
+        }
 
         const Entry* e = m.selected();
         if (!e) return;
+        const int bottom = kScreenH - kFooterH;
+        const int textW = kScreenW - 2 * kMargin;
+        int descH = wrappedHeight(descFont, e->description, textW);
+        int titleH = TTF_FontHeight(titleFont);
+        int textTop = bottom - 8 - descH - titleH;
+        gradient({0, textTop - 70, kScreenW, 70}, kClear);
+        fill(kClear, {0, textTop, kScreenW, bottom - textTop});
+        drawText(renderer, titleFont, e->name, kMargin, textTop, kWhite, textW);
+        drawWrapped(descFont, e->description, kMargin, textTop + titleH, kGrey, textW);
+    }
 
-        const int bottom = kScreenH - kTextMargin;
-        int descH = 0;
-        if (descFont && !e->description.empty()) {
-            SDL_Surface* s = TTF_RenderUTF8_Blended_Wrapped(descFont, e->description.c_str(), kGrey, maxW - 142);
-            if (s) {
-                descH = s->h;
-                drawSurface(renderer, s, kTextMargin, bottom - descH);
-                SDL_FreeSurface(s);
+    void renderList(const Model& m) {
+        const Category& c = m.cur();
+        if (c.sel < c.scroll) c.scroll = c.sel;
+        if (c.sel >= c.scroll + kListRows) c.scroll = c.sel - kListRows + 1;
+
+        const int fontH = TTF_FontHeight(descFont);
+        for (int row = 0; row < kListRows && c.scroll + row < (int)c.visible.size(); ++row) {
+            int k = c.scroll + row;
+            const Entry& e = c.entries[c.visible[k]];
+            SDL_Rect r{kMargin, kListTop + row * kListRowH, kListWidth, kListRowH - 2};
+            if (k == c.sel) {
+                fill(kRowSel, r);
+                fill(kYellow, {r.x, r.y, 4, r.h});
             }
+            int maxW = r.w - 22;
+            if (m.isAutoStart(m.tab, c.visible[k])) {
+                int w = textWidth(smallFont, "auto") + 12;
+                pill("auto", r.x + r.w - w - 4, r.y + (r.h - TTF_FontHeight(smallFont) - 4) / 2, kYellow, kBlack);
+                maxW -= w + 8;
+            }
+            drawText(renderer, descFont, e.name, r.x + 14, r.y + (r.h - fontH) / 2, k == c.sel ? kWhite : kGrey, maxW);
         }
-        if (titleFont) {
-            int titleH = TTF_FontHeight(titleFont);
-            drawText(renderer, titleFont, e->name, kTextMargin, bottom - descH - titleH, kWhite, maxW - 142);
+
+        // Scrollbar, only when the tab doesn't fit on one screen
+        int total = (int)c.visible.size();
+        if (total > kListRows) {
+            SDL_Rect track{kMargin + kListWidth + 4, kListTop, 4, kListRows * kListRowH - 2};
+            fill(kTile, track);
+            int thumbH = std::max(16, track.h * kListRows / total);
+            int thumbY = track.y + (track.h - thumbH) * c.scroll / std::max(1, total - kListRows);
+            fill(kGrey, {track.x, thumbY, track.w, thumbH});
+        }
+
+        const Entry* e = m.selected();
+        if (!e) return;
+        SDL_Rect box{kPreviewX, kListTop, kPreviewW, kPreviewH};
+        fill(kTile, box);
+        drawIcon(*previewIcons, e->iconPath, box);
+        int y = box.y + box.h + 10;
+        y += drawWrapped(uiFont, e->name, kPreviewX, y, kWhite, kPreviewW) + 6;
+        drawWrapped(smallFont, e->description, kPreviewX, y, kGrey, kPreviewW);
+
+        std::string pos = std::to_string(c.sel + 1) + " / " + std::to_string(total);
+        drawText(renderer, smallFont, pos, kScreenW - kMargin - textWidth(smallFont, pos),
+                 kScreenH - kFooterH - TTF_FontHeight(smallFont) - 6, kGrey);
+    }
+
+    void renderKeyboard(const Model& m, const Keyboard& kb) {
+        const int pad = 12, gap = 4, keyW = 54, keyH = 40;
+        const int queryH = TTF_FontHeight(uiFont) + 12;
+        const int panelW = Keyboard::kCols * keyW + (Keyboard::kCols - 1) * gap + 2 * pad;
+        const int panelH = queryH + Keyboard::kRows * keyH + (Keyboard::kRows - 1) * gap + 2 * pad;
+        SDL_Rect panel{(kScreenW - panelW) / 2, kScreenH - kFooterH - panelH - 6, panelW, panelH};
+        fill({12, 12, 14, 240}, panel);
+        frame(kTile, panel, 2);
+
+        drawText(renderer, uiFont, "Search: " + m.query + "_", panel.x + pad, panel.y + pad, kWhite, panelW - 2 * pad);
+
+        for (int r = 0; r < Keyboard::kRows; ++r) {
+            for (int c = 0; c < Keyboard::kCols; ++c) {
+                SDL_Rect k{panel.x + pad + c * (keyW + gap), panel.y + pad + queryH + r * (keyH + gap), keyW, keyH};
+                bool sel = r == kb.row && c == kb.col;
+                fill(sel ? kYellow : kTile, k);
+                std::string label = Keyboard::key(r, c);
+                TTF_Font* f = label.size() > 1 ? smallFont : uiFont;
+                if (label.size() == 1) label = upper(label);
+                drawText(renderer, f, label, k.x + (k.w - textWidth(f, label)) / 2,
+                         k.y + (k.h - TTF_FontHeight(f)) / 2, sel ? kBlack : kWhite);
+            }
         }
     }
 };
 
-enum class Action { None, Up, Down, Left, Right, Launch, ToggleAutoStart };
+enum class Action { None, Up, Down, Left, Right, Launch, Back, ToggleAutoStart, Search, ToggleView, PrevTab, NextTab, Start };
 
+static bool isRepeatable(Action a) {
+    return a == Action::Up || a == Action::Down || a == Action::Left || a == Action::Right;
+}
+
+// Keyboard bindings, mostly for running the launcher on a PC: F1/F2 = L1/R1, F3 = Select, F4 = X, F5 = Start.
 static Action actionFromKey(SDL_Keycode k) {
     switch (k) {
-        case SDLK_UP:     return Action::Up;
-        case SDLK_DOWN:   return Action::Down;
-        case SDLK_LEFT:   return Action::Left;
-        case SDLK_RIGHT:  return Action::Right;
-        case SDLK_RETURN: return Action::Launch;
-        case SDLK_SPACE:  return Action::ToggleAutoStart;
-        default:          return Action::None;
+        case SDLK_UP:        return Action::Up;
+        case SDLK_DOWN:      return Action::Down;
+        case SDLK_LEFT:      return Action::Left;
+        case SDLK_RIGHT:     return Action::Right;
+        case SDLK_RETURN:    return Action::Launch;
+        case SDLK_ESCAPE:
+        case SDLK_BACKSPACE: return Action::Back;
+        case SDLK_SPACE:     return Action::ToggleAutoStart;
+        case SDLK_F1:        return Action::PrevTab;
+        case SDLK_F2:        return Action::NextTab;
+        case SDLK_F3:        return Action::ToggleView;
+        case SDLK_F4:        return Action::Search;
+        case SDLK_F5:        return Action::Start;
+        default:             return Action::None;
     }
 }
 
 static Action actionFromButton(Uint8 b) {
     switch (b) {
-        case SDL_CONTROLLER_BUTTON_DPAD_UP:    return Action::Up;
-        case SDL_CONTROLLER_BUTTON_DPAD_DOWN:  return Action::Down;
-        case SDL_CONTROLLER_BUTTON_DPAD_LEFT:  return Action::Left;
-        case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: return Action::Right;
-        case SDL_CONTROLLER_BUTTON_A:          return Action::Launch;
-        case SDL_CONTROLLER_BUTTON_Y:          return Action::ToggleAutoStart;
-        default:                               return Action::None;
+        case SDL_CONTROLLER_BUTTON_DPAD_UP:       return Action::Up;
+        case SDL_CONTROLLER_BUTTON_DPAD_DOWN:     return Action::Down;
+        case SDL_CONTROLLER_BUTTON_DPAD_LEFT:     return Action::Left;
+        case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:    return Action::Right;
+        case SDL_CONTROLLER_BUTTON_A:             return Action::Launch;
+        case SDL_CONTROLLER_BUTTON_B:             return Action::Back;
+        case SDL_CONTROLLER_BUTTON_X:             return Action::Search;
+        case SDL_CONTROLLER_BUTTON_Y:             return Action::ToggleAutoStart;
+        case SDL_CONTROLLER_BUTTON_BACK:          return Action::ToggleView;
+        case SDL_CONTROLLER_BUTTON_START:         return Action::Start;
+        case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:  return Action::PrevTab;
+        case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: return Action::NextTab;
+        default:                                  return Action::None;
     }
 }
 
@@ -699,11 +979,15 @@ int main() {
         std::cerr << "No entries found in apps.puppy files!\n";
         return 1;
     }
+    for (auto& c : model.categories)
+        for (auto& e : c.entries) e.searchKey = lower(e.name);
 
+    model.view = loadView();
+    model.applyFilter();
     restoreCursor(model);
     {
         std::string cat, name;
-        if (readAutoStartId(cat, name)) model.find(cat, name, model.autoRow, model.autoCol);
+        if (readAutoStartId(cat, name)) model.find(cat, name, model.autoTab, model.autoEntry);
     }
 
     Ui ui;
@@ -714,25 +998,97 @@ int main() {
         if (SDL_IsGameController(i)) { pad = SDL_GameControllerOpen(i); break; }
     }
 
+    Keyboard kb;
     bool running = true;
     bool dirty = true;
     int shownBattery = -2;
     Uint32 lastActivity = SDL_GetTicks();
 
+    // d-pad auto-repeat
+    Action held = Action::None;
+    Uint32 nextRepeat = 0;
+
+    auto typeKey = [&](const std::string& key) {
+        if (key == "ok") { kb.open = false; return; }
+        if (key == "del") { if (!model.query.empty()) model.query.pop_back(); }
+        else if ((int)model.query.size() < kMaxQueryLength) model.query += (key == "space" ? " " : key);
+        model.applyFilter();
+    };
+
+    auto apply = [&](Action a) {
+        const bool grid = model.view == View::Grid;
+        switch (a) {
+            case Action::PrevTab:    model.switchTab(-1); return;
+            case Action::NextTab:    model.switchTab(1);  return;
+            case Action::ToggleView:
+                model.view = grid ? View::List : View::Grid;
+                saveView(model.view);
+                return;
+            default: break;
+        }
+
+        if (kb.open) {
+            switch (a) {
+                case Action::Up:     kb.move(0, -1); break;
+                case Action::Down:   kb.move(0, 1);  break;
+                case Action::Left:   kb.move(-1, 0); break;
+                case Action::Right:  kb.move(1, 0);  break;
+                case Action::Launch: typeKey(kb.current()); break;
+                case Action::Back:
+                    if (model.query.empty()) kb.open = false;
+                    else typeKey("del");
+                    break;
+                case Action::Start:
+                case Action::Search: kb.open = false; break;
+                default: break;
+            }
+            return;
+        }
+
+        switch (a) {
+            case Action::Up:    model.moveSel(grid ? -kGridCols : -1); break;
+            case Action::Down:  model.moveSel(grid ? kGridCols : 1);   break;
+            case Action::Left:  model.moveSel(grid ? -1 : -kListRows); break;
+            case Action::Right: model.moveSel(grid ? 1 : kListRows);   break;
+            case Action::Search: kb.open = true; break;
+            case Action::Back:
+                if (!model.query.empty()) { model.query.clear(); model.applyFilter(); }
+                break;
+            case Action::ToggleAutoStart: toggleAutoStart(model); break;
+            case Action::Launch:
+                if (const Entry* e = model.selected()) {
+                    launch(*e);
+                    running = false;
+                }
+                break;
+            default: break;
+        }
+    };
+
     while (running) {
         if (dirty) {
             shownBattery = readBattery();
-            ui.render(model, shownBattery);
+            ui.render(model, kb, shownBattery);
             dirty = false;
         }
 
-        Uint32 elapsed = SDL_GetTicks() - lastActivity;
+        Uint32 now = SDL_GetTicks();
+        Uint32 elapsed = now - lastActivity;
         int timeout = elapsed >= kIdleCheckMs ? 0 : (int)(kIdleCheckMs - elapsed);
+        if (held != Action::None) timeout = std::min(timeout, (int)std::max<Sint32>(0, (Sint32)(nextRepeat - now)));
 
         SDL_Event ev;
         if (!SDL_WaitEventTimeout(&ev, timeout)) {
-            lastActivity = SDL_GetTicks();
-            if (readBattery() != shownBattery) dirty = true;
+            now = SDL_GetTicks();
+            if (held != Action::None && (Sint32)(now - nextRepeat) >= 0) {
+                apply(held);
+                nextRepeat = now + kRepeatRateMs;
+                dirty = true;
+                lastActivity = now;
+            } else if (now - lastActivity >= kIdleCheckMs) {
+                lastActivity = now;
+                if (readBattery() != shownBattery) dirty = true;
+            }
             continue;
         }
 
@@ -745,30 +1101,33 @@ int main() {
                 case SDL_WINDOWEVENT:
                     if (ev.window.event == SDL_WINDOWEVENT_EXPOSED) dirty = true;
                     break;
-                case SDL_KEYDOWN:
-                    action = actionFromKey(ev.key.keysym.sym);
+                case SDL_KEYDOWN: {
+                    SDL_Keycode k = ev.key.keysym.sym;
+                    if (kb.open && ((k >= SDLK_a && k <= SDLK_z) || (k >= SDLK_0 && k <= SDLK_9))) {
+                        typeKey(std::string(1, (char)k));
+                        dirty = true;
+                    } else if (!ev.key.repeat) {
+                        action = actionFromKey(k);
+                    }
+                    break;
+                }
+                case SDL_KEYUP:
+                    if (actionFromKey(ev.key.keysym.sym) == held) held = Action::None;
                     break;
                 case SDL_CONTROLLERBUTTONDOWN:
                     action = actionFromButton(ev.cbutton.button);
                     break;
-            }
-
-            switch (action) {
-                case Action::Up:    model.move(0, -1); break;
-                case Action::Down:  model.move(0, 1);  break;
-                case Action::Left:  model.move(-1, 0); break;
-                case Action::Right: model.move(1, 0);  break;
-                case Action::ToggleAutoStart: toggleAutoStart(model); break;
-                case Action::Launch:
-                    if (const Entry* e = model.selected()) {
-                        launch(model, *e);
-                        running = false;
-                    }
+                case SDL_CONTROLLERBUTTONUP:
+                    if (actionFromButton(ev.cbutton.button) == held) held = Action::None;
                     break;
-                case Action::None: break;
             }
 
             if (action != Action::None) {
+                apply(action);
+                if (isRepeatable(action)) {
+                    held = action;
+                    nextRepeat = SDL_GetTicks() + kRepeatDelayMs;
+                }
                 dirty = true;
                 lastActivity = SDL_GetTicks();
             }

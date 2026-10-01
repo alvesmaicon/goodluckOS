@@ -65,6 +65,18 @@ Puppy uses a ini-formatted `apps.puppy` files to populate it's application list.
 
 Add a new entry by modifying the `apps.puppy` file in your HOME partition. Take a look at the comments at the top of that file for syntax/examples
 
+Each system and app category gets its own tab. Controls:
+
+| Button | Action |
+|---|---|
+| L1 / R1 | Previous / next tab |
+| D-pad | Move (hold to scroll). In list view, left/right jump a page |
+| A | Launch |
+| Y | Set / clear autolaunch |
+| X | Search by name with the on-screen keyboard (the search applies to every tab) |
+| B | Clear the search |
+| SELECT | Switch between grid and list view (remembered across reboots) |
+
 ## What's wrong with the stock firmware?
 Stock firmware:
 - Based on ancient, unsupported forks of thelinux kernel version 3.4.
@@ -84,7 +96,7 @@ Stock firmware:
 3. Flash it to a microSD card of at least 1gb capacity with [balenaEtcher](https://etcher.balena.io/), [Rufus (in DD mode)](https://rufus.ie/en/), [dd](https://man7.org/linux/man-pages/man1/dd.1.html), etc
 4. Plug the micro SD card into TF Slot 1 (TF1-OS) on your GA36-MB
 5. Power it on.
-6. [optional] Select the `Resize Home` application in the launcher to expand your HOME partition to fill all the remaining space on your SD card. You only need to do this once.
+6. [optional] Select the `Resize Home` application in the launcher (or in System Settings) to expand your HOME partition to fill all the remaining space on your SD card. Do it before copying your games: HOME is backed up to RAM while it's resized. You only need to do this once, after that it's hidden from the launcher.
 
 ## How do I add games?
 Plug the SD card into your PC and open up the HOME partition. In there you'll find a `roms` folder with a few subfolders for each system. Add your roms to those.
