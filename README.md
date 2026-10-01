@@ -113,6 +113,8 @@ Grid or list view and whether the tabs are shown are set in System Settings.
 ## System Settings
 Opened with START from the launcher. It has brightness, volume and mute, a performance mode (keeps the CPU at full speed, uses more battery), the launcher options (tabs, grid or list view), the interface language, `Resize Home`, a System Info page and Input Settings, with the list of every shortcut and a button tester. Changes are saved as soon as you make them.
 
+![System Settings](docs/screenshots/system-settings.png)
+
 ## Translations
 Every text in the launcher, System Settings, the confirmation screens and `Resize Home` can be translated, and new languages need no code changes. Languages live in `/usr/share/goodluck/lang/<code>.lang` (in the repository: `rootfs/board/my-device/rootfs-overlay/usr/share/goodluck/lang/`) and show up in System Settings -> Options -> Language as soon as the file is there.
 
