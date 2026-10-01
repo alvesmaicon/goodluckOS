@@ -299,7 +299,7 @@ struct Entry {
     std::string name;
     std::string description;    // the system or app description
     std::string synopsis;       // from gamelist.xml
-    std::string meta;           // "year · genre · players", from gamelist.xml
+    std::string meta;           // "year Â· genre Â· players", from gamelist.xml
     std::string command;
     std::string iconPath;
     std::string searchKey;  // lowercase name, filled once the catalog is loaded
@@ -587,10 +587,10 @@ static std::string stripDotSlash(std::string p) {
     return p;
 }
 
-// Reads dir/gamelist.xml (as written by Skraper or EmulationStation), keyed by ROM file name.
-static std::map<std::string, GameInfo> loadGamelist(const fs::path& dir) {
+// Reads one gamelist file (as written by Skraper or EmulationStation), keyed by ROM file name.
+static std::map<std::string, GameInfo> readGamelistFile(const fs::path& dir, const std::string& file) {
     std::map<std::string, GameInfo> out;
-    std::ifstream in(dir / "gamelist.xml", std::ios::binary);
+    std::ifstream in(dir / file, std::ios::binary);
     if (!in) return out;
     const std::string xml((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
 
@@ -622,6 +622,27 @@ static std::map<std::string, GameInfo> loadGamelist(const fs::path& dir) {
         for (size_t i = 0; i < meta.size(); ++i) g.meta += (i ? "  \u00b7  " : "") + meta[i];
 
         out[path] = std::move(g);
+    }
+    return out;
+}
+
+// dir/gamelist.xml, with names, descriptions and metadata replaced by the ones in the gamelist for the
+// interface language when there is one: gamelist.<code>.xml (e.g. gamelist.pt-BR.xml), or
+// gamelist.<language>.xml (gamelist.pt.xml). Images and anything it lacks come from gamelist.xml.
+static std::map<std::string, GameInfo> loadGamelist(const fs::path& dir) {
+    auto out = readGamelistFile(dir, "gamelist.xml");
+    const std::string code = i18n::current();
+    if (code.empty() || code == "en") return out;
+
+    auto local = readGamelistFile(dir, "gamelist." + code + ".xml");
+    if (local.empty() && code.find('-') != std::string::npos)
+        local = readGamelistFile(dir, "gamelist." + code.substr(0, code.find('-')) + ".xml");
+    for (auto& [path, l] : local) {
+        GameInfo& g = out[path];
+        if (!l.name.empty()) g.name = l.name;
+        if (!l.synopsis.empty()) g.synopsis = l.synopsis;
+        if (!l.meta.empty()) g.meta = l.meta;
+        if (g.image.empty()) g.image = l.image;
     }
     return out;
 }
