@@ -75,6 +75,10 @@ Consider contributing to the [Device Fund](https://ko-fi.com/jeremyclark) so I c
 ## Puppy
 Puppy is goodluckOS' application launcher. It's what you see when you start goodluckOS.
 
+| Grid view | List view |
+| --- | --- |
+| ![Puppy in grid view](docs/screenshots/puppy-grid.png) | ![Puppy in list view](docs/screenshots/puppy-list.png) |
+
 It starts up fast, uses very little power, launches applications instantly, and uses zero RAM and CPU after launching an application.
 
 Puppy uses a ini-formatted `apps.puppy` files to populate it's application list. 
