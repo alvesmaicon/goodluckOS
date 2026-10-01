@@ -793,19 +793,19 @@ private:
         std::string count = std::to_string(c.visible.size());
         if (!m.query.empty()) count += " of " + std::to_string(c.entries.size());
         count += c.isArchive ? (c.entries.size() == 1 ? " game" : " games") : (c.entries.size() == 1 ? " app" : " apps");
+        if (!m.query.empty()) count += "  \u00b7  \"" + m.query + "\"";
         int countW = textWidth(smallFont, count);
 
         int maxNameW = batX - 24 - countW - 10 - kMargin;
         int nameW = std::min(textWidth(uiFont, c.name), maxNameW);
         drawText(renderer, uiFont, c.name, kMargin, nameY, kWhite, maxNameW);
         drawText(renderer, smallFont, count, kMargin + nameW + 10,
-                 nameY + TTF_FontAscent(uiFont) - TTF_FontAscent(smallFont), kGrey);
+                 nameY + TTF_FontAscent(uiFont) - TTF_FontAscent(smallFont), m.query.empty() ? kGrey : kYellow);
 
         renderTabs(m);
     }
 
-    // Strip with the neighbouring tabs around the current one and the L1/R1 buttons at the ends,
-    // so it's clear the shoulder buttons switch tabs.
+    // Strip with the neighbouring tabs around the current one (L1/R1 are listed in the footer hints).
     void renderTabs(const Model& m) {
         const int top = kHeaderH;
         fill(kClear, {0, top, kScreenW, kTabsH});
@@ -813,10 +813,11 @@ private:
         const int pillH = TTF_FontHeight(smallFont) + 4;
         const int pillY = top + (kTabsH - pillH) / 2;
 
-        int l1W = pill("L1 \u2039", kMargin, pillY, kYellow, kBlack);
-        int r1W = textWidth(smallFont, "\u203a R1") + 12;
-        pill("\u203a R1", kScreenW - kMargin - r1W, pillY, kYellow, kBlack);
-        const int left = kMargin + l1W + 10, right = kScreenW - kMargin - r1W - 10;
+        // Arrows at the ends: the tabs wrap around in both directions
+        const int arrowW = textWidth(smallFont, "\u2039") + 6;
+        drawText(renderer, smallFont, "\u2039", kMargin, pillY + 2, kGrey);
+        drawText(renderer, smallFont, "\u203a", kScreenW - kMargin - arrowW + 6, pillY + 2, kGrey);
+        const int left = kMargin + arrowW + 6, right = kScreenW - kMargin - arrowW - 6;
 
         const int n = (int)m.categories.size();
         const int gap = 18, pad = 8;
@@ -857,7 +858,7 @@ private:
         if (kb.open) {
             hints = {{"A", "Type"}, {"B", "Delete"}, {"START", "Done"}};
         } else {
-            hints = {{"A", "Launch"}, {"Y", "Autolaunch"}, {"X", "Search"},
+            hints = {{"L1", "Prev"}, {"R1", "Next"}, {"A", "Launch"}, {"Y", "Autolaunch"}, {"X", "Search"},
                      {"SELECT", m.view == View::Grid ? "List" : "Grid"}};
             if (!m.query.empty()) hints.push_back({"B", "Clear"});
         }
@@ -869,12 +870,7 @@ private:
             drawText(renderer, smallFont, it->second, x, y + 2, kWhite);
             x -= 5 + textWidth(smallFont, it->first) + 12;
             pill(it->first, x, y, kYellow, kBlack);
-            x -= 14;
-        }
-
-        if (!m.query.empty() && !kb.open) {
-            std::string s = "\"" + m.query + "\": " + std::to_string(m.cur().visible.size());
-            drawText(renderer, smallFont, s, kMargin, y + 2, kYellow, x - kMargin);
+            x -= 10;
         }
     }
 
