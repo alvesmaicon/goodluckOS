@@ -20,7 +20,7 @@
                 <div class="title-block">
                     <h2 class="japanese-text">グッドラックＯＳ</h2>
                     <h1 class="logo-text">goodluck<span class="red-text">OS</span></h1>
-                    <div class="version-badge">VER 0.0.1 ALPHA</div>
+                    <div class="version-badge">VER 0.0.2 ALPHA</div>
                 </div>
 
                 <div class="mascot-block">
@@ -70,13 +70,33 @@
                 </div>
 
                 <div class="feature-box">
+                    <h3>TABS, GRID, LIST</h3>
+                    <p>One tab per console plus an "All Games" tab, flipped with L1/R1. Pick a box-art grid or a list with a big cover preview. Your choice is remembered, like a good butler.</p>
+                </div>
+
+                <div class="feature-box">
+                    <h3>FIND IT FAST</h3>
+                    <p>Press X and type part of a name on the on-screen QWERTY keyboard. The search follows you across every tab. 800 NES games? Not a problem anymore.</p>
+                </div>
+
+                <div class="feature-box">
                     <h3>AUTOSTART</h3>
                     <p>Don't want to use Puppy? Fine. Mark any application as Autostart to launch it immediately when the console boots. Never see Puppy again. We won't judge you.</p>
                 </div>
 
                 <div class="feature-box">
                     <h3>KILL EM' ALL</h3>
-                    <p>Kill any application from anywhere by pressing the three center buttons. This will instantly bring you right back to the launcher.</p>
+                    <p>SELECT + START closes the running app properly (your save is written) and brings you right back to the launcher. Frozen? Add FN to force-kill it.</p>
+                </div>
+
+                <div class="feature-box">
+                    <h3>SETTINGS THAT STICK</h3>
+                    <p>Brightness, volume and CPU mode survive reboots. Change them with the hotkeys and a bar shows the level, in the launcher and as a RetroArch notification in-game.</p>
+                </div>
+
+                <div class="feature-box">
+                    <h3>SYSTEM SETTINGS</h3>
+                    <p>Brightness, volume, performance mode, launcher view, Resize Home, system info and a button tester for every key, FN included. All one press of START away.</p>
                 </div>
 
                 <div class="feature-box yellow-bg">
@@ -93,7 +113,7 @@
                 </div>
                 <div class="feature-box">
                     <h3>BUILT FOR SIZE</h3>
-                    <p>goodluckOS is built with only the absolutely necessary packages to get you playing games. This makes the entire build tiny. The whole OS will happily fit on a 512mb micro SD card with room to spare.</p>
+                    <p>goodluckOS is built with only the absolutely necessary packages to get you playing games. This makes the entire build tiny. The whole OS image is 1gb, and most of that is room for your games.</p>
                 </div>
                 <div class="feature-box">
                     <h3>EASY TO BUILD</h3>
@@ -117,15 +137,18 @@
             <h2 class="section-title">SYSTEM SPECIFICATIONS</h2>
             <div class="spec-container">
                 <ul class="spec-list">
+                    <li><strong>SOC:</strong> Allwinner A33 or A23 (separate builds, not interchangeable)</li>
                     <li><strong>KERNEL:</strong> Mainline Linux 7.2 (A23/A33-Optimized)</li>
                     <li><strong>SIZE:</strong> Fits on a 1gb MicroSD card</li>
                     <li><strong>DOWNLOAD SIZE:</strong> 137mb</li>
                     <li><strong>GLIBC:</strong> 2.44</li>
+                    <li><strong>EMULATION:</strong> RetroArch 1.22, cores built for the A7</li>
+                    <li><strong>GRAPHICS:</strong> SDL2 2.32 on KMS/DRM, Mali-400 GPU</li>
                     <li><strong>LICENSE:</strong> GPL 2.0</li>
                     <li><strong>DISPLAY DRIVER:</strong> Reverse-engineered <small>(shout out to the NSA for ghidra, u guys rule)</small></li>
                     <li><strong>GAMEPAD DRIVER:</strong> Reverse-engineered</li>
                     <li><strong>DEVICE TREE:</strong> Reverse-engineered, built from scratch</li>
-                    <li><strong>SWAP:</strong> ZSwap</li>
+                    <li><strong>SWAP:</strong> zram (in RAM, never on the SD card)</li>
                     <li><strong>BUILD:</strong> Easy-to-use, containerised build system</li>
                 </ul>
                 <div class="kanji-watermark">高品質</div>
@@ -173,8 +196,8 @@
                 <div class="step-box">
                     <div class="step-num">STEP 01</div>
                     <div class="step-text">
-                        <h3>GET A NEW MICROSD CARD</h3>
-                        <p>Throw away that unbranded generic microSD card that came with your unit. Get yourself a high-quality MicroSD media of at least 1gb capacity.</p>
+                        <h3>DUMP YOUR STOCK CARD</h3>
+                        <p>Don't throw away the card that came with your unit yet! Its first 128mb hold the boot data for your exact board, and goodluckOS needs it. Image the whole card with Win32 Disk Imager, or <span class="code">dd if=/dev/sdx of=stock_sdcard.img bs=1M count=128</span> on Linux. Keep the full image somewhere safe: it's also your way back to the stock OS.</p>
                     </div>
                 </div>
 
@@ -182,15 +205,15 @@
                     <div class="step-num">STEP 02</div>
                     <div class="step-text">
                         <h3>DOWNLOAD GOODLUCKOS</h3>
-                        <p>Download goodluckOS.zip from <a href="https://github.com/CodeZombie/goodluckOS/releases">here.</a></p>
+                        <p>Download the goodluckOS zip for your SoC from <a href="https://github.com/CodeZombie/goodluckOS/releases">here.</a> A33 builds don't work on A23 hardware and vice versa.</p>
                     </div>
                 </div>
 
                 <div class="step-box">
                     <div class="step-num">STEP 03</div>
                     <div class="step-text">
-                        <h3>UNZIP IT</h3>
-                        <p>Unzip goodluckOS.zip. The image file should extract into a 1gb .img file.</p>
+                        <h3>BUILD YOUR IMAGE</h3>
+                        <p>Open the <a href="download.html">Firmware Builder</a>, load your stock card dump and the goodluckOS image, and download your personalised image. Don't flash the release image directly: without your board's boot data it won't start.</p>
                     </div>
                 </div>
 
@@ -198,7 +221,7 @@
                     <div class="step-num">STEP 04</div>
                     <div class="step-text">
                         <h3>FLASH IT</h3>
-                        <p>Use software such as DD, BalenaEtcher, or Rufus to write `goodluckOS.img` directly to the new sd card. This will wipe all data on the card.</p>
+                        <p>Get a good quality microSD card of at least 1gb (the generic one that came with the unit is often fake-sized and unreliable). Write your built image to it with DD, BalenaEtcher, or Rufus. This will wipe all data on the card.</p>
                     </div>
                 </div>
 
@@ -206,7 +229,7 @@
                     <div class="step-num">STEP 05</div>
                     <div class="step-text">
                         <h3>EXPAND HOME (Optional)</h3>
-                        <p>Turn it on. Once you're in, find the 'resize-home' application, launch it, and follow the steps. This will resize your home partition to fill up all the available space on your microSD card</p>
+                        <p>Turn it on and run Resize Home (in the launcher, or START &rarr; System Settings) to grow your HOME partition to the whole card. Do it <strong>before</strong> copying games: HOME is backed up to a small RAM disk while it's reformatted. Once it has run, the launcher entry hides itself.</p>
                     </div>
                 </div>
             </div>
@@ -217,7 +240,12 @@
         <section id="features" class="ad-section">
             <h1>Problems?</h1>
             <p>This a pre-release alpha version, so you're probably going to run into some issues.</p>
-            <p>If you do, let us know!</p>
+            <p>Known ones:</p>
+            <ul style="margin-left:1rem;">
+                <li>With headphones plugged in, the volume can drop to zero a second after audio starts. The speaker works fine. This is a codec driver bug we're still chasing.</li>
+            </ul>
+            <br/>
+            <p>Run into something else? Let us know!</p>
             <br/>
             <p>Open a <a href="https://github.com/CodeZombie/goodluckOS/issues">new issue</a> on github, describe the problem, and we'll dispatch one of our trained associates to dedicate the remainder of their life to making <strong>you</strong> happy.</p>
         </section>
@@ -233,9 +261,52 @@
                 <li>Mount the HOME partition</li>
                 <li>Open the <span class="code">roms</span> folder</li>
                 <li>Open the subfolder for the console you want to add games for.</li>
-                <li>Drop your rom file in there.</li>
-                <li>If you're feeling extra fancy, throw a little png/jpg in the <span class="code">icons</span> folder too (with the same name as your rom file)</li>
+                <li>Drop your rom file in there. Zipped roms (<span class="code">.zip</span>/<span class="code">.7z</span>) work for the cartridge systems.</li>
+                <li>If you're feeling extra fancy, throw a little png/jpg in the <span class="code">icons</span> folder too (with the same name as your rom file, minus the extension). Around 320x240 keeps scrolling smooth.</li>
             </ol>
+            <br/>
+            <table class="tech-table">
+                <tr><th>System</th><th>Folder</th><th>Files</th></tr>
+                <tr><td>NES</td><td><span class="code">nes</span>, <span class="code">famicom</span></td><td>nes, fds, unf, zip, 7z</td></tr>
+                <tr><td>SNES</td><td><span class="code">snes</span>, <span class="code">sfc</span></td><td>sfc, smc, zip, 7z</td></tr>
+                <tr><td>Game Boy / Color</td><td><span class="code">gb</span>, <span class="code">gbc</span></td><td>gb, gbc, zip, 7z</td></tr>
+                <tr><td>Game Boy Advance</td><td><span class="code">gba</span></td><td>gba, zip, 7z</td></tr>
+                <tr><td>Genesis / Mega Drive</td><td><span class="code">genesis</span>, <span class="code">megadrive</span></td><td>md, smd, gen, bin, zip, 7z</td></tr>
+                <tr><td>Master System</td><td><span class="code">sms</span>, <span class="code">mastersystem</span></td><td>sms, zip, 7z</td></tr>
+                <tr><td>Game Gear</td><td><span class="code">gg</span>, <span class="code">gamegear</span></td><td>gg, zip, 7z</td></tr>
+                <tr><td>Sega CD</td><td><span class="code">segacd</span></td><td>cue, chd, iso</td></tr>
+                <tr><td>PlayStation</td><td><span class="code">psx</span></td><td>bin, cue, chd, m3u, iso</td></tr>
+                <tr><td>PSP</td><td><span class="code">psp</span></td><td>iso, cso, chd</td></tr>
+                <tr><td>DOS</td><td><span class="code">dos</span></td><td>exe, com, bat, conf</td></tr>
+                <tr><td>Doom</td><td><span class="code">doom</span></td><td>wad, iwad</td></tr>
+            </table>
+            <br/>
+            <p>The second folder name is the one other firmwares use, so a card prepared for them works as-is. No core ships for PC Engine, arcade (CPS, MAME, Neo Geo), NDS or N64 yet; see "Adding Cores?" below.</p>
+        </section>
+
+        <hr class="thick-divider">
+
+        <section id="controls" class="ad-section">
+            <h2 class="section-title">Controls</h2>
+            <table class="tech-table">
+                <tr><th>Where</th><th>Buttons</th><th>Does</th></tr>
+                <tr><td>Anywhere</td><td>VOL+ / VOL-</td><td>Volume</td></tr>
+                <tr><td>Anywhere</td><td>FN + VOL+ / VOL-</td><td>Brightness</td></tr>
+                <tr><td>Anywhere</td><td>POWER</td><td>Screen off / on</td></tr>
+                <tr><td>Anywhere</td><td>SELECT + START</td><td>Close the app (or quit the game) and go back to the launcher</td></tr>
+                <tr><td>Anywhere</td><td>FN + SELECT + START</td><td>Force-kill a frozen app</td></tr>
+                <tr><td>Launcher</td><td>L1 / R1</td><td>Previous / next tab</td></tr>
+                <tr><td>Launcher</td><td>X</td><td>Search by name</td></tr>
+                <tr><td>Launcher</td><td>Y</td><td>Autostart on boot</td></tr>
+                <tr><td>Launcher</td><td>START</td><td>Menu: reboot, power off, System Settings</td></tr>
+                <tr><td>RetroArch</td><td>FN + X</td><td>Menu</td></tr>
+                <tr><td>RetroArch</td><td>FN + R1 / L1</td><td>Save / load state</td></tr>
+                <tr><td>RetroArch</td><td>FN + LEFT / RIGHT</td><td>State slot</td></tr>
+                <tr><td>RetroArch</td><td>FN + Y</td><td>Pause</td></tr>
+                <tr><td>RetroArch</td><td>FN + R2</td><td>Fast forward</td></tr>
+            </table>
+            <br/>
+            <p>Not sure a button works? START &rarr; System Settings &rarr; Input Settings &rarr; Button Tester lights up every key as you press it.</p>
         </section>
 
         <hr class="thick-divider">
