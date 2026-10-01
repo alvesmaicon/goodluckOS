@@ -11,10 +11,10 @@ echo "$kind $pct $3" > /dev/shm/osd.tmp && mv /dev/shm/osd.tmp /dev/shm/osd
 
 if pidof retroarch >/dev/null; then
     case "$kind" in
-        volume)     label=Volume ;;
-        brightness) label=Brightness ;;
+        volume)     label=$(/usr/local/bin/gl-tr Volume) ;;
+        brightness) label=$(/usr/local/bin/gl-tr Brightness) ;;
         *)          label=$kind ;;
     esac
-    if [ "$3" = "muted" ]; then msg="$label: muted"; else msg="$label: $pct%"; fi
+    if [ "$3" = "muted" ]; then msg="$label: $(/usr/local/bin/gl-tr muted)"; else msg="$label: $pct%"; fi
     retroarch --command "SHOW_MSG $msg" >/dev/null 2>&1 &
 fi

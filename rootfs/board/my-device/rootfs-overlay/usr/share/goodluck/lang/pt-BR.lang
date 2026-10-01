@@ -1,0 +1,156 @@
+# Portuguese (Brazil) translation of goodluckOS.
+# Format: "English text = Translation", one per line (see rootfs/package/common/i18n.h).
+# Keep the launcher hints short: the bottom bar is nearly full.
+language = Português (Brasil)
+
+# --- Launcher: tabs and header
+All Games = Todos os Jogos
+My List = Minha Lista
+System = Sistema
+Emulators/Frontends = Emuladores
+Games = Jogos
+Applications = Aplicativos
+of = de
+game = jogo
+games = jogos
+app = app
+apps = apps
+player = jogador
+players = jogadores
+
+# --- Launcher: bottom bar hints
+Prev = Ant.
+Next = Próx.
+Launch = Abrir
+Remove = Remover
+Search = Buscar
+Clear = Limpar
+Autolaunch = Autoinício
+Settings = Ajustes
+Select = Escolher
+Close = Fechar
+Type = Digitar
+Delete = Apagar
+Done = Pronto
+
+# --- Launcher: messages and badges
+Your list is empty = Sua lista está vazia
+Press Y on any game to add it here = Aperte Y em qualquer jogo para adicioná-lo aqui
+Nothing here = Nada por aqui
+No matches for = Nada encontrado para
+L1/R1 to search other tabs = L1/R1 para buscar nas outras abas
+autolaunch = autoinício
+auto = auto
+Search: = Buscar:
+space = espaço
+del = apagar
+ok = ok
+
+# --- Launcher: volume / brightness bar
+Brightness = Brilho
+Volume = Volume
+Muted = Mudo
+muted = mudo
+
+# --- Power options
+Power options = Opções de energia
+Display off = Desligar a tela
+Restart = Reiniciar
+Shut down = Desligar
+Restarting... = Reiniciando...
+Shutting down... = Desligando...
+Starting system... = Iniciando o sistema...
+Are you sure you want to reboot the device? = Tem certeza de que quer reiniciar o aparelho?
+Are you sure you want to power off the device? = Tem certeza de que quer desligar o aparelho?
+
+# --- apps.puppy descriptions
+Reboot the device = Reinicia o aparelho
+Power off the device = Desliga o aparelho
+Modify your system's settings = Altere as configurações do sistema
+Resize your HOME partition (also in System Settings) = Expande a partição HOME (também nas Configurações)
+A frontend for emulators, game engines and media players = Interface para emuladores, motores de jogos e players de mídia
+It's Doom. = É o Doom.
+Doom WADs = WADs de Doom
+Sony Playstation = Sony PlayStation
+Game Boy / Game Boy Color = Game Boy / Game Boy Color
+PSP (Playstation Portable) = PSP (PlayStation Portable)
+Capcom Play System (arcade) = Capcom Play System (fliperama)
+Capcom Play System 2 (arcade) = Capcom Play System 2 (fliperama)
+Capcom Play System 3 (arcade) = Capcom Play System 3 (fliperama)
+Arcade (MAME 2003-Plus romset) = Fliperama (romset MAME 2003-Plus)
+
+# --- Confirmation screen
+Cancel = Cancelar
+Confirm = Confirmar
+Command Failed (Exit Code: %d) = O comando falhou (código de saída: %d)
+No output returned. = Nenhuma saída retornada.
+
+# --- System Settings
+System Settings = Configurações
+Display & Audio = Tela e Áudio
+Master Volume = Volume geral
+Global Mute = Sem som
+Options = Opções
+Performance mode (uses more battery) = Modo desempenho (gasta mais bateria)
+Show launcher tabs = Mostrar abas no launcher
+Launcher view: = Exibição do launcher:
+Grid = Grade
+List = Lista
+Language: = Idioma:
+Resize Home = Expandir a HOME
+System Info = Informações do sistema
+Input Settings = Controles
+Back = Voltar
+Too much data in HOME to resize. Resize right after flashing, before copying games. = Dados demais na HOME para expandir. Expanda logo depois de gravar o cartão, antes de copiar os jogos.
+
+# --- System Info
+Device = Aparelho
+Kernel = Kernel
+CPU = CPU
+Memory = Memória
+Battery = Bateria
+Storage = Armazenamento
+Unused = Livre
+unknown = desconhecido
+%s free of %s = %s livres de %s
+%s used of %s = %s usados de %s
+%s on the card (see Resize Home) = %s no cartão (veja Expandir a HOME)
+Charging = Carregando
+Discharging = Descarregando
+Full = Cheia
+Not charging = Sem carregar
+Unknown = Desconhecido
+
+# --- Input Settings: shortcut list
+Button Tester = Testar botões
+Any app = Em qualquer app
+Screen off / on = Desliga / liga a tela
+Close the app = Fecha o app
+Force close the app = Força o fechamento do app
+Launcher = Launcher
+Previous / next tab = Aba anterior / próxima
+D-pad / left stick = D-pad / analógico esq.
+Move = Mover
+LEFT / RIGHT (list) = ESQ. / DIR. (lista)
+Previous / next page = Página anterior / próxima
+Right stick up/down = Analógico dir. cima/baixo
+Scroll the description = Rola a descrição
+Add to / remove from My List = Põe / tira da Minha Lista
+Search by name = Busca por nome
+Clear the search = Limpa a busca
+Autolaunch on boot = Abre sozinho ao ligar
+Display off / restart / shut down = Desligar tela / reiniciar / desligar
+RetroArch = RetroArch
+Menu = Menu
+Save / load state = Salvar / carregar estado
+State slot = Slot de estado
+Pause = Pausa
+Fast forward = Avanço rápido
+Quit the game = Sai do jogo
+
+# --- Button tester
+No gamepad found. = Nenhum controle encontrado.
+Last pressed: %s (button %d) = Último apertado: %s (botão %d)
+Press any button = Aperte qualquer botão
+Sticks:  L %+4d %+4d   R %+4d %+4d = Analógicos:  E %+4d %+4d   D %+4d %+4d
+Hold B to go back = Segure B para voltar
