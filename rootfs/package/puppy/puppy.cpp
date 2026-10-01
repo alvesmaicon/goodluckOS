@@ -333,6 +333,7 @@ struct Category {
     std::vector<int> visible;   // indices of the entries matching the search, in display order
     int sel = 0;                // position in 'visible'
     mutable int scroll = 0;     // first list row / grid row on screen, kept in view by the renderer
+    mutable int tagColumn = -1; // list view: width of the system tag column (-1: to be measured)
 };
 
 enum class View { Grid, List };
@@ -1011,6 +1012,7 @@ static void rebuildMyList(Model& m) {
         return l.searchKey < r.searchKey;
     });
     m.categories[t].entries = std::move(list);
+    m.categories[t].tagColumn = -1;
 }
 
 // Adds the My List tab right after All Games (one R1 press from the boot tab).
@@ -1627,13 +1629,30 @@ private:
         drawText(renderer, descFont, sub, kMargin, textTop + titleH, kGrey, textW);
     }
 
+    // Width of a pill() with this text; the system tags are measured once.
+    int pillWidth(const std::string& text) {
+        auto it = pillWidths.find(text);
+        if (it != pillWidths.end()) return it->second;
+        return pillWidths[text] = textWidth(smallFont, text) + 12;
+    }
+    std::map<std::string, int> pillWidths;
+
     void renderList(const Model& m) {
         const Category& c = m.cur();
         if (c.sel < c.scroll) c.scroll = c.sel;
         const int rows = listRows(m.showTabs), top = listTop(m.showTabs);
         if (c.sel >= c.scroll + rows) c.scroll = c.sel - rows + 1;
 
+        // Rows are laid out in columns, like a table: [star] name ... [auto] [system]. The star has a
+        // fixed slot before the name, and the system column is as wide as the widest tag in the tab,
+        // with the tags at its left edge, so both line up from row to row.
         const int fontH = TTF_FontHeight(descFont);
+        const int starW = 20;
+        if (c.mixed && c.tagColumn < 0) {
+            c.tagColumn = 0;
+            for (const Entry& e : c.entries) c.tagColumn = std::max(c.tagColumn, pillWidth(e.tag));
+        }
+        const int tagColW = c.mixed ? c.tagColumn : 0;
         for (int row = 0; row < rows && c.scroll + row < (int)c.visible.size(); ++row) {
             int k = c.scroll + row;
             const Entry& e = c.entries[c.visible[k]];
@@ -1642,27 +1661,22 @@ private:
                 fill(kRowSel, r);
                 fill(kYellow, {r.x, r.y, 4, r.h});
             }
-            int maxW = r.w - 22;
-            int tagX = r.x + r.w - 4;
             const int tagY = r.y + (r.h - TTF_FontHeight(smallFont) - 4) / 2;
+            const int nameX = r.x + 12 + starW;
+            int right = r.x + r.w - 4;      // the name ends before this
             if (c.mixed) {
-                int w = textWidth(smallFont, e.tag) + 12;
-                tagX -= w;
-                pill(e.tag, tagX, tagY, kTile, kGrey);
-                maxW -= w + 8;
+                right -= tagColW;
+                pill(e.tag, right, tagY, kTile, kGrey);
+                right -= 8;
             }
             if (m.isAutoStart(e)) {
-                int w = textWidth(smallFont, tr("auto")) + 12;
-                tagX -= w + 4;
-                pill(tr("auto"), tagX, tagY, kYellow, kBlack);
-                maxW -= w + 8;
+                right -= pillWidth(tr("auto"));
+                pill(tr("auto"), right, tagY, kYellow, kBlack);
+                right -= 8;
             }
-            if (m.isFavorite(e)) {
-                tagX -= 22;
-                star(tagX + 9, r.y + r.h / 2, 8, kYellow);
-                maxW -= 22;
-            }
-            drawText(renderer, descFont, e.name, r.x + 14, r.y + (r.h - fontH) / 2, k == c.sel ? kWhite : kGrey, maxW);
+            if (m.isFavorite(e)) star(r.x + 12 + starW / 2, r.y + r.h / 2, 7, kYellow);
+            drawText(renderer, descFont, e.name, nameX, r.y + (r.h - fontH) / 2, k == c.sel ? kWhite : kGrey,
+                     right - nameX);
         }
 
         // Scrollbar, only when the tab doesn't fit on one screen
