@@ -266,6 +266,50 @@ void set_alsa_mute(bool mute) {
 
 
 
+// Raw joystick button numbers of the GA36-MB gamepad, the same numbering used by SDL_GAMECONTROLLERCONFIG
+// (/etc/profile.d/sdl_controller.sh) and RetroArch's autoconfig. FN is not mapped as a game controller
+// button, so the tester reads the raw joystick.
+const char* GAMEPAD_BUTTON_NAMES[] = {"B", "A", "X", "Y", "L1", "R1", "L2", "R2", "SELECT", "START",
+                                      "FN", "L3", "R3", "UP", "DOWN", "LEFT", "RIGHT"};
+const int GAMEPAD_BUTTON_COUNT = sizeof(GAMEPAD_BUTTON_NAMES) / sizeof(GAMEPAD_BUTTON_NAMES[0]);
+const int GAMEPAD_BUTTON_B = 0;
+const Uint32 TESTER_EXIT_HOLD_MS = 1000;
+
+// Shortcuts, from /etc/triggerhappy/triggers.d, Puppy and the RetroArch config (hotkey = FN)
+const char* const SHORTCUTS[][2] = {
+    {"Any app", nullptr},
+    {"VOL+ / VOL-", "Volume"},
+    {"FN + VOL+ / VOL-", "Brightness"},
+    {"POWER", "Screen off / on"},
+    {"SELECT + START", "Close the app"},
+    {"FN + SELECT + START", "Force close the app"},
+    {"Launcher", nullptr},
+    {"L1 / R1", "Previous / next tab"},
+    {"X", "Search by name"},
+    {"SELECT", "Grid / list view"},
+    {"Y", "Autolaunch on boot"},
+    {"RetroArch", nullptr},
+    {"FN + X", "Menu"},
+    {"FN + R1 / L1", "Save / load state"},
+    {"FN + LEFT / RIGHT", "State slot"},
+    {"FN + Y", "Pause"},
+    {"FN + R2", "Fast forward"},
+    {"FN + START", "Quit the game"},
+};
+
+// A button shape that lights up while pressed. Drawn by hand so it can't take the d-pad focus.
+void input_chip(const char* label, bool pressed, float width) {
+    ImVec2 size(width, ImGui::GetFrameHeight());
+    ImVec2 p = ImGui::GetCursorScreenPos();
+    ImDrawList* draw = ImGui::GetWindowDrawList();
+    draw->AddRectFilled(p, ImVec2(p.x + size.x, p.y + size.y),
+                        pressed ? IM_COL32(66, 150, 250, 255) : IM_COL32(50, 56, 66, 255), 4.0f);
+    ImVec2 text = ImGui::CalcTextSize(label);
+    draw->AddText(ImVec2(p.x + (size.x - text.x) * 0.5f, p.y + (size.y - text.y) * 0.5f),
+                  IM_COL32_WHITE, label);
+    ImGui::Dummy(size);
+}
+
 void section_headear(const char* text) {
     float windowWidth = ImGui::GetWindowSize().x;
     float textWidth = ImGui::CalcTextSize(text).x;
@@ -328,9 +372,13 @@ int main(int argc, char* argv[]) {
     // frames right away instead of waiting for the first input event
     int startup_frames = 3;
 
-    enum Page { PAGE_MAIN, PAGE_SYSTEM };
+    enum Page { PAGE_MAIN, PAGE_SYSTEM, PAGE_INPUT, PAGE_TESTER };
     Page page = PAGE_MAIN;
-    bool focus_system_button = false;   // coming back from the System page
+    // Coming back from a sub-page puts the focus on the button that opened it
+    bool focus_system_button = false, focus_input_button = false, focus_tester_button = false;
+    SDL_Joystick* joystick = controller ? SDL_GameControllerGetJoystick(controller) : nullptr;
+    int last_button = -1;
+    Uint32 b_hold_start = 0;
     SystemInfo info = gather_system_info();
     bool performance_mode = info.governor == PERFORMANCE_GOVERNOR;
     bool launch_resize_home = false;
@@ -345,7 +393,9 @@ int main(int argc, char* argv[]) {
             startup_frames--;
             got_event = SDL_PollEvent(&event);
         } else {
-            got_event = pending ? SDL_WaitEventTimeout(&event, 100) : SDL_WaitEvent(&event);
+            // the tester redraws continuously to show the sticks and the hold-B progress
+            if (page == PAGE_TESTER) got_event = SDL_WaitEventTimeout(&event, 33);
+            else got_event = pending ? SDL_WaitEventTimeout(&event, 100) : SDL_WaitEvent(&event);
         }
         if (got_event) {
             do {
@@ -374,8 +424,9 @@ int main(int argc, char* argv[]) {
         Page next_page = page;
         if (!editing && (ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false) ||
                          ImGui::IsKeyPressed(ImGuiKey_Escape, false))) {
-            if (page == PAGE_SYSTEM) next_page = PAGE_MAIN;
-            else running = false;
+            if (page == PAGE_SYSTEM || page == PAGE_INPUT) next_page = PAGE_MAIN;
+            else if (page == PAGE_MAIN) running = false;
+            // PAGE_TESTER: B is one of the buttons being tested, it leaves only when held
         }
 
         ImGui::SetNextWindowPos(ImVec2(0, 0));
@@ -448,13 +499,112 @@ int main(int argc, char* argv[]) {
                 info = gather_system_info();
                 next_page = PAGE_SYSTEM;
             }
-            // TODO: Input Settings (swap A/B, input tester) and Date/Time (the RTC has no backup
-            // battery, so the clock resets on every boot)
+            if (focus_input_button) {
+                ImGui::SetKeyboardFocusHere();
+                focus_input_button = false;
+            }
+            if (ImGui::Button("Input Settings")) {
+                next_page = PAGE_INPUT;
+            }
+            // TODO: Date/Time (the RTC has no backup battery, so the clock resets on every boot)
 
             ImGui::Spacing();
             if (ImGui::Button("Back")) {
                 running = false;
             }
+            ImGui::End();
+        } else if (page == PAGE_INPUT) {
+            ImGui::Begin("Input", nullptr, window_flags);
+            ImGui::Text("Input Settings");
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            if (focus_tester_button) {
+                ImGui::SetKeyboardFocusHere();
+                focus_tester_button = false;
+            }
+            if (ImGui::Button("Button Tester")) {
+                last_button = -1;
+                b_hold_start = 0;
+                next_page = PAGE_TESTER;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Back")) {
+                next_page = PAGE_MAIN;
+            }
+            ImGui::Spacing();
+
+            ImGui::PushFont(nullptr, ImGui::GetStyle().FontSizeBase * 0.8f);
+            if (ImGui::BeginTable("shortcuts", 2, ImGuiTableFlags_SizingStretchProp)) {
+                for (const auto& row : SHORTCUTS) {
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
+                    if (!row[1]) {
+                        ImGui::TextColored(ImVec4(0.45f, 0.70f, 1.0f, 1.0f), "%s", row[0]);
+                        continue;
+                    }
+                    ImGui::Text("  %s", row[0]);
+                    ImGui::TableNextColumn();
+                    ImGui::TextUnformatted(row[1]);
+                }
+                ImGui::EndTable();
+            }
+            ImGui::PopFont();
+            ImGui::End();
+        } else if (page == PAGE_TESTER) {
+            ImGui::Begin("Tester", nullptr, window_flags);
+            ImGui::Text("Button Tester");
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            auto pressed = [&](int button) {
+                return joystick && button < SDL_JoystickNumButtons(joystick) && SDL_JoystickGetButton(joystick, button);
+            };
+            for (int b = 0; b < GAMEPAD_BUTTON_COUNT; ++b) {
+                if (pressed(b)) last_button = b;
+            }
+
+            const float w = 92.0f, gap = ImGui::GetStyle().ItemSpacing.x;
+            static const int rows[][5] = {
+                {6, 4, -1, 5, 7},           // L2 L1   R1 R2
+                {13, 14, 15, 16, -1},       // d-pad
+                {2, 3, 1, 0, -1},           // X Y A B
+                {8, 10, 9, 11, 12},         // SELECT FN START L3 R3
+            };
+            for (const auto& row : rows) {
+                for (int i = 0; i < 5; ++i) {
+                    if (i > 0) ImGui::SameLine(0.0f, gap);
+                    if (row[i] < 0) ImGui::Dummy(ImVec2(w, ImGui::GetFrameHeight()));
+                    else input_chip(GAMEPAD_BUTTON_NAMES[row[i]], pressed(row[i]), w);
+                }
+            }
+            // Volume keys come from a separate keyboard-type input device
+            const Uint8* keys = SDL_GetKeyboardState(nullptr);
+            input_chip("VOL-", keys[SDL_SCANCODE_VOLUMEDOWN], w);
+            ImGui::SameLine(0.0f, gap);
+            input_chip("VOL+", keys[SDL_SCANCODE_VOLUMEUP], w);
+
+            ImGui::Spacing();
+            if (!joystick) {
+                ImGui::Text("No gamepad found.");
+            } else {
+                if (SDL_JoystickNumAxes(joystick) >= 4) {
+                    ImGui::Text("Sticks:  L %+4d %+4d   R %+4d %+4d",
+                                SDL_JoystickGetAxis(joystick, 0) * 100 / 32767, SDL_JoystickGetAxis(joystick, 1) * 100 / 32767,
+                                SDL_JoystickGetAxis(joystick, 2) * 100 / 32767, SDL_JoystickGetAxis(joystick, 3) * 100 / 32767);
+                }
+                if (last_button >= 0) ImGui::Text("Last pressed: %s (button %d)", GAMEPAD_BUTTON_NAMES[last_button], last_button);
+                else ImGui::Text("Press any button");
+            }
+
+            bool b_down = pressed(GAMEPAD_BUTTON_B) || keys[SDL_SCANCODE_ESCAPE];
+            Uint32 now = SDL_GetTicks();
+            if (!b_down) b_hold_start = 0;
+            else if (b_hold_start == 0) b_hold_start = now;
+            float hold = b_hold_start ? std::min(1.0f, (now - b_hold_start) / (float)TESTER_EXIT_HOLD_MS) : 0.0f;
+            ImGui::Spacing();
+            ImGui::ProgressBar(hold, ImVec2(-1.0f, 0.0f), "Hold B to go back");
+            if (hold >= 1.0f) next_page = PAGE_INPUT;
             ImGui::End();
         } else {
             ImGui::Begin("System", nullptr, window_flags);
@@ -489,7 +639,9 @@ int main(int argc, char* argv[]) {
         }
 
         if (next_page != page) {
-            if (next_page == PAGE_MAIN) focus_system_button = true;
+            if (page == PAGE_SYSTEM) focus_system_button = true;
+            if (page == PAGE_INPUT && next_page == PAGE_MAIN) focus_input_button = true;
+            if (page == PAGE_TESTER) focus_tester_button = true;
             page = next_page;
             startup_frames = 3;
         }
