@@ -13,6 +13,9 @@
 #include <string>
 #include <vector>
 
+#include <fcntl.h>
+#include <unistd.h>
+
 namespace fs = std::filesystem;
 
 static const char* kFontFile      = "/usr/share/fonts/Inter_24pt-Medium.ttf";
@@ -669,9 +672,15 @@ static const PowerItem kPowerItems[] = {
 };
 constexpr int kPowerItemCount = sizeof(kPowerItems) / sizeof(kPowerItems[0]);
 
+// Non-blocking: if power-manager.sh isn't reading (e.g. being respawned), drop the request rather
+// than freeze the launcher.
 static void sendPowerRequest(const char* request) {
-    std::ofstream fifo(kPowerFifo);
-    if (fifo) fifo << request << "\n";
+    int fd = open(kPowerFifo, O_WRONLY | O_NONBLOCK);
+    if (fd < 0) return;
+    std::string line = std::string(request) + "\n";
+    ssize_t written = write(fd, line.c_str(), line.size());
+    (void)written;
+    close(fd);
 }
 
 static bool screenOn() {
@@ -1306,6 +1315,7 @@ int main() {
 
     Keyboard kb;
     Osd osd;
+    bool consoleCleared = false;
     Uint32 osdUntil = 0, osdNextRead = 0;
     bool running = true;
     bool dirty = true;
@@ -1418,6 +1428,12 @@ int main() {
         if (dirty) {
             shownBattery = readBattery();
             ui.render(model, kb, osd, shownBattery);
+            if (!consoleCleared) {
+                // The boot's "Starting system..." stays on the text console, which flashes between
+                // apps; we can't write to it as player, so ask the root power-manager.sh
+                sendPowerRequest("clear-console");
+                consoleCleared = true;
+            }
             dirty = false;
         }
 

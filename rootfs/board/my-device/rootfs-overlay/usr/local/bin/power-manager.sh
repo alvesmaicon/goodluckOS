@@ -31,6 +31,9 @@ while true; do
         save-settings)   # sent by unprivileged apps (e.g. system-settings) after changing volume
             /usr/local/bin/persist-settings.sh save
             ;;
+        clear-console)   # sent by Puppy once it's up: drop the boot's "Starting system..." text
+            printf "\033[2J" > /dev/tty1 2>/dev/null
+            ;;
         screen-off)      # Puppy's power menu: "Display off"
             /usr/local/bin/toggle-screen.sh off
             ;;
