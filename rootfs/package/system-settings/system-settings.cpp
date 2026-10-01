@@ -11,6 +11,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #include <sys/statvfs.h>
 #include <sys/utsname.h>
 #include <alsa/asoundlib.h>
@@ -84,6 +85,50 @@ std::string human_size_kb(unsigned long long kb) {
     else if (kb >= 1024) snprintf(buf, sizeof(buf), "%.0f MB", kb / 1024.0);
     else snprintf(buf, sizeof(buf), "%llu KB", kb);
     return buf;
+}
+
+// Options of the Puppy launcher, read by it every time it starts: "view=grid|list" and "tabs=on|off"
+const char* LAUNCHER_SETTINGS_DIR = "/home/player/.config/puppy";
+const char* LAUNCHER_SETTINGS_FILE = "/home/player/.config/puppy/settings";
+
+struct LauncherSettings {
+    bool show_tabs = true;
+    bool list_view = false;
+};
+
+LauncherSettings load_launcher_settings() {
+    LauncherSettings s;
+    std::ifstream file(LAUNCHER_SETTINGS_FILE);
+    for (std::string line; std::getline(file, line);) {
+        if (line == "view=list") s.list_view = true;
+        else if (line == "view=grid") s.list_view = false;
+        else if (line == "tabs=off") s.show_tabs = false;
+        else if (line == "tabs=on") s.show_tabs = true;
+    }
+    return s;
+}
+
+void save_launcher_settings(const LauncherSettings& s) {
+    // keep any other options already in the file
+    std::vector<std::string> lines;
+    {
+        std::ifstream file(LAUNCHER_SETTINGS_FILE);
+        for (std::string line; std::getline(file, line);) {
+            if (line.compare(0, 5, "view=") != 0 && line.compare(0, 5, "tabs=") != 0 && !line.empty()) lines.push_back(line);
+        }
+    }
+    lines.push_back(std::string("view=") + (s.list_view ? "list" : "grid"));
+    lines.push_back(std::string("tabs=") + (s.show_tabs ? "on" : "off"));
+
+    mkdir("/home/player/.config", 0755);
+    mkdir(LAUNCHER_SETTINGS_DIR, 0755);
+    std::string tmp = std::string(LAUNCHER_SETTINGS_FILE) + ".tmp";
+    {
+        std::ofstream file(tmp.c_str());
+        if (!file.is_open()) return;
+        for (const auto& line : lines) file << line << "\n";
+    }
+    rename(tmp.c_str(), LAUNCHER_SETTINGS_FILE);
 }
 
 const char* HOME_MOUNT = "/home/player";
@@ -286,7 +331,7 @@ const char* const SHORTCUTS[][2] = {
     {"Launcher", nullptr},
     {"L1 / R1", "Previous / next tab"},
     {"X", "Search by name"},
-    {"SELECT", "Grid / list view"},
+    {"START", "Menu (reboot, power off...)"},
     {"Y", "Autolaunch on boot"},
     {"RetroArch", nullptr},
     {"FN + X", "Menu"},
@@ -381,6 +426,7 @@ int main(int argc, char* argv[]) {
     Uint32 b_hold_start = 0;
     SystemInfo info = gather_system_info();
     bool performance_mode = info.governor == PERFORMANCE_GOVERNOR;
+    LauncherSettings launcher = load_launcher_settings();
     bool launch_resize_home = false;
 
     bool running = true;
@@ -467,12 +513,29 @@ int main(int argc, char* argv[]) {
                 last_change = SDL_GetTicks();
             }
 
+            // CPU and launcher options share one section so the page still fits the 480px screen
+            section_headear("Options");
             if (!info.normal_governor.empty()) {
-                section_headear("Performance");
                 if (ImGui::Checkbox("Performance mode (uses more battery)", &performance_mode)) {
                     send_power_request(std::string("set-governor ") +
                                        (performance_mode ? PERFORMANCE_GOVERNOR : info.normal_governor));
                 }
+            }
+
+            if (ImGui::Checkbox("Show launcher tabs", &launcher.show_tabs)) {
+                save_launcher_settings(launcher);
+            }
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("Launcher view:");
+            ImGui::SameLine();
+            if (ImGui::RadioButton("Grid", !launcher.list_view)) {
+                launcher.list_view = false;
+                save_launcher_settings(launcher);
+            }
+            ImGui::SameLine();
+            if (ImGui::RadioButton("List", launcher.list_view)) {
+                launcher.list_view = true;
+                save_launcher_settings(launcher);
             }
 
             ImGui::Spacing();

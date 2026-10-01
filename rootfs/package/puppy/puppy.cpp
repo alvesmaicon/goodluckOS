@@ -30,7 +30,6 @@ constexpr int kScreenH              = 480;
 
 constexpr int kHeaderH              = 44;
 constexpr int kTabsH                = 30;   // tab strip under the header
-constexpr int kBodyTop              = kHeaderH + kTabsH;
 constexpr int kFooterH              = 30;
 constexpr int kMargin               = 16;
 constexpr int kBorder               = 3;
@@ -40,14 +39,11 @@ constexpr int kCellWidth            = 192;
 constexpr int kCellHeight           = 128;
 constexpr int kGridCols             = 3;
 constexpr int kGridGap              = 16;
-constexpr int kGridTop              = kBodyTop + 8;
 constexpr int kGridPitchY           = kCellHeight + kGridGap;
 constexpr int kGridFullRows         = 2;    // rows kept fully visible above the title area
 
 // List view: names on the left, a preview of the selected entry on the right.
-constexpr int kListTop              = kBodyTop + 6;
 constexpr int kListRowH             = 32;
-constexpr int kListRows             = (kScreenH - kFooterH - kListTop - 4) / kListRowH;
 constexpr int kListWidth            = 352;
 constexpr int kPreviewX             = kMargin + kListWidth + kMargin;
 constexpr int kPreviewW             = kScreenW - kPreviewX - kMargin;
@@ -59,6 +55,12 @@ constexpr Uint32 kIdleCheckMs       = 60000;
 constexpr Uint32 kRepeatDelayMs     = 350;  // holding the d-pad repeats the move after this...
 constexpr Uint32 kRepeatRateMs      = 60;   // ...and then this often
 constexpr size_t kMaxCachedIcons    = 64;
+
+// The tab strip can be hidden (System Settings -> Show Tabs); the content then moves up.
+static int bodyTop(bool showTabs)  { return kHeaderH + (showTabs ? kTabsH : 0); }
+static int gridTop(bool showTabs)  { return bodyTop(showTabs) + 8; }
+static int listTop(bool showTabs)  { return bodyTop(showTabs) + 6; }
+static int listRows(bool showTabs) { return (kScreenH - kFooterH - listTop(showTabs) - 4) / kListRowH; }
 
 constexpr SDL_Color kWhite  {255, 255, 255, 255};
 constexpr SDL_Color kGrey   {170, 170, 170, 255};
@@ -272,6 +274,7 @@ struct Model {
     std::vector<Category> categories;
     int tab = 0;
     View view = View::Grid;
+    bool showTabs = true;
     std::string query;
     std::string autoCategory, autoName;   // the autolaunch entry
 
@@ -639,19 +642,16 @@ static void extractSystemMenu(Model& m) {
     m.categories.erase(sys);
 }
 
-static View loadView() {
+// Launcher options, set in System Settings: "view=grid|list" and "tabs=on|off".
+static void loadSettings(Model& m) {
     std::ifstream in(kSettingsFile);
     for (std::string line; std::getline(in, line);) {
-        if (trim(line) == "view=list") return View::List;
+        line = trim(line);
+        if (line == "view=list") m.view = View::List;
+        else if (line == "view=grid") m.view = View::Grid;
+        else if (line == "tabs=off") m.showTabs = false;
+        else if (line == "tabs=on") m.showTabs = true;
     }
-    return View::Grid;
-}
-
-static void saveView(View v) {
-    std::error_code ec;
-    fs::create_directories(fs::path(kSettingsFile).parent_path(), ec);
-    std::ofstream out(kSettingsFile);
-    if (out) out << "view=" << (v == View::List ? "list" : "grid") << "\n";
 }
 
 static int readBattery() {
@@ -887,7 +887,7 @@ private:
         drawText(renderer, smallFont, count, kMargin + nameW + 10,
                  nameY + TTF_FontAscent(uiFont) - TTF_FontAscent(smallFont), m.query.empty() ? kGrey : kYellow);
 
-        renderTabs(m);
+        if (m.showTabs) renderTabs(m);
     }
 
     // Strip with the neighbouring tabs around the current one (L1/R1 are listed in the footer hints).
@@ -974,7 +974,6 @@ private:
             // while searching, clearing the search is more useful than starting a new one
             if (m.query.empty()) hints.push_back({"X", "Search"});
             else hints.push_back({"B", "Clear"});
-            hints.push_back({"SELECT", m.view == View::Grid ? "List" : "Grid"});
             if (!m.menu.empty()) hints.push_back({"START", "Menu"});
         }
 
@@ -1013,7 +1012,7 @@ private:
             int row = k / kGridCols - c.scroll;
             if (row > kGridFullRows) break;    // one extra, partly hidden row hints that the list goes on
             int col = k % kGridCols;
-            SDL_Rect cell{x0 + col * (kCellWidth + kGridGap), kGridTop + row * kGridPitchY, kCellWidth, kCellHeight};
+            SDL_Rect cell{x0 + col * (kCellWidth + kGridGap), gridTop(m.showTabs) + row * kGridPitchY, kCellWidth, kCellHeight};
             fill(kTile, cell);
             drawIcon(*gridIcons, c.entries[c.visible[k]].iconPath, cell);
             if (k == c.sel) frame(kYellow, cell, kBorder);
@@ -1041,13 +1040,14 @@ private:
     void renderList(const Model& m) {
         const Category& c = m.cur();
         if (c.sel < c.scroll) c.scroll = c.sel;
-        if (c.sel >= c.scroll + kListRows) c.scroll = c.sel - kListRows + 1;
+        const int rows = listRows(m.showTabs), top = listTop(m.showTabs);
+        if (c.sel >= c.scroll + rows) c.scroll = c.sel - rows + 1;
 
         const int fontH = TTF_FontHeight(descFont);
-        for (int row = 0; row < kListRows && c.scroll + row < (int)c.visible.size(); ++row) {
+        for (int row = 0; row < rows && c.scroll + row < (int)c.visible.size(); ++row) {
             int k = c.scroll + row;
             const Entry& e = c.entries[c.visible[k]];
-            SDL_Rect r{kMargin, kListTop + row * kListRowH, kListWidth, kListRowH - 2};
+            SDL_Rect r{kMargin, top + row * kListRowH, kListWidth, kListRowH - 2};
             if (k == c.sel) {
                 fill(kRowSel, r);
                 fill(kYellow, {r.x, r.y, 4, r.h});
@@ -1072,17 +1072,17 @@ private:
 
         // Scrollbar, only when the tab doesn't fit on one screen
         int total = (int)c.visible.size();
-        if (total > kListRows) {
-            SDL_Rect track{kMargin + kListWidth + 4, kListTop, 4, kListRows * kListRowH - 2};
+        if (total > rows) {
+            SDL_Rect track{kMargin + kListWidth + 4, top, 4, rows * kListRowH - 2};
             fill(kTile, track);
-            int thumbH = std::max(16, track.h * kListRows / total);
-            int thumbY = track.y + (track.h - thumbH) * c.scroll / std::max(1, total - kListRows);
+            int thumbH = std::max(16, track.h * rows / total);
+            int thumbY = track.y + (track.h - thumbH) * c.scroll / std::max(1, total - rows);
             fill(kGrey, {track.x, thumbY, track.w, thumbH});
         }
 
         const Entry* e = m.selected();
         if (!e) return;
-        SDL_Rect box{kPreviewX, kListTop, kPreviewW, kPreviewH};
+        SDL_Rect box{kPreviewX, top, kPreviewW, kPreviewH};
         fill(kTile, box);
         drawIcon(*previewIcons, e->iconPath, box);
         int y = box.y + box.h + 10;
@@ -1099,7 +1099,8 @@ private:
         const int titleH = TTF_FontHeight(uiFont) + 14;
         const int panelW = 320;
         const int panelH = titleH + (int)m.menu.size() * rowH + 2 * pad;
-        SDL_Rect panel{(kScreenW - panelW) / 2, kBodyTop + (kScreenH - kFooterH - kBodyTop - panelH) / 2, panelW, panelH};
+        const int bodyY = bodyTop(m.showTabs);
+        SDL_Rect panel{(kScreenW - panelW) / 2, bodyY + (kScreenH - kFooterH - bodyY - panelH) / 2, panelW, panelH};
         fill({0, 0, 0, 150}, {0, kHeaderH, kScreenW, kScreenH - kFooterH - kHeaderH});   // dim the tab behind
         fill(kBar, panel);
         frame(kTile, panel, 2);
@@ -1147,13 +1148,13 @@ private:
     }
 };
 
-enum class Action { None, Up, Down, Left, Right, Launch, Back, ToggleAutoStart, Search, ToggleView, PrevTab, NextTab, Start };
+enum class Action { None, Up, Down, Left, Right, Launch, Back, ToggleAutoStart, Search, PrevTab, NextTab, Start };
 
 static bool isRepeatable(Action a) {
     return a == Action::Up || a == Action::Down || a == Action::Left || a == Action::Right;
 }
 
-// Keyboard bindings, mostly for running the launcher on a PC: F1/F2 = L1/R1, F3 = Select, F4 = X, F5 = Start.
+// Keyboard bindings, mostly for running the launcher on a PC: F1/F2 = L1/R1, F4 = X, F5 = Start.
 static Action actionFromKey(SDL_Keycode k) {
     switch (k) {
         case SDLK_UP:        return Action::Up;
@@ -1166,7 +1167,6 @@ static Action actionFromKey(SDL_Keycode k) {
         case SDLK_SPACE:     return Action::ToggleAutoStart;
         case SDLK_F1:        return Action::PrevTab;
         case SDLK_F2:        return Action::NextTab;
-        case SDLK_F3:        return Action::ToggleView;
         case SDLK_F4:        return Action::Search;
         case SDLK_F5:        return Action::Start;
         default:             return Action::None;
@@ -1183,7 +1183,6 @@ static Action actionFromButton(Uint8 b) {
         case SDL_CONTROLLER_BUTTON_B:             return Action::Back;
         case SDL_CONTROLLER_BUTTON_X:             return Action::Search;
         case SDL_CONTROLLER_BUTTON_Y:             return Action::ToggleAutoStart;
-        case SDL_CONTROLLER_BUTTON_BACK:          return Action::ToggleView;
         case SDL_CONTROLLER_BUTTON_START:         return Action::Start;
         case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:  return Action::PrevTab;
         case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: return Action::NextTab;
@@ -1207,7 +1206,7 @@ int main() {
         return 1;
     }
 
-    model.view = loadView();
+    loadSettings(model);
     model.applyFilter();
     restoreCursor(model);
     {
@@ -1267,10 +1266,6 @@ int main() {
         switch (a) {
             case Action::PrevTab:    model.switchTab(-1); return;
             case Action::NextTab:    model.switchTab(1);  return;
-            case Action::ToggleView:
-                model.view = grid ? View::List : View::Grid;
-                saveView(model.view);
-                return;
             default: break;
         }
 
@@ -1295,8 +1290,8 @@ int main() {
         switch (a) {
             case Action::Up:    model.moveSel(grid ? -kGridCols : -1); break;
             case Action::Down:  model.moveSel(grid ? kGridCols : 1);   break;
-            case Action::Left:  model.moveSel(grid ? -1 : -kListRows); break;
-            case Action::Right: model.moveSel(grid ? 1 : kListRows);   break;
+            case Action::Left:  model.moveSel(grid ? -1 : -listRows(model.showTabs)); break;
+            case Action::Right: model.moveSel(grid ? 1 : listRows(model.showTabs));   break;
             case Action::Search: kb.open = true; break;
             case Action::Back:
                 if (!model.query.empty()) { model.query.clear(); model.applyFilter(); }
