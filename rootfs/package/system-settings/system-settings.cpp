@@ -369,6 +369,53 @@ void input_chip(const char* label, bool pressed, float width) {
     ImGui::Dummy(size);
 }
 
+// A slider drawn as a level bar: filled from the left up to the value, with the percentage in the
+// middle (value / max, so brightness 5 of 10 reads 50%). It's a regular ImGui slider underneath, with
+// its frame and grab made transparent and the bar drawn behind it.
+// Left/right change the value right away when the bar is selected (step per press), without having to
+// press A first as plain ImGui sliders need.
+bool level_slider(const char* label, int* value, int min, int max, int step) {
+    ImDrawList* draw = ImGui::GetWindowDrawList();
+    const ImVec2 pos = ImGui::GetCursorScreenPos();
+    const float width = ImGui::CalcItemWidth();
+    const float height = ImGui::GetFrameHeight();
+    const float rounding = ImGui::GetStyle().FrameRounding;
+
+    draw->ChannelsSplit(2);
+    draw->ChannelsSetCurrent(1);
+    const ImVec4 clear(0, 0, 0, 0);
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, clear);
+    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, clear);
+    ImGui::PushStyleColor(ImGuiCol_FrameBgActive, clear);
+    ImGui::PushStyleColor(ImGuiCol_SliderGrab, clear);
+    ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, clear);
+    bool changed = ImGui::SliderInt(label, value, min, max, "");
+    ImGui::PopStyleColor(5);
+    const bool active = ImGui::IsItemActive() || ImGui::IsItemFocused();
+    if (ImGui::IsItemFocused() && !ImGui::IsItemActive()) {
+        int delta = 0;
+        if (ImGui::IsKeyPressed(ImGuiKey_GamepadDpadRight, true) || ImGui::IsKeyPressed(ImGuiKey_RightArrow, true)) delta = step;
+        if (ImGui::IsKeyPressed(ImGuiKey_GamepadDpadLeft, true) || ImGui::IsKeyPressed(ImGuiKey_LeftArrow, true)) delta = -step;
+        int v = std::max(min, std::min(max, *value + delta));
+        if (v != *value) { *value = v; changed = true; }
+    }
+
+    char text[16];
+    snprintf(text, sizeof(text), "%d%%", max > 0 ? *value * 100 / max : 0);
+    const ImVec2 size = ImGui::CalcTextSize(text);
+    draw->AddText(ImVec2(pos.x + (width - size.x) * 0.5f, pos.y + (height - size.y) * 0.5f),
+                  ImGui::GetColorU32(ImGuiCol_Text), text);
+
+    draw->ChannelsSetCurrent(0);   // behind the slider
+    const ImVec2 end(pos.x + width, pos.y + height);
+    draw->AddRectFilled(pos, end, ImGui::GetColorU32(active ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg), rounding);
+    const float fill = max > 0 ? std::max(0.0f, std::min(1.0f, (float)*value / max)) : 0.0f;
+    if (fill > 0.0f)
+        draw->AddRectFilled(pos, ImVec2(pos.x + width * fill, end.y), ImGui::GetColorU32(ImGuiCol_SliderGrabActive), rounding);
+    draw->ChannelsMerge();
+    return changed;
+}
+
 void section_headear(const char* english) {
     const char* text = tr(english);
     float windowWidth = ImGui::GetWindowSize().x;
@@ -412,9 +459,6 @@ int main(int argc, char* argv[]) {
     ImGui_ImplSDLRenderer2_Init(renderer);
 
     ImGui::GetStyle().FontScaleMain = 1.65;
-    // Integer sliders size the grab to one unit, so the 1-10 brightness grab was much wider than
-    // the 0-100 volume one. A fixed minimum makes them match.
-    ImGui::GetStyle().GrabMinSize = 40.0f;
 
     SDL_GameController* controller = nullptr;
     for (int i = 0; i < SDL_NumJoysticks(); ++i) {
@@ -472,6 +516,10 @@ int main(int argc, char* argv[]) {
             // the shortcut list scrolls while the d-pad / right stick is held
             else if (page == PAGE_INPUT) got_event = SDL_WaitEventTimeout(&event, 50);
             else if (following) got_event = SDL_WaitEventTimeout(&event, HOTKEY_POLL_MS);
+            // keep drawing while left/right is held, so holding it keeps changing a level bar
+            else if (ImGui::IsKeyDown(ImGuiKey_GamepadDpadLeft) || ImGui::IsKeyDown(ImGuiKey_GamepadDpadRight) ||
+                     ImGui::IsKeyDown(ImGuiKey_LeftArrow) || ImGui::IsKeyDown(ImGuiKey_RightArrow))
+                got_event = SDL_WaitEventTimeout(&event, 50);
             else got_event = pending ? SDL_WaitEventTimeout(&event, 100) : SDL_WaitEvent(&event);
         }
         if (got_event) {
@@ -532,14 +580,14 @@ int main(int argc, char* argv[]) {
 
             // One header for both, so the page (with the Options section) still fits the 480px screen
             section_headear("Display & Audio");
-            if (ImGui::SliderInt(tr("Brightness"), &display_brightness, 1, 10)) {
+            if (level_slider(tr("Brightness"), &display_brightness, 1, 10, 1)) {
                 set_brightness(display_brightness);
                 brightness_dirty = true;
                 last_change = SDL_GetTicks();
             }
             ImGui::SetItemDefaultFocus();
 
-            if (ImGui::SliderInt(tr("Master Volume"), &current_volume, 0, 100)) {
+            if (level_slider(tr("Master Volume"), &current_volume, 0, 100, 5)) {
                 set_alsa_volume(current_volume);
 
                 if (current_mute && current_volume > 0) {

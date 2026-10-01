@@ -69,6 +69,8 @@ Puppy uses a ini-formatted `apps.puppy` files to populate it's application list.
 
 Add a new entry by modifying the `apps.puppy` file in your HOME partition. Take a look at the comments at the top of that file for syntax/examples
 
+Works with scraped collections: point Skraper (or anything that writes EmulationStation's `gamelist.xml`) at your rom folders and Puppy shows the games' names, artwork, descriptions and year/genre/players, no conversion needed (see [How do I add games?](#how-do-i-add-games)).
+
 Each system and app category gets its own tab, plus an "All Games" tab with every system's games and a "My List" tab with your favourites. Controls:
 
 | Button | Action |
@@ -124,6 +126,8 @@ Stock firmware:
 
 ## How do I add games?
 Plug the SD card into your PC and open up the HOME partition. In there you'll find a `roms` folder with a few subfolders for each system. Add your roms to those.
+
+Already have a scraped collection (e.g. made with [Skraper](https://www.skraper.net/) for EmulationStation)? Copy it as it is, `gamelist.xml` and `media` folder included: Puppy reads them.
 
 To add custom art to Puppy, add an image file into the `icons` folder in your rom folder with the same name as the rom file. (eg. if your game is `roms/snes/super-mario.smc`, your image would be `roms/snes/icons/super-mario.png`)
 
