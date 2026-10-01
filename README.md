@@ -70,7 +70,8 @@ Each system and app category gets its own tab, plus an "All Games" tab with ever
 | Button | Action |
 |---|---|
 | L1 / R1 | Previous / next tab |
-| D-pad | Move (hold to scroll). In list view, left/right jump a page |
+| D-pad / left stick | Move (hold to scroll). In list view, left/right jump a page |
+| Right stick up/down | Scroll the game's description (list view) |
 | A | Launch |
 | Y | Add to / remove from My List (your favourites tab) |
 | SELECT | Set / clear autolaunch |

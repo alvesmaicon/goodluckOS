@@ -69,6 +69,10 @@ constexpr Uint32 kOsdShowMs         = 1500;  // how long the volume/brightness b
 constexpr Uint32 kOsdRefreshMs      = 100;   // re-read the level while it's up (the hotkey script runs async)
 constexpr Uint32 kRepeatDelayMs     = 350;  // holding the d-pad repeats the move after this...
 constexpr Uint32 kRepeatRateMs      = 60;   // ...and then this often
+constexpr Uint32 kScrollDelayMs     = 250;  // right stick: description scroll repeat
+constexpr Uint32 kScrollRateMs      = 110;
+constexpr int    kStickOn           = 20000;    // analog stick deflection that counts as a press...
+constexpr int    kStickOff          = 12000;    // ...and that releases it (hysteresis, so it doesn't flicker)
 constexpr size_t kMaxCachedIcons    = 64;
 
 // The tab strip can be hidden (System Settings -> Show Tabs); the content then moves up.
@@ -332,6 +336,7 @@ struct Model {
     bool menuOpen = false;
     int menuSel = 0;
     std::string status;     // full-screen message while restarting / shutting down
+    int descScroll = 0;     // lines the list preview's description is scrolled (right stick)
 
     Category& cur() { return categories[tab]; }
     const Category& cur() const { return categories[tab]; }
@@ -365,11 +370,13 @@ struct Model {
     }
 
     void switchTab(int delta) {
+        descScroll = 0;
         int n = (int)categories.size();
         if (n > 0) tab = ((tab + delta) % n + n) % n;
     }
 
     void moveSel(int delta) {
+        descScroll = 0;
         Category& c = cur();
         if (c.visible.empty()) return;
         c.sel = std::clamp(c.sel + delta, 0, (int)c.visible.size() - 1);
@@ -1053,6 +1060,7 @@ public:
 
     bool ok() const { return ok_; }
     bool animating() const { return tabOffset != 0.0f; }
+    int descMaxScroll() const { return descMax; }   // of the description drawn in the last frame
 
     void render(const Model& m, const Keyboard& kb, const Osd& osd, int battery) {
         setColor(kClear);
@@ -1082,6 +1090,7 @@ private:
     SDL_Texture* clipTex = nullptr;     // drawWrappedClipped's last text
     std::string clipText;
     int clipWidth = 0, clipW = 0, clipH = 0;
+    int descMax = 0;
     int lastTab = -1;           // tab drawn in the previous frame, to animate the strip
     float tabOffset = 0.0f;     // remaining slide of the tab strip, in pixels
 
@@ -1165,26 +1174,47 @@ private:
 
     // Wrapped text cut to the whole lines that fit in maxH. The last texture is kept, since a long
     // synopsis is expensive to lay out again on every frame.
-    void drawWrappedClipped(TTF_Font* font, const std::string& text, int x, int y, SDL_Color color, int width, int maxH) {
-        if (!font || text.empty() || maxH <= 0) return;
+    // Returns how many lines it can scroll; scrollLines starts the text that many lines down.
+    int drawWrappedClipped(TTF_Font* font, const std::string& text, int x, int y, SDL_Color color, int width, int maxH,
+                           int scrollLines = 0) {
+        if (!font || text.empty() || maxH <= 0) return 0;
         if (text != clipText || width != clipWidth || !clipTex) {
             if (clipTex) SDL_DestroyTexture(clipTex);
             clipTex = nullptr;
             clipText = text;
             clipWidth = width;
             SDL_Surface* surf = TTF_RenderUTF8_Blended_Wrapped(font, text.c_str(), color, width);
-            if (!surf) return;
+            if (!surf) return 0;
             clipTex = SDL_CreateTextureFromSurface(renderer, surf);
             clipW = surf->w;
             clipH = surf->h;
             SDL_FreeSurface(surf);
-            if (!clipTex) return;
+            if (!clipTex) return 0;
         }
         const int line = std::max(1, TTF_FontLineSkip(font));
         const int h = std::min(clipH, maxH / line * line);
-        if (h <= 0) return;
-        SDL_Rect src{0, 0, clipW, h}, dst{x, y, clipW, h};
+        if (h <= 0) return 0;
+        const int maxScroll = std::max(0, (clipH - h + line - 1) / line);
+        const int scroll = std::clamp(scrollLines, 0, maxScroll);
+        const int srcY = std::min(scroll * line, clipH - h);
+        SDL_Rect src{0, srcY, clipW, h}, dst{x, y, clipW, h};
         SDL_RenderCopy(renderer, clipTex, &src, &dst);
+
+        // Arrows just right of the text when there's more above / below (callers leave room for them)
+        const int ax = x + width + 8;
+        if (scroll > 0) triangle(ax, y + 5, 5, true, kYellow);
+        if (scroll < maxScroll) triangle(ax, y + h - 5, 5, false, kYellow);
+        return maxScroll;
+    }
+
+    void triangle(int cx, int cy, int r, bool up, SDL_Color c) {
+        SDL_Vertex v[3];
+        const float d = up ? -1.0f : 1.0f;
+        v[0].position = {(float)cx, cy + d * r};
+        v[1].position = {(float)(cx - r), cy - d * r};
+        v[2].position = {(float)(cx + r), cy - d * r};
+        for (auto& vert : v) { vert.color = c; vert.tex_coord = {0, 0}; }
+        SDL_RenderGeometry(renderer, nullptr, v, 3, nullptr, 0);
     }
 
     int wrappedHeight(TTF_Font* font, const std::string& text, int width) {
@@ -1449,8 +1479,8 @@ private:
             y += TTF_FontLineSkip(smallFont) + 4;
         }
         const int textBottom = kScreenH - kFooterH - TTF_FontHeight(smallFont) - 10;   // above the "n / total"
-        drawWrappedClipped(smallFont, e->synopsis.empty() ? e->description : e->synopsis,
-                           kPreviewX, y, kGrey, kPreviewW, textBottom - y);
+        descMax = drawWrappedClipped(smallFont, e->synopsis.empty() ? e->description : e->synopsis,
+                                     kPreviewX, y, kGrey, kPreviewW - 16, textBottom - y, m.descScroll);
 
         std::string pos = std::to_string(c.sel + 1) + " / " + std::to_string(total);
         drawText(renderer, smallFont, pos, kScreenW - kMargin - textWidth(smallFont, pos),
@@ -1533,15 +1563,37 @@ private:
     }
 };
 
-enum class Action { None, Up, Down, Left, Right, Launch, Back, ToggleAutoStart, ToggleFavorite, Search, PrevTab, NextTab, Start, Power };
+enum class Action { None, Up, Down, Left, Right, Launch, Back, ToggleAutoStart, ToggleFavorite, Search, PrevTab, NextTab, Start, Power,
+                    ScrollUp, ScrollDown };
 
 static bool isRepeatable(Action a) {
-    return a == Action::Up || a == Action::Down || a == Action::Left || a == Action::Right;
+    return a == Action::Up || a == Action::Down || a == Action::Left || a == Action::Right ||
+           a == Action::ScrollUp || a == Action::ScrollDown;
+}
+
+static bool isScroll(Action a) { return a == Action::ScrollUp || a == Action::ScrollDown; }
+
+// Left stick as a d-pad: the dominant axis past kStickOn picks the direction, which holds until the
+// stick comes back under kStickOff.
+static Action stickDirection(int x, int y, Action current) {
+    auto magnitude = [&](Action a) {
+        switch (a) {
+            case Action::Left:  return -x;
+            case Action::Right: return x;
+            case Action::Up:    return -y;
+            case Action::Down:  return y;
+            default:            return 0;
+        }
+    };
+    if (current != Action::None && magnitude(current) > kStickOff) return current;
+    if (std::max(std::abs(x), std::abs(y)) < kStickOn) return Action::None;
+    if (std::abs(x) > std::abs(y)) return x < 0 ? Action::Left : Action::Right;
+    return y < 0 ? Action::Up : Action::Down;
 }
 
 // Keyboard bindings, mostly for running the launcher on a PC: F1/F2 = L1/R1, Space = Y, F3 = Select,
 // F4 = X, F5 = Start,
-// F6 = POWER (the real power key arrives as SDLK_POWER).
+// F6 = POWER (the real power key arrives as SDLK_POWER), PageUp/PageDown = right stick.
 static Action actionFromKey(SDL_Keycode k) {
     switch (k) {
         case SDLK_UP:        return Action::Up;
@@ -1559,6 +1611,8 @@ static Action actionFromKey(SDL_Keycode k) {
         case SDLK_F5:        return Action::Start;
         case SDLK_POWER:
         case SDLK_F6:        return Action::Power;
+        case SDLK_PAGEUP:    return Action::ScrollUp;
+        case SDLK_PAGEDOWN:  return Action::ScrollDown;
         default:             return Action::None;
     }
 }
@@ -1618,6 +1672,7 @@ int main() {
     Osd osd;
     bool consoleCleared = false;
     bool selectHeld = false, selectCombo = false;
+    Action leftStick = Action::None, rightStick = Action::None;
     Uint32 osdUntil = 0, osdNextRead = 0;
     bool running = true;
     bool dirty = true;
@@ -1717,6 +1772,8 @@ int main() {
                 break;
             case Action::ToggleAutoStart: toggleAutoStart(model); break;
             case Action::ToggleFavorite:  toggleFavorite(model);  break;
+            case Action::ScrollUp:   model.descScroll = std::max(0, model.descScroll - 1); break;
+            case Action::ScrollDown: model.descScroll = std::min(ui.descMaxScroll(), model.descScroll + 1); break;
             case Action::Launch:
                 if (const Entry* e = model.selected()) {
                     launch(model, *e);
@@ -1768,7 +1825,7 @@ int main() {
             now = SDL_GetTicks();
             if (held != Action::None && (Sint32)(now - nextRepeat) >= 0) {
                 apply(held);
-                nextRepeat = now + kRepeatRateMs;
+                nextRepeat = now + (isScroll(held) ? kScrollRateMs : kRepeatRateMs);
                 dirty = true;
                 lastActivity = now;
             } else if (now - lastActivity >= kIdleCheckMs) {
@@ -1822,6 +1879,29 @@ int main() {
                     }
                     action = actionFromButton(ev.cbutton.button);
                     break;
+                case SDL_CONTROLLERAXISMOTION: {
+                    // Left stick navigates like the d-pad; right stick up/down scrolls the description
+                    const Uint8 axis = ev.caxis.axis;
+                    if (axis == SDL_CONTROLLER_AXIS_LEFTX || axis == SDL_CONTROLLER_AXIS_LEFTY) {
+                        Action dir = stickDirection(SDL_GameControllerGetAxis(pad, SDL_CONTROLLER_AXIS_LEFTX),
+                                                    SDL_GameControllerGetAxis(pad, SDL_CONTROLLER_AXIS_LEFTY), leftStick);
+                        if (dir != leftStick) {
+                            if (held == leftStick) held = Action::None;
+                            leftStick = dir;
+                            action = dir;
+                        }
+                    } else if (axis == SDL_CONTROLLER_AXIS_RIGHTY) {
+                        const int v = ev.caxis.value;
+                        Action dir = v < -kStickOn ? Action::ScrollUp : v > kStickOn ? Action::ScrollDown
+                                   : std::abs(v) < kStickOff ? Action::None : rightStick;
+                        if (dir != rightStick) {
+                            if (held == rightStick) held = Action::None;
+                            rightStick = dir;
+                            action = dir;
+                        }
+                    }
+                    break;
+                }
                 case SDL_CONTROLLERBUTTONUP:
                     if (ev.cbutton.button == SDL_CONTROLLER_BUTTON_BACK) {
                         if (selectHeld && !selectCombo) action = Action::ToggleAutoStart;
@@ -1836,7 +1916,7 @@ int main() {
                 apply(action);
                 if (isRepeatable(action)) {
                     held = action;
-                    nextRepeat = SDL_GetTicks() + kRepeatDelayMs;
+                    nextRepeat = SDL_GetTicks() + (isScroll(action) ? kScrollDelayMs : kRepeatDelayMs);
                 }
                 dirty = true;
                 lastActivity = SDL_GetTicks();

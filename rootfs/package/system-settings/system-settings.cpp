@@ -330,6 +330,8 @@ const char* const SHORTCUTS[][2] = {
     {"FN + SELECT + START", "Force close the app"},
     {"Launcher", nullptr},
     {"L1 / R1", "Previous / next tab"},
+    {"Left stick", "Move, like the d-pad"},
+    {"Right stick up/down", "Scroll the description"},
     {"X", "Search by name"},
     {"START", "System Settings"},
     {"Y", "Add to / remove from My List"},
