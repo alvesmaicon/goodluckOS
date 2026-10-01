@@ -519,22 +519,7 @@ int main(int argc, char* argv[]) {
             ImGui::Separator();
             ImGui::Spacing();
 
-            if (focus_tester_button) {
-                ImGui::SetKeyboardFocusHere();
-                focus_tester_button = false;
-            }
-            if (ImGui::Button("Button Tester")) {
-                last_button = -1;
-                b_hold_start = 0;
-                next_page = PAGE_TESTER;
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Back")) {
-                next_page = PAGE_MAIN;
-            }
-            ImGui::Spacing();
-
-            ImGui::PushFont(nullptr, ImGui::GetStyle().FontSizeBase * 0.8f);
+            ImGui::PushFont(nullptr, ImGui::GetStyle().FontSizeBase * 0.75f);
             if (ImGui::BeginTable("shortcuts", 2, ImGuiTableFlags_SizingStretchProp)) {
                 for (const auto& row : SHORTCUTS) {
                     ImGui::TableNextRow();
@@ -550,6 +535,22 @@ int main(int argc, char* argv[]) {
                 ImGui::EndTable();
             }
             ImGui::PopFont();
+
+            ImGui::Spacing();
+            if (focus_tester_button) {
+                ImGui::SetKeyboardFocusHere();
+                focus_tester_button = false;
+            }
+            if (ImGui::Button("Button Tester")) {
+                last_button = -1;
+                b_hold_start = 0;
+                next_page = PAGE_TESTER;
+            }
+            ImGui::SetItemDefaultFocus();
+            ImGui::Spacing();
+            if (ImGui::Button("Back")) {
+                next_page = PAGE_MAIN;
+            }
             ImGui::End();
         } else if (page == PAGE_TESTER) {
             ImGui::Begin("Tester", nullptr, window_flags);
