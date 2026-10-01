@@ -24,6 +24,7 @@ static const char* kAutoStartFile = "/home/player/autolaunch";
 
 static const char* kSettingsFile  = "/home/player/.config/puppy/settings";
 static const char* kMenuCategory  = "System";   // apps.puppy category shown in the START menu
+static const char* kOsdFile       = "/dev/shm/osd";  // "volume|brightness <percent> [muted]", from osd-notify.sh
 
 constexpr int kScreenW              = 640;
 constexpr int kScreenH              = 480;
@@ -52,6 +53,8 @@ constexpr int kPreviewH             = kPreviewW * 3 / 4;
 constexpr int kMaxQueryLength       = 32;
 
 constexpr Uint32 kIdleCheckMs       = 60000;
+constexpr Uint32 kOsdShowMs         = 1500;  // how long the volume/brightness bar stays up
+constexpr Uint32 kOsdRefreshMs      = 100;   // re-read the level while it's up (the hotkey script runs async)
 constexpr Uint32 kRepeatDelayMs     = 350;  // holding the d-pad repeats the move after this...
 constexpr Uint32 kRepeatRateMs      = 60;   // ...and then this often
 constexpr size_t kMaxCachedIcons    = 64;
@@ -667,6 +670,22 @@ static int readBattery() {
     return -1; // no battery
 }
 
+// Volume/brightness level written by the hotkey scripts, shown as a bar for a moment.
+struct Osd {
+    bool visible = false;
+    std::string kind;
+    int percent = 0;
+    bool muted = false;
+
+    void read() {
+        std::ifstream in(kOsdFile);
+        std::string flag;
+        if (!(in >> kind >> percent)) { kind.clear(); return; }
+        muted = (in >> flag) && flag == "muted";
+        percent = std::clamp(percent, 0, 100);
+    }
+};
+
 // On-screen keyboard for the name search, driven by the d-pad. QWERTY like Android's: rows are
 // staggered and some keys are wider, so positions and widths are in key units (10 per row).
 struct Keyboard {
@@ -771,7 +790,7 @@ public:
     bool ok() const { return ok_; }
     bool animating() const { return tabOffset != 0.0f; }
 
-    void render(const Model& m, const Keyboard& kb, int battery) {
+    void render(const Model& m, const Keyboard& kb, const Osd& osd, int battery) {
         setColor(kClear);
         SDL_RenderClear(renderer);
 
@@ -784,6 +803,7 @@ public:
         renderFooter(m, kb);
         if (kb.open) renderKeyboard(m, kb);
         if (m.menuOpen) renderMenu(m);
+        if (osd.visible && !osd.kind.empty()) renderOsd(osd, bodyTop(m.showTabs));
 
         SDL_RenderPresent(renderer);
     }
@@ -1094,6 +1114,22 @@ private:
                  kScreenH - kFooterH - TTF_FontHeight(smallFont) - 6, kGrey);
     }
 
+    void renderOsd(const Osd& osd, int top) {
+        const int w = 300, h = 64, pad = 14;
+        SDL_Rect panel{(kScreenW - w) / 2, top + 12, w, h};
+        fill({12, 12, 14, 235}, panel);
+        frame(kTile, panel, 2);
+
+        std::string label = osd.kind == "brightness" ? "Brightness" : (osd.kind == "volume" ? "Volume" : osd.kind);
+        std::string value = osd.muted ? "Muted" : std::to_string(osd.percent) + "%";
+        drawText(renderer, descFont, label, panel.x + pad, panel.y + 8, kWhite);
+        drawText(renderer, descFont, value, panel.x + w - pad - textWidth(descFont, value), panel.y + 8, kYellow);
+
+        SDL_Rect track{panel.x + pad, panel.y + h - 20, w - 2 * pad, 8};
+        fill(kTile, track);
+        fill(kYellow, {track.x, track.y, osd.muted ? 0 : track.w * osd.percent / 100, track.h});
+    }
+
     void renderMenu(const Model& m) {
         const int pad = 12, rowH = 40;
         const int titleH = TTF_FontHeight(uiFont) + 14;
@@ -1223,6 +1259,8 @@ int main() {
     }
 
     Keyboard kb;
+    Osd osd;
+    Uint32 osdUntil = 0, osdNextRead = 0;
     bool running = true;
     bool dirty = true;
     int shownBattery = -2;
@@ -1310,7 +1348,7 @@ int main() {
     while (running) {
         if (dirty) {
             shownBattery = readBattery();
-            ui.render(model, kb, shownBattery);
+            ui.render(model, kb, osd, shownBattery);
             dirty = false;
         }
 
@@ -1318,6 +1356,20 @@ int main() {
         Uint32 elapsed = now - lastActivity;
         int timeout = elapsed >= kIdleCheckMs ? 0 : (int)(kIdleCheckMs - elapsed);
         if (held != Action::None) timeout = std::min(timeout, (int)std::max<Sint32>(0, (Sint32)(nextRepeat - now)));
+        if (osd.visible) {
+            if ((Sint32)(now - osdUntil) >= 0) {
+                osd.visible = false;
+                dirty = true;
+                timeout = 0;
+            } else {
+                if ((Sint32)(now - osdNextRead) >= 0) {
+                    osd.read();
+                    osdNextRead = now + kOsdRefreshMs;
+                    dirty = true;
+                }
+                timeout = std::min(timeout, (int)kOsdRefreshMs);
+            }
+        }
         if (ui.animating()) {   // keep drawing until the tab strip has slid into place (paced by vsync)
             dirty = true;
             timeout = 0;
@@ -1349,6 +1401,14 @@ int main() {
                     break;
                 case SDL_KEYDOWN: {
                     SDL_Keycode k = ev.key.keysym.sym;
+                    // volume keys (and FN + volume for brightness) are handled by triggerhappy scripts;
+                    // just show the resulting level
+                    if (k == SDLK_VOLUMEUP || k == SDLK_VOLUMEDOWN) {
+                        osd.visible = true;
+                        osdUntil = SDL_GetTicks() + kOsdShowMs;
+                        osdNextRead = SDL_GetTicks() + 30;   // give the script a moment to write it
+                        break;
+                    }
                     if (kb.open && ((k >= SDLK_a && k <= SDLK_z) || (k >= SDLK_0 && k <= SDLK_9))) {
                         typeKey(std::string(1, (char)k));
                         dirty = true;
