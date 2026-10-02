@@ -23,7 +23,8 @@ Please Note: At the time of writing, Allwinner-A23 based GA36-MB devices (which 
 - Great battery life
 - No swap on SD card (massively improves the life of your card over the stock f/w)
 - Built-in `Resize Home` app which grows your HOME partition to fill all the available space on your microSD card.
-- Volume buttons change the volume and FN+Vol the screen brightness from anywhere, and both now show feedback: an on-screen level bar in the launcher and a notification in RetroArch
+- Volume buttons change the volume and FN+Vol the screen brightness from anywhere, with a level bar shown over whatever is on screen: the launcher, the settings or any game
+- Optional in-game status bar with the battery, the volume and the audio output, over any game
 - Brightness, volume and CPU mode are kept across reboots
 - SELECT+START closes the active application cleanly (RetroArch saves first), bringing you right back to the launcher
 - FN+START+SELECT force-kills the active application
@@ -82,7 +83,7 @@ Puppy is goodluckOS' application launcher. It's what you see when you start good
 
 The top bar shows the volume (a headphones icon when the sound goes to the headphones only) and the battery, whose level turns yellow while charging, green when full and red at 10% or less.
 
-Changing the brightness (FN+Vol) or the volume shows a level bar for a moment, and FN + D-pad down shows the audio output:
+Changing the brightness (FN+Vol) or the volume shows a level bar for a moment, and FN + D-pad down shows the audio output. It is drawn by the graphics driver (a patch to Mesa's Gallium HUD), so it looks the same over the launcher, the settings and every game:
 
 | Brightness | Volume | Audio output |
 | --- | --- | --- |
@@ -117,8 +118,8 @@ Grid or list view, whether the tabs are shown and which ones are set in System S
 ### Shortcuts that work everywhere
 | Buttons | Action |
 |---|---|
-| VOL+ / VOL- | Volume, with an on-screen level bar (a notification in RetroArch) |
-| FN + VOL+ / VOL- | Brightness, with an on-screen level bar (a notification in RetroArch) |
+| VOL+ / VOL- | Volume, with an on-screen level bar |
+| FN + VOL+ / VOL- | Brightness, with an on-screen level bar |
 | POWER | Screen off / on (in the launcher it opens the power options) |
 | SELECT + START | Close the active app cleanly (RetroArch saves first) and go back to the launcher |
 | FN + SELECT + START | Force close the active app |
@@ -156,11 +157,15 @@ System Settings
 ├── Interface
 │   ├── Language
 │   ├── Font
-│   └── Performance overlay
-│       ├── Show on game start
-│       ├── Content: FPS / FPS + CPU
-│       ├── Style: Graph / Text
-│       └── Position: top or bottom, left or right
+│   └── Overlay
+│       ├── In-game status bar
+│       │   ├── Show: Battery and audio / Battery only
+│       │   └── Opacity
+│       └── Performance (FN + UP)
+│           ├── Show on game start
+│           ├── Content: FPS / FPS + CPU
+│           ├── Style: Graph / Text
+│           └── Position: top or bottom, left or right
 ├── Storage
 │   ├── HOME usage
 │   ├── Resize Home
@@ -175,7 +180,9 @@ System Settings
 
 - **Launcher tabs**: hidden tabs' games still appear in All Games and My List.
 - **Font**: Default keeps each app's own font (Inter in the launcher, ProggyClean elsewhere); or Inter, ProggyClean, VT323 or Pixelify Sans in every app.
-- **Performance overlay**: the Gallium HUD that FN + D-pad up shows in game. The choice applies from the next game on; Text only goes at the top.
+- **In-game status bar**: battery, volume and audio output in the top right corner of every game, with the launcher's icons; Opacity sets its background.
+- **Performance**: the Gallium HUD graphs that FN + D-pad up shows in game. Text only goes at the top.
+- Overlay changes apply from the next game on.
 - **Empty trash**: deletes for good the games moved to the trash in the launcher.
 - **Performance mode**: keeps the CPU at full speed.
 
@@ -186,8 +193,10 @@ VT323 and Pixelify Sans are under the SIL Open Font License and ProggyClean unde
 | Main page | Display & Audio |
 | --- | --- |
 | ![System Settings](docs/screenshots/system-settings.png) | ![Display & Audio](docs/screenshots/system-settings-audio.png) |
-| Interface | Performance overlay in game (FN + D-pad up) |
-| ![Interface](docs/screenshots/system-settings-overlay.png) | ![Performance overlay in game](docs/screenshots/performance-overlay.png) |
+| Interface | In-game status bar |
+| ![Interface](docs/screenshots/system-settings-overlay.png) | ![In-game status bar](docs/screenshots/status-bar.png) |
+| Performance overlay in game (FN + D-pad up) | |
+| ![Performance overlay in game](docs/screenshots/performance-overlay.png) | |
 
 ## Translations
 Every text in the launcher, System Settings, the confirmation screens and `Resize Home` can be translated, and new languages need no code changes. Languages live in `/usr/share/goodluck/lang/<code>.lang` (in the repository: `rootfs/board/my-device/rootfs-overlay/usr/share/goodluck/lang/`) and show up in System Settings -> Interface -> Language as soon as the file is there.
