@@ -10,8 +10,8 @@ Both use the launcher's colors and icons. Text can now have a color and a
 scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
 
 ---
---- a/src/gallium/auxiliary/hud/hud_context.c	2026-10-02 19:55:44.437618385 -0300
-+++ b/src/gallium/auxiliary/hud/hud_context.c	2026-10-02 19:55:44.438653979 -0300
+--- a/src/gallium/auxiliary/hud/hud_context.c	2026-10-02 20:46:44.928267836 -0300
++++ b/src/gallium/auxiliary/hud/hud_context.c	2026-10-02 20:46:44.929414483 -0300
 @@ -68,6 +68,9 @@
  #include "util/u_upload_mgr.h"
  #include "tgsi/tgsi_text.h"
@@ -22,7 +22,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
  
  #define HUD_DEFAULT_VISIBILITY true
  #define HUD_DEFAULT_SCALE 1
-@@ -80,6 +83,60 @@
+@@ -80,6 +83,61 @@
  static int hud_rotate = HUD_DEFAULT_ROTATION;
  static float hud_opacity = HUD_DEFAULT_OPACITY / 100.0f;
  
@@ -51,6 +51,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
 +   int enabled;
 +   bool battery_only;
 +   float opacity;
++   char clock_format[32];
 +   struct timespec mtime;
 +   int64_t next_ms;
 +   char battery_dir[300];
@@ -83,7 +84,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
  #if DETECT_OS_POSIX
  static void
  signal_visible_handler(int sig, siginfo_t *siginfo, void *context)
-@@ -169,6 +226,8 @@
+@@ -169,6 +227,8 @@
     char *s = buf;
     float *vertices = hud->text.vertices + hud->text.num_vertices*4;
     unsigned num = 0;
@@ -92,7 +93,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
  
     va_list ap;
     va_start(ap, str);
-@@ -178,23 +237,24 @@
+@@ -178,23 +238,24 @@
     if (!*s)
        return;
  
@@ -123,7 +124,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
           s++;
           continue;
        }
-@@ -221,7 +281,7 @@
+@@ -221,7 +282,7 @@
        vertices[num++] = (float) tx2;
        vertices[num++] = (float) ty1;
  
@@ -132,7 +133,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
        s++;
     }
  
-@@ -485,6 +545,330 @@
+@@ -485,6 +546,343 @@
   * The texture is usually the back buffer being displayed.
   */
  static void
@@ -236,6 +237,8 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
 +      status.enabled = env && strcmp(env, "0") && strcmp(env, "false");
 +      status.battery_only = env && !strcmp(env, "battery");
 +      status.opacity = opacity ? atoi(opacity) / 100.0 : 0.5;
++      const char *clock = getenv("GALLIUM_HUD_STATUS_CLOCK");
++      snprintf(status.clock_format, sizeof(status.clock_format), "%s", clock ? clock : "");
 +   }
 +   if (!status.enabled)
 +      return;
@@ -359,7 +362,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
 +static void
 +hud_status_accumulate(struct hud_context *hud)
 +{
-+   char bat[16], vol[16];
++   char bat[16], vol[16], clock[32] = "";
 +   unsigned th = hud_text_height(hud);
 +   unsigned bh = (th > 16 ? th : 16) + 8;
 +   unsigned y = 6, x;
@@ -368,6 +371,13 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
 +   snprintf(bat, sizeof(bat), status.battery >= 0 ? "%d%%" : "??", status.battery);
 +   bat_w = hud_text_width(hud, bat);
 +   total = 8 + 28 + bat_w + 8;
++   if (status.clock_format[0]) {
++      time_t now = time(NULL);
++      struct tm tm;
++      localtime_r(&now, &tm);
++      strftime(clock, sizeof(clock), status.clock_format, &tm);
++      total += hud_text_width(hud, clock) + 14;
++   }
 +   bool audio = status.volume >= 0 && !status.battery_only;
 +   float bg[] = {12 / 255.0, 12 / 255.0, 14 / 255.0, status.opacity};
 +   if (audio) {
@@ -380,6 +390,10 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
 +   if (status.opacity > 0)
 +      hud_quad(x, y, total, bh, bg);
 +   x += 8;
++   if (clock[0]) {
++      hud_colored_string(hud, x, y + (bh - th) / 2, kGrey, clock);
++      x += hud_text_width(hud, clock) + 14;
++   }
 +   if (audio) {
 +      if (status.headphones)
 +         headphones_icon(x, y + (bh - 16) / 2, kGrey);
@@ -463,7 +477,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
  hud_draw_results(struct hud_context *hud, struct pipe_resource *tex)
  {
     struct cso_context *cso = hud->cso;
-@@ -496,9 +880,12 @@
+@@ -496,9 +894,12 @@
           { &hud->font_sampler_state };
     struct hud_pane *pane;
     struct pipe_resource *releasebuf[3] = { 0 };
@@ -477,7 +491,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
  
     hud->fb_width = tex->width0;
     hud->fb_height = tex->height0;
-@@ -606,18 +993,31 @@
+@@ -606,18 +1007,31 @@
     }
     hud->bg.vbuf.buffer.resource = NULL;
  
@@ -511,7 +525,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
        goto done;
  
     /* draw accumulated vertices for white lines */
-@@ -650,6 +1050,7 @@
+@@ -650,6 +1064,7 @@
     }
  
  done:
@@ -519,7 +533,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
     pipe_resource_release(pipe, releasebuf[2]);
     pipe_resource_release(pipe, releasebuf[1]);
     pipe_resource_release(pipe, releasebuf[0]);
-@@ -745,12 +1146,16 @@
+@@ -745,12 +1160,16 @@
           }
        }
  
@@ -536,7 +550,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
     /* unmap the uploader's vertex buffer before drawing */
     u_upload_unmap(pipe->stream_uploader);
  }
-@@ -1774,13 +2179,14 @@
+@@ -1774,13 +2193,14 @@
        static const char *fragment_shader_text = {
           "FRAG\n"
           "DCL IN[0], GENERIC[0], LINEAR\n"
@@ -552,7 +566,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
           "END\n"
        };
  
-@@ -1845,6 +2251,7 @@
+@@ -1845,6 +2265,7 @@
           "DCL IN[0..1]\n"
           "DCL OUT[0], POSITION\n"
           "DCL OUT[1], GENERIC[0]\n" /* texcoord */
@@ -560,7 +574,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
           /* [0] = color,
            * [1] = (2/fb_width, 2/fb_height, xoffset, yoffset)
            * [2] = (xscale, yscale, 0, 0)
-@@ -1865,6 +2272,7 @@
+@@ -1865,6 +2286,7 @@
           "MOV OUT[0].zw, IMM[0]\n"
  
           "MUL OUT[1], IN[1], IMM[1]\n"

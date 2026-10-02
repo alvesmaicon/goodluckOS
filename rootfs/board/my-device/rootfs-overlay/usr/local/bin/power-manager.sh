@@ -38,6 +38,10 @@ while true; do
         screen-off)      # Puppy's power menu: "Display off"
             /usr/local/bin/toggle-screen.sh off
             ;;
+        set-time\ *)     # sent by system-settings: seconds since the epoch, kept in the RTC
+            t=${cmd#set-time }
+            case "$t" in ''|*[!0-9]*) ;; *) date -u -s "@$t" >/dev/null && hwclock -w -u ;; esac
+            ;;
         set-governor\ *) # sent by system-settings; persist-settings.sh only accepts governors the kernel offers
             /usr/local/bin/persist-settings.sh governor "${cmd#set-governor }"
             ;;

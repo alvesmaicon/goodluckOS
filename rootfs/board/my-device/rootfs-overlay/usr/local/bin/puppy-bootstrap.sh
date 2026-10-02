@@ -10,6 +10,7 @@ fi
 
 while true; do
     rm -f /dev/shm/launch
+    . /etc/profile.d/timezone.sh
 
     /usr/bin/puppy
 

@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <ctime>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -158,6 +159,11 @@ const char* HUD_CONFIG = "/home/player/.config/gallium_hud.conf";
 const char* HUD_POSITIONS[] = {"top-left", "top-right", "bottom-left", "bottom-right"};
 const char* HUD_POSITION_NAMES[] = {"Top left", "Top right", "Bottom left", "Bottom right"};
 
+// Date formats: what the settings show, and the strftime format the clocks use
+const char* DATE_FORMAT_NAMES[] = {"MM/DD", "DD/MM", "MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD", "DD/MM/YY", "YY-MM-DD"};
+const char* DATE_FORMATS[] = {"%m/%d", "%d/%m", "%m/%d/%Y", "%d/%m/%Y", "%Y-%m-%d", "%d/%m/%y", "%y-%m-%d"};
+const int DATE_FORMAT_COUNT = sizeof(DATE_FORMATS) / sizeof(DATE_FORMATS[0]);
+
 struct HudSettings {
     bool status = false;
     bool status_battery_only = false;
@@ -166,6 +172,10 @@ struct HudSettings {
     bool cpu = true;
     bool text = false;
     int position = 0;
+    bool date = true;
+    bool time = true;
+    bool h24 = false;
+    int date_format = 0;   // DATE_FORMATS
 };
 
 HudSettings load_hud_settings() {
@@ -178,6 +188,13 @@ HudSettings load_hud_settings() {
         if (key == "HUD_STATUS") hud.status = value == "true";
         else if (key == "HUD_STATUS_ITEMS") hud.status_battery_only = value == "battery";
         else if (key == "HUD_STATUS_OPACITY") hud.status_opacity = std::max(0, std::min(100, atoi(value.c_str())));
+        else if (key == "HUD_DATE") hud.date = value == "true";
+        else if (key == "HUD_TIME") hud.time = value == "true";
+        else if (key == "HUD_24H") hud.h24 = value == "true";
+        else if (key == "HUD_DATE_FORMAT") {
+            for (int i = 0; i < DATE_FORMAT_COUNT; i++)
+                if (value == DATE_FORMATS[i]) hud.date_format = i;
+        }
         else if (key == "HUD_VISIBLE") hud.visible = value == "true";
         else if (key == "HUD_ITEMS") hud.cpu = value == "fps,cpu";
         else if (key == "HUD_STYLE") hud.text = value == "text";
@@ -201,9 +218,57 @@ void save_hud_settings(const HudSettings& hud) {
              << "HUD_VISIBLE=" << (hud.visible ? "true" : "false") << "\n"
              << "HUD_ITEMS=" << (hud.cpu ? "fps,cpu" : "fps") << "\n"
              << "HUD_STYLE=" << (hud.text ? "text" : "graph") << "\n"
-             << "HUD_POSITION=" << HUD_POSITIONS[hud.position] << "\n";
+             << "HUD_POSITION=" << HUD_POSITIONS[hud.position] << "\n"
+             << "HUD_DATE=" << (hud.date ? "true" : "false") << "\n"
+             << "HUD_TIME=" << (hud.time ? "true" : "false") << "\n"
+             << "HUD_24H=" << (hud.h24 ? "true" : "false") << "\n"
+             << "HUD_DATE_FORMAT=" << DATE_FORMATS[hud.date_format] << "\n";
     }
     rename(tmp.c_str(), HUD_CONFIG);
+}
+
+// Time zones as UTC offsets in minutes; ~/.config/timezone gets the POSIX TZ string
+// (there is no zoneinfo), read by /etc/profile.d/timezone.sh when an app starts
+const char* TIMEZONE_FILE = "/home/player/.config/timezone";
+const int TIMEZONE_OFFSETS[] = {-720, -660, -600, -570, -540, -480, -420, -360, -300, -240, -210, -180,
+                                -120, -60, 0, 60, 120, 180, 210, 240, 270, 300, 330, 345, 360, 390,
+                                420, 480, 525, 540, 570, 600, 630, 660, 720, 765, 780, 840};
+const int TIMEZONE_COUNT = sizeof(TIMEZONE_OFFSETS) / sizeof(TIMEZONE_OFFSETS[0]);
+
+std::string timezone_label(int minutes) {
+    char text[16];
+    snprintf(text, sizeof(text), "UTC%c%02d:%02d", minutes < 0 ? '-' : '+', abs(minutes) / 60, abs(minutes) % 60);
+    return text;
+}
+
+// "<-03>3" for UTC-3: POSIX counts west of Greenwich as positive
+std::string timezone_posix(int minutes) {
+    if (minutes == 0) return "UTC0";
+    char text[24];
+    int h = abs(minutes) / 60, m = abs(minutes) % 60;
+    if (m) snprintf(text, sizeof(text), "<%c%02d%02d>%s%d:%02d", minutes < 0 ? '-' : '+', h, m, minutes < 0 ? "" : "-", h, m);
+    else snprintf(text, sizeof(text), "<%c%02d>%s%d", minutes < 0 ? '-' : '+', h, minutes < 0 ? "" : "-", h);
+    return text;
+}
+
+int load_timezone() {
+    std::ifstream file(TIMEZONE_FILE);
+    std::string line;
+    std::getline(file, line);
+    for (int i = 0; i < TIMEZONE_COUNT; i++)
+        if (timezone_posix(TIMEZONE_OFFSETS[i]) == line) return i;
+    for (int i = 0; i < TIMEZONE_COUNT; i++)
+        if (TIMEZONE_OFFSETS[i] == 0) return i;
+    return 0;
+}
+
+void save_timezone(int index) {
+    const std::string tz = timezone_posix(TIMEZONE_OFFSETS[index]);
+    mkdir("/home/player/.config", 0755);
+    std::ofstream file(TIMEZONE_FILE);
+    file << tz << "\n";
+    setenv("TZ", tz.c_str(), 1);
+    tzset();
 }
 
 // The launcher's tabs, written by Puppy as "name<TAB>label" lines.
@@ -547,6 +612,29 @@ void input_chip(const char* label, bool pressed, float width) {
 // its frame and grab made transparent and the bar drawn behind it.
 // Left/right change the value right away when the bar is selected (step per press), without having to
 // press A first as plain ImGui sliders need.
+// A number changed with left / right while selected, wrapping around at the ends
+bool number_stepper(const char* label, int* value, int min, int max, const char* format, bool hour12 = false) {
+    char text[32];
+    if (hour12) snprintf(text, sizeof(text), "%02d %s", *value % 12 ? *value % 12 : 12, *value < 12 ? "AM" : "PM");
+    else snprintf(text, sizeof(text), format, *value);
+    ImGui::Button((std::string("< ") + text + " >##" + label).c_str(), ImVec2(ImGui::GetFontSize() * 6.0f, 0));
+    bool changed = false;
+    if (ImGui::IsItemFocused()) {
+        int dir = 0;
+        if (ImGui::IsKeyPressed(ImGuiKey_GamepadDpadRight, true) || ImGui::IsKeyPressed(ImGuiKey_RightArrow, true)) dir = 1;
+        if (ImGui::IsKeyPressed(ImGuiKey_GamepadDpadLeft, true) || ImGui::IsKeyPressed(ImGuiKey_LeftArrow, true)) dir = -1;
+        if (dir) {
+            *value += dir;
+            if (*value > max) *value = min;
+            if (*value < min) *value = max;
+            changed = true;
+        }
+    }
+    ImGui::SameLine();
+    ImGui::Text("%s", label);
+    return changed;
+}
+
 bool level_slider(const char* label, int* value, int min, int max, int step) {
     ImDrawList* draw = ImGui::GetWindowDrawList();
     const ImVec2 pos = ImGui::GetCursorScreenPos();
@@ -686,7 +774,7 @@ int main(int argc, char* argv[]) {
 
     // The main page is a menu of sections; each opens its own page
     enum Page { PAGE_NONE, PAGE_MAIN, PAGE_DISPLAY, PAGE_LAUNCHER, PAGE_INTERFACE, PAGE_STORAGE,
-                PAGE_SYSTEM_MENU, PAGE_SYSTEM, PAGE_INPUT, PAGE_TESTER, PAGE_TABS, PAGE_OVERLAY };
+                PAGE_SYSTEM_MENU, PAGE_SYSTEM, PAGE_INPUT, PAGE_TESTER, PAGE_TABS, PAGE_OVERLAY, PAGE_DATETIME };
     Page page = PAGE_MAIN;
     // Where B / Back goes from each page (PAGE_NONE: leave the app)
     auto parent_of = [](Page p) {
@@ -711,6 +799,9 @@ int main(int argc, char* argv[]) {
     bool performance_mode = info.governor == PERFORMANCE_GOVERNOR;
     LauncherSettings launcher = load_launcher_settings();
     HudSettings hud = load_hud_settings();
+    int timezone = load_timezone();
+    struct tm clock_edit = {};   // the date and time being set, taken from the clock when the page opens
+    bool clock_set = false;
     const std::vector<i18n::Language> languages = i18n::available();
     bool launch_resize_home = false;
 
@@ -729,6 +820,8 @@ int main(int argc, char* argv[]) {
             if (page == PAGE_TESTER) got_event = SDL_WaitEventTimeout(&event, 33);
             // the shortcut list scrolls while the d-pad / right stick is held
             else if (page == PAGE_INPUT) got_event = SDL_WaitEventTimeout(&event, 50);
+            // the current time ticks on the Date & Time page
+            else if (page == PAGE_DATETIME) got_event = SDL_WaitEventTimeout(&event, 1000);
             else if (following) got_event = SDL_WaitEventTimeout(&event, HOTKEY_POLL_MS);
             // keep drawing while left/right is held, so holding it keeps changing a level bar
             else if (ImGui::IsKeyDown(ImGuiKey_GamepadDpadLeft) || ImGui::IsKeyDown(ImGuiKey_GamepadDpadRight) ||
@@ -838,6 +931,7 @@ int main(int argc, char* argv[]) {
             page_button(tr("Launcher"), PAGE_LAUNCHER);
             page_button(tr("Interface"), PAGE_INTERFACE);
             page_button(tr("Overlay"), PAGE_OVERLAY);
+            page_button(tr("Date & Time"), PAGE_DATETIME);
             page_button(tr("Storage"), PAGE_STORAGE);
             page_button(tr("System"), PAGE_SYSTEM_MENU);
             page_button(tr("Input Settings"), PAGE_INPUT);
@@ -997,6 +1091,92 @@ int main(int argc, char* argv[]) {
                 ImGui::EndCombo();
             }
             if (hud_changed) save_hud_settings(hud);
+            end_page();
+        } else if (page == PAGE_DATETIME) {
+            begin_page("DateTime", "Date & Time");
+            {
+                char now_text[48];
+                time_t now = time(nullptr);
+                struct tm tm;
+                localtime_r(&now, &tm);
+                std::string fmt = std::string(DATE_FORMATS[hud.date_format]) + (hud.h24 ? " %H:%M:%S" : " %I:%M:%S %p");
+                strftime(now_text, sizeof(now_text), fmt.c_str(), &tm);
+                ImGui::Text("%s %s", tr("Now:"), now_text);
+            }
+            ImGui::Spacing();
+            ImGui::TextDisabled("%s", tr("Launcher and in-game status bar"));
+            bool shown_changed = ImGui::Checkbox(tr("Show date"), &hud.date);
+            ImGui::SetItemDefaultFocus();
+            shown_changed |= ImGui::Checkbox(tr("Show time"), &hud.time);
+            shown_changed |= ImGui::Checkbox(tr("24-hour clock"), &hud.h24);
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("%s", tr("Date format:"));
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 7.0f);
+            if (ImGui::BeginCombo("##date_format", DATE_FORMAT_NAMES[hud.date_format])) {
+                for (int i = 0; i < DATE_FORMAT_COUNT; ++i) {
+                    bool selected = i == hud.date_format;
+                    if (ImGui::Selectable(DATE_FORMAT_NAMES[i], selected) && !selected) {
+                        hud.date_format = i;
+                        shown_changed = true;
+                    }
+                    if (selected) ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+            if (shown_changed) save_hud_settings(hud);
+
+            ImGui::Spacing();
+            if (ImGui::IsWindowAppearing() || clock_edit.tm_year == 0) {
+                time_t now = time(nullptr);
+                localtime_r(&now, &clock_edit);
+                clock_edit.tm_sec = 0;
+                clock_set = false;
+            }
+            int year = clock_edit.tm_year + 1900, month = clock_edit.tm_mon + 1;
+            bool edited = number_stepper(tr("Year"), &year, 2024, 2099, "%04d");
+            edited |= number_stepper(tr("Month"), &month, 1, 12, "%02d");
+            static const int kDays[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+            bool leap = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+            int days = kDays[month - 1] + (month == 2 && leap ? 1 : 0);
+            clock_edit.tm_mday = std::min(clock_edit.tm_mday, days);
+            edited |= number_stepper(tr("Day"), &clock_edit.tm_mday, 1, days, "%02d");
+            edited |= number_stepper(tr("Hour"), &clock_edit.tm_hour, 0, 23, "%02d", !hud.h24);
+            edited |= number_stepper(tr("Minute"), &clock_edit.tm_min, 0, 59, "%02d");
+            clock_edit.tm_year = year - 1900;
+            clock_edit.tm_mon = month - 1;
+            if (edited) clock_set = false;
+            if (ImGui::Button(tr("Set date and time"))) {
+                struct tm t = clock_edit;
+                t.tm_isdst = -1;
+                time_t when = mktime(&t);
+                if (when > 0) {
+                    send_power_request("set-time " + std::to_string((long long)when));
+                    clock_set = true;
+                }
+            }
+            if (clock_set) {
+                ImGui::SameLine();
+                ImGui::TextDisabled("%s", tr("Done"));
+            }
+
+            ImGui::Spacing();
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("%s", tr("Time zone:"));
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 7.0f);
+            if (ImGui::BeginCombo("##timezone", timezone_label(TIMEZONE_OFFSETS[timezone]).c_str())) {
+                for (int i = 0; i < TIMEZONE_COUNT; ++i) {
+                    bool selected = i == timezone;
+                    if (ImGui::Selectable(timezone_label(TIMEZONE_OFFSETS[i]).c_str(), selected) && !selected) {
+                        timezone = i;
+                        save_timezone(i);
+                        clock_edit.tm_year = 0;   // show the clock in the new zone
+                    }
+                    if (selected) ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
             end_page();
         } else if (page == PAGE_STORAGE) {
             begin_page("Storage", "Storage");
