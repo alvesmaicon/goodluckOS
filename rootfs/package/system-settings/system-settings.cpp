@@ -3,6 +3,7 @@
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_sdlrenderer2.h"
 #include <fstream>
+#include <string>
 #include <vector>
 #include <fcntl.h>
 #include <unistd.h>
@@ -109,7 +110,44 @@ void set_alsa_mute(bool mute) {
     snd_mixer_close(handle);
 }
 
+const char* HUD_CONFIG = "/home/player/.config/gallium_hud.conf";
+const char* HUD_POSITIONS[] = {"top-left", "top-right", "bottom-left", "bottom-right"};
+const char* HUD_POSITION_NAMES[] = {"Top left", "Top right", "Bottom left", "Bottom right"};
 
+struct HudSettings {
+    bool visible = false;
+    bool cpu = true;
+    bool text = false;
+    int position = 0;
+};
+
+HudSettings load_hud_settings() {
+    HudSettings hud;
+    std::ifstream file(HUD_CONFIG);
+    std::string line;
+    while (std::getline(file, line)) {
+        size_t eq = line.find('=');
+        if (eq == std::string::npos) continue;
+        std::string key = line.substr(0, eq), value = line.substr(eq + 1);
+        if (key == "HUD_VISIBLE") hud.visible = value == "true";
+        else if (key == "HUD_ITEMS") hud.cpu = value == "fps,cpu";
+        else if (key == "HUD_STYLE") hud.text = value == "text";
+        else if (key == "HUD_POSITION") {
+            for (int i = 0; i < 4; i++) {
+                if (value == HUD_POSITIONS[i]) hud.position = i;
+            }
+        }
+    }
+    return hud;
+}
+
+void save_hud_settings(const HudSettings& hud) {
+    std::ofstream file(HUD_CONFIG);
+    file << "HUD_VISIBLE=" << (hud.visible ? "true" : "false") << "\n"
+         << "HUD_ITEMS=" << (hud.cpu ? "fps,cpu" : "fps") << "\n"
+         << "HUD_STYLE=" << (hud.text ? "text" : "graph") << "\n"
+         << "HUD_POSITION=" << HUD_POSITIONS[hud.position] << "\n";
+}
 
 void section_headear(const char* text) {
     float windowWidth = ImGui::GetWindowSize().x;
@@ -156,6 +194,7 @@ int main(int argc, char* argv[]) {
     int display_brightness = get_brightness();
     int current_volume = get_alsa_volume();
     bool current_mute = get_alsa_mute();
+    HudSettings hud = load_hud_settings();
 
 
     bool running = true;
@@ -203,6 +242,24 @@ int main(int argc, char* argv[]) {
 
         if (ImGui::Checkbox("Global Mute", &current_mute)) {
             set_alsa_mute(current_mute);
+        }
+
+        section_headear("Performance Overlay");
+        bool hud_changed = ImGui::Checkbox("Show on game start", &hud.visible);
+        ImGui::Text("Content:");
+        ImGui::SameLine();
+        if (ImGui::RadioButton("FPS", !hud.cpu)) { hud.cpu = false; hud_changed = true; }
+        ImGui::SameLine();
+        if (ImGui::RadioButton("FPS + CPU", hud.cpu)) { hud.cpu = true; hud_changed = true; }
+        ImGui::Text("Style:");
+        ImGui::SameLine();
+        if (ImGui::RadioButton("Graph", !hud.text)) { hud.text = false; hud_changed = true; }
+        ImGui::SameLine();
+        if (ImGui::RadioButton("Text", hud.text)) { hud.text = true; hud.position &= 1; hud_changed = true; }
+        hud_changed |= ImGui::Combo("Position", &hud.position, HUD_POSITION_NAMES, hud.text ? 2 : 4);
+        ImGui::TextDisabled("FN + UP shows or hides it in game");
+        if (hud_changed) {
+            save_hud_settings(hud);
         }
 
         if (ImGui::Button("System Settings")) {

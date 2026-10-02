@@ -16,6 +16,7 @@ while true; do
     if [ -f "/dev/shm/launch" ]; then
         cmd="$(cat /dev/shm/launch)"
         if [ -n "$cmd" ]; then
+            . /etc/profile.d/gallium_hud.sh
             sh -c "exec $cmd" &
             echo $! > /dev/shm/puppy-active-process-id
             wait $!
