@@ -103,7 +103,7 @@ Each system and app category gets its own tab, plus an "All Games" tab with ever
 | A | Launch |
 | Y | Add to / remove from My List (your favourites tab) |
 | SELECT | Set / clear autolaunch |
-| L2 + R2 | Game options: **Rename** the game's file (its cover, gamelist entry and RetroArch saves follow) with the on-screen keyboard, which has an Aa key for capitals, or **Move to trash** (`HOME/.trash`; a `.cue`'s tracks and a `.m3u`'s discs go with it). System Settings empties the trash |
+| L2 + R2 | Game options: **Rename** the game with the on-screen keyboard, starting from the name it shows (L1/R1 move the cursor, Aa types capitals): the shown name changes and the file takes a version of it the card accepts (":" becomes " -"), with its cover, gamelist entry and RetroArch saves following, or **Move to trash** (`HOME/.trash`; a `.cue`'s tracks and a `.m3u`'s discs go with it). System Settings empties the trash |
 | X | Search by name with the on-screen keyboard (the search applies to every tab) |
 | B | Clear the search, or close the keyboard / power options |
 | START | System Settings |

@@ -386,8 +386,9 @@ struct Model {
     Entry menuEntry;                    // the game those act on
     int menuSel = 0;
     int menuCount() const { return menuKind == Menu::Power ? (int)menuItems.size() : (int)menuLabels.size(); }
-    bool renaming = false;      // the keyboard edits renameText (the game's file name), not the search
+    bool renaming = false;      // the keyboard edits renameText (the game's name), not the search
     std::string renameText;
+    size_t renameCursor = 0;    // byte position in renameText, moved with L1/R1
     std::string notice;         // short message over the footer (renamed, moved to the trash...)
     Uint32 noticeUntil = 0;
     std::string status;     // full-screen message while restarting / shutting down
@@ -1154,30 +1155,64 @@ static void renameSaves(const std::string& oldStem, const std::string& newStem) 
     }
 }
 
-// Renames a game's file to newStem (same extension) along with what goes by its name: the cover in
-// its icons folder, its gamelist entries (path and shown name), its RetroArch saves and states, and
-// the launcher's favourites and autolaunch. Returns the message to show.
-static std::string renameEntry(Model& m, const Entry& e, const std::string& newStem) {
-    if (newStem.find('/') != std::string::npos || newStem == "." || newStem == "..") return tr("That name can't be used");
-    const fs::path from(e.file);
-    const fs::path to = from.parent_path() / (newStem + from.extension().string());
-    std::error_code ec;
-    if (fs::exists(to, ec)) return tr("A file with that name already exists");
-    fs::rename(from, to, ec);
-    if (ec) return tr("Couldn't rename the file");
-
-    const std::string oldStem = from.stem().string();
-    std::string icon = e.iconPath;
-    if (!icon.empty() && fs::path(icon).stem().string() == oldStem) {   // the icons folder's cover
-        const fs::path iconTo = fs::path(icon).parent_path() / (newStem + fs::path(icon).extension().string());
-        std::error_code ec2;
-        if (!fs::exists(iconTo, ec2)) {
-            fs::rename(icon, iconTo, ec2);
-            if (!ec2) icon = iconTo.string();
+// A file name for a shown name: what FAT32 can't hold in a name goes (":" becomes " -", as in
+// "Castlevania : Symphony" -> "Castlevania - Symphony"), with no doubled spaces or trailing dots.
+static std::string fileSafeName(const std::string& name) {
+    std::string out;
+    for (char c : name) {
+        switch (c) {
+            case ':': out += " -"; break;
+            case '/': case '\\': out += '-'; break;
+            case '*': case '?': case '"': case '<': case '>': case '|': break;
+            default: if ((unsigned char)c >= 0x20) out += c;
         }
     }
-    renameInGamelists(from.parent_path(), from.filename().string(), to.filename().string(), newStem);
-    renameSaves(oldStem, newStem);
+    std::string clean;
+    for (char c : out) {
+        if (c == ' ' && (clean.empty() || clean.back() == ' ')) continue;
+        clean += c;
+    }
+    while (!clean.empty() && (clean.back() == ' ' || clean.back() == '.')) clean.pop_back();
+    return clean;
+}
+
+static void renamePath(const fs::path& from, const fs::path& to, std::error_code& ec) {
+    // FAT32 ignores case, so a change of case only goes through a temporary name
+    if (lower(from.filename().string()) == lower(to.filename().string())) {
+        const fs::path tmp = from.string() + ".renaming";
+        fs::rename(from, tmp, ec);
+        if (!ec) fs::rename(tmp, to, ec);
+    } else {
+        fs::rename(from, to, ec);
+    }
+}
+
+// Renames a game: newName is shown in the launcher (its gamelist entries get it), and the file takes
+// a file-safe version of it (same extension), along with what goes by the file's name: the cover in
+// its icons folder, its RetroArch saves and states, and the launcher's favourites and autolaunch.
+// Returns the message to show.
+static std::string renameEntry(Model& m, const Entry& e, const std::string& newName) {
+    const std::string newStem = fileSafeName(newName);
+    if (newStem.empty() || newStem == "." || newStem == "..") return tr("That name can't be used");
+    const fs::path from(e.file);
+    const std::string oldStem = from.stem().string();
+    const bool moveFile = newStem != oldStem;
+    const fs::path to = moveFile ? from.parent_path() / (newStem + from.extension().string()) : from;
+    std::error_code ec;
+    std::string icon = e.iconPath;
+    if (moveFile) {
+        if (lower(newStem) != lower(oldStem) && fs::exists(to, ec)) return tr("A file with that name already exists");
+        renamePath(from, to, ec);
+        if (ec) return tr("Couldn't rename the file");
+        if (!icon.empty() && fs::path(icon).stem().string() == oldStem) {   // the icons folder's cover
+            const fs::path iconTo = fs::path(icon).parent_path() / (newStem + fs::path(icon).extension().string());
+            std::error_code ec2;
+            renamePath(icon, iconTo, ec2);
+            if (!ec2) icon = iconTo.string();
+        }
+        renameSaves(oldStem, newStem);
+    }
+    renameInGamelists(from.parent_path(), from.filename().string(), to.filename().string(), newName);
 
     const bool fav = m.favorites.erase(Model::favoriteKey(e)) > 0;
     const bool autostart = m.isAutoStart(e);
@@ -1185,12 +1220,15 @@ static std::string renameEntry(Model& m, const Entry& e, const std::string& newS
     for (auto& c : m.categories) {
         for (auto& x : c.entries) {
             if (x.category != e.category || x.id != e.id) continue;
-            x.id = x.name = newStem;
+            x.id = newStem;
+            x.name = newName;
             x.file = to.string();
             x.iconPath = icon;
-            replaceAll(x.command, shellQuote(from.string()), shellQuote(to.string()));
-            replaceAll(x.command, from.string(), to.string());   // unquoted, e.g. %ROM_RAW%
-            x.searchKey = lower(x.name);
+            if (moveFile) {
+                replaceAll(x.command, shellQuote(from.string()), shellQuote(to.string()));
+                replaceAll(x.command, from.string(), to.string());   // unquoted, e.g. %ROM_RAW%
+            }
+            x.searchKey = lower(newName == newStem ? newName : newName + " " + newStem);
             if (!renamed) renamed = &x;
         }
     }
@@ -1819,6 +1857,7 @@ private:
             hints = {{"A", tr("Select")}, {"B", tr("Close")}};
         } else if (kb.open) {
             hints = {{"A", tr("Type")}, {"B", tr("Delete")}, {"START", tr("Done")}};
+            if (m.renaming) hints.insert(hints.begin(), {"L1/R1", tr("Cursor")});
         } else {
             const Entry* sel = m.selected();
             hints = {{"L1", tr("Prev")}, {"R1", tr("Next")}, {"A", tr("Launch")},
@@ -2102,11 +2141,20 @@ private:
 
         // What is typed: the search, or the new name of a game's file; a long name shows its end
         const std::string prompt = tr(m.renaming ? "Rename:" : "Search:");
-        const std::string text = (m.renaming ? m.renameText : m.query) + "_";
         drawText(renderer, uiFont, prompt, panel.x + pad, panel.y + pad, kGrey);
         const int textX = panel.x + pad + textWidth(uiFont, prompt) + 8;
         const int textMax = panel.x + panelW - pad - textX;
-        drawText(renderer, uiFont, text, textX, panel.y + pad, kWhite, textMax, std::max(0, textWidth(uiFont, text) - textMax));
+        if (m.renaming) {
+            // the name with a cursor bar, scrolled so the cursor stays in view
+            const size_t cursor = std::min(m.renameCursor, m.renameText.size());
+            const int caretX = textWidth(uiFont, m.renameText.substr(0, cursor));
+            const int scroll = std::max(0, caretX + 4 - textMax);
+            drawText(renderer, uiFont, m.renameText, textX, panel.y + pad, kWhite, textMax, scroll);
+            fill(kYellow, {textX + caretX - scroll, panel.y + pad, 2, TTF_FontHeight(uiFont)});
+        } else {
+            const std::string text = m.query + "_";
+            drawText(renderer, uiFont, text, textX, panel.y + pad, kWhite, textMax, std::max(0, textWidth(uiFont, text) - textMax));
+        }
 
         for (int r = 0; r < Keyboard::kRows; ++r) {
             const auto& keys = Keyboard::keys(r);
@@ -2343,21 +2391,38 @@ int main(int argc, char** argv) {
         if (!model.renaming) return;
         model.renaming = false;
         const std::string name = trim(model.renameText);
-        if (accept && !name.empty() && name != model.menuEntry.id) showNotice(renameEntry(model, model.menuEntry, name));
+        if (accept && !name.empty() && name != model.menuEntry.name) showNotice(renameEntry(model, model.menuEntry, name));
     };
 
+    // UTF-8 aware: the start of the letter before / after byte position pos
+    auto prevLetter = [](const std::string& t, size_t pos) {
+        while (pos > 0 && ((unsigned char)t[--pos] & 0xC0) == 0x80) {}
+        return pos;
+    };
+    auto nextLetter = [](const std::string& t, size_t pos) {
+        if (pos < t.size()) ++pos;
+        while (pos < t.size() && ((unsigned char)t[pos] & 0xC0) == 0x80) ++pos;
+        return pos;
+    };
+
+    // Types at the cursor (the search's is always at its end)
     auto typeKey = [&](const std::string& key) {
         std::string& text = model.renaming ? model.renameText : model.query;
+        size_t cursorAtEnd = text.size();
+        size_t& cursor = model.renaming ? model.renameCursor : cursorAtEnd;
+        cursor = std::min(cursor, text.size());
         const size_t maxLen = model.renaming ? kMaxNameLength : kMaxQueryLength;
         if (key == "ok") { closeKeyboard(true); return; }
         if (key == "shift") { kb.caps = !kb.caps; return; }
         if (key == "del") {
-            while (!text.empty() && ((unsigned char)text.back() & 0xC0) == 0x80) text.pop_back();  // a whole UTF-8 letter
-            if (!text.empty()) text.pop_back();
+            const size_t start = prevLetter(text, cursor);
+            text.erase(start, cursor - start);
+            cursor = start;
         } else if (text.size() < maxLen) {
             std::string c = key == "space" ? " " : key;
             if (kb.caps && c.size() == 1) c = upper(c);
-            text += c;
+            text.insert(cursor, c);
+            cursor += c.size();
         }
         if (!model.renaming) model.applyFilter();
     };
@@ -2375,9 +2440,10 @@ int main(int argc, char** argv) {
                 case Action::Launch: {
                     if (model.menuKind == Model::Menu::Game) {
                         model.menuOpen = false;
-                        if (model.menuSel == 0) {   // Rename: the keyboard, with the file's name
+                        if (model.menuSel == 0) {   // Rename: the keyboard, with the name as shown
                             model.renaming = true;
-                            model.renameText = model.menuEntry.id;
+                            model.renameText = model.menuEntry.name;
+                            model.renameCursor = model.renameText.size();
                             kb.open = true;
                             kb.caps = false;
                         } else {                    // Move to trash: ask first
@@ -2473,6 +2539,12 @@ int main(int argc, char** argv) {
                 case Action::Left:   kb.move(-1, 0); break;
                 case Action::Right:  kb.move(1, 0);  break;
                 case Action::Launch: typeKey(kb.current()); break;
+                case Action::PrevTab:   // L1/R1 move the cursor in the name
+                    if (model.renaming) model.renameCursor = prevLetter(model.renameText, std::min(model.renameCursor, model.renameText.size()));
+                    break;
+                case Action::NextTab:
+                    if (model.renaming) model.renameCursor = nextLetter(model.renameText, model.renameCursor);
+                    break;
                 case Action::Back:
                     if ((model.renaming ? model.renameText : model.query).empty()) closeKeyboard(false);
                     else typeKey("del");

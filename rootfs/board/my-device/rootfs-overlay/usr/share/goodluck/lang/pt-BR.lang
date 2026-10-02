@@ -217,3 +217,4 @@ Game options: rename, move to trash = Opções do jogo: renomear, mover para a l
 Empty trash (%llu files, %s) = Esvaziar lixeira (%llu arquivos, %s)
 Delete the games in the trash for good? = Apagar de vez os jogos da lixeira?
 Empty = Esvaziar
+Cursor = Cursor
