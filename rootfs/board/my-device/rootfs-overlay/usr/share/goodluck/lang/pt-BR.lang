@@ -104,6 +104,7 @@ Grid = Grade
 List = Lista
 Language: = Idioma:
 Font: = Fonte:
+Default = Padrão
 Resize Home = Expandir a HOME
 System Info = Informações do sistema
 Input Settings = Controles

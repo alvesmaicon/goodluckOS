@@ -686,12 +686,12 @@ int main(int argc, char* argv[]) {
                 ImGui::Text("%s", tr("Font:"));
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(ImGui::GetFontSize() * 11.0f);
-                if (ImGui::BeginCombo("##font", fonts::all()[font_choices[current_font]].name)) {
+                if (ImGui::BeginCombo("##font", tr(fonts::all()[font_choices[current_font]].name))) {
                     for (size_t i = 0; i < font_choices.size(); ++i) {
                         bool selected = (int)i == current_font;
                         // each name in its own font, as a preview
                         ImGui::PushFont(loaded_fonts[i], loaded_fonts[i]->LegacySize);
-                        if (ImGui::Selectable(fonts::all()[font_choices[i]].name, selected) && !selected) {
+                        if (ImGui::Selectable(tr(fonts::all()[font_choices[i]].name), selected) && !selected) {
                             launcher.font = fonts::all()[font_choices[i]].key;
                             save_launcher_settings(launcher);
                             pending_font = (int)i;
