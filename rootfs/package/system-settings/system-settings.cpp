@@ -146,6 +146,50 @@ void save_launcher_settings(const LauncherSettings& s) {
     rename(tmp.c_str(), LAUNCHER_SETTINGS_FILE);
 }
 
+// Gallium HUD options, read by /etc/profile.d/gallium_hud.sh before each launch
+const char* HUD_CONFIG = "/home/player/.config/gallium_hud.conf";
+const char* HUD_POSITIONS[] = {"top-left", "top-right", "bottom-left", "bottom-right"};
+const char* HUD_POSITION_NAMES[] = {"Top left", "Top right", "Bottom left", "Bottom right"};
+
+struct HudSettings {
+    bool visible = false;
+    bool cpu = true;
+    bool text = false;
+    int position = 0;
+};
+
+HudSettings load_hud_settings() {
+    HudSettings hud;
+    std::ifstream file(HUD_CONFIG);
+    for (std::string line; std::getline(file, line);) {
+        size_t eq = line.find('=');
+        if (eq == std::string::npos) continue;
+        std::string key = line.substr(0, eq), value = line.substr(eq + 1);
+        if (key == "HUD_VISIBLE") hud.visible = value == "true";
+        else if (key == "HUD_ITEMS") hud.cpu = value == "fps,cpu";
+        else if (key == "HUD_STYLE") hud.text = value == "text";
+        else if (key == "HUD_POSITION") {
+            for (int i = 0; i < 4; i++)
+                if (value == HUD_POSITIONS[i]) hud.position = i;
+        }
+    }
+    return hud;
+}
+
+void save_hud_settings(const HudSettings& hud) {
+    mkdir("/home/player/.config", 0755);
+    std::string tmp = std::string(HUD_CONFIG) + ".tmp";
+    {
+        std::ofstream file(tmp.c_str());
+        if (!file.is_open()) return;
+        file << "HUD_VISIBLE=" << (hud.visible ? "true" : "false") << "\n"
+             << "HUD_ITEMS=" << (hud.cpu ? "fps,cpu" : "fps") << "\n"
+             << "HUD_STYLE=" << (hud.text ? "text" : "graph") << "\n"
+             << "HUD_POSITION=" << HUD_POSITIONS[hud.position] << "\n";
+    }
+    rename(tmp.c_str(), HUD_CONFIG);
+}
+
 // The launcher's tabs, written by Puppy as "name<TAB>label" lines.
 struct LauncherTab {
     std::string name, label;
@@ -613,13 +657,14 @@ int main(int argc, char* argv[]) {
 
     // The main page is a menu of sections; each opens its own page
     enum Page { PAGE_NONE, PAGE_MAIN, PAGE_DISPLAY, PAGE_LAUNCHER, PAGE_INTERFACE, PAGE_STORAGE,
-                PAGE_SYSTEM_MENU, PAGE_SYSTEM, PAGE_INPUT, PAGE_TESTER, PAGE_TABS };
+                PAGE_SYSTEM_MENU, PAGE_SYSTEM, PAGE_INPUT, PAGE_TESTER, PAGE_TABS, PAGE_OVERLAY };
     Page page = PAGE_MAIN;
     // Where B / Back goes from each page (PAGE_NONE: leave the app)
     auto parent_of = [](Page p) {
         switch (p) {
             case PAGE_MAIN:   return PAGE_NONE;
             case PAGE_TABS:   return PAGE_LAUNCHER;
+            case PAGE_OVERLAY: return PAGE_INTERFACE;
             case PAGE_SYSTEM: return PAGE_SYSTEM_MENU;
             case PAGE_TESTER: return PAGE_INPUT;
             default:          return PAGE_MAIN;
@@ -637,6 +682,7 @@ int main(int argc, char* argv[]) {
     SystemInfo info = gather_system_info();
     bool performance_mode = info.governor == PERFORMANCE_GOVERNOR;
     LauncherSettings launcher = load_launcher_settings();
+    HudSettings hud = load_hud_settings();
     const std::vector<i18n::Language> languages = i18n::available();
     bool launch_resize_home = false;
 
@@ -876,6 +922,42 @@ int main(int argc, char* argv[]) {
                     ImGui::EndCombo();
                 }
             }
+            page_button(tr("Performance overlay"), PAGE_OVERLAY);
+            end_page();
+        } else if (page == PAGE_OVERLAY) {
+            begin_page("Overlay", "Performance overlay");
+            bool hud_changed = ImGui::Checkbox(tr("Show on game start"), &hud.visible);
+            ImGui::SetItemDefaultFocus();
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("%s", tr("Content:"));
+            ImGui::SameLine();
+            if (ImGui::RadioButton(tr("FPS"), !hud.cpu)) { hud.cpu = false; hud_changed = true; }
+            ImGui::SameLine();
+            if (ImGui::RadioButton(tr("FPS + CPU"), hud.cpu)) { hud.cpu = true; hud_changed = true; }
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("%s", tr("Style:"));
+            ImGui::SameLine();
+            if (ImGui::RadioButton(tr("Graph"), !hud.text)) { hud.text = false; hud_changed = true; }
+            ImGui::SameLine();
+            if (ImGui::RadioButton(tr("Text"), hud.text)) { hud.text = true; hud.position &= 1; hud_changed = true; }
+            // Mesa ignores the y offset in text mode, so it only goes at the top
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("%s", tr("Position:"));
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 11.0f);
+            if (ImGui::BeginCombo("##hud_position", tr(HUD_POSITION_NAMES[hud.position]))) {
+                for (int i = 0; i < (hud.text ? 2 : 4); ++i) {
+                    bool selected = i == hud.position;
+                    if (ImGui::Selectable(tr(HUD_POSITION_NAMES[i]), selected) && !selected) {
+                        hud.position = i;
+                        hud_changed = true;
+                    }
+                    if (selected) ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+            ImGui::TextDisabled("%s", tr("FN + UP shows or hides it in game"));
+            if (hud_changed) save_hud_settings(hud);
             end_page();
         } else if (page == PAGE_STORAGE) {
             begin_page("Storage", "Storage");

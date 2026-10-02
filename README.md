@@ -27,7 +27,7 @@ Please Note: At the time of writing, Allwinner-A23 based GA36-MB devices (which 
 - Brightness, volume and CPU mode are kept across reboots
 - SELECT+START closes the active application cleanly (RetroArch saves first), bringing you right back to the launcher
 - FN+START+SELECT force-kills the active application
-- FN+DPAD_UP toggles a live FPS/CPU graph for monitoring in-game performance.
+- FN+DPAD_UP toggles a live FPS/CPU graph for monitoring in-game performance. What it shows, its style and its corner are set in System Settings -> Interface -> Performance overlay.
 - FN+DPAD_DOWN switches the sound between the speaker and the headphones only
 - If the screen is on, the LEDs are off. Nothing blinding you while you're playing in the dark
 - Comes stock with Chocolate Doom, ready to play
@@ -155,7 +155,12 @@ System Settings
 │   └── Launcher tabs ─ which tabs to show
 ├── Interface
 │   ├── Language
-│   └── Font
+│   ├── Font
+│   └── Performance overlay
+│       ├── Show on game start
+│       ├── Content: FPS / FPS + CPU
+│       ├── Style: Graph / Text
+│       └── Position: top or bottom, left or right
 ├── Storage
 │   ├── HOME usage
 │   ├── Resize Home
@@ -170,6 +175,7 @@ System Settings
 
 - **Launcher tabs**: hidden tabs' games still appear in All Games and My List.
 - **Font**: Default keeps each app's own font (Inter in the launcher, ProggyClean elsewhere); or Inter, ProggyClean, VT323 or Pixelify Sans in every app.
+- **Performance overlay**: the Gallium HUD that FN + D-pad up shows in game. The choice applies from the next game on; Text only goes at the top.
 - **Empty trash**: deletes for good the games moved to the trash in the launcher.
 - **Performance mode**: keeps the CPU at full speed.
 
@@ -180,6 +186,8 @@ VT323 and Pixelify Sans are under the SIL Open Font License and ProggyClean unde
 | Main page | Display & Audio |
 | --- | --- |
 | ![System Settings](docs/screenshots/system-settings.png) | ![Display & Audio](docs/screenshots/system-settings-audio.png) |
+| **Performance overlay** | **In game (FN + D-pad up)** |
+| ![Performance overlay](docs/screenshots/system-settings-overlay.png) | ![Performance overlay in game](docs/screenshots/performance-overlay.png) |
 
 ## Translations
 Every text in the launcher, System Settings, the confirmation screens and `Resize Home` can be translated, and new languages need no code changes. Languages live in `/usr/share/goodluck/lang/<code>.lang` (in the repository: `rootfs/board/my-device/rootfs-overlay/usr/share/goodluck/lang/`) and show up in System Settings -> Interface -> Language as soon as the file is there.
