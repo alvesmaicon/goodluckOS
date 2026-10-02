@@ -95,7 +95,7 @@ constexpr int kMaxNameLength        = 96;   // renaming a game's file
 constexpr Uint32 kNoticeMs          = 2500;
 
 constexpr Uint32 kIdleCheckMs       = 60000;
-constexpr Uint32 kOsdShowMs         = 1500;  // how long the volume/brightness bar stays up
+constexpr Uint32 kOsdShowMs         = 2200;  // keeps redrawing while the Mesa HUD shows the bar (1.5 s after the script writes it)
 constexpr Uint8 kFnButton           = 10;    // BTN_MODE, which the SDL mapping leaves out
 constexpr Uint32 kOsdRefreshMs      = 100;   // re-read the level while it's up (the hotkey script runs async)
 constexpr Uint32 kRepeatDelayMs     = 350;  // holding the d-pad repeats the move after this...
@@ -1638,7 +1638,6 @@ public:
         if (m.menuOpen) renderMenu(m);
         if (!m.status.empty()) renderStatus(m.status);
         if (!m.notice.empty()) renderNotice(m.notice);
-        if (osd.visible && !osd.kind.empty()) renderOsd(osd, bodyTop(m.showTabs));
         if (!marqueeNext) marqueeKey.clear();   // coming back to the same name starts it over
 
         SDL_RenderPresent(renderer);
@@ -2163,35 +2162,6 @@ private:
         std::string pos = std::to_string(c.sel + 1) + " / " + std::to_string(total);
         drawText(renderer, smallFont, pos, kScreenW - kMargin - textWidth(smallFont, pos),
                  kScreenH - kFooterH - TTF_FontHeight(smallFont) - 6, kGrey);
-    }
-
-    void renderOsd(const Osd& osd, int top) {
-        const int w = 300, h = 64, pad = 14;
-        SDL_Rect panel{(kScreenW - w) / 2, top + 12, w, h};
-        fill({12, 12, 14, 235}, panel);
-        frame(kTile, panel, 2);
-
-        if (osd.kind == "output") {
-            const bool hp = osd.flag == "headphones";
-            const std::string value = tr(hp ? "Headphones" : "Speaker");
-            drawText(renderer, descFont, tr("Audio output"), panel.x + pad, panel.y + 6, kWhite, w - 2 * pad);
-            const int rowY = panel.y + h - 8 - TTF_FontHeight(descFont);
-            const int x = panel.x + (w - 16 - 8 - textWidth(descFont, value)) / 2;
-            const int iconY = rowY + (TTF_FontHeight(descFont) - 16) / 2;
-            if (hp) headphonesIcon(x, iconY, kYellow);
-            else speakerIcon(x, iconY, kYellow, false);
-            drawText(renderer, descFont, value, x + 24, rowY, kYellow);
-            return;
-        }
-
-        std::string label = osd.kind == "brightness" ? tr("Brightness") : (osd.kind == "volume" ? tr("Volume") : osd.kind);
-        std::string value = osd.muted ? tr("Muted") : std::to_string(osd.percent) + "%";
-        drawText(renderer, descFont, label, panel.x + pad, panel.y + 8, kWhite);
-        drawText(renderer, descFont, value, panel.x + w - pad - textWidth(descFont, value), panel.y + 8, kYellow);
-
-        SDL_Rect track{panel.x + pad, panel.y + h - 20, w - 2 * pad, 8};
-        fill(kTile, track);
-        fill(kYellow, {track.x, track.y, osd.muted ? 0 : track.w * osd.percent / 100, track.h});
     }
 
     // A short message over the footer, e.g. after renaming a game.
