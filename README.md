@@ -23,7 +23,7 @@ Please Note: At the time of writing, Allwinner-A23 based GA36-MB devices (which 
 - Built-in `Resize Home` app which grows your HOME partition to fill all the available space on your microSD card.
 - FN+Vol buttons adjust the screen brightness from anywhere
 - FN+START+SELECT kills the active application, bringing you right back to the launcher
-- FN+DPAD_UP toggles a live FPS/CPU graph for monitoring in-game performance.
+- FN+DPAD_UP toggles a live FPS/CPU graph for monitoring in-game performance What it shows, its style and its corner are set in System Settings -> Performance Overlay.
 - If the screen is on, the LEDs are off. Nothing blinding you while you're playing in the dark
 - Comes stock with Chocolate Doom, ready to play
 - Comes stock with Retroarch and several optimized cores (PCSX-ReArmed, Snes9x, QuickNES, DOSbox, Genesis Plus GX, mGBA, etc)
