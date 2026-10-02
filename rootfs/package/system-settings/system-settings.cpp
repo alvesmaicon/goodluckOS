@@ -159,6 +159,8 @@ const char* HUD_POSITION_NAMES[] = {"Top left", "Top right", "Bottom left", "Bot
 
 struct HudSettings {
     bool status = false;
+    bool status_battery_only = false;
+    int status_opacity = 50;
     bool visible = false;
     bool cpu = true;
     bool text = false;
@@ -173,6 +175,8 @@ HudSettings load_hud_settings() {
         if (eq == std::string::npos) continue;
         std::string key = line.substr(0, eq), value = line.substr(eq + 1);
         if (key == "HUD_STATUS") hud.status = value == "true";
+        else if (key == "HUD_STATUS_ITEMS") hud.status_battery_only = value == "battery";
+        else if (key == "HUD_STATUS_OPACITY") hud.status_opacity = std::clamp(atoi(value.c_str()), 0, 100);
         else if (key == "HUD_VISIBLE") hud.visible = value == "true";
         else if (key == "HUD_ITEMS") hud.cpu = value == "fps,cpu";
         else if (key == "HUD_STYLE") hud.text = value == "text";
@@ -191,6 +195,8 @@ void save_hud_settings(const HudSettings& hud) {
         std::ofstream file(tmp.c_str());
         if (!file.is_open()) return;
         file << "HUD_STATUS=" << (hud.status ? "true" : "false") << "\n"
+             << "HUD_STATUS_ITEMS=" << (hud.status_battery_only ? "battery" : "all") << "\n"
+             << "HUD_STATUS_OPACITY=" << hud.status_opacity << "\n"
              << "HUD_VISIBLE=" << (hud.visible ? "true" : "false") << "\n"
              << "HUD_ITEMS=" << (hud.cpu ? "fps,cpu" : "fps") << "\n"
              << "HUD_STYLE=" << (hud.text ? "text" : "graph") << "\n"
@@ -938,6 +944,13 @@ int main(int argc, char* argv[]) {
             ImGui::Separator();
             ImGui::Spacing();
             bool hud_changed = ImGui::Checkbox(tr("In-game status bar"), &hud.status);
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("%s", tr("Show:"));
+            ImGui::SameLine();
+            if (ImGui::RadioButton(tr("Battery and audio"), !hud.status_battery_only)) { hud.status_battery_only = false; hud_changed = true; }
+            ImGui::SameLine();
+            if (ImGui::RadioButton(tr("Battery only"), hud.status_battery_only)) { hud.status_battery_only = true; hud_changed = true; }
+            hud_changed |= level_slider(tr("Opacity"), &hud.status_opacity, 0, 100, 10);
             ImGui::TextDisabled("%s", tr("Performance (FN + UP)"));
             hud_changed |= ImGui::Checkbox(tr("Show on game start"), &hud.visible);
             ImGui::AlignTextToFramePadding();
