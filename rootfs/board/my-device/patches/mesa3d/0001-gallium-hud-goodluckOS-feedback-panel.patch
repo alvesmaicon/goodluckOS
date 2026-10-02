@@ -1,0 +1,229 @@
+From: Maicon Alves <maicon.alves@posthaus.com.br>
+Subject: [PATCH] gallium/hud: goodluckOS feedback panel
+
+Draws the volume / brightness / audio output feedback that osd-notify.sh
+writes to /dev/shm/hud-osd over any app, even with the graphs hidden.
+Text can be drawn in a color (the value is yellow, like the launcher).
+
+---
+--- a/src/gallium/auxiliary/hud/hud_context.c	2026-10-02 18:08:16.369287913 -0300
++++ b/src/gallium/auxiliary/hud/hud_context.c	2026-10-02 18:08:16.370781446 -0300
+@@ -68,6 +68,8 @@
+ #include "util/u_upload_mgr.h"
+ #include "tgsi/tgsi_text.h"
+ #include "tgsi/tgsi_dump.h"
++#include "util/os_time.h"
++#include <sys/stat.h>
+ 
+ #define HUD_DEFAULT_VISIBILITY true
+ #define HUD_DEFAULT_SCALE 1
+@@ -80,6 +82,25 @@
+ static int hud_rotate = HUD_DEFAULT_ROTATION;
+ static float hud_opacity = HUD_DEFAULT_OPACITY / 100.0f;
+ 
++/* goodluckOS: feedback panel (volume, brightness...) drawn over any app, even
++ * with the graphs hidden. osd-notify.sh writes three lines: label, value and
++ * the bar percentage (-1 for no bar). */
++#define OSD_FILE "/dev/shm/hud-osd"
++#define OSD_MS 1500
++#define OSD_W 300
++#define OSD_H 64
++#define OSD_PAD 14
++
++static struct {
++   bool started, visible;
++   struct timespec mtime;
++   int64_t until_ms;
++   char label[64], value[64];
++   int percent;
++   unsigned x, y;
++   unsigned value_first, value_count;
++} osd;
++
+ #if DETECT_OS_POSIX
+ static void
+ signal_visible_handler(int sig, siginfo_t *siginfo, void *context)
+@@ -485,6 +506,92 @@
+  * The texture is usually the back buffer being displayed.
+  */
+ static void
++hud_osd_update(void)
++{
++   struct stat st;
++   int64_t now = os_time_get_nano() / 1000000;
++   bool exists = stat(OSD_FILE, &st) == 0;
++
++   if (exists && (st.st_mtim.tv_sec != osd.mtime.tv_sec ||
++                  st.st_mtim.tv_nsec != osd.mtime.tv_nsec)) {
++      char lines[3][64] = {{0}};
++      FILE *f = fopen(OSD_FILE, "r");
++
++      osd.mtime = st.st_mtim;
++      if (f) {
++         for (int i = 0; i < 3 && fgets(lines[i], sizeof(lines[i]), f); i++)
++            lines[i][strcspn(lines[i], "\n")] = 0;
++         fclose(f);
++         snprintf(osd.label, sizeof(osd.label), "%s", lines[0]);
++         snprintf(osd.value, sizeof(osd.value), "%s", lines[1]);
++         osd.percent = lines[2][0] ? atoi(lines[2]) : -1;
++         /* a notification older than the app isn't shown */
++         if (osd.started)
++            osd.until_ms = now + OSD_MS;
++      }
++   }
++   osd.started = true;
++   osd.visible = now < osd.until_ms;
++}
++
++static void
++hud_osd_accumulate(struct hud_context *hud)
++{
++   unsigned w = strlen(osd.value) * hud->font.glyph_width;
++
++   osd.x = (hud->fb_width > OSD_W ? hud->fb_width - OSD_W : 0) / 2;
++   osd.y = 24;
++   hud_draw_string(hud, osd.x + OSD_PAD, osd.y + 10, "%s", osd.label);
++   osd.value_first = hud->text.num_vertices;
++   if (osd.percent >= 0)
++      hud_draw_string(hud, osd.x + OSD_W - OSD_PAD - w, osd.y + 10, "%s", osd.value);
++   else
++      hud_draw_string(hud, osd.x + (OSD_W - w) / 2, osd.y + OSD_H - 10 - hud->font.glyph_height, "%s", osd.value);
++   osd.value_count = hud->text.num_vertices - osd.value_first;
++}
++
++static void
++hud_osd_draw_panel(struct hud_context *hud)
++{
++   unsigned x = osd.x, y = osd.y;
++
++   hud_draw_colored_quad(hud, MESA_PRIM_QUADS, x, y, x + OSD_W, y + OSD_H,
++                         40 / 255.0, 40 / 255.0, 44 / 255.0, 1);
++   hud_draw_colored_quad(hud, MESA_PRIM_QUADS, x + 2, y + 2, x + OSD_W - 2, y + OSD_H - 2,
++                         12 / 255.0, 12 / 255.0, 14 / 255.0, 235 / 255.0);
++   if (osd.percent >= 0) {
++      unsigned tx = x + OSD_PAD, ty = y + OSD_H - 20, tw = OSD_W - 2 * OSD_PAD;
++      unsigned pct = osd.percent > 100 ? 100 : osd.percent;
++
++      hud_draw_colored_quad(hud, MESA_PRIM_QUADS, tx, ty, tx + tw, ty + 8,
++                            40 / 255.0, 40 / 255.0, 44 / 255.0, 1);
++      if (pct)
++         hud_draw_colored_quad(hud, MESA_PRIM_QUADS, tx, ty, tx + tw * pct / 100, ty + 8,
++                               1, 205 / 255.0, 60 / 255.0, 1);
++   }
++}
++
++static void
++hud_draw_text_range(struct hud_context *hud, unsigned first, unsigned count,
++                    float r, float g, float b, struct pipe_resource **releasebuf)
++{
++   if (!count)
++      return;
++   hud->constants.color[0] = r;
++   hud->constants.color[1] = g;
++   hud->constants.color[2] = b;
++   hud->constants.color[3] = 1;
++   hud->constants.translate[0] = 0;
++   hud->constants.translate[1] = 0;
++   hud->constants.scale[0] = hud_scale;
++   hud->constants.scale[1] = hud_scale;
++   pipe_resource_release(hud->pipe, *releasebuf);
++   *releasebuf = NULL;
++   pipe_upload_constant_buffer0(hud->pipe, MESA_SHADER_VERTEX, &hud->constbuf, releasebuf);
++   cso_draw_arrays(hud->cso, MESA_PRIM_QUADS, first, count);
++}
++
++static void
+ hud_draw_results(struct hud_context *hud, struct pipe_resource *tex)
+ {
+    struct cso_context *cso = hud->cso;
+@@ -497,7 +604,7 @@
+    struct hud_pane *pane;
+    struct pipe_resource *releasebuf[3] = { 0 };
+ 
+-   if (!huds_visible)
++   if (!huds_visible && !osd.visible)
+       return;
+ 
+    hud->fb_width = tex->width0;
+@@ -606,18 +713,28 @@
+    }
+    hud->bg.vbuf.buffer.resource = NULL;
+ 
++   if (osd.visible)
++      hud_osd_draw_panel(hud);
++
+    /* draw accumulated vertices for text */
+    if (hud->text.num_vertices) {
++      unsigned first = osd.visible ? osd.value_first : hud->text.num_vertices;
++      unsigned count = osd.visible ? osd.value_count : 0;
++
+       cso_set_vertex_shader_handle(cso, hud->vs_text);
+       cso_set_vertex_elements(cso, &hud->text_velems);
+       cso_set_vertex_buffers(cso, 1, &hud->text.vbuf);
+       cso_set_fragment_shader_handle(hud->cso, hud->fs_text);
+-      cso_draw_arrays(cso, MESA_PRIM_QUADS, 0, hud->text.num_vertices);
++      hud_draw_text_range(hud, 0, first, 1, 1, 1, &releasebuf[2]);
++      hud_draw_text_range(hud, first, count, 1, 205 / 255.0, 60 / 255.0, &releasebuf[2]);
++      hud_draw_text_range(hud, first + count, hud->text.num_vertices - first - count,
++                          1, 1, 1, &releasebuf[2]);
+       cso_set_vertex_elements(cso, &hud->velems);
++      cso_set_vertex_shader_handle(cso, hud->vs_color);
+    }
+    hud->text.vbuf.buffer.resource = NULL;
+ 
+-   if (hud->simple)
++   if (hud->simple || !huds_visible)
+       goto done;
+ 
+    /* draw accumulated vertices for white lines */
+@@ -745,12 +862,18 @@
+          }
+       }
+ 
++      if (!huds_visible)
++         continue;
+       if (hud->simple)
+          hud_pane_accumulate_vertices_simple(hud, pane);
+       else
+          hud_pane_accumulate_vertices(hud, pane);
+    }
+ 
++   hud_osd_update();
++   if (osd.visible)
++      hud_osd_accumulate(hud);
++
+    /* unmap the uploader's vertex buffer before drawing */
+    u_upload_unmap(pipe->stream_uploader);
+ }
+@@ -1774,13 +1897,14 @@
+       static const char *fragment_shader_text = {
+          "FRAG\n"
+          "DCL IN[0], GENERIC[0], LINEAR\n"
++         "DCL IN[1], GENERIC[1], CONSTANT\n"
+          "DCL SAMP[0]\n"
+          "DCL SVIEW[0], 2D, FLOAT\n"
+          "DCL OUT[0], COLOR[0]\n"
+          "DCL TEMP[0]\n"
+ 
+          "TEX TEMP[0], IN[0], SAMP[0], 2D\n"
+-         "MOV OUT[0], TEMP[0].xxxx\n"
++         "MUL OUT[0], TEMP[0].xxxx, IN[1]\n"
+          "END\n"
+       };
+ 
+@@ -1845,6 +1969,7 @@
+          "DCL IN[0..1]\n"
+          "DCL OUT[0], POSITION\n"
+          "DCL OUT[1], GENERIC[0]\n" /* texcoord */
++         "DCL OUT[2], GENERIC[1]\n" /* color */
+          /* [0] = color,
+           * [1] = (2/fb_width, 2/fb_height, xoffset, yoffset)
+           * [2] = (xscale, yscale, 0, 0)
+@@ -1865,6 +1990,7 @@
+          "MOV OUT[0].zw, IMM[0]\n"
+ 
+          "MUL OUT[1], IN[1], IMM[1]\n"
++         "MOV OUT[2], CONST[0][0]\n"
+          "END\n"
+       };
+ 
