@@ -176,7 +176,7 @@ HudSettings load_hud_settings() {
         std::string key = line.substr(0, eq), value = line.substr(eq + 1);
         if (key == "HUD_STATUS") hud.status = value == "true";
         else if (key == "HUD_STATUS_ITEMS") hud.status_battery_only = value == "battery";
-        else if (key == "HUD_STATUS_OPACITY") hud.status_opacity = std::clamp(atoi(value.c_str()), 0, 100);
+        else if (key == "HUD_STATUS_OPACITY") hud.status_opacity = std::max(0, std::min(100, atoi(value.c_str())));
         else if (key == "HUD_VISIBLE") hud.visible = value == "true";
         else if (key == "HUD_ITEMS") hud.cpu = value == "fps,cpu";
         else if (key == "HUD_STYLE") hud.text = value == "text";
