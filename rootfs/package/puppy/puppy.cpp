@@ -1823,7 +1823,7 @@ private:
 
         std::string bat = battery >= 0 ? std::to_string(battery) + "%" : "??";
         int batX = kScreenW - kMargin - textWidth(uiFont, bat);
-        drawText(renderer, uiFont, bat, batX, nameY, kWhite);
+        drawText(renderer, uiFont, bat, batX, nameY, kGrey);
 
         int statusX = batX;
         if (audio.volume >= 0) {
