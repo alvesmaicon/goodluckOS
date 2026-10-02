@@ -675,7 +675,7 @@ int main(int argc, char* argv[]) {
             // The options scroll (bigger fonts don't fit the 480px screen), following the d-pad
             // selection; Back stays at the bottom. NavFlattened: the d-pad moves between the list and
             // Back as if they were one.
-            const float back_h = ImGui::GetFrameHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y;
+            const float back_h = ImGui::GetFrameHeightWithSpacing() + 2 * ImGui::GetStyle().ItemSpacing.y + 1.0f;   // + the separator
             ImGui::BeginChild("main_list", ImVec2(0, ImGui::GetContentRegionAvail().y - back_h), ImGuiChildFlags_NavFlattened);
 
             section_headear("Display & Audio");
@@ -844,6 +844,7 @@ int main(int argc, char* argv[]) {
             // TODO: Date/Time (the RTC has no backup battery, so the clock resets on every boot)
             ImGui::EndChild();
 
+            ImGui::Separator();   // the scrolling part ends here; the buttons below stay put
             ImGui::Spacing();
             if (ImGui::Button(tr("Back"))) {
                 running = false;
@@ -857,7 +858,7 @@ int main(int argc, char* argv[]) {
 
             // The list scrolls with d-pad up/down and the right stick; the buttons sit side by side at
             // the bottom, so left/right picks one and up/down stay free for scrolling
-            const float buttons_h = ImGui::GetFrameHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y;
+            const float buttons_h = ImGui::GetFrameHeightWithSpacing() + 2 * ImGui::GetStyle().ItemSpacing.y + 1.0f;   // + the separator
             ImGui::BeginChild("shortcut_list", ImVec2(0, ImGui::GetContentRegionAvail().y - buttons_h), ImGuiChildFlags_None,
                               ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoNavFocus);
             const float step = ImGui::GetTextLineHeightWithSpacing() * 0.75f;
@@ -887,6 +888,7 @@ int main(int argc, char* argv[]) {
             ImGui::PopFont();
             ImGui::EndChild();
 
+            ImGui::Separator();   // the scrolling part ends here; the buttons below stay put
             ImGui::Spacing();
             if (focus_tester_button) {
                 ImGui::SetKeyboardFocusHere();
@@ -910,7 +912,7 @@ int main(int argc, char* argv[]) {
             ImGui::TextWrapped("%s", tr("Unticked tabs are hidden; their games still show in All Games and My List."));
             ImGui::Spacing();
 
-            const float back_h = ImGui::GetFrameHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y;
+            const float back_h = ImGui::GetFrameHeightWithSpacing() + 2 * ImGui::GetStyle().ItemSpacing.y + 1.0f;   // + the separator
             ImGui::BeginChild("tab_list", ImVec2(0, ImGui::GetContentRegionAvail().y - back_h), ImGuiChildFlags_NavFlattened);
             for (size_t i = 0; i < launcher_tabs.size(); ++i) {
                 const LauncherTab& t = launcher_tabs[i];
@@ -933,6 +935,7 @@ int main(int argc, char* argv[]) {
             }
             ImGui::EndChild();
 
+            ImGui::Separator();   // the scrolling part ends here; the buttons below stay put
             ImGui::Spacing();
             if (ImGui::Button(tr("Back"))) next_page = PAGE_MAIN;
             ImGui::End();
