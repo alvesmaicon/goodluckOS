@@ -657,14 +657,13 @@ int main(int argc, char* argv[]) {
 
     // The main page is a menu of sections; each opens its own page
     enum Page { PAGE_NONE, PAGE_MAIN, PAGE_DISPLAY, PAGE_LAUNCHER, PAGE_INTERFACE, PAGE_STORAGE,
-                PAGE_SYSTEM_MENU, PAGE_SYSTEM, PAGE_INPUT, PAGE_TESTER, PAGE_TABS, PAGE_OVERLAY };
+                PAGE_SYSTEM_MENU, PAGE_SYSTEM, PAGE_INPUT, PAGE_TESTER, PAGE_TABS };
     Page page = PAGE_MAIN;
     // Where B / Back goes from each page (PAGE_NONE: leave the app)
     auto parent_of = [](Page p) {
         switch (p) {
             case PAGE_MAIN:   return PAGE_NONE;
             case PAGE_TABS:   return PAGE_LAUNCHER;
-            case PAGE_OVERLAY: return PAGE_INTERFACE;
             case PAGE_SYSTEM: return PAGE_SYSTEM_MENU;
             case PAGE_TESTER: return PAGE_INPUT;
             default:          return PAGE_MAIN;
@@ -922,12 +921,11 @@ int main(int argc, char* argv[]) {
                     ImGui::EndCombo();
                 }
             }
-            page_button(tr("Performance overlay"), PAGE_OVERLAY);
-            end_page();
-        } else if (page == PAGE_OVERLAY) {
-            begin_page("Overlay", "Performance overlay");
+            ImGui::Spacing();
+            ImGui::Text("%s", tr("Performance overlay"));
+            ImGui::Separator();
+            ImGui::Spacing();
             bool hud_changed = ImGui::Checkbox(tr("Show on game start"), &hud.visible);
-            ImGui::SetItemDefaultFocus();
             ImGui::AlignTextToFramePadding();
             ImGui::Text("%s", tr("Content:"));
             ImGui::SameLine();
