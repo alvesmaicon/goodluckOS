@@ -109,7 +109,7 @@ Each system and app category gets its own tab, plus an "All Games" tab with ever
 | START | System Settings |
 | POWER | Power options: display off, restart, shut down |
 
-Grid or list view and whether the tabs are shown are set in System Settings. In list view, a selected name that doesn't fit scrolls to show the rest.
+Grid or list view, whether the tabs are shown and which ones are set in System Settings. In list view, a selected name that doesn't fit scrolls to show the rest.
 
 ### Shortcuts that work everywhere
 | Buttons | Action |
@@ -136,7 +136,7 @@ FN is the hotkey:
 The same list is in System Settings -> Input Settings, next to a button tester.
 
 ## System Settings
-Opened with START from the launcher. It has brightness, volume and mute, a performance mode (keeps the CPU at full speed, uses more battery), the launcher options (tabs, grid or list view), the interface language, the interface font (Default keeps each app's own font, Inter in the launcher and ProggyClean elsewhere; or Inter, ProggyClean, VT323 or Pixelify Sans in every app), `Resize Home`, emptying the trash of games deleted in the launcher, a System Info page and Input Settings, with the list of every shortcut and a button tester. Changes are saved as soon as you make them. The page scrolls with the d-pad when it doesn't fit the screen.
+Opened with START from the launcher. It has brightness, volume and mute, a performance mode (keeps the CPU at full speed, uses more battery), the launcher options (tabs, grid or list view, and which tabs to show: hidden tabs' games still appear in All Games and My List), the interface language, the interface font (Default keeps each app's own font, Inter in the launcher and ProggyClean elsewhere; or Inter, ProggyClean, VT323 or Pixelify Sans in every app), `Resize Home`, emptying the trash of games deleted in the launcher, a System Info page and Input Settings, with the list of every shortcut and a button tester. Changes are saved as soon as you make them. The page scrolls with the d-pad when it doesn't fit the screen.
 
 VT323 and Pixelify Sans are under the SIL Open Font License and ProggyClean under the MIT License; their license files are next to them in `/usr/share/fonts`.
 
