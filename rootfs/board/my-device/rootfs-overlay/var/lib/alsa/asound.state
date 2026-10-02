@@ -18,8 +18,8 @@ state.GA36mbAudio {
 	control.2 {
 		iface MIXER
 		name 'AIF1 DA0 Playback Volume'
-		value.0 179
-		value.1 179
+		value.0 160
+		value.1 160
 		comment {
 			access 'read write'
 			type INTEGER
@@ -27,8 +27,8 @@ state.GA36mbAudio {
 			range '0 - 192'
 			dbmin -9999999
 			dbmax 2400
-			dbvalue.0 1425
-			dbvalue.1 1425
+			dbvalue.0 0
+			dbvalue.1 0
 		}
 	}
 	control.3 {
@@ -82,8 +82,8 @@ state.GA36mbAudio {
 	control.6 {
 		iface MIXER
 		name 'DAC Playback Volume'
-		value.0 125
-		value.1 125
+		value.0 144
+		value.1 144
 		comment {
 			access 'read write'
 			type INTEGER
@@ -91,8 +91,8 @@ state.GA36mbAudio {
 			range '0 - 192'
 			dbmin -9999999
 			dbmax 2400
-			dbvalue.0 -2625
-			dbvalue.1 -2625
+			dbvalue.0 -1200
+			dbvalue.1 -1200
 		}
 	}
 	control.7 {

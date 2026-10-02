@@ -1,0 +1,180 @@
+From: alvesmaicon <alvesmaiconn@gmail.com>
+Subject: [PATCH] ASoC: sun8i-codec: DAC high-pass filter controls on the A33
+
+The A33 codec's DAC DAP block has a high-pass filter. Expose it as
+"DAC High-Pass Filter Switch" and "DAC High-Pass Filter Cutoff" (100 to
+600 Hz at 48 kHz), and power the block with the DAC through DAPM, so the
+register cache doesn't switch it off when a stream starts.
+
+Small speakers distort on bass they can't play; filtering it out makes
+them cleaner and louder.
+
+diff --git a/sound/soc/sunxi/sun8i-codec.c b/sound/soc/sunxi/sun8i-codec.c
+index 6bd42da57..4b6020370 100644
+--- a/sound/soc/sunxi/sun8i-codec.c
++++ b/sound/soc/sunxi/sun8i-codec.c
+@@ -40,12 +40,14 @@
+ #define SUN8I_MOD_CLK_ENA_AIF1				15
+ #define SUN8I_MOD_CLK_ENA_AIF2				14
+ #define SUN8I_MOD_CLK_ENA_AIF3				13
++#define SUN8I_MOD_CLK_ENA_DAP				6
+ #define SUN8I_MOD_CLK_ENA_ADC				3
+ #define SUN8I_MOD_CLK_ENA_DAC				2
+ #define SUN8I_MOD_RST_CTL				0x014
+ #define SUN8I_MOD_RST_CTL_AIF1				15
+ #define SUN8I_MOD_RST_CTL_AIF2				14
+ #define SUN8I_MOD_RST_CTL_AIF3				13
++#define SUN8I_MOD_RST_CTL_DAP				6
+ #define SUN8I_MOD_RST_CTL_ADC				3
+ #define SUN8I_MOD_RST_CTL_DAC				2
+ #define SUN8I_SYS_SR_CTRL				0x018
+@@ -145,6 +147,11 @@
+ #define SUN8I_DAC_VOL_CTRL_DACL_VOL			8
+ #define SUN8I_DAC_VOL_CTRL_DACR_VOL			0
+ #define SUN8I_DAC_MXR_SRC				0x130
++#define SUN8I_DAC_DAP_CTRL				0x280
++#define SUN8I_DAC_DAP_CTRL_HPF_L_EN			1
++#define SUN8I_DAC_DAP_CTRL_HPF_R_EN			0
++#define SUN8I_DAC_DAP_HHPFC				0x284
++#define SUN8I_DAC_DAP_LHPFC				0x288
+ #define SUN8I_DAC_MXR_SRC_DACL_MXR_SRC_AIF1DA0L		15
+ #define SUN8I_DAC_MXR_SRC_DACL_MXR_SRC_AIF1DA1L		14
+ #define SUN8I_DAC_MXR_SRC_DACL_MXR_SRC_AIF2DACL		13
+@@ -213,6 +220,7 @@ struct sun8i_codec_quirks {
+ 	bool	jack_detection	: 1;
+ 	bool	legacy_widgets	: 1;
+ 	bool	lrck_inversion	: 1;
++	bool	dac_hpf		: 1;
+ };
+ 
+ enum {
+@@ -239,6 +247,7 @@ struct sun8i_codec {
+ 	int				last_hmic_irq;
+ 	unsigned int			sysclk_rate;
+ 	int				sysclk_refcnt;
++	unsigned int			hpf_cutoff;
+ };
+ 
+ static struct snd_soc_dai_driver sun8i_codec_dais[];
+@@ -1285,6 +1294,67 @@ static const struct snd_soc_dapm_route sun8i_codec_legacy_routes[] = {
+ 	{ "AIF1 Slot 0 Right", NULL, "DACR" },
+ };
+ 
++/* DAC DAP high-pass filter, 3.24 coefficients exp(-2*pi*fc/48000) */
++static const char * const sun8i_codec_hpf_cutoff_text[] = {
++	"100 Hz", "200 Hz", "300 Hz", "400 Hz", "500 Hz", "600 Hz",
++};
++static const u32 sun8i_codec_hpf_coefs[] = {
++	16559033, 16343689, 16131144, 15921364, 15714312, 15509953,
++};
++static SOC_ENUM_SINGLE_EXT_DECL(sun8i_codec_hpf_cutoff_enum, sun8i_codec_hpf_cutoff_text);
++
++static void sun8i_codec_set_hpf_coef(struct sun8i_codec *scodec)
++{
++	u32 coef = sun8i_codec_hpf_coefs[scodec->hpf_cutoff];
++
++	regmap_write(scodec->regmap, SUN8I_DAC_DAP_HHPFC, coef >> 16);
++	regmap_write(scodec->regmap, SUN8I_DAC_DAP_LHPFC, coef & 0xffff);
++}
++
++static int sun8i_codec_hpf_cutoff_get(struct snd_kcontrol *kcontrol,
++				      struct snd_ctl_elem_value *ucontrol)
++{
++	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
++	struct sun8i_codec *scodec = snd_soc_component_get_drvdata(component);
++
++	ucontrol->value.enumerated.item[0] = scodec->hpf_cutoff;
++	return 0;
++}
++
++static int sun8i_codec_hpf_cutoff_put(struct snd_kcontrol *kcontrol,
++				      struct snd_ctl_elem_value *ucontrol)
++{
++	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
++	struct sun8i_codec *scodec = snd_soc_component_get_drvdata(component);
++	unsigned int item = ucontrol->value.enumerated.item[0];
++
++	if (item >= ARRAY_SIZE(sun8i_codec_hpf_coefs))
++		return -EINVAL;
++	if (item == scodec->hpf_cutoff)
++		return 0;
++	scodec->hpf_cutoff = item;
++	sun8i_codec_set_hpf_coef(scodec);
++	return 1;
++}
++
++static const struct snd_kcontrol_new sun8i_codec_hpf_controls[] = {
++	SOC_DOUBLE("DAC High-Pass Filter Switch", SUN8I_DAC_DAP_CTRL,
++		   SUN8I_DAC_DAP_CTRL_HPF_L_EN, SUN8I_DAC_DAP_CTRL_HPF_R_EN, 1, 0),
++	SOC_ENUM_EXT("DAC High-Pass Filter Cutoff", sun8i_codec_hpf_cutoff_enum,
++		     sun8i_codec_hpf_cutoff_get, sun8i_codec_hpf_cutoff_put),
++};
++
++static const struct snd_soc_dapm_widget sun8i_codec_hpf_widgets[] = {
++	SND_SOC_DAPM_SUPPLY("CLK DAP", SUN8I_MOD_CLK_ENA, SUN8I_MOD_CLK_ENA_DAP, 0, NULL, 0),
++	SND_SOC_DAPM_SUPPLY("RST DAP", SUN8I_MOD_RST_CTL, SUN8I_MOD_RST_CTL_DAP, 0, NULL, 0),
++};
++
++static const struct snd_soc_dapm_route sun8i_codec_hpf_routes[] = {
++	{ "CLK DAP", NULL, "SYSCLK" },
++	{ "RST DAP", NULL, "CLK DAP" },
++	{ "DAC", NULL, "RST DAP" },
++};
++
+ static int sun8i_codec_component_probe(struct snd_soc_component *component)
+ {
+ 	struct snd_soc_dapm_context *dapm = snd_soc_component_to_dapm(component);
+@@ -1293,6 +1363,23 @@ static int sun8i_codec_component_probe(struct snd_soc_component *component)
+ 
+ 	scodec->component = component;
+ 
++	if (scodec->quirks->dac_hpf) {
++		ret = snd_soc_add_component_controls(component, sun8i_codec_hpf_controls,
++						     ARRAY_SIZE(sun8i_codec_hpf_controls));
++		if (ret)
++			return ret;
++		ret = snd_soc_dapm_new_controls(dapm, sun8i_codec_hpf_widgets,
++						ARRAY_SIZE(sun8i_codec_hpf_widgets));
++		if (ret)
++			return ret;
++		ret = snd_soc_dapm_add_routes(dapm, sun8i_codec_hpf_routes,
++					      ARRAY_SIZE(sun8i_codec_hpf_routes));
++		if (ret)
++			return ret;
++		scodec->hpf_cutoff = 1;
++		sun8i_codec_set_hpf_coef(scodec);
++	}
++
+ 	/* Add widgets for backward compatibility with old device trees. */
+ 	if (scodec->quirks->legacy_widgets) {
+ 		ret = snd_soc_dapm_new_controls(dapm, sun8i_codec_legacy_widgets,
+@@ -1592,12 +1679,20 @@ static bool sun8i_codec_volatile_reg(struct device *dev, unsigned int reg)
+ 	return reg == SUN8I_HMIC_STS;
+ }
+ 
++static bool sun8i_codec_rw_reg(struct device *dev, unsigned int reg)
++{
++	return reg <= SUN8I_DAC_MXR_SRC ||
++	       (reg >= SUN8I_DAC_DAP_CTRL && reg <= SUN8I_DAC_DAP_LHPFC);
++}
++
+ static const struct regmap_config sun8i_codec_regmap_config = {
+ 	.reg_bits	= 32,
+ 	.reg_stride	= 4,
+ 	.val_bits	= 32,
+ 	.volatile_reg	= sun8i_codec_volatile_reg,
+-	.max_register	= SUN8I_DAC_MXR_SRC,
++	.readable_reg	= sun8i_codec_rw_reg,
++	.writeable_reg	= sun8i_codec_rw_reg,
++	.max_register	= SUN8I_DAC_DAP_LHPFC,
+ 
+ 	.cache_type	= REGCACHE_FLAT,
+ };
+@@ -1684,6 +1779,7 @@ static const struct sun8i_codec_quirks sun8i_a33_quirks = {
+ 	.bus_clock	= true,
+ 	.legacy_widgets	= true,
+ 	.lrck_inversion	= true,
++	.dac_hpf	= true,
+ };
+ 
+ static const struct sun8i_codec_quirks sun50i_a64_quirks = {

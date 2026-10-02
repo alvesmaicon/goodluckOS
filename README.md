@@ -19,7 +19,7 @@ Please Note: At the time of writing, Allwinner-A23 based GA36-MB devices (which 
 - Can be flashed to a 1gb SD card and still give you over 500mb of free space for games
 - ZRAM enabled by default
 - Hardware accelerated graphics
-- Speaker audio
+- Speaker and headphone audio. The speaker gets a high-pass filter, so it stays clean instead of distorting on bass it can't play
 - Great battery life
 - No swap on SD card (massively improves the life of your card over the stock f/w)
 - Built-in `Resize Home` app which grows your HOME partition to fill all the available space on your microSD card.
