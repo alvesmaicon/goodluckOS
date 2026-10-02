@@ -122,7 +122,14 @@
 		"Speaker Amp INR", "HP",
 		"Speaker", "Speaker Amp OUTL",
 		"Speaker", "Speaker Amp OUTR",
-		"Headphone Jack", "HP";
+		"Headphone Jack", "HP",
+		/*
+		 * The jack is wired for direct drive (stock script.bin: headphone_direct_used=1):
+		 * its return goes to HPCOM, not to ground. HPCOM has to be driven as a virtual
+		 * ground, or the codec mutes the headphone output and sets its volume to 0
+		 * about a second after playback starts.
+		 */
+		"Headphone Jack", "HPCOM";
 };
 
 &dai {
