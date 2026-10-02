@@ -1857,7 +1857,10 @@ private:
             hints = {{"A", tr("Select")}, {"B", tr("Close")}};
         } else if (kb.open) {
             hints = {{"A", tr("Type")}, {"B", tr("Delete")}, {"START", tr("Done")}};
-            if (m.renaming) hints.insert(hints.begin(), {"L1/R1", tr("Cursor")});
+            if (m.renaming) {
+                hints.insert(hints.begin(), {"L1/R1", tr("Cursor")});
+                hints.push_back({"SELECT", tr("Cancel")});
+            }
         } else {
             const Entry* sel = m.selected();
             hints = {{"L1", tr("Prev")}, {"R1", tr("Next")}, {"A", tr("Launch")},
@@ -2551,6 +2554,7 @@ int main(int argc, char** argv) {
                     break;
                 case Action::Start:
                 case Action::Search: closeKeyboard(true); break;
+                case Action::ToggleAutoStart: closeKeyboard(false); break;   // SELECT: cancel
                 default: break;
             }
             return;
