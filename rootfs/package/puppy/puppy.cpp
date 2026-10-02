@@ -46,6 +46,9 @@ struct Config {
     std::string powerFifo     = "/run/power-request";   // root power-manager.sh
     std::string backlight     = "/sys/class/backlight/backlight/brightness";
     std::string osdFile       = "/dev/shm/osd";  // "volume|brightness <percent> [muted]", from osd-notify.sh
+    std::string trashDir      = "/home/player/.trash";   // deleted games, until System Settings empties it
+    // RetroArch saves and states, renamed along with a game (sort_savefiles: one folder per core)
+    std::vector<std::string> saveDirs = {"/home/player/.config/retroarch/saves", "/home/player/.config/retroarch/states"};
     // When set, these replace the System entries of apps.puppy and the power-manager.sh requests
     std::string settingsCommand, restartCommand, shutdownCommand, screenOffCommand;
     bool quit = false;      // a "Quit Puppy" power option, for when Puppy is started from another frontend
@@ -86,6 +89,8 @@ constexpr int kPreviewW             = kScreenW - kPreviewX - kMargin;
 constexpr int kPreviewH             = kPreviewW * 3 / 4;
 
 constexpr int kMaxQueryLength       = 32;
+constexpr int kMaxNameLength        = 96;   // renaming a game's file
+constexpr Uint32 kNoticeMs          = 2500;
 
 constexpr Uint32 kIdleCheckMs       = 60000;
 constexpr Uint32 kOsdShowMs         = 1500;  // how long the volume/brightness bar stays up
@@ -327,6 +332,7 @@ struct Entry {
     std::string iconPath;
     std::string searchKey;  // lowercase name, filled once the catalog is loaded
     std::string tag;        // short system name, shown next to the entry in the "All Games" tab
+    std::string file;       // the ROM file (archive entries): what Rename and Delete act on
 };
 
 // One tab of the launcher (a console or an apps category).
@@ -372,8 +378,18 @@ struct Model {
     bool hasSettings = false;
     std::vector<Entry> systemEntries;   // the System category, e.g. Reboot/Power Off with their are-you-sure
     bool menuOpen = false;
-    std::vector<PowerItem> menuItems;   // filled when the menu opens
+    // The POWER menu, or the game options menu (L2 + R2) and its delete confirmation
+    enum class Menu { Power, Game, ConfirmDelete };
+    Menu menuKind = Menu::Power;
+    std::vector<PowerItem> menuItems;   // Power: filled when the menu opens
+    std::vector<std::string> menuLabels;    // Game / ConfirmDelete
+    Entry menuEntry;                    // the game those act on
     int menuSel = 0;
+    int menuCount() const { return menuKind == Menu::Power ? (int)menuItems.size() : (int)menuLabels.size(); }
+    bool renaming = false;      // the keyboard edits renameText (the game's file name), not the search
+    std::string renameText;
+    std::string notice;         // short message over the footer (renamed, moved to the trash...)
+    Uint32 noticeUntil = 0;
     std::string status;     // full-screen message while restarting / shutting down
     int descScroll = 0;     // lines the list preview's description is scrolled (right stick)
 
@@ -416,7 +432,6 @@ struct Model {
             if (!categories[tab].hidden) break;
         }
     }
-
 
     void moveSel(int delta) {
         descScroll = 0;
@@ -832,6 +847,7 @@ static std::vector<Entry> expandArchive(const Archive& a) {
             e.name        = e.id;
             e.description = a.description;
             e.command     = a.es ? buildEsCommand(a, p) : buildArchiveCommand(a.command, p.string());
+            e.file        = p.string();
             // Cover: the icons folder wins (small, hand-picked), then the gamelist's image
             e.iconPath    = findArchiveIcon(a, e.id);
 
@@ -1053,6 +1069,209 @@ static void toggleFavorite(Model& m) {
     if (inMyList && !m.cur().visible.empty()) m.cur().sel = std::min(oldSel, (int)m.cur().visible.size() - 1);
 }
 
+static void replaceAll(std::string& s, const std::string& from, const std::string& to) {
+    if (from.empty()) return;
+    for (size_t pos = 0; (pos = s.find(from, pos)) != std::string::npos; pos += to.size()) s.replace(pos, from.size(), to);
+}
+
+static std::string xmlEscape(const std::string& s) {
+    std::string out;
+    for (char c : s) {
+        switch (c) {
+            case '&':  out += "&amp;";  break;
+            case '<':  out += "&lt;";   break;
+            case '>':  out += "&gt;";   break;
+            case '"':  out += "&quot;"; break;
+            case '\'': out += "&apos;"; break;
+            default:   out += c;
+        }
+    }
+    return out;
+}
+
+// In dir's gamelists (gamelist.xml, gamelist.<language>.xml), the <game> whose <path> is oldFile gets
+// newFile and the shown name newName. Backups are left alone.
+static void renameInGamelists(const fs::path& dir, const std::string& oldFile, const std::string& newFile,
+                              const std::string& newName) {
+    std::error_code ec;
+    for (fs::directory_iterator it(dir, ec), end; !ec && it != end; it.increment(ec)) {
+        const std::string fn = it->path().filename().string();
+        if (fn.compare(0, 8, "gamelist") != 0 || it->path().extension() != ".xml" ||
+            fn.find("backup") != std::string::npos) continue;
+        std::string xml;
+        {
+            std::ifstream in(it->path(), std::ios::binary);
+            xml.assign((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+        }
+        bool changed = false;
+        for (size_t pos = 0; (pos = xml.find("<path>", pos)) != std::string::npos;) {
+            const size_t a = pos + 6;
+            size_t b = xml.find("</path>", a);
+            if (b == std::string::npos) break;
+            if (stripDotSlash(trim(xmlUnescape(xml.substr(a, b - a)))) != oldFile) { pos = b; continue; }
+            const std::string newPath = "./" + xmlEscape(newFile);
+            xml.replace(a, b - a, newPath);
+            b = a + newPath.size();
+            // the <name> of the same <game>
+            const size_t gameStart = xml.rfind("<game", a), gameEnd = xml.find("</game>", b);
+            size_t na = xml.find("<name>", gameStart);
+            if (na != std::string::npos && na < gameEnd) {
+                na += 6;
+                const size_t nb = xml.find("</name>", na);
+                if (nb != std::string::npos && nb < gameEnd) xml.replace(na, nb - na, xmlEscape(newName));
+            }
+            changed = true;
+            pos = b;
+        }
+        if (!changed) continue;
+        const std::string tmp = it->path().string() + ".tmp";
+        { std::ofstream out(tmp, std::ios::binary); if (!out) continue; out << xml; }
+        std::error_code ec2;
+        fs::rename(tmp, it->path(), ec2);
+    }
+}
+
+// RetroArch saves and states named after a game ("<name>.srm", "<name>.state1"...), in cfg.saveDirs
+// and their per-core folders.
+static void renameSaves(const std::string& oldStem, const std::string& newStem) {
+    const std::string prefix = oldStem + ".";
+    for (const auto& root : cfg.saveDirs) {
+        std::error_code ec;
+        std::vector<fs::path> dirs = {root};
+        for (fs::directory_iterator it(root, ec), end; !ec && it != end; it.increment(ec))
+            if (it->is_directory(ec)) dirs.push_back(it->path());
+        for (const auto& d : dirs) {
+            std::vector<fs::path> found;
+            std::error_code ec2;
+            for (fs::directory_iterator it(d, ec2), end; !ec2 && it != end; it.increment(ec2))
+                if (it->path().filename().string().compare(0, prefix.size(), prefix) == 0) found.push_back(it->path());
+            for (const auto& f : found) {
+                const fs::path to = f.parent_path() / (newStem + f.filename().string().substr(oldStem.size()));
+                std::error_code ec3;
+                if (!fs::exists(to, ec3)) fs::rename(f, to, ec3);
+            }
+        }
+    }
+}
+
+// Renames a game's file to newStem (same extension) along with what goes by its name: the cover in
+// its icons folder, its gamelist entries (path and shown name), its RetroArch saves and states, and
+// the launcher's favourites and autolaunch. Returns the message to show.
+static std::string renameEntry(Model& m, const Entry& e, const std::string& newStem) {
+    if (newStem.find('/') != std::string::npos || newStem == "." || newStem == "..") return tr("That name can't be used");
+    const fs::path from(e.file);
+    const fs::path to = from.parent_path() / (newStem + from.extension().string());
+    std::error_code ec;
+    if (fs::exists(to, ec)) return tr("A file with that name already exists");
+    fs::rename(from, to, ec);
+    if (ec) return tr("Couldn't rename the file");
+
+    const std::string oldStem = from.stem().string();
+    std::string icon = e.iconPath;
+    if (!icon.empty() && fs::path(icon).stem().string() == oldStem) {   // the icons folder's cover
+        const fs::path iconTo = fs::path(icon).parent_path() / (newStem + fs::path(icon).extension().string());
+        std::error_code ec2;
+        if (!fs::exists(iconTo, ec2)) {
+            fs::rename(icon, iconTo, ec2);
+            if (!ec2) icon = iconTo.string();
+        }
+    }
+    renameInGamelists(from.parent_path(), from.filename().string(), to.filename().string(), newStem);
+    renameSaves(oldStem, newStem);
+
+    const bool fav = m.favorites.erase(Model::favoriteKey(e)) > 0;
+    const bool autostart = m.isAutoStart(e);
+    const Entry* renamed = nullptr;
+    for (auto& c : m.categories) {
+        for (auto& x : c.entries) {
+            if (x.category != e.category || x.id != e.id) continue;
+            x.id = x.name = newStem;
+            x.file = to.string();
+            x.iconPath = icon;
+            replaceAll(x.command, shellQuote(from.string()), shellQuote(to.string()));
+            replaceAll(x.command, from.string(), to.string());   // unquoted, e.g. %ROM_RAW%
+            x.searchKey = lower(x.name);
+            if (!renamed) renamed = &x;
+        }
+    }
+    if (renamed && fav) { m.favorites.insert(Model::favoriteKey(*renamed)); saveFavorites(m); }
+    if (renamed && autostart) { writeAutoStart(*renamed); m.autoName = renamed->id; }
+    return tr("Renamed");
+}
+
+// Files a game is made of besides its own: the tracks of a .cue, the discs of a .m3u.
+static std::vector<fs::path> companionFiles(const fs::path& file) {
+    std::vector<fs::path> out;
+    const std::string ext = lower(file.extension().string());
+    if (ext != ".cue" && ext != ".m3u") return out;
+    std::ifstream in(file);
+    for (std::string line; std::getline(in, line);) {
+        line = trim(line);
+        std::string ref;
+        if (ext == ".cue") {
+            if (line.size() < 6 || upper(line.substr(0, 5)) != "FILE ") continue;
+            size_t a = line.find('"'), b = line.rfind('"');
+            if (a != std::string::npos && b > a) ref = line.substr(a + 1, b - a - 1);
+            else ref = trim(line.substr(5, line.rfind(' ') - 5));
+        } else {
+            if (line.empty() || line[0] == '#') continue;
+            ref = line;
+        }
+        std::error_code ec;
+        const fs::path p = file.parent_path() / ref;
+        if (fs::is_regular_file(p, ec)) out.push_back(p);
+    }
+    return out;
+}
+
+// Moves a file into the trash, under its system's folder name: <trash>/<system>/<sub folders>/<file>.
+static bool moveToTrash(const fs::path& file, const fs::path& systemDir) {
+    std::error_code ec;
+    fs::path rel = file.lexically_relative(systemDir).parent_path();
+    if (!rel.empty() && *rel.begin() == "..") rel.clear();
+    const fs::path dir = fs::path(cfg.trashDir) / systemDir.filename() / rel;
+    fs::create_directories(dir, ec);
+    fs::path to = dir / file.filename();
+    for (int i = 2; fs::exists(to, ec) && i < 100; ++i)
+        to = dir / (file.stem().string() + " (" + std::to_string(i) + ")" + file.extension().string());
+    fs::rename(file, to, ec);
+    if (ec) {   // not the same filesystem: copy, then remove
+        std::error_code ec2;
+        fs::copy_file(file, to, ec2);
+        if (ec2) return false;
+        fs::remove(file, ec2);
+    }
+    return true;
+}
+
+// Moves a game (and its tracks or discs) to the trash and takes it out of every tab.
+static std::string deleteEntry(Model& m, const Entry& e) {
+    const fs::path file(e.file);
+    const fs::path systemDir = file.parent_path();
+    std::vector<fs::path> parts = companionFiles(file);
+    for (size_t i = 0; i < parts.size() && parts.size() < 64; ++i)      // a .m3u's discs can be .cue files
+        for (const auto& p : companionFiles(parts[i])) parts.push_back(p);
+    if (!moveToTrash(file, systemDir)) return tr("Couldn't move the game to the trash");
+    for (const auto& p : parts) moveToTrash(p, systemDir);
+
+    if (m.favorites.erase(Model::favoriteKey(e))) saveFavorites(m);
+    if (m.isAutoStart(e)) {
+        clearAutoStart();
+        m.autoCategory.clear();
+        m.autoName.clear();
+    }
+    const int oldSel = m.cur().sel;
+    for (auto& c : m.categories) {
+        c.entries.erase(std::remove_if(c.entries.begin(), c.entries.end(), [&](const Entry& x) {
+            return x.category == e.category && x.id == e.id;
+        }), c.entries.end());
+        c.tagColumn = -1;
+    }
+    m.applyFilter();
+    if (!m.cur().visible.empty()) m.cur().sel = std::min(oldSel, (int)m.cur().visible.size() - 1);
+    return tr("Moved to the trash");
+}
+
 // Takes the System category out of the tabs: its settings entry opens with START and the power
 // actions live in the POWER menu, so they don't mean scrolling through every tab.
 static void extractSystemMenu(Model& m) {
@@ -1167,7 +1386,6 @@ static void writeTabsList(const Model& m) {
     fs::rename(tmp, cfg.tabsFile(), ec);
 }
 
-
 static int readBattery() {
     std::error_code ec;
     for (fs::directory_iterator it("/sys/class/power_supply", ec), end; !ec && it != end; it.increment(ec)) {
@@ -1208,6 +1426,7 @@ struct Keyboard {
     static constexpr float kRowUnits = 10.0f;
 
     bool open = false;
+    bool caps = false;      // the Aa key: letters typed in upper case
     int row = 1, col = 0;   // starts on Q
 
     static const std::vector<Key>& keys(int r) {
@@ -1225,7 +1444,9 @@ struct Keyboard {
             for (const Key& k : evenRow("zxcvbnm", 1.5f)) r3.push_back(k);
             r3.push_back({"del", 8.5f, 1.5f});
             rows.push_back(r3);
-            rows.push_back({{"'", 0.0f, 1.5f}, {"space", 1.5f, 6.0f}, {"ok", 7.5f, 2.5f}});
+            // Aa switches the case; ( ) and . are common in game file names
+            rows.push_back({{"shift", 0.0f, 1.5f}, {"'", 1.5f, 1.0f}, {"(", 2.5f, 1.0f}, {")", 3.5f, 1.0f},
+                            {"space", 4.5f, 3.0f}, {".", 7.5f, 1.0f}, {"ok", 8.5f, 1.5f}});
             return rows;
         }();
         return kLayout[r];
@@ -1321,6 +1542,7 @@ public:
         if (kb.open) renderKeyboard(m, kb);
         if (m.menuOpen) renderMenu(m);
         if (!m.status.empty()) renderStatus(m.status);
+        if (!m.notice.empty()) renderNotice(m.notice);
         if (osd.visible && !osd.kind.empty()) renderOsd(osd, bodyTop(m.showTabs));
         if (!marqueeNext) marqueeKey.clear();   // coming back to the same name starts it over
 
@@ -1813,35 +2035,59 @@ private:
         fill(kYellow, {track.x, track.y, osd.muted ? 0 : track.w * osd.percent / 100, track.h});
     }
 
+    // A short message over the footer, e.g. after renaming a game.
+    void renderNotice(const std::string& text) {
+        const int padX = 14, h = TTF_FontHeight(descFont) + 14;
+        const int w = std::min(kScreenW - 2 * kMargin, textWidth(descFont, text) + 2 * padX);
+        SDL_Rect r{(kScreenW - w) / 2, kScreenH - kFooterH - h - 10, w, h};
+        fill({12, 12, 14, 240}, r);
+        frame(kYellow, r, 2);
+        drawText(renderer, descFont, text, r.x + padX, r.y + 7, kWhite, w - 2 * padX);
+    }
+
     void renderStatus(const std::string& text) {
         fill(kClear, {0, 0, kScreenW, kScreenH});
         drawText(renderer, titleFont, text, (kScreenW - textWidth(titleFont, text)) / 2,
                  (kScreenH - TTF_FontHeight(titleFont)) / 2, kWhite);
     }
 
+    // The POWER menu, or the game options menu (L2 + R2) and its delete confirmation, which show the
+    // game's name under the title.
     void renderMenu(const Model& m) {
+        std::string title, subtitle;
+        std::vector<std::string> labels;
+        if (m.menuKind == Model::Menu::Power) {
+            title = tr("Power options");
+            for (const auto& item : m.menuItems) labels.push_back(tr(item.label));
+        } else {
+            title = tr(m.menuKind == Model::Menu::Game ? "Game options" : "Move this game to the trash?");
+            subtitle = m.menuEntry.name;
+            for (const auto& l : m.menuLabels) labels.push_back(tr(l));
+        }
         const int pad = 12, rowH = 40;
         const int titleH = TTF_FontHeight(uiFont) + 14;
-        const int panelW = 320;
-        const int count = (int)m.menuItems.size();
-        const int panelH = titleH + count * rowH + 2 * pad;
+        const int subH = subtitle.empty() ? 0 : TTF_FontLineSkip(smallFont) + 6;
+        const int panelW = subtitle.empty() ? 320 : 400;
+        const int count = (int)labels.size();
+        const int panelH = titleH + subH + count * rowH + 2 * pad;
         const int bodyY = bodyTop(m.showTabs);
         SDL_Rect panel{(kScreenW - panelW) / 2, bodyY + (kScreenH - kFooterH - bodyY - panelH) / 2, panelW, panelH};
         fill({0, 0, 0, 150}, {0, kHeaderH, kScreenW, kScreenH - kFooterH - kHeaderH});   // dim the tab behind
         fill(kBar, panel);
         frame(kTile, panel, 2);
-        drawText(renderer, uiFont, tr("Power options"), panel.x + pad + 4, panel.y + pad, kWhite);
+        drawText(renderer, uiFont, title, panel.x + pad + 4, panel.y + pad, kWhite, panelW - 2 * pad - 4);
+        if (!subtitle.empty())
+            drawText(renderer, smallFont, subtitle, panel.x + pad + 4, panel.y + pad + titleH - 4, kGrey, panelW - 2 * pad - 4);
 
         const int fontH = TTF_FontHeight(descFont);
         for (int i = 0; i < count; ++i) {
-            SDL_Rect r{panel.x + pad, panel.y + pad + titleH + i * rowH, panelW - 2 * pad, rowH - 4};
+            SDL_Rect r{panel.x + pad, panel.y + pad + titleH + subH + i * rowH, panelW - 2 * pad, rowH - 4};
             bool sel = i == m.menuSel;
             if (sel) {
                 fill(kRowSel, r);
                 fill(kYellow, {r.x, r.y, 4, r.h});
             }
-            drawText(renderer, descFont, tr(m.menuItems[i].label), r.x + 16, r.y + (r.h - fontH) / 2,
-                     sel ? kWhite : kGrey, r.w - 24);
+            drawText(renderer, descFont, labels[i], r.x + 16, r.y + (r.h - fontH) / 2, sel ? kWhite : kGrey, r.w - 24);
         }
     }
 
@@ -1854,7 +2100,13 @@ private:
         fill({12, 12, 14, 240}, panel);
         frame(kTile, panel, 2);
 
-        drawText(renderer, uiFont, tr("Search:") + std::string(" ") + m.query + "_", panel.x + pad, panel.y + pad, kWhite, panelW - 2 * pad);
+        // What is typed: the search, or the new name of a game's file; a long name shows its end
+        const std::string prompt = tr(m.renaming ? "Rename:" : "Search:");
+        const std::string text = (m.renaming ? m.renameText : m.query) + "_";
+        drawText(renderer, uiFont, prompt, panel.x + pad, panel.y + pad, kGrey);
+        const int textX = panel.x + pad + textWidth(uiFont, prompt) + 8;
+        const int textMax = panel.x + panelW - pad - textX;
+        drawText(renderer, uiFont, text, textX, panel.y + pad, kWhite, textMax, std::max(0, textWidth(uiFont, text) - textMax));
 
         for (int r = 0; r < Keyboard::kRows; ++r) {
             const auto& keys = Keyboard::keys(r);
@@ -1864,9 +2116,11 @@ private:
                            (int)(key.w * unit) - gap, keyH};
                 bool sel = r == kb.row && c == kb.col;
                 fill(sel ? kYellow : kTile, k);
-                std::string label = key.label.size() > 1 ? tr(key.label) : key.label;   // space / del / ok
+                if (key.label == "shift" && kb.caps) frame(sel ? kBlack : kYellow, k, 2);   // case switch on
+                std::string label = key.label == "shift" ? (kb.caps ? "aA" : "Aa")
+                                  : key.label.size() > 1 ? tr(key.label) : key.label;   // space / del / ok
                 TTF_Font* f = key.label.size() > 1 ? smallFont : uiFont;
-                if (label.size() == 1) label = upper(label);
+                if (key.label.size() == 1) label = kb.caps ? upper(label) : label;
                 drawText(renderer, f, label, k.x + (k.w - textWidth(f, label)) / 2,
                          k.y + (k.h - TTF_FontHeight(f)) / 2, sel ? kBlack : kWhite);
             }
@@ -1875,7 +2129,7 @@ private:
 };
 
 enum class Action { None, Up, Down, Left, Right, Launch, Back, ToggleAutoStart, ToggleFavorite, Search, PrevTab, NextTab, Start, Power,
-                    ScrollUp, ScrollDown };
+                    ScrollUp, ScrollDown, GameMenu };
 
 static bool isRepeatable(Action a) {
     return a == Action::Up || a == Action::Down || a == Action::Left || a == Action::Right ||
@@ -1922,6 +2176,7 @@ static Action actionFromKey(SDL_Keycode k) {
         case SDLK_F5:        return Action::Start;
         case SDLK_POWER:
         case SDLK_F6:        return Action::Power;
+        case SDLK_F7:        return Action::GameMenu;   // L2 + R2
         case SDLK_PAGEUP:    return Action::ScrollUp;
         case SDLK_PAGEDOWN:  return Action::ScrollDown;
         default:             return Action::None;
@@ -1980,7 +2235,7 @@ static bool loadConfig(int argc, char** argv) {
         {"font", &cfg.font}, {"fallback_icon", &cfg.fallbackIcon}, {"launch_file", &cfg.launchFile},
         {"state_file", &cfg.stateFile}, {"autolaunch_file", &cfg.autoStartFile}, {"config_dir", &cfg.configDir},
         {"cache_dir", &cfg.cacheDir}, {"lang_dir", &cfg.langDir}, {"power_fifo", &cfg.powerFifo},
-        {"backlight", &cfg.backlight}, {"osd_file", &cfg.osdFile},
+        {"backlight", &cfg.backlight}, {"osd_file", &cfg.osdFile}, {"trash_dir", &cfg.trashDir},
     };
     std::map<std::string, std::string*> texts = {
         {"language", &cfg.language}, {"view", &cfg.view}, {"tabs", &cfg.tabs},
@@ -1989,6 +2244,7 @@ static bool loadConfig(int argc, char** argv) {
     };
     std::map<std::string, std::vector<std::string>*> lists = {
         {"apps", &cfg.apps}, {"apps_dirs", &cfg.appsDirs}, {"es_systems", &cfg.esSystems},
+        {"save_dirs", &cfg.saveDirs},
     };
 
     int lineNo = 0;
@@ -2065,6 +2321,7 @@ int main(int argc, char** argv) {
     bool consoleCleared = false;
     bool selectHeld = false, selectCombo = false;
     Action leftStick = Action::None, rightStick = Action::None;
+    bool triggerL = false, triggerR = false;    // L2 / R2 held (they're axes); both: game options
     Uint32 osdUntil = 0, osdNextRead = 0;
     bool running = true;
     bool dirty = true;
@@ -2075,11 +2332,34 @@ int main(int argc, char** argv) {
     Action held = Action::None;
     Uint32 nextRepeat = 0;
 
+    auto showNotice = [&](const std::string& text) {
+        model.notice = text;
+        model.noticeUntil = SDL_GetTicks() + kNoticeMs;
+    };
+
+    // Closes the keyboard; when renaming, accept renames the game's file
+    auto closeKeyboard = [&](bool accept) {
+        kb.open = false;
+        if (!model.renaming) return;
+        model.renaming = false;
+        const std::string name = trim(model.renameText);
+        if (accept && !name.empty() && name != model.menuEntry.id) showNotice(renameEntry(model, model.menuEntry, name));
+    };
+
     auto typeKey = [&](const std::string& key) {
-        if (key == "ok") { kb.open = false; return; }
-        if (key == "del") { if (!model.query.empty()) model.query.pop_back(); }
-        else if ((int)model.query.size() < kMaxQueryLength) model.query += (key == "space" ? " " : key);
-        model.applyFilter();
+        std::string& text = model.renaming ? model.renameText : model.query;
+        const size_t maxLen = model.renaming ? kMaxNameLength : kMaxQueryLength;
+        if (key == "ok") { closeKeyboard(true); return; }
+        if (key == "shift") { kb.caps = !kb.caps; return; }
+        if (key == "del") {
+            while (!text.empty() && ((unsigned char)text.back() & 0xC0) == 0x80) text.pop_back();  // a whole UTF-8 letter
+            if (!text.empty()) text.pop_back();
+        } else if (text.size() < maxLen) {
+            std::string c = key == "space" ? " " : key;
+            if (kb.caps && c.size() == 1) c = upper(c);
+            text += c;
+        }
+        if (!model.renaming) model.applyFilter();
     };
 
     auto apply = [&](Action a) {
@@ -2088,11 +2368,31 @@ int main(int argc, char** argv) {
         if (!model.status.empty()) return;   // restarting / shutting down
 
         if (model.menuOpen) {
-            const int n = (int)model.menuItems.size();
+            const int n = model.menuCount();
             switch (a) {
                 case Action::Up:     model.menuSel = (model.menuSel + n - 1) % n; break;
                 case Action::Down:   model.menuSel = (model.menuSel + 1) % n;     break;
                 case Action::Launch: {
+                    if (model.menuKind == Model::Menu::Game) {
+                        model.menuOpen = false;
+                        if (model.menuSel == 0) {   // Rename: the keyboard, with the file's name
+                            model.renaming = true;
+                            model.renameText = model.menuEntry.id;
+                            kb.open = true;
+                            kb.caps = false;
+                        } else {                    // Move to trash: ask first
+                            model.menuKind = Model::Menu::ConfirmDelete;
+                            model.menuLabels = {"Cancel", "Move to trash"};
+                            model.menuSel = 0;
+                            model.menuOpen = true;
+                        }
+                        break;
+                    }
+                    if (model.menuKind == Model::Menu::ConfirmDelete) {
+                        model.menuOpen = false;
+                        if (model.menuSel == 1) showNotice(deleteEntry(model, model.menuEntry));
+                        break;
+                    }
                     const PowerItem item = model.menuItems[model.menuSel];
                     model.menuOpen = false;
                     if (item.quit) {
@@ -2126,10 +2426,22 @@ int main(int argc, char** argv) {
         auto openMenu = [&]() {
             model.menuItems = powerItems(model);
             if (model.menuItems.empty()) return;
-            kb.open = false;
+            model.menuKind = Model::Menu::Power;
+            closeKeyboard(false);
             model.menuOpen = true;
             model.menuSel = 0;
         };
+        if (a == Action::GameMenu) {   // L2 + R2: rename or delete the selected game
+            const Entry* e = model.selected();
+            if (e && !e->file.empty() && !kb.open) {
+                model.menuEntry = *e;
+                model.menuKind = Model::Menu::Game;
+                model.menuLabels = {"Rename", "Move to trash"};
+                model.menuSel = 0;
+                model.menuOpen = true;
+            }
+            return;
+        }
         if (a == Action::Power) {
             // with the screen off, toggle-screen.sh turns it back on; don't open a menu in the dark
             if (screenOn()) openMenu();
@@ -2146,10 +2458,12 @@ int main(int argc, char** argv) {
             if (model.menuOpen) return;
         }
 
-        switch (a) {
-            case Action::PrevTab:    model.switchTab(-1); return;
-            case Action::NextTab:    model.switchTab(1);  return;
-            default: break;
+        if (!model.renaming) {
+            switch (a) {
+                case Action::PrevTab:    model.switchTab(-1); return;
+                case Action::NextTab:    model.switchTab(1);  return;
+                default: break;
+            }
         }
 
         if (kb.open) {
@@ -2160,11 +2474,11 @@ int main(int argc, char** argv) {
                 case Action::Right:  kb.move(1, 0);  break;
                 case Action::Launch: typeKey(kb.current()); break;
                 case Action::Back:
-                    if (model.query.empty()) kb.open = false;
+                    if ((model.renaming ? model.renameText : model.query).empty()) closeKeyboard(false);
                     else typeKey("del");
                     break;
                 case Action::Start:
-                case Action::Search: kb.open = false; break;
+                case Action::Search: closeKeyboard(true); break;
                 default: break;
             }
             return;
@@ -2222,6 +2536,15 @@ int main(int argc, char** argv) {
                     dirty = true;
                 }
                 timeout = std::min(timeout, (int)kOsdRefreshMs);
+            }
+        }
+        if (!model.notice.empty()) {
+            if ((Sint32)(now - model.noticeUntil) >= 0) {
+                model.notice.clear();
+                dirty = true;
+                timeout = 0;
+            } else {
+                timeout = std::min(timeout, (int)(model.noticeUntil - now));
             }
         }
         if (ui.animating()) {   // keep drawing until the tab strip has slid into place (paced by vsync)
@@ -2307,6 +2630,12 @@ int main(int argc, char** argv) {
                             leftStick = dir;
                             action = dir;
                         }
+                    } else if (axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT || axis == SDL_CONTROLLER_AXIS_TRIGGERRIGHT) {
+                        bool& on = axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT ? triggerL : triggerR;
+                        const bool wasBoth = triggerL && triggerR;
+                        if (ev.caxis.value > kStickOn) on = true;
+                        else if (ev.caxis.value < kStickOff) on = false;
+                        if (!wasBoth && triggerL && triggerR) action = Action::GameMenu;
                     } else if (axis == SDL_CONTROLLER_AXIS_RIGHTY) {
                         const int v = ev.caxis.value;
                         Action dir = v < -kStickOn ? Action::ScrollUp : v > kStickOn ? Action::ScrollDown

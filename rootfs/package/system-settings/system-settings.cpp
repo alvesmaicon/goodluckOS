@@ -165,6 +165,47 @@ std::vector<LauncherTab> read_launcher_tabs() {
     return tabs;
 }
 
+// Games deleted in the launcher (L2 + R2 -> Move to trash) wait here until emptied.
+const char* TRASH_DIR = "/home/player/.trash";
+
+struct TrashStats {
+    unsigned long long files = 0, bytes = 0;
+};
+
+// Counts the files under dir; with remove, deletes them and the folders too.
+void trash_walk(const std::string& dir, TrashStats* stats, bool remove) {
+    DIR* d = opendir(dir.c_str());
+    if (!d) return;
+    while (struct dirent* e = readdir(d)) {
+        std::string name = e->d_name;
+        if (name == "." || name == "..") continue;
+        std::string path = dir + "/" + name;
+        struct stat st;
+        if (lstat(path.c_str(), &st) != 0) continue;
+        if (S_ISDIR(st.st_mode)) {
+            trash_walk(path, stats, remove);
+            if (remove) rmdir(path.c_str());
+        } else {
+            stats->files++;
+            stats->bytes += (unsigned long long)st.st_size;
+            if (remove) unlink(path.c_str());
+        }
+    }
+    closedir(d);
+}
+
+TrashStats trash_stats() {
+    TrashStats stats;
+    trash_walk(TRASH_DIR, &stats, false);
+    return stats;
+}
+
+void empty_trash() {
+    TrashStats stats;
+    trash_walk(TRASH_DIR, &stats, true);
+    sync();
+}
+
 const char* HOME_MOUNT = "/home/player";
 const char* CARD_SYSFS = "/sys/class/block/mmcblk0";
 const char* HOME_PART_SYSFS = "/sys/class/block/mmcblk0p2";
@@ -370,6 +411,7 @@ const char* const SHORTCUTS[][2] = {
     {"Right stick up/down", "Scroll the description"},
     {"A", "Launch"},
     {"Y", "Add to / remove from My List"},
+    {"L2 + R2", "Game options: rename, move to trash"},
     {"X", "Search by name"},
     {"B", "Clear the search"},
     {"SELECT", "Autolaunch on boot"},
@@ -533,6 +575,8 @@ int main(int argc, char* argv[]) {
     bool focus_system_button = false, focus_input_button = false, focus_tester_button = false;
     bool focus_tabs_button = false, focus_first_tab = false;
     std::vector<LauncherTab> launcher_tabs = read_launcher_tabs();
+    TrashStats trash = trash_stats();
+    bool trash_confirm = false, focus_trash_cancel = false;   // "Empty trash" asks before deleting
     SDL_Joystick* joystick = controller ? SDL_GameControllerGetJoystick(controller) : nullptr;
     int last_button = -1;
     Uint32 b_hold_start = 0;
@@ -611,6 +655,7 @@ int main(int argc, char* argv[]) {
         if (!editing && (ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false) ||
                          ImGui::IsKeyPressed(ImGuiKey_Escape, false))) {
             if (page == PAGE_SYSTEM || page == PAGE_INPUT || page == PAGE_TABS) next_page = PAGE_MAIN;
+            else if (page == PAGE_MAIN && trash_confirm) trash_confirm = false;
             else if (page == PAGE_MAIN) running = false;
             // PAGE_TESTER: B is one of the buttons being tested, it leaves only when held
         }
@@ -753,6 +798,32 @@ int main(int argc, char* argv[]) {
             ImGui::EndDisabled();
             if (can_grow && !fits) {
                 ImGui::TextWrapped("%s", tr("Too much data in HOME to resize. Resize right after flashing, before copying games."));
+            }
+
+            // Games moved to the trash in the launcher, deleted for good only from here
+            if (trash.files > 0) {
+                if (!trash_confirm) {
+                    char label[160];
+                    snprintf(label, sizeof(label), tr("Empty trash (%llu files, %s)"), trash.files,
+                             human_size_kb(trash.bytes / 1024).c_str());
+                    if (ImGui::Button(label)) {
+                        trash_confirm = true;
+                        focus_trash_cancel = true;
+                    }
+                } else {
+                    ImGui::TextWrapped("%s", tr("Delete the games in the trash for good?"));
+                    if (focus_trash_cancel) {
+                        ImGui::SetKeyboardFocusHere();
+                        focus_trash_cancel = false;
+                    }
+                    if (ImGui::Button(tr("Cancel"))) trash_confirm = false;
+                    if (ImGui::Button(tr("Empty"))) {
+                        empty_trash();
+                        trash = trash_stats();
+                        info = gather_system_info();    // free space
+                        trash_confirm = false;
+                    }
+                }
             }
 
             if (focus_system_button) {

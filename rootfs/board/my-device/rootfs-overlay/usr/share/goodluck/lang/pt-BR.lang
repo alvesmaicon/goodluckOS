@@ -200,3 +200,20 @@ Failed to reboot. Does this app have permission to run 'doas reboot'? = Falha ao
 # Launcher tabs (System Settings)
 Launcher tabs = Abas do launcher
 Unticked tabs are hidden; their games still show in All Games and My List. = As abas desmarcadas ficam ocultas; os jogos delas continuam em Todos os Jogos e Minha Lista.
+
+# Game options (L2 + R2) and the trash
+Game options = Opções do jogo
+Rename = Renomear
+Move to trash = Mover para a lixeira
+Move this game to the trash? = Mover este jogo para a lixeira?
+Rename: = Renomear:
+Renamed = Renomeado
+Moved to the trash = Movido para a lixeira
+A file with that name already exists = Já existe um arquivo com esse nome
+Couldn't rename the file = Não foi possível renomear o arquivo
+That name can't be used = Esse nome não pode ser usado
+Couldn't move the game to the trash = Não foi possível mover o jogo para a lixeira
+Game options: rename, move to trash = Opções do jogo: renomear, mover para a lixeira
+Empty trash (%llu files, %s) = Esvaziar lixeira (%llu arquivos, %s)
+Delete the games in the trash for good? = Apagar de vez os jogos da lixeira?
+Empty = Esvaziar
