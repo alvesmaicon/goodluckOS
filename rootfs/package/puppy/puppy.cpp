@@ -19,6 +19,7 @@
 #include "fonts.h"
 #include "i18n.h"
 
+#include <alsa/asoundlib.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <unistd.h>
@@ -46,6 +47,7 @@ struct Config {
     std::string powerFifo     = "/run/power-request";   // root power-manager.sh
     std::string backlight     = "/sys/class/backlight/backlight/brightness";
     std::string osdFile       = "/dev/shm/osd";  // "volume|brightness <percent> [muted]", from osd-notify.sh
+    std::string alsaCard      = "hw:GA36mbAudio";   // volume and audio output shown in the header
     std::string trashDir      = "/home/player/.trash";   // deleted games, until System Settings empties it
     // RetroArch saves and states, renamed along with a game (sort_savefiles: one folder per core)
     std::vector<std::string> saveDirs = {"/home/player/.config/retroarch/saves", "/home/player/.config/retroarch/states"};
@@ -94,6 +96,7 @@ constexpr Uint32 kNoticeMs          = 2500;
 
 constexpr Uint32 kIdleCheckMs       = 60000;
 constexpr Uint32 kOsdShowMs         = 1500;  // how long the volume/brightness bar stays up
+constexpr Uint8 kFnButton           = 10;    // BTN_MODE, which the SDL mapping leaves out
 constexpr Uint32 kOsdRefreshMs      = 100;   // re-read the level while it's up (the hotkey script runs async)
 constexpr Uint32 kRepeatDelayMs     = 350;  // holding the d-pad repeats the move after this...
 constexpr Uint32 kRepeatRateMs      = 60;   // ...and then this often
@@ -1437,18 +1440,62 @@ static int readBattery() {
     return -1; // no battery
 }
 
+// headphones: the speaker is switched off (no jack detection on the GA36-MB)
+struct Audio {
+    int volume = -1;          // -1: no mixer
+    bool muted = false;
+    bool headphones = false;
+
+    bool operator!=(const Audio& o) const {
+        return volume != o.volume || muted != o.muted || headphones != o.headphones;
+    }
+
+    void read() {
+        volume = -1;
+        snd_mixer_t* mixer = nullptr;
+        if (snd_mixer_open(&mixer, 0) < 0) return;
+        if (snd_mixer_attach(mixer, cfg.alsaCard.c_str()) < 0 || snd_mixer_selem_register(mixer, nullptr, nullptr) < 0 ||
+            snd_mixer_load(mixer) < 0) {
+            snd_mixer_close(mixer);
+            return;
+        }
+        snd_mixer_selem_id_t* sid;
+        snd_mixer_selem_id_alloca(&sid);
+        snd_mixer_selem_id_set_name(sid, "Headphone");
+        if (snd_mixer_elem_t* e = snd_mixer_find_selem(mixer, sid)) {
+            long min = 0, max = 0, v = 0;
+            int on = 1;
+            snd_mixer_selem_get_playback_volume_range(e, &min, &max);
+            snd_mixer_selem_get_playback_volume(e, SND_MIXER_SCHN_FRONT_LEFT, &v);
+            if (snd_mixer_selem_has_playback_switch(e)) snd_mixer_selem_get_playback_switch(e, SND_MIXER_SCHN_FRONT_LEFT, &on);
+            volume = max > min ? (int)std::lround((v - min) * 100.0 / (max - min)) : 0;
+            muted = !on || volume == 0;
+        }
+        snd_mixer_selem_id_set_name(sid, "Speaker");
+        headphones = false;
+        if (snd_mixer_elem_t* e = snd_mixer_find_selem(mixer, sid)) {
+            int on = 1;
+            if (snd_mixer_selem_has_playback_switch(e)) snd_mixer_selem_get_playback_switch(e, SND_MIXER_SCHN_FRONT_LEFT, &on);
+            headphones = !on;
+        }
+        snd_mixer_close(mixer);
+    }
+};
+
 // Volume/brightness level written by the hotkey scripts, shown as a bar for a moment.
 struct Osd {
     bool visible = false;
     std::string kind;
     int percent = 0;
     bool muted = false;
+    std::string flag;
 
     void read() {
         std::ifstream in(cfg.osdFile);
-        std::string flag;
+        flag.clear();
         if (!(in >> kind >> percent)) { kind.clear(); return; }
-        muted = (in >> flag) && flag == "muted";
+        in >> flag;
+        muted = flag == "muted";
         percent = std::clamp(percent, 0, 100);
     }
 };
@@ -1565,7 +1612,7 @@ public:
     Uint32 marqueeDue() const { return marqueeNext; }   // when the scrolling name needs a frame (0: never)
     int descMaxScroll() const { return descMax; }   // of the description drawn in the last frame
 
-    void render(const Model& m, const Keyboard& kb, const Osd& osd, int battery) {
+    void render(const Model& m, const Keyboard& kb, const Osd& osd, int battery, const Audio& audio) {
         marqueeNext = 0;    // set again below if the selected name is still scrolling
         setColor(kClear);
         SDL_RenderClear(renderer);
@@ -1575,7 +1622,7 @@ public:
         else renderList(m);
 
         // Bars are drawn last so long descriptions or scrolled tiles never spill over them
-        renderHeader(m, battery);
+        renderHeader(m, battery, audio);
         renderFooter(m, kb);
         if (kb.open) renderKeyboard(m, kb);
         if (m.menuOpen) renderMenu(m);
@@ -1743,7 +1790,33 @@ private:
         return h;
     }
 
-    void renderHeader(const Model& m, int battery) {
+    // 16x16
+    void speakerIcon(int x, int y, SDL_Color c, bool muted) {
+        fill(c, {x, y + 5, 4, 6});
+        for (int i = 0; i < 6; ++i) fill(c, {x + 4 + i, y + 5 - i, 1, 6 + 2 * i});
+        if (muted) {
+            setColor(c);
+            for (int d = 0; d < 2; ++d) {
+                SDL_RenderDrawLine(renderer, x + 11 + d, y + 4, x + 16 + d, y + 11);
+                SDL_RenderDrawLine(renderer, x + 11 + d, y + 11, x + 16 + d, y + 4);
+            }
+        } else {
+            fill(c, {x + 12, y + 5, 1, 6});
+            fill(c, {x + 14, y + 3, 1, 10});
+        }
+    }
+
+    void headphonesIcon(int x, int y, SDL_Color c) {
+        fill(c, {x + 4, y, 8, 2});
+        fill(c, {x + 2, y + 1, 2, 2});
+        fill(c, {x + 12, y + 1, 2, 2});
+        fill(c, {x, y + 3, 2, 7});
+        fill(c, {x + 14, y + 3, 2, 7});
+        fill(c, {x, y + 9, 4, 7});
+        fill(c, {x + 12, y + 9, 4, 7});
+    }
+
+    void renderHeader(const Model& m, int battery, const Audio& audio) {
         fill(kBar, {0, 0, kScreenW, kHeaderH});
         const Category& c = m.cur();
         const int nameY = (kHeaderH - TTF_FontHeight(uiFont)) / 2;
@@ -1751,6 +1824,17 @@ private:
         std::string bat = battery >= 0 ? std::to_string(battery) + "%" : "??";
         int batX = kScreenW - kMargin - textWidth(uiFont, bat);
         drawText(renderer, uiFont, bat, batX, nameY, kWhite);
+
+        int statusX = batX;
+        if (audio.volume >= 0) {
+            std::string vol = audio.muted ? tr("muted") : std::to_string(audio.volume) + "%";
+            int x = batX - 18 - textWidth(uiFont, vol);
+            drawText(renderer, uiFont, vol, x, nameY, kGrey);
+            x -= 24;
+            if (audio.headphones) headphonesIcon(x, (kHeaderH - 16) / 2, kWhite);
+            else speakerIcon(x, (kHeaderH - 16) / 2, kWhite, audio.muted);
+            statusX = x;
+        }
 
         // "686 games", or "12 of 686 games" while searching
         std::string count = std::to_string(c.visible.size());
@@ -1760,7 +1844,7 @@ private:
         if (!m.query.empty()) count += "  \u00b7  \"" + m.query + "\"";
         int countW = textWidth(smallFont, count);
 
-        int maxNameW = batX - 24 - countW - 10 - kMargin;
+        int maxNameW = statusX - 24 - countW - 10 - kMargin;
         const std::string title = tr(c.name);
         int nameW = std::min(textWidth(uiFont, title), maxNameW);
         drawText(renderer, uiFont, title, kMargin, nameY, kWhite, maxNameW);
@@ -2067,6 +2151,15 @@ private:
         fill({12, 12, 14, 235}, panel);
         frame(kTile, panel, 2);
 
+        if (osd.kind == "output") {
+            std::string value = tr(osd.flag == "headphones" ? "Headphones" : "Speaker");
+            drawText(renderer, descFont, tr("Audio output"), panel.x + pad, panel.y + 8, kWhite);
+            drawText(renderer, descFont, value, panel.x + w - pad - textWidth(descFont, value), panel.y + 8, kYellow);
+            if (osd.flag == "headphones") headphonesIcon(panel.x + pad, panel.y + h - 26, kYellow);
+            else speakerIcon(panel.x + pad, panel.y + h - 26, kYellow, false);
+            return;
+        }
+
         std::string label = osd.kind == "brightness" ? tr("Brightness") : (osd.kind == "volume" ? tr("Volume") : osd.kind);
         std::string value = osd.muted ? tr("Muted") : std::to_string(osd.percent) + "%";
         drawText(renderer, descFont, label, panel.x + pad, panel.y + 8, kWhite);
@@ -2287,6 +2380,7 @@ static bool loadConfig(int argc, char** argv) {
         {"state_file", &cfg.stateFile}, {"autolaunch_file", &cfg.autoStartFile}, {"config_dir", &cfg.configDir},
         {"cache_dir", &cfg.cacheDir}, {"lang_dir", &cfg.langDir}, {"power_fifo", &cfg.powerFifo},
         {"backlight", &cfg.backlight}, {"osd_file", &cfg.osdFile}, {"trash_dir", &cfg.trashDir},
+        {"alsa_card", &cfg.alsaCard},
     };
     std::map<std::string, std::string*> texts = {
         {"language", &cfg.language}, {"view", &cfg.view}, {"tabs", &cfg.tabs},
@@ -2369,6 +2463,9 @@ int main(int argc, char** argv) {
 
     Keyboard kb;
     Osd osd;
+    Audio audio;
+    audio.read();
+    bool fnHeld = false;        // FN + UP/DOWN are triggerhappy hotkeys, not navigation
     bool consoleCleared = false;
     bool selectHeld = false, selectCombo = false;
     Action leftStick = Action::None, rightStick = Action::None;
@@ -2586,7 +2683,7 @@ int main(int argc, char** argv) {
     while (running) {
         if (dirty) {
             shownBattery = readBattery();
-            ui.render(model, kb, osd, shownBattery);
+            ui.render(model, kb, osd, shownBattery, audio);
             if (!consoleCleared) {
                 // The boot's "Starting system..." stays on the text console, which flashes between
                 // apps; we can't write to it as player, so ask the root power-manager.sh
@@ -2608,6 +2705,7 @@ int main(int argc, char** argv) {
             } else {
                 if ((Sint32)(now - osdNextRead) >= 0) {
                     osd.read();
+                    audio.read();
                     osdNextRead = now + kOsdRefreshMs;
                     dirty = true;
                 }
@@ -2647,6 +2745,9 @@ int main(int argc, char** argv) {
             } else if (now - lastActivity >= kIdleCheckMs) {
                 lastActivity = now;
                 if (readBattery() != shownBattery) dirty = true;
+                Audio a;
+                a.read();
+                if (a != audio) { audio = a; dirty = true; }
             }
             continue;
         }
@@ -2681,6 +2782,10 @@ int main(int argc, char** argv) {
                 case SDL_KEYUP:
                     if (actionFromKey(ev.key.keysym.sym) == held) held = Action::None;
                     break;
+                case SDL_JOYBUTTONDOWN:
+                case SDL_JOYBUTTONUP:
+                    if (ev.jbutton.button == kFnButton) fnHeld = ev.type == SDL_JOYBUTTONDOWN;
+                    break;
                 case SDL_CONTROLLERBUTTONDOWN:
                     // SELECT toggles autolaunch when released on its own: SELECT + START is the
                     // close-app shortcut, which must neither set autolaunch nor open the settings
@@ -2691,6 +2796,15 @@ int main(int argc, char** argv) {
                     }
                     if (selectHeld) {
                         selectCombo = true;
+                        break;
+                    }
+                    if (fnHeld && (ev.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_UP ||
+                                   ev.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_DOWN)) {
+                        if (ev.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_DOWN) {
+                            osd.visible = true;
+                            osdUntil = SDL_GetTicks() + kOsdShowMs;
+                            osdNextRead = SDL_GetTicks() + 30;
+                        }
                         break;
                     }
                     action = actionFromButton(ev.cbutton.button);

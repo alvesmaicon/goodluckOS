@@ -384,6 +384,39 @@ void set_alsa_mute(bool mute) {
     snd_mixer_close(handle);
 }
 
+// Off: sound on the headphones only (no jack detection)
+bool get_speaker() {
+    int on = 1;
+    snd_mixer_t *handle;
+    snd_mixer_selem_id_t *sid;
+    if (snd_mixer_open(&handle, 0) < 0) return true;
+    snd_mixer_attach(handle, ALSA_CARD);
+    snd_mixer_selem_register(handle, NULL, NULL);
+    snd_mixer_load(handle);
+    snd_mixer_selem_id_alloca(&sid);
+    snd_mixer_selem_id_set_name(sid, "Speaker");
+    snd_mixer_elem_t* elem = snd_mixer_find_selem(handle, sid);
+    if (elem && snd_mixer_selem_has_playback_switch(elem))
+        snd_mixer_selem_get_playback_switch(elem, SND_MIXER_SCHN_FRONT_LEFT, &on);
+    snd_mixer_close(handle);
+    return on != 0;
+}
+
+void set_speaker(bool on) {
+    snd_mixer_t *handle;
+    snd_mixer_selem_id_t *sid;
+    if (snd_mixer_open(&handle, 0) < 0) return;
+    snd_mixer_attach(handle, ALSA_CARD);
+    snd_mixer_selem_register(handle, NULL, NULL);
+    snd_mixer_load(handle);
+    snd_mixer_selem_id_alloca(&sid);
+    snd_mixer_selem_id_set_name(sid, "Speaker");
+    snd_mixer_elem_t* elem = snd_mixer_find_selem(handle, sid);
+    if (elem && snd_mixer_selem_has_playback_switch(elem))
+        snd_mixer_selem_set_playback_switch_all(elem, on ? 1 : 0);
+    snd_mixer_close(handle);
+}
+
 
 
 // Raw joystick button numbers of the GA36-MB gamepad, the same numbering used by SDL_GAMECONTROLLERCONFIG
@@ -404,6 +437,7 @@ const char* const SHORTCUTS[][2] = {
     {"SELECT + START", "Close the app"},
     {"FN + SELECT + START", "Force close the app"},
     {"FN + UP", "FPS / CPU overlay"},
+    {"FN + DOWN", "Speaker / headphones"},
     {"Launcher", nullptr},
     {"L1 / R1", "Previous / next tab"},
     {"D-pad / left stick", "Move"},
@@ -554,6 +588,7 @@ int main(int argc, char* argv[]) {
     int display_brightness = get_brightness();
     int current_volume = get_alsa_volume();
     bool current_mute = get_alsa_mute();
+    bool speaker_on = get_speaker();
 
     // Changes are saved SAVE_DELAY_MS after the last edit, so holding the d-pad doesn't hammer the SD card
     bool brightness_dirty = false;
@@ -639,6 +674,7 @@ int main(int argc, char* argv[]) {
             display_brightness = get_brightness();
             current_volume = get_alsa_volume();
             current_mute = get_alsa_mute();
+            speaker_on = get_speaker();
         }
 
         if (pending && SDL_GetTicks() - last_change >= SAVE_DELAY_MS) {
@@ -745,6 +781,23 @@ int main(int argc, char* argv[]) {
 
             if (ImGui::Checkbox(tr("Global Mute"), &current_mute)) {
                 set_alsa_mute(current_mute);
+                volume_dirty = true;
+                last_change = SDL_GetTicks();
+            }
+
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("%s", tr("Audio output:"));
+            ImGui::SameLine();
+            if (ImGui::RadioButton(tr("Speaker"), speaker_on) && !speaker_on) {
+                speaker_on = true;
+                set_speaker(true);
+                volume_dirty = true;
+                last_change = SDL_GetTicks();
+            }
+            ImGui::SameLine();
+            if (ImGui::RadioButton(tr("Headphones"), !speaker_on) && speaker_on) {
+                speaker_on = false;
+                set_speaker(false);
                 volume_dirty = true;
                 last_change = SDL_GetTicks();
             }
