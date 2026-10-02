@@ -33,7 +33,7 @@ If the above page does not confirm support, please do not attempt to flash a goo
 - Comes stock with Retroarch and several optimized cores (PCSX-ReArmed, Snes9x, QuickNES, DOSbox, Genesis Plus GX, mGBA, etc)
 - Games perform very well. Metal Gear Solid 1 is completely playable at reasonable framerates
 - Comes with a custom, optimized launcher application, with tabs per system, search, favourites and game artwork/descriptions from `gamelist.xml`
-- System Settings app: brightness, volume, performance mode, launcher options, language, system info and a button tester
+- System Settings app: brightness, volume, performance mode, launcher options, language, interface font, system info and a button tester
 - Translatable interface, with English and Brazilian Portuguese included (see [Translations](#translations))
 - Autostart any application on boot, including games or a front-end like EmulationStation (coming soon)
 - USB terminal access for remote debugging. Log in with `sudo screen /dev/ttyACM* 115200` and `root:root`
@@ -135,7 +135,9 @@ FN is the hotkey:
 The same list is in System Settings -> Input Settings, next to a button tester.
 
 ## System Settings
-Opened with START from the launcher. It has brightness, volume and mute, a performance mode (keeps the CPU at full speed, uses more battery), the launcher options (tabs, grid or list view), the interface language, `Resize Home`, a System Info page and Input Settings, with the list of every shortcut and a button tester. Changes are saved as soon as you make them.
+Opened with START from the launcher. It has brightness, volume and mute, a performance mode (keeps the CPU at full speed, uses more battery), the launcher options (tabs, grid or list view), the interface language, the interface font (Inter, or the retro VT323 and Pixelify Sans, used by every app), `Resize Home`, a System Info page and Input Settings, with the list of every shortcut and a button tester. Changes are saved as soon as you make them. The page scrolls with the d-pad when it doesn't fit the screen.
+
+VT323 and Pixelify Sans are under the SIL Open Font License; their license files are next to them in `/usr/share/fonts`.
 
 ![System Settings](docs/screenshots/system-settings.png)
 

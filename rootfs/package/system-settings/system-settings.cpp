@@ -1,6 +1,7 @@
 #include <SDL2/SDL.h>
 #include "imgui.h"
 #include "imgui_internal.h"
+#include "fonts.h"
 #include "i18n.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_sdlrenderer2.h"
@@ -98,6 +99,7 @@ struct LauncherSettings {
     bool show_tabs = true;
     bool list_view = false;
     std::string language = "en";
+    std::string font;           // fonts.h key, "" = not chosen (Inter)
 };
 
 LauncherSettings load_launcher_settings() {
@@ -109,6 +111,7 @@ LauncherSettings load_launcher_settings() {
         else if (line == "tabs=off") s.show_tabs = false;
         else if (line == "tabs=on") s.show_tabs = true;
         else if (line.compare(0, 9, "language=") == 0 && line.size() > 9) s.language = line.substr(9);
+        else if (line.compare(0, 5, "font=") == 0 && line.size() > 5) s.font = line.substr(5);
     }
     return s;
 }
@@ -120,12 +123,14 @@ void save_launcher_settings(const LauncherSettings& s) {
         std::ifstream file(LAUNCHER_SETTINGS_FILE);
         for (std::string line; std::getline(file, line);) {
             if (line.compare(0, 5, "view=") != 0 && line.compare(0, 5, "tabs=") != 0 &&
-                line.compare(0, 9, "language=") != 0 && !line.empty()) lines.push_back(line);
+                line.compare(0, 9, "language=") != 0 && line.compare(0, 5, "font=") != 0 &&
+                !line.empty()) lines.push_back(line);
         }
     }
     lines.push_back(std::string("view=") + (s.list_view ? "list" : "grid"));
     lines.push_back(std::string("tabs=") + (s.show_tabs ? "on" : "off"));
     lines.push_back("language=" + s.language);
+    if (!s.font.empty()) lines.push_back("font=" + s.font);
 
     mkdir("/home/player/.config", 0755);
     mkdir(LAUNCHER_SETTINGS_DIR, 0755);
@@ -443,11 +448,23 @@ int main(int argc, char* argv[]) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     i18n::loadConfigured();
-    // ImGui's built-in font has no accented letters; use the launcher's font when it's there
-    if (FILE* font = fopen("/usr/share/fonts/Inter_24pt-Medium.ttf", "rb")) {
-        fclose(font);
-        ImGui::GetIO().Fonts->AddFontFromFileTTF("/usr/share/fonts/Inter_24pt-Medium.ttf", 13.0f);
+    // Interface fonts (ImGui's built-in one has no accented letters): every available one is loaded,
+    // so the Font option switches right away; the chosen one is the default
+    std::vector<int> font_choices;          // indexes in fonts::all() of the fonts that are there
+    std::vector<ImFont*> loaded_fonts;
+    for (size_t i = 0; i < fonts::all().size(); ++i) {
+        const fonts::Font& f = fonts::all()[i];
+        if (!fonts::available(f)) continue;
+        ImFont* font = ImGui::GetIO().Fonts->AddFontFromFileTTF(fonts::path(f).c_str(), 13.0f * f.scale);
+        if (!font) continue;
+        font_choices.push_back((int)i);
+        loaded_fonts.push_back(font);
     }
+    int current_font = 0;   // in font_choices
+    for (size_t i = 0; i < font_choices.size(); ++i)
+        if (&fonts::all()[font_choices[i]] == &fonts::current()) current_font = (int)i;
+    if (!loaded_fonts.empty()) ImGui::GetIO().FontDefault = loaded_fonts[current_font];
+    int pending_font = -1;  // switched before the next frame
     ImGuiIO& io = ImGui::GetIO(); (void)io;
 
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad | ImGuiConfigFlags_NavEnableKeyboard;
@@ -553,6 +570,13 @@ int main(int argc, char* argv[]) {
         // B first cancels an active edit; only with nothing active does it leave the app
         bool editing = ImGui::IsAnyItemActive();
 
+        if (pending_font >= 0) {
+            ImGui::GetIO().FontDefault = loaded_fonts[pending_font];
+            ImGui::GetStyle().FontSizeBase = loaded_fonts[pending_font]->LegacySize;
+            current_font = pending_font;
+            pending_font = -1;
+        }
+
         ImGui_ImplSDLRenderer2_NewFrame();
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
@@ -579,7 +603,12 @@ int main(int argc, char* argv[]) {
             ImGui::Separator();
             ImGui::Spacing();
 
-            // One header for both, so the page (with the Options section) still fits the 480px screen
+            // The options scroll (bigger fonts don't fit the 480px screen), following the d-pad
+            // selection; Back stays at the bottom. NavFlattened: the d-pad moves between the list and
+            // Back as if they were one.
+            const float back_h = ImGui::GetFrameHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y;
+            ImGui::BeginChild("main_list", ImVec2(0, ImGui::GetContentRegionAvail().y - back_h), ImGuiChildFlags_NavFlattened);
+
             section_headear("Display & Audio");
             if (level_slider(tr("Brightness"), &display_brightness, 1, 10, 1)) {
                 set_brightness(display_brightness);
@@ -651,6 +680,29 @@ int main(int argc, char* argv[]) {
                 ImGui::EndCombo();
             }
 
+            // Interface font of every app (fonts.h); the launcher picks it up when it comes back
+            if (loaded_fonts.size() > 1) {
+                ImGui::AlignTextToFramePadding();
+                ImGui::Text("%s", tr("Font:"));
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(ImGui::GetFontSize() * 11.0f);
+                if (ImGui::BeginCombo("##font", fonts::all()[font_choices[current_font]].name)) {
+                    for (size_t i = 0; i < font_choices.size(); ++i) {
+                        bool selected = (int)i == current_font;
+                        // each name in its own font, as a preview
+                        ImGui::PushFont(loaded_fonts[i], loaded_fonts[i]->LegacySize);
+                        if (ImGui::Selectable(fonts::all()[font_choices[i]].name, selected) && !selected) {
+                            launcher.font = fonts::all()[font_choices[i]].key;
+                            save_launcher_settings(launcher);
+                            pending_font = (int)i;
+                        }
+                        ImGui::PopFont();
+                        if (selected) ImGui::SetItemDefaultFocus();
+                    }
+                    ImGui::EndCombo();
+                }
+            }
+
             ImGui::Spacing();
             // Always offered here (the launcher hides it after the first run); resize-home shows the
             // details and asks before doing anything. It reformats HOME after backing it up to the RAM
@@ -683,6 +735,7 @@ int main(int argc, char* argv[]) {
                 next_page = PAGE_INPUT;
             }
             // TODO: Date/Time (the RTC has no backup battery, so the clock resets on every boot)
+            ImGui::EndChild();
 
             ImGui::Spacing();
             if (ImGui::Button(tr("Back"))) {

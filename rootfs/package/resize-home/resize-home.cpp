@@ -2,6 +2,7 @@
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_sdlrenderer2.h"
+#include "fonts.h"
 #include "i18n.h"
 
 #include <cerrno>
@@ -407,11 +408,10 @@ int main(int argc, char* argv[]) {
     ImGui_ImplSDLRenderer2_Init(renderer);
     ImGui::GetStyle().FontScaleMain = 1.65;
     i18n::loadConfigured();
-    // ImGui's built-in font has no accented letters; use the launcher's font when it's there
-    if (FILE* font = fopen("/usr/share/fonts/Inter_24pt-Medium.ttf", "rb")) {
-        fclose(font);
-        ImGui::GetIO().Fonts->AddFontFromFileTTF("/usr/share/fonts/Inter_24pt-Medium.ttf", 13.0f);
-    }
+    // The interface font chosen in System Settings (ImGui's built-in one has no accented letters)
+    const fonts::Font& ui_font = fonts::current();
+    if (fonts::available(ui_font))
+        ImGui::GetIO().Fonts->AddFontFromFileTTF(fonts::path(ui_font).c_str(), 13.0f * ui_font.scale);
 
     SDL_GameController* controller = nullptr;
     for (int i = 0; i < SDL_NumJoysticks(); ++i) {

@@ -1,6 +1,7 @@
 #include <SDL2/SDL.h>
 #include "imgui.h"
 #include "imgui_internal.h"
+#include "fonts.h"
 #include "i18n.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_sdlrenderer2.h"
@@ -75,11 +76,10 @@ int main(int argc, char* argv[]) {
     i18n::loadConfigured();
     message = i18n::tr(message);
     if (done_message) done_message = i18n::tr(done_message);
-    // ImGui's built-in font has no accented letters; use the launcher's font when it's there
-    if (FILE* font = fopen("/usr/share/fonts/Inter_24pt-Medium.ttf", "rb")) {
-        fclose(font);
-        ImGui::GetIO().Fonts->AddFontFromFileTTF("/usr/share/fonts/Inter_24pt-Medium.ttf", 13.0f);
-    }
+    // The interface font chosen in System Settings (ImGui's built-in one has no accented letters)
+    const fonts::Font& ui_font = fonts::current();
+    if (fonts::available(ui_font))
+        ImGui::GetIO().Fonts->AddFontFromFileTTF(fonts::path(ui_font).c_str(), 13.0f * ui_font.scale);
     ImGuiIO& io = ImGui::GetIO(); (void)io;
 
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad | ImGuiConfigFlags_NavEnableKeyboard;

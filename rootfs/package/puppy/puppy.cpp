@@ -16,6 +16,7 @@
 #include <string>
 #include <vector>
 
+#include "fonts.h"
 #include "i18n.h"
 
 #include <fcntl.h>
@@ -29,6 +30,7 @@ using i18n::tr;
 // goodluckOS needs no config file; on other firmwares a puppy.conf points Puppy at their files.
 struct Config {
     std::string font          = "/usr/share/fonts/Inter_24pt-Medium.ttf";
+    float fontScale           = 1.0f;   // of the font chosen in System Settings (fonts.h)
     std::string fallbackIcon  = "/usr/share/puppy/assets/fallback.png";
     std::vector<std::string> apps     = {"/usr/share/puppy/apps.puppy", "/home/player/apps.puppy"};
     std::vector<std::string> appsDirs = {"/home/player/.local/share/applications"};   // *.puppy files
@@ -1244,10 +1246,11 @@ public:
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
         const char* font = cfg.font.c_str();
-        uiFont    = TTF_OpenFont(font, 22);
-        titleFont = TTF_OpenFont(font, 30);
-        descFont  = TTF_OpenFont(font, 20);
-        smallFont = TTF_OpenFont(font, 15);
+        auto size = [](int pt) { return (int)std::lround(pt * cfg.fontScale); };
+        uiFont    = TTF_OpenFont(font, size(22));
+        titleFont = TTF_OpenFont(font, size(30));
+        descFont  = TTF_OpenFont(font, size(20));
+        smallFont = TTF_OpenFont(font, size(15));
         if (!uiFont || !titleFont || !descFont || !smallFont)
             std::cerr << "Warning: could not load font " << cfg.font << "\n";
 
@@ -1963,6 +1966,15 @@ int main(int argc, char** argv) {
     i18n::settingsPath() = cfg.settingsFile();
     if (!cfg.language.empty()) i18n::load(cfg.language);
     else i18n::loadConfigured();
+    // the font chosen in System Settings, from the folder of puppy.conf's font
+    fonts::dirPath() = fs::path(cfg.font).parent_path().string();
+    if (!fonts::configuredKey().empty()) {
+        const fonts::Font& f = fonts::find(fonts::configuredKey());
+        if (fonts::available(f)) {
+            cfg.font = fonts::path(f);
+            cfg.fontScale = f.scale;
+        }
+    }
 
     Model model;
     model.categories = loadCatalog();

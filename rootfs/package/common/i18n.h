@@ -97,14 +97,21 @@ inline std::vector<Language> available() {
     return langs;
 }
 
-inline std::string configuredLanguage() {
+// The value of "key=value" in the settings file (the last one wins), or "".
+inline std::string settingValue(const std::string& key) {
     std::ifstream in(settingsFile());
-    std::string line, code = "en";
+    const std::string prefix = key + "=";
+    std::string line, value;
     while (std::getline(in, line)) {
         line = trimmed(line);
-        if (line.compare(0, 9, "language=") == 0 && line.size() > 9) code = line.substr(9);
+        if (line.compare(0, prefix.size(), prefix) == 0 && line.size() > prefix.size()) value = line.substr(prefix.size());
     }
-    return code;
+    return value;
+}
+
+inline std::string configuredLanguage() {
+    const std::string code = settingValue("language");
+    return code.empty() ? "en" : code;
 }
 
 inline std::string& current() {
