@@ -80,11 +80,13 @@ Puppy is goodluckOS' application launcher. It's what you see when you start good
 | --- | --- |
 | ![Puppy in grid view](docs/screenshots/puppy-grid.png) | ![Puppy in list view](docs/screenshots/puppy-list.png) |
 
-Changing the brightness (FN+Vol) or the volume shows a level bar for a moment:
+The top bar shows the volume (a headphones icon when the sound goes to the headphones only) and the battery, whose level turns yellow while charging, green when full and red at 10% or less.
 
-| Brightness | Volume |
-| --- | --- |
-| ![Brightness level bar](docs/screenshots/osd-brightness.png) | ![Volume level bar](docs/screenshots/osd-volume.png) |
+Changing the brightness (FN+Vol) or the volume shows a level bar for a moment, and FN + D-pad down shows the audio output:
+
+| Brightness | Volume | Audio output |
+| --- | --- | --- |
+| ![Brightness level bar](docs/screenshots/osd-brightness.png) | ![Volume level bar](docs/screenshots/osd-volume.png) | ![Audio output](docs/screenshots/osd-output.png) |
 
 It starts up fast, uses very little power, launches applications instantly, and uses zero RAM and CPU after launching an application.
 
@@ -121,6 +123,7 @@ Grid or list view, whether the tabs are shown and which ones are set in System S
 | SELECT + START | Close the active app cleanly (RetroArch saves first) and go back to the launcher |
 | FN + SELECT + START | Force close the active app |
 | FN + D-pad up | Show / hide a live FPS and CPU overlay |
+| FN + D-pad down | Sound on the speaker or on the headphones only (the console can't detect headphones, so this is manual) |
 
 ### RetroArch
 FN is the hotkey:
@@ -138,21 +141,48 @@ The same list is in System Settings -> Input Settings, next to a button tester.
 
 ## System Settings
 Opened with START from the launcher. Its main page is a menu of sections, each with its own page:
-- **Display & Audio**: brightness, volume and mute
-- **Launcher**: show the tabs, grid or list view, and which tabs to show (hidden tabs' games still appear in All Games and My List)
-- **Interface**: the language, and the font (Default keeps each app's own font, Inter in the launcher and ProggyClean elsewhere; or Inter, ProggyClean, VT323 or Pixelify Sans in every app)
-- **Storage**: HOME usage, `Resize Home`, and emptying the trash of games deleted in the launcher
-- **System**: a performance mode (keeps the CPU at full speed, uses more battery) and the System Info page
-- **Input Settings**: the list of every shortcut and a button tester
+
+```
+System Settings
+├── Display & Audio
+│   ├── Brightness
+│   ├── Master Volume
+│   ├── Global Mute
+│   └── Audio output: Speaker / Headphones
+├── Launcher
+│   ├── Show launcher tabs
+│   ├── Launcher view: Grid / List
+│   └── Launcher tabs ─ which tabs to show
+├── Interface
+│   ├── Language
+│   └── Font
+├── Storage
+│   ├── HOME usage
+│   ├── Resize Home
+│   └── Empty trash
+├── System
+│   ├── Performance mode (uses more battery)
+│   └── System Info
+└── Input Settings
+    ├── every shortcut
+    └── Button Tester
+```
+
+- **Launcher tabs**: hidden tabs' games still appear in All Games and My List.
+- **Font**: Default keeps each app's own font (Inter in the launcher, ProggyClean elsewhere); or Inter, ProggyClean, VT323 or Pixelify Sans in every app.
+- **Empty trash**: deletes for good the games moved to the trash in the launcher.
+- **Performance mode**: keeps the CPU at full speed.
 
 B goes back one page; Back stays at the bottom of every page. Changes are saved as soon as you make them. The page scrolls with the d-pad when it doesn't fit the screen.
 
 VT323 and Pixelify Sans are under the SIL Open Font License and ProggyClean under the MIT License; their license files are next to them in `/usr/share/fonts`.
 
-![System Settings](docs/screenshots/system-settings.png)
+| Main page | Display & Audio |
+| --- | --- |
+| ![System Settings](docs/screenshots/system-settings.png) | ![Display & Audio](docs/screenshots/system-settings-audio.png) |
 
 ## Translations
-Every text in the launcher, System Settings, the confirmation screens and `Resize Home` can be translated, and new languages need no code changes. Languages live in `/usr/share/goodluck/lang/<code>.lang` (in the repository: `rootfs/board/my-device/rootfs-overlay/usr/share/goodluck/lang/`) and show up in System Settings -> Options -> Language as soon as the file is there.
+Every text in the launcher, System Settings, the confirmation screens and `Resize Home` can be translated, and new languages need no code changes. Languages live in `/usr/share/goodluck/lang/<code>.lang` (in the repository: `rootfs/board/my-device/rootfs-overlay/usr/share/goodluck/lang/`) and show up in System Settings -> Interface -> Language as soon as the file is there.
 
 To add a language:
 1. Copy `pt-BR.lang` to a file named after your language's code, e.g. `es.lang` or `fr.lang`.
