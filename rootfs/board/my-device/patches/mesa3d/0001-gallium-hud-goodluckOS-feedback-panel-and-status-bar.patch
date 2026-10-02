@@ -1,0 +1,558 @@
+From: Maicon Alves <maicon.alves@posthaus.com.br>
+Subject: [PATCH] gallium/hud: goodluckOS feedback panel and status bar
+
+Draws over any app, even with the graphs hidden:
+- the volume / brightness / audio output feedback that osd-notify.sh writes
+  to /dev/shm/hud-osd, for 1.5 s;
+- with GALLIUM_HUD_STATUS set, a status bar with the battery (from sysfs) and
+  the volume and output that hud-status.sh writes to /dev/shm/hud-status.
+Both use the launcher's colors and icons. Text can now have a color and a
+scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
+
+---
+--- a/src/gallium/auxiliary/hud/hud_context.c	2026-10-02 18:51:38.215237430 -0300
++++ b/src/gallium/auxiliary/hud/hud_context.c	2026-10-02 18:51:38.216470046 -0300
+@@ -68,6 +68,9 @@
+ #include "util/u_upload_mgr.h"
+ #include "tgsi/tgsi_text.h"
+ #include "tgsi/tgsi_dump.h"
++#include "util/os_time.h"
++#include <dirent.h>
++#include <sys/stat.h>
+ 
+ #define HUD_DEFAULT_VISIBILITY true
+ #define HUD_DEFAULT_SCALE 1
+@@ -80,6 +83,60 @@
+ static int hud_rotate = HUD_DEFAULT_ROTATION;
+ static float hud_opacity = HUD_DEFAULT_OPACITY / 100.0f;
+ 
++/* goodluckOS: a feedback panel (volume, brightness, audio output) and a status
++ * bar (battery, volume, output) drawn over any app, even with the graphs
++ * hidden. osd-notify.sh writes the panel as three lines (label, value, bar
++ * percent or -1) and hud-status.sh the volume, mute and headphones state. */
++#define OSD_FILE "/dev/shm/hud-osd"
++#define STATUS_FILE "/dev/shm/hud-status"
++#define OSD_MS 1500
++#define OSD_W 300
++#define OSD_PAD 14
++
++static float text_scale = 1;
++static bool text_background = true;
++
++static struct {
++   bool started, visible;
++   struct timespec mtime;
++   int64_t until_ms;
++   char label[64], value[64];
++   int percent;
++} osd;
++
++static struct {
++   int enabled;
++   bool battery_only;
++   float opacity;
++   struct timespec mtime;
++   int64_t next_ms;
++   char battery_dir[300];
++   int battery, volume;
++   bool charging, full, muted, headphones;
++} status = { .enabled = -1, .battery = -1, .volume = -1 };
++
++#define MAX_QUADS 96
++static struct {
++   unsigned x1, y1, x2, y2;
++   float color[4];
++} quads[MAX_QUADS];
++static unsigned num_quads;
++
++#define MAX_TEXT_COLORS 8
++static struct {
++   unsigned first, count;
++   float color[3];
++} text_colors[MAX_TEXT_COLORS];
++static unsigned num_text_colors;
++
++static const float kWhite[] = {1, 1, 1, 1};
++static const float kGrey[] = {170 / 255.0, 170 / 255.0, 170 / 255.0, 1};
++static const float kYellow[] = {1, 205 / 255.0, 60 / 255.0, 1};
++static const float kRed[] = {230 / 255.0, 60 / 255.0, 50 / 255.0, 1};
++static const float kGreen[] = {80 / 255.0, 200 / 255.0, 90 / 255.0, 1};
++static const float kTile[] = {40 / 255.0, 40 / 255.0, 44 / 255.0, 1};
++static const float kTranslucent[] = {12 / 255.0, 12 / 255.0, 14 / 255.0, 0.5};
++
+ #if DETECT_OS_POSIX
+ static void
+ signal_visible_handler(int sig, siginfo_t *siginfo, void *context)
+@@ -169,6 +226,8 @@
+    char *s = buf;
+    float *vertices = hud->text.vertices + hud->text.num_vertices*4;
+    unsigned num = 0;
++   unsigned gw = hud->font.glyph_width * text_scale;
++   unsigned gh = hud->font.glyph_height * text_scale;
+ 
+    va_list ap;
+    va_start(ap, str);
+@@ -178,23 +237,24 @@
+    if (!*s)
+       return;
+ 
+-   hud_draw_background_quad(hud,
++   if (text_background)
++      hud_draw_background_quad(hud,
+                             x, y,
+-                            x + strlen(buf)*hud->font.glyph_width,
+-                            y + hud->font.glyph_height);
++                            x + strlen(buf)*gw,
++                            y + gh);
+ 
+    while (*s) {
+       unsigned x1 = x;
+       unsigned y1 = y;
+-      unsigned x2 = x + hud->font.glyph_width;
+-      unsigned y2 = y + hud->font.glyph_height;
++      unsigned x2 = x + gw;
++      unsigned y2 = y + gh;
+       unsigned tx1 = (*s % 16) * hud->font.glyph_width;
+       unsigned ty1 = (*s / 16) * hud->font.glyph_height;
+       unsigned tx2 = tx1 + hud->font.glyph_width;
+       unsigned ty2 = ty1 + hud->font.glyph_height;
+ 
+       if (*s == ' ') {
+-         x += hud->font.glyph_width;
++         x += gw;
+          s++;
+          continue;
+       }
+@@ -221,7 +281,7 @@
+       vertices[num++] = (float) tx2;
+       vertices[num++] = (float) ty1;
+ 
+-      x += hud->font.glyph_width;
++      x += gw;
+       s++;
+    }
+ 
+@@ -485,6 +545,330 @@
+  * The texture is usually the back buffer being displayed.
+  */
+ static void
++hud_quad(unsigned x1, unsigned y1, unsigned w, unsigned h, const float *color)
++{
++   if (num_quads == MAX_QUADS)
++      return;
++   quads[num_quads].x1 = x1;
++   quads[num_quads].y1 = y1;
++   quads[num_quads].x2 = x1 + w;
++   quads[num_quads].y2 = y1 + h;
++   memcpy(quads[num_quads].color, color, sizeof(quads[0].color));
++   num_quads++;
++}
++
++static unsigned
++hud_text_width(struct hud_context *hud, const char *str)
++{
++   return strlen(str) * (unsigned)(hud->font.glyph_width * text_scale);
++}
++
++static unsigned
++hud_text_height(struct hud_context *hud)
++{
++   return hud->font.glyph_height * text_scale;
++}
++
++static void
++hud_colored_string(struct hud_context *hud, unsigned x, unsigned y,
++                   const float *color, const char *str)
++{
++   unsigned first = hud->text.num_vertices;
++
++   hud_draw_string(hud, x, y, "%s", str);
++   if (num_text_colors == MAX_TEXT_COLORS || hud->text.num_vertices == first)
++      return;
++   text_colors[num_text_colors].first = first;
++   text_colors[num_text_colors].count = hud->text.num_vertices - first;
++   memcpy(text_colors[num_text_colors].color, color, sizeof(text_colors[0].color));
++   num_text_colors++;
++}
++
++static bool
++read_line(const char *path, char *buf, size_t size)
++{
++   FILE *f = fopen(path, "r");
++   bool ok;
++
++   if (!f)
++      return false;
++   ok = fgets(buf, size, f) != NULL;
++   fclose(f);
++   if (ok)
++      buf[strcspn(buf, "\n")] = 0;
++   return ok;
++}
++
++static bool
++file_changed(const char *path, struct timespec *mtime)
++{
++   struct stat st;
++
++   if (stat(path, &st) != 0 ||
++       (st.st_mtim.tv_sec == mtime->tv_sec && st.st_mtim.tv_nsec == mtime->tv_nsec))
++      return false;
++   *mtime = st.st_mtim;
++   return true;
++}
++
++static void
++hud_osd_update(int64_t now)
++{
++   if (file_changed(OSD_FILE, &osd.mtime)) {
++      char lines[3][64] = {{0}};
++      FILE *f = fopen(OSD_FILE, "r");
++
++      if (f) {
++         for (int i = 0; i < 3 && fgets(lines[i], sizeof(lines[i]), f); i++)
++            lines[i][strcspn(lines[i], "\n")] = 0;
++         fclose(f);
++         snprintf(osd.label, sizeof(osd.label), "%s", lines[0]);
++         snprintf(osd.value, sizeof(osd.value), "%s", lines[1]);
++         osd.percent = lines[2][0] ? atoi(lines[2]) : -1;
++         /* a notification older than the app isn't shown */
++         if (osd.started)
++            osd.until_ms = now + OSD_MS;
++      }
++   }
++   osd.started = true;
++   osd.visible = now < osd.until_ms;
++}
++
++static void
++hud_status_update(int64_t now)
++{
++   char buf[64];
++
++   if (status.enabled < 0) {
++      const char *env = getenv("GALLIUM_HUD_STATUS");
++      const char *opacity = getenv("GALLIUM_HUD_STATUS_OPACITY");
++      status.enabled = env && strcmp(env, "0") && strcmp(env, "false");
++      status.battery_only = env && !strcmp(env, "battery");
++      status.opacity = opacity ? atoi(opacity) / 100.0 : 0.5;
++   }
++   if (!status.enabled)
++      return;
++
++   if (file_changed(STATUS_FILE, &status.mtime) && read_line(STATUS_FILE, buf, sizeof(buf))) {
++      int muted = 0, headphones = 0;
++      if (sscanf(buf, "%d %d %d", &status.volume, &muted, &headphones) == 3) {
++         status.muted = muted;
++         status.headphones = headphones;
++      }
++   }
++
++   if (now < status.next_ms)
++      return;
++   status.next_ms = now + 5000;
++
++   if (!status.battery_dir[0]) {
++      DIR *dir = opendir("/sys/class/power_supply");
++      struct dirent *e;
++
++      while (dir && (e = readdir(dir))) {
++         char path[300];
++         snprintf(path, sizeof(path), "/sys/class/power_supply/%s/type", e->d_name);
++         if (read_line(path, buf, sizeof(buf)) && !strcmp(buf, "Battery")) {
++            snprintf(status.battery_dir, sizeof(status.battery_dir),
++                     "/sys/class/power_supply/%s", e->d_name);
++            break;
++         }
++      }
++      if (dir)
++         closedir(dir);
++      if (!status.battery_dir[0])
++         return;
++   }
++
++   char path[320];
++   snprintf(path, sizeof(path), "%s/capacity", status.battery_dir);
++   status.battery = read_line(path, buf, sizeof(buf)) ? atoi(buf) : -1;
++   snprintf(path, sizeof(path), "%s/status", status.battery_dir);
++   if (read_line(path, buf, sizeof(buf))) {
++      status.charging = !strcmp(buf, "Charging");
++      status.full = !strcmp(buf, "Full");
++   }
++}
++
++/* the launcher's icons: speaker and headphones 16x16, battery 24x12 */
++static void
++speaker_icon(unsigned x, unsigned y, const float *c, bool muted)
++{
++   hud_quad(x, y + 5, 4, 6, c);
++   for (unsigned i = 0; i < 6; i++)
++      hud_quad(x + 4 + i, y + 5 - i, 1, 6 + 2 * i, c);
++   if (muted) {
++      for (unsigned i = 0; i < 8; i++) {
++         hud_quad(x + 11 + i * 5 / 7, y + 4 + i, 2, 1, c);
++         hud_quad(x + 11 + i * 5 / 7, y + 11 - i, 2, 1, c);
++      }
++   } else {
++      hud_quad(x + 12, y + 5, 1, 6, c);
++      hud_quad(x + 14, y + 3, 1, 10, c);
++   }
++}
++
++static void
++headphones_icon(unsigned x, unsigned y, const float *c)
++{
++   hud_quad(x + 4, y, 8, 2, c);
++   hud_quad(x + 2, y + 1, 2, 2, c);
++   hud_quad(x + 12, y + 1, 2, 2, c);
++   hud_quad(x, y + 3, 2, 7, c);
++   hud_quad(x + 14, y + 3, 2, 7, c);
++   hud_quad(x, y + 9, 4, 7, c);
++   hud_quad(x + 12, y + 9, 4, 7, c);
++}
++
++static void
++battery_icon(unsigned x, unsigned y, int percent, bool charging, bool full)
++{
++   const float *c = full || (charging && percent >= 100) ? kGreen :
++                    charging ? kYellow : percent <= 10 ? kRed : kGrey;
++
++   hud_quad(x, y, 22, 1, kGrey);
++   hud_quad(x, y + 11, 22, 1, kGrey);
++   hud_quad(x, y, 1, 12, kGrey);
++   hud_quad(x + 21, y, 1, 12, kGrey);
++   hud_quad(x + 22, y + 3, 2, 6, kGrey);
++   if (percent > 0) {
++      unsigned w = 18 * (percent > 100 ? 100 : percent) / 100;
++      hud_quad(x + 2, y + 2, w < 3 ? 3 : w, 8, c);
++   }
++}
++
++static void
++hud_osd_accumulate(struct hud_context *hud)
++{
++   unsigned th = hud_text_height(hud);
++   unsigned h = 10 + th + 31;
++   unsigned x = (hud->fb_width > OSD_W ? hud->fb_width - OSD_W : 0) / 2;
++   unsigned y = status.enabled ? 6 + (th > 16 ? th : 16) + 8 + 8 : 24;   /* below the status bar */
++   unsigned w = hud_text_width(hud, osd.value);
++
++   hud_quad(x, y, OSD_W, 2, kTile);
++   hud_quad(x, y + h - 2, OSD_W, 2, kTile);
++   hud_quad(x, y + 2, 2, h - 4, kTile);
++   hud_quad(x + OSD_W - 2, y + 2, 2, h - 4, kTile);
++   hud_quad(x + 2, y + 2, OSD_W - 4, h - 4, kTranslucent);
++   hud_colored_string(hud, x + OSD_PAD, y + 10, kWhite, osd.label);
++   if (osd.percent >= 0) {
++      unsigned tw = OSD_W - 2 * OSD_PAD;
++      unsigned pct = osd.percent > 100 ? 100 : osd.percent;
++
++      hud_colored_string(hud, x + OSD_W - OSD_PAD - w, y + 10, kYellow, osd.value);
++      hud_quad(x + OSD_PAD, y + h - 20, tw, 8, kTile);
++      if (pct)
++         hud_quad(x + OSD_PAD, y + h - 20, tw * pct / 100, 8, kYellow);
++   } else {
++      hud_colored_string(hud, x + (OSD_W - w) / 2, y + h - 10 - th, kYellow, osd.value);
++   }
++}
++
++static void
++hud_status_accumulate(struct hud_context *hud)
++{
++   char bat[16], vol[16];
++   unsigned th = hud_text_height(hud);
++   unsigned bh = (th > 16 ? th : 16) + 8;
++   unsigned y = 6, x;
++   unsigned bat_w, vol_w = 0, total;
++
++   snprintf(bat, sizeof(bat), status.battery >= 0 ? "%d%%" : "??", status.battery);
++   bat_w = hud_text_width(hud, bat);
++   total = 8 + 28 + bat_w + 8;
++   bool audio = status.volume >= 0 && !status.battery_only;
++   float bg[] = {12 / 255.0, 12 / 255.0, 14 / 255.0, status.opacity};
++   if (audio) {
++      snprintf(vol, sizeof(vol), status.muted ? "mute" : "%d%%", status.volume);
++      vol_w = hud_text_width(hud, vol);
++      total += 22 + vol_w + 14;
++   }
++   x = hud->fb_width - 8 - total;
++
++   if (status.opacity > 0)
++      hud_quad(x, y, total, bh, bg);
++   x += 8;
++   if (audio) {
++      if (status.headphones)
++         headphones_icon(x, y + (bh - 16) / 2, kGrey);
++      else
++         speaker_icon(x, y + (bh - 16) / 2, kGrey, status.muted);
++      x += 22;
++      hud_colored_string(hud, x, y + (bh - th) / 2, kGrey, vol);
++      x += vol_w + 14;
++   }
++   battery_icon(x, y + (bh - 12) / 2, status.battery, status.charging, status.full);
++   x += 28;
++   hud_colored_string(hud, x, y + (bh - th) / 2, kGrey, bat);
++}
++
++static void
++hud_goodluck_accumulate(struct hud_context *hud)
++{
++   int64_t now = os_time_get_nano() / 1000000;
++   const char *env = getenv("GALLIUM_HUD_TEXT_SCALE");
++
++   num_quads = 0;
++   num_text_colors = 0;
++   hud_osd_update(now);
++   hud_status_update(now);
++   if (!hud->fb_width)
++      return;
++
++   text_scale = env ? atof(env) : 1.5;
++   text_background = false;
++   if (status.enabled)
++      hud_status_accumulate(hud);
++   if (osd.visible)
++      hud_osd_accumulate(hud);
++   text_scale = 1;
++   text_background = true;
++}
++
++static void
++hud_draw_quads(struct hud_context *hud)
++{
++   float buffer[MAX_QUADS * 8];
++
++   for (unsigned i = 0; i < num_quads;) {
++      unsigned n = 0, j = i;
++
++      for (; j < num_quads && !memcmp(quads[j].color, quads[i].color, sizeof(quads[i].color)); j++) {
++         float v[] = {
++            quads[j].x1, quads[j].y1, quads[j].x1, quads[j].y2,
++            quads[j].x2, quads[j].y2, quads[j].x2, quads[j].y1,
++         };
++         memcpy(buffer + n * 8, v, sizeof(v));
++         n++;
++      }
++      hud_draw_colored_prims(hud, MESA_PRIM_QUADS, buffer, n * 4, quads[i].color[0],
++                             quads[i].color[1], quads[i].color[2], quads[i].color[3], 0, 0, 1);
++      i = j;
++   }
++}
++
++static void
++hud_draw_text_range(struct hud_context *hud, unsigned first, unsigned count,
++                    const float *color, struct pipe_resource **releasebuf)
++{
++   if (!count)
++      return;
++   hud->constants.color[0] = color[0];
++   hud->constants.color[1] = color[1];
++   hud->constants.color[2] = color[2];
++   hud->constants.color[3] = 1;
++   hud->constants.translate[0] = 0;
++   hud->constants.translate[1] = 0;
++   hud->constants.scale[0] = hud_scale;
++   hud->constants.scale[1] = hud_scale;
++   pipe_resource_release(hud->pipe, *releasebuf);
++   *releasebuf = NULL;
++   pipe_upload_constant_buffer0(hud->pipe, MESA_SHADER_VERTEX, &hud->constbuf, releasebuf);
++   cso_draw_arrays(hud->cso, MESA_PRIM_QUADS, first, count);
++}
++
++static void
+ hud_draw_results(struct hud_context *hud, struct pipe_resource *tex)
+ {
+    struct cso_context *cso = hud->cso;
+@@ -497,8 +881,10 @@
+    struct hud_pane *pane;
+    struct pipe_resource *releasebuf[3] = { 0 };
+ 
+-   if (!huds_visible)
++   if (!huds_visible && !num_quads) {
++      hud->fb_width = tex->width0;
+       return;
++   }
+ 
+    hud->fb_width = tex->width0;
+    hud->fb_height = tex->height0;
+@@ -606,18 +992,29 @@
+    }
+    hud->bg.vbuf.buffer.resource = NULL;
+ 
++   hud_draw_quads(hud);
++
+    /* draw accumulated vertices for text */
+    if (hud->text.num_vertices) {
++      unsigned pos = 0;
++
+       cso_set_vertex_shader_handle(cso, hud->vs_text);
+       cso_set_vertex_elements(cso, &hud->text_velems);
+       cso_set_vertex_buffers(cso, 1, &hud->text.vbuf);
+       cso_set_fragment_shader_handle(hud->cso, hud->fs_text);
+-      cso_draw_arrays(cso, MESA_PRIM_QUADS, 0, hud->text.num_vertices);
++      for (unsigned i = 0; i < num_text_colors; i++) {
++         hud_draw_text_range(hud, pos, text_colors[i].first - pos, kWhite, &releasebuf[2]);
++         hud_draw_text_range(hud, text_colors[i].first, text_colors[i].count,
++                             text_colors[i].color, &releasebuf[2]);
++         pos = text_colors[i].first + text_colors[i].count;
++      }
++      hud_draw_text_range(hud, pos, hud->text.num_vertices - pos, kWhite, &releasebuf[2]);
+       cso_set_vertex_elements(cso, &hud->velems);
++      cso_set_vertex_shader_handle(cso, hud->vs_color);
+    }
+    hud->text.vbuf.buffer.resource = NULL;
+ 
+-   if (hud->simple)
++   if (hud->simple || !huds_visible)
+       goto done;
+ 
+    /* draw accumulated vertices for white lines */
+@@ -745,12 +1142,16 @@
+          }
+       }
+ 
++      if (!huds_visible)
++         continue;
+       if (hud->simple)
+          hud_pane_accumulate_vertices_simple(hud, pane);
+       else
+          hud_pane_accumulate_vertices(hud, pane);
+    }
+ 
++   hud_goodluck_accumulate(hud);
++
+    /* unmap the uploader's vertex buffer before drawing */
+    u_upload_unmap(pipe->stream_uploader);
+ }
+@@ -1774,13 +2175,14 @@
+       static const char *fragment_shader_text = {
+          "FRAG\n"
+          "DCL IN[0], GENERIC[0], LINEAR\n"
++         "DCL IN[1], GENERIC[1], CONSTANT\n"
+          "DCL SAMP[0]\n"
+          "DCL SVIEW[0], 2D, FLOAT\n"
+          "DCL OUT[0], COLOR[0]\n"
+          "DCL TEMP[0]\n"
+ 
+          "TEX TEMP[0], IN[0], SAMP[0], 2D\n"
+-         "MOV OUT[0], TEMP[0].xxxx\n"
++         "MUL OUT[0], TEMP[0].xxxx, IN[1]\n"
+          "END\n"
+       };
+ 
+@@ -1845,6 +2247,7 @@
+          "DCL IN[0..1]\n"
+          "DCL OUT[0], POSITION\n"
+          "DCL OUT[1], GENERIC[0]\n" /* texcoord */
++         "DCL OUT[2], GENERIC[1]\n" /* color */
+          /* [0] = color,
+           * [1] = (2/fb_width, 2/fb_height, xoffset, yoffset)
+           * [2] = (xscale, yscale, 0, 0)
+@@ -1865,6 +2268,7 @@
+          "MOV OUT[0].zw, IMM[0]\n"
+ 
+          "MUL OUT[1], IN[1], IMM[1]\n"
++         "MOV OUT[2], CONST[0][0]\n"
+          "END\n"
+       };
+ 

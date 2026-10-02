@@ -63,8 +63,14 @@ void send_power_request(const std::string& cmd) {
     close(fd);
 }
 
+// The in-game status bar's volume and output (Gallium HUD)
+void update_hud_status() {
+    if (system("/usr/local/bin/hud-status.sh >/dev/null 2>&1 &") != 0) {}
+}
+
 void request_volume_save() {
     send_power_request("save-settings");
+    update_hud_status();
 }
 
 std::string read_line(const std::string& path) {
@@ -152,6 +158,9 @@ const char* HUD_POSITIONS[] = {"top-left", "top-right", "bottom-left", "bottom-r
 const char* HUD_POSITION_NAMES[] = {"Top left", "Top right", "Bottom left", "Bottom right"};
 
 struct HudSettings {
+    bool status = false;
+    bool status_battery_only = false;
+    int status_opacity = 50;
     bool visible = false;
     bool cpu = true;
     bool text = false;
@@ -165,7 +174,10 @@ HudSettings load_hud_settings() {
         size_t eq = line.find('=');
         if (eq == std::string::npos) continue;
         std::string key = line.substr(0, eq), value = line.substr(eq + 1);
-        if (key == "HUD_VISIBLE") hud.visible = value == "true";
+        if (key == "HUD_STATUS") hud.status = value == "true";
+        else if (key == "HUD_STATUS_ITEMS") hud.status_battery_only = value == "battery";
+        else if (key == "HUD_STATUS_OPACITY") hud.status_opacity = std::clamp(atoi(value.c_str()), 0, 100);
+        else if (key == "HUD_VISIBLE") hud.visible = value == "true";
         else if (key == "HUD_ITEMS") hud.cpu = value == "fps,cpu";
         else if (key == "HUD_STYLE") hud.text = value == "text";
         else if (key == "HUD_POSITION") {
@@ -182,7 +194,10 @@ void save_hud_settings(const HudSettings& hud) {
     {
         std::ofstream file(tmp.c_str());
         if (!file.is_open()) return;
-        file << "HUD_VISIBLE=" << (hud.visible ? "true" : "false") << "\n"
+        file << "HUD_STATUS=" << (hud.status ? "true" : "false") << "\n"
+             << "HUD_STATUS_ITEMS=" << (hud.status_battery_only ? "battery" : "all") << "\n"
+             << "HUD_STATUS_OPACITY=" << hud.status_opacity << "\n"
+             << "HUD_VISIBLE=" << (hud.visible ? "true" : "false") << "\n"
              << "HUD_ITEMS=" << (hud.cpu ? "fps,cpu" : "fps") << "\n"
              << "HUD_STYLE=" << (hud.text ? "text" : "graph") << "\n"
              << "HUD_POSITION=" << HUD_POSITIONS[hud.position] << "\n";
@@ -466,6 +481,7 @@ void set_speaker(bool on) {
     if ((elem = snd_mixer_find_selem(handle, sid)) && snd_mixer_selem_has_playback_switch(elem))
         snd_mixer_selem_set_playback_switch_all(elem, on ? 1 : 0);
     snd_mixer_close(handle);
+    update_hud_status();
 }
 
 
@@ -544,16 +560,27 @@ bool level_slider(const char* label, int* value, int min, int max, int step) {
     ImGui::PushStyleColor(ImGuiCol_FrameBgActive, clear);
     ImGui::PushStyleColor(ImGuiCol_SliderGrab, clear);
     ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, clear);
+    // the next step on the min + n * step grid, so 46 goes to 50 or 40
+    auto stepped = [&](int v, int dir) {
+        int k = (v - min) / step;
+        if (dir > 0) k++;
+        else if ((v - min) % step == 0) k--;
+        return std::max(min, std::min(max, min + k * step));
+    };
+    const int before = *value;
     bool changed = ImGui::SliderInt(label, value, min, max, "");
     ImGui::PopStyleColor(5);
     const bool active = ImGui::IsItemActive() || ImGui::IsItemFocused();
+    // editing it after A moves it by 1: same step as when it is only focused
+    if (ImGui::IsItemActive() && *value != before) *value = stepped(before, *value > before ? 1 : -1);
     if (ImGui::IsItemFocused() && !ImGui::IsItemActive()) {
-        int delta = 0;
-        if (ImGui::IsKeyPressed(ImGuiKey_GamepadDpadRight, true) || ImGui::IsKeyPressed(ImGuiKey_RightArrow, true)) delta = step;
-        if (ImGui::IsKeyPressed(ImGuiKey_GamepadDpadLeft, true) || ImGui::IsKeyPressed(ImGuiKey_LeftArrow, true)) delta = -step;
-        int v = std::max(min, std::min(max, *value + delta));
+        int dir = 0;
+        if (ImGui::IsKeyPressed(ImGuiKey_GamepadDpadRight, true) || ImGui::IsKeyPressed(ImGuiKey_RightArrow, true)) dir = 1;
+        if (ImGui::IsKeyPressed(ImGuiKey_GamepadDpadLeft, true) || ImGui::IsKeyPressed(ImGuiKey_LeftArrow, true)) dir = -1;
+        int v = dir ? stepped(*value, dir) : *value;
         if (v != *value) { *value = v; changed = true; }
     }
+    changed = changed && *value != before;
 
     char text[16];
     snprintf(text, sizeof(text), "%d%%", max > 0 ? *value * 100 / max : 0);
@@ -648,7 +675,7 @@ int main(int argc, char* argv[]) {
 
     // The volume/brightness hotkeys change the levels behind our back (triggerhappy scripts): after
     // one is pressed, re-read the levels for a moment so the sliders follow
-    const Uint32 HOTKEY_FOLLOW_MS = 600, HOTKEY_POLL_MS = 100;
+    const Uint32 HOTKEY_FOLLOW_MS = 2200, HOTKEY_POLL_MS = 100;   // until the HUD feedback is gone
     Uint32 follow_until = 0;
 
     // ImGui applies the default focus a couple of frames after the window appears, so render those
@@ -713,8 +740,10 @@ int main(int argc, char* argv[]) {
                 if (event.type == SDL_QUIT) {
                     running = false;
                 }
-                if (event.type == SDL_KEYDOWN &&
-                    (event.key.keysym.sym == SDLK_VOLUMEUP || event.key.keysym.sym == SDLK_VOLUMEDOWN)) {
+                // volume / brightness keys, and FN (FN + DOWN switches the audio output)
+                if ((event.type == SDL_KEYDOWN &&
+                     (event.key.keysym.sym == SDLK_VOLUMEUP || event.key.keysym.sym == SDLK_VOLUMEDOWN)) ||
+                    (event.type == SDL_JOYBUTTONDOWN && event.jbutton.button == 10)) {
                     follow_until = SDL_GetTicks() + HOTKEY_FOLLOW_MS;
                     following = true;
                 }
@@ -820,7 +849,7 @@ int main(int argc, char* argv[]) {
             }
             ImGui::SetItemDefaultFocus();
 
-            if (level_slider(tr("Master Volume"), &current_volume, 0, 100, 5)) {
+            if (level_slider(tr("Master Volume"), &current_volume, 0, 100, 10)) {
                 set_alsa_volume(current_volume);
 
                 if (current_mute && current_volume > 0) {
@@ -922,10 +951,19 @@ int main(int argc, char* argv[]) {
                 }
             }
             ImGui::Spacing();
-            ImGui::Text("%s", tr("Performance overlay"));
+            ImGui::Text("%s", tr("Overlay"));
             ImGui::Separator();
             ImGui::Spacing();
-            bool hud_changed = ImGui::Checkbox(tr("Show on game start"), &hud.visible);
+            bool hud_changed = ImGui::Checkbox(tr("In-game status bar"), &hud.status);
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("%s", tr("Show:"));
+            ImGui::SameLine();
+            if (ImGui::RadioButton(tr("Battery and audio"), !hud.status_battery_only)) { hud.status_battery_only = false; hud_changed = true; }
+            ImGui::SameLine();
+            if (ImGui::RadioButton(tr("Battery only"), hud.status_battery_only)) { hud.status_battery_only = true; hud_changed = true; }
+            hud_changed |= level_slider(tr("Opacity"), &hud.status_opacity, 0, 100, 10);
+            ImGui::TextDisabled("%s", tr("Performance (FN + UP)"));
+            hud_changed |= ImGui::Checkbox(tr("Show on game start"), &hud.visible);
             ImGui::AlignTextToFramePadding();
             ImGui::Text("%s", tr("Content:"));
             ImGui::SameLine();
@@ -954,7 +992,6 @@ int main(int argc, char* argv[]) {
                 }
                 ImGui::EndCombo();
             }
-            ImGui::TextDisabled("%s", tr("FN + UP shows or hides it in game"));
             if (hud_changed) save_hud_settings(hud);
             end_page();
         } else if (page == PAGE_STORAGE) {
