@@ -6,6 +6,7 @@
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_sdlrenderer2.h"
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <fstream>
 #include <string>
@@ -373,7 +374,8 @@ long get_alsa_volume() {
     if (elem) {
         snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
         snd_mixer_selem_get_playback_volume(elem, SND_MIXER_SCHN_FRONT_LEFT, &vol);
-        if (max > min) vol = ((vol - min) * 100) / (max - min);
+        // 64 hardware levels: the nearest multiple of 5 is the level that was asked for
+        if (max > min) vol = std::lround((vol - min) * 20.0 / (max - min)) * 5;
     }
     snd_mixer_close(handle);
     return vol;
@@ -395,7 +397,7 @@ void set_alsa_volume(long volume) {
     snd_mixer_elem_t* elem = snd_mixer_find_selem(handle, sid);
     if (elem) {
         snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
-        long scaled_vol = min + (volume * (max - min)) / 100;
+        long scaled_vol = min + std::lround(volume * (max - min) / 100.0);
         snd_mixer_selem_set_playback_volume_all(elem, scaled_vol);
     }
     snd_mixer_close(handle);

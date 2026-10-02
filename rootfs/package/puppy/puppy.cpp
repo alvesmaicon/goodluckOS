@@ -1478,7 +1478,8 @@ struct Audio {
             snd_mixer_selem_get_playback_volume_range(e, &min, &max);
             snd_mixer_selem_get_playback_volume(e, SND_MIXER_SCHN_FRONT_LEFT, &v);
             if (snd_mixer_selem_has_playback_switch(e)) snd_mixer_selem_get_playback_switch(e, SND_MIXER_SCHN_FRONT_LEFT, &on);
-            volume = max > min ? (int)std::lround((v - min) * 100.0 / (max - min)) : 0;
+            // 64 hardware levels: the nearest multiple of 5 is the level that was asked for
+            volume = max > min ? (int)std::lround((v - min) * 20.0 / (max - min)) * 5 : 0;
             muted = !on || volume == 0;
         }
         snd_mixer_selem_id_set_name(sid, "Speaker");
