@@ -218,3 +218,6 @@ Empty trash (%llu files, %s) = Esvaziar lixeira (%llu arquivos, %s)
 Delete the games in the trash for good? = Apagar de vez os jogos da lixeira?
 Empty = Esvaziar
 Cursor = Cursor
+
+# System Settings sections
+Interface = Interface

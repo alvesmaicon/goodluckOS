@@ -6,6 +6,7 @@
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_sdlrenderer2.h"
 #include <algorithm>
+#include <cfloat>
 #include <cstdio>
 #include <fstream>
 #include <string>
@@ -569,11 +570,23 @@ int main(int argc, char* argv[]) {
     // frames right away instead of waiting for the first input event
     int startup_frames = 3;
 
-    enum Page { PAGE_MAIN, PAGE_SYSTEM, PAGE_INPUT, PAGE_TESTER, PAGE_TABS };
+    // The main page is a menu of sections; each opens its own page
+    enum Page { PAGE_NONE, PAGE_MAIN, PAGE_DISPLAY, PAGE_LAUNCHER, PAGE_INTERFACE, PAGE_STORAGE,
+                PAGE_SYSTEM_MENU, PAGE_SYSTEM, PAGE_INPUT, PAGE_TESTER, PAGE_TABS };
     Page page = PAGE_MAIN;
-    // Coming back from a sub-page puts the focus on the button that opened it
-    bool focus_system_button = false, focus_input_button = false, focus_tester_button = false;
-    bool focus_tabs_button = false, focus_first_tab = false;
+    // Where B / Back goes from each page (PAGE_NONE: leave the app)
+    auto parent_of = [](Page p) {
+        switch (p) {
+            case PAGE_MAIN:   return PAGE_NONE;
+            case PAGE_TABS:   return PAGE_LAUNCHER;
+            case PAGE_SYSTEM: return PAGE_SYSTEM_MENU;
+            case PAGE_TESTER: return PAGE_INPUT;
+            default:          return PAGE_MAIN;
+        }
+    };
+    // Coming back from a page puts the focus on the button that opened it
+    Page focus_opener = PAGE_NONE;
+    bool focus_first_tab = false;
     std::vector<LauncherTab> launcher_tabs = read_launcher_tabs();
     TrashStats trash = trash_stats();
     bool trash_confirm = false, focus_trash_cancel = false;   // "Empty trash" asks before deleting
@@ -654,10 +667,12 @@ int main(int argc, char* argv[]) {
         Page next_page = page;
         if (!editing && (ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false) ||
                          ImGui::IsKeyPressed(ImGuiKey_Escape, false))) {
-            if (page == PAGE_SYSTEM || page == PAGE_INPUT || page == PAGE_TABS) next_page = PAGE_MAIN;
-            else if (page == PAGE_MAIN && trash_confirm) trash_confirm = false;
-            else if (page == PAGE_MAIN) running = false;
-            // PAGE_TESTER: B is one of the buttons being tested, it leaves only when held
+            if (page == PAGE_STORAGE && trash_confirm) trash_confirm = false;
+            else if (page != PAGE_TESTER) {     // the tester: B is a button being tested, it leaves only when held
+                Page up = parent_of(page);
+                if (up == PAGE_NONE) running = false;
+                else next_page = up;
+            }
         }
 
         ImGui::SetNextWindowPos(ImVec2(0, 0));
@@ -666,19 +681,51 @@ int main(int argc, char* argv[]) {
                                         ImGuiWindowFlags_NoMove |
                                         ImGuiWindowFlags_NoSavedSettings;
 
-        if (page == PAGE_MAIN) {
-            ImGui::Begin("Settings", nullptr, window_flags);
-            ImGui::Text("%s", tr("System Settings"));
+        // A page: the title, a part that scrolls following the d-pad selection (NavFlattened: the
+        // d-pad moves between it and Back as if they were one), and Back fixed at the bottom under a line
+        auto begin_page = [&](const char* id, const char* title) {
+            ImGui::Begin(id, nullptr, window_flags);
+            ImGui::Text("%s", tr(title));
             ImGui::Separator();
             ImGui::Spacing();
+            const float back_h = ImGui::GetFrameHeightWithSpacing() + 2 * ImGui::GetStyle().ItemSpacing.y + 1.0f;   // + the line
+            ImGui::BeginChild("page", ImVec2(0, ImGui::GetContentRegionAvail().y - back_h), ImGuiChildFlags_NavFlattened);
+        };
+        auto end_page = [&]() {
+            ImGui::EndChild();
+            ImGui::Separator();   // the scrolling part ends here; Back stays put
+            ImGui::Spacing();
+            if (ImGui::Button(tr("Back"))) {
+                Page up = parent_of(page);
+                if (up == PAGE_NONE) running = false;
+                else next_page = up;
+            }
+            ImGui::End();
+        };
+        // A button that opens another page (wide: the main menu's full-width rows)
+        auto page_button = [&](const char* label, Page target, bool wide) {
+            if (focus_opener == target) {
+                ImGui::SetKeyboardFocusHere();
+                focus_opener = PAGE_NONE;
+            }
+            if (!ImGui::Button(label, ImVec2(wide ? -FLT_MIN : 0.0f, 0.0f))) return false;
+            next_page = target;
+            return true;
+        };
 
-            // The options scroll (bigger fonts don't fit the 480px screen), following the d-pad
-            // selection; Back stays at the bottom. NavFlattened: the d-pad moves between the list and
-            // Back as if they were one.
-            const float back_h = ImGui::GetFrameHeightWithSpacing() + 2 * ImGui::GetStyle().ItemSpacing.y + 1.0f;   // + the separator
-            ImGui::BeginChild("main_list", ImVec2(0, ImGui::GetContentRegionAvail().y - back_h), ImGuiChildFlags_NavFlattened);
-
-            section_headear("Display & Audio");
+        if (page == PAGE_MAIN) {
+            begin_page("Settings", "System Settings");
+            page_button(tr("Display & Audio"), PAGE_DISPLAY, true);
+            ImGui::SetItemDefaultFocus();
+            page_button(tr("Launcher"), PAGE_LAUNCHER, true);
+            page_button(tr("Interface"), PAGE_INTERFACE, true);
+            page_button(tr("Storage"), PAGE_STORAGE, true);
+            page_button(tr("System"), PAGE_SYSTEM_MENU, true);
+            page_button(tr("Input Settings"), PAGE_INPUT, true);
+            // TODO: Date/Time (the RTC has no backup battery, so the clock resets on every boot)
+            end_page();
+        } else if (page == PAGE_DISPLAY) {
+            begin_page("Display", "Display & Audio");
             if (level_slider(tr("Brightness"), &display_brightness, 1, 10, 1)) {
                 set_brightness(display_brightness);
                 brightness_dirty = true;
@@ -702,19 +749,13 @@ int main(int argc, char* argv[]) {
                 volume_dirty = true;
                 last_change = SDL_GetTicks();
             }
-
-            // CPU and launcher options share one section so the page still fits the 480px screen
-            section_headear("Options");
-            if (!info.normal_governor.empty()) {
-                if (ImGui::Checkbox(tr("Performance mode (uses more battery)"), &performance_mode)) {
-                    send_power_request(std::string("set-governor ") +
-                                       (performance_mode ? PERFORMANCE_GOVERNOR : info.normal_governor));
-                }
-            }
-
+            end_page();
+        } else if (page == PAGE_LAUNCHER) {
+            begin_page("Launcher", "Launcher");
             if (ImGui::Checkbox(tr("Show launcher tabs"), &launcher.show_tabs)) {
                 save_launcher_settings(launcher);
             }
+            ImGui::SetItemDefaultFocus();
             ImGui::AlignTextToFramePadding();
             ImGui::Text("%s", tr("Launcher view:"));
             ImGui::SameLine();
@@ -727,19 +768,11 @@ int main(int argc, char* argv[]) {
                 launcher.list_view = true;
                 save_launcher_settings(launcher);
             }
-
-            // Which tabs the launcher shows, next to the other launcher options (the list comes from the launcher, see read_launcher_tabs)
-            if (!launcher_tabs.empty()) {
-                if (focus_tabs_button) {
-                    ImGui::SetKeyboardFocusHere();
-                    focus_tabs_button = false;
-                }
-                if (ImGui::Button(tr("Launcher tabs"))) {
-                    next_page = PAGE_TABS;
-                    focus_first_tab = true;
-                }
-            }
-
+            // Which tabs the launcher shows (the list comes from the launcher, see read_launcher_tabs)
+            if (!launcher_tabs.empty() && page_button(tr("Launcher tabs"), PAGE_TABS, false)) focus_first_tab = true;
+            end_page();
+        } else if (page == PAGE_INTERFACE) {
+            begin_page("Interface", "Interface");
             // Languages come from the files in /usr/share/goodluck/lang (see i18n.h)
             ImGui::AlignTextToFramePadding();
             ImGui::Text("%s", tr("Language:"));
@@ -760,6 +793,7 @@ int main(int argc, char* argv[]) {
                 }
                 ImGui::EndCombo();
             }
+            ImGui::SetItemDefaultFocus();
 
             // Interface font of every app (fonts.h); the launcher picks it up when it comes back
             if (loaded_fonts.size() > 1) {
@@ -783,8 +817,15 @@ int main(int argc, char* argv[]) {
                     ImGui::EndCombo();
                 }
             }
-
+            end_page();
+        } else if (page == PAGE_STORAGE) {
+            begin_page("Storage", "Storage");
+            char usage[96];
+            snprintf(usage, sizeof(usage), tr("%s used of %s"), human_size_kb(info.home_used_kb).c_str(),
+                     human_size_kb(info.home_total_kb).c_str());
+            ImGui::Text("HOME: %s", usage);
             ImGui::Spacing();
+
             // Always offered here (the launcher hides it after the first run); resize-home shows the
             // details and asks before doing anything. It reformats HOME after backing it up to the RAM
             // disk, so it only works while HOME is still nearly empty (right after flashing).
@@ -796,6 +837,7 @@ int main(int argc, char* argv[]) {
                 running = false;
             }
             ImGui::EndDisabled();
+            ImGui::SetItemDefaultFocus();
             if (can_grow && !fits) {
                 ImGui::TextWrapped("%s", tr("Too much data in HOME to resize. Resize right after flashing, before copying games."));
             }
@@ -825,31 +867,18 @@ int main(int argc, char* argv[]) {
                     }
                 }
             }
-
-            if (focus_system_button) {
-                ImGui::SetKeyboardFocusHere();
-                focus_system_button = false;
+            end_page();
+        } else if (page == PAGE_SYSTEM_MENU) {
+            begin_page("SystemMenu", "System");
+            if (!info.normal_governor.empty()) {
+                if (ImGui::Checkbox(tr("Performance mode (uses more battery)"), &performance_mode)) {
+                    send_power_request(std::string("set-governor ") +
+                                       (performance_mode ? PERFORMANCE_GOVERNOR : info.normal_governor));
+                }
+                ImGui::SetItemDefaultFocus();
             }
-            if (ImGui::Button(tr("System Info"))) {
-                info = gather_system_info();
-                next_page = PAGE_SYSTEM;
-            }
-            if (focus_input_button) {
-                ImGui::SetKeyboardFocusHere();
-                focus_input_button = false;
-            }
-            if (ImGui::Button(tr("Input Settings"))) {
-                next_page = PAGE_INPUT;
-            }
-            // TODO: Date/Time (the RTC has no backup battery, so the clock resets on every boot)
-            ImGui::EndChild();
-
-            ImGui::Separator();   // the scrolling part ends here; the buttons below stay put
-            ImGui::Spacing();
-            if (ImGui::Button(tr("Back"))) {
-                running = false;
-            }
-            ImGui::End();
+            if (page_button(tr("System Info"), PAGE_SYSTEM, false)) info = gather_system_info();
+            end_page();
         } else if (page == PAGE_INPUT) {
             ImGui::Begin("Input", nullptr, window_flags);
             ImGui::Text("%s", tr("Input Settings"));
@@ -890,14 +919,9 @@ int main(int argc, char* argv[]) {
 
             ImGui::Separator();   // the scrolling part ends here; the buttons below stay put
             ImGui::Spacing();
-            if (focus_tester_button) {
-                ImGui::SetKeyboardFocusHere();
-                focus_tester_button = false;
-            }
-            if (ImGui::Button(tr("Button Tester"))) {
+            if (page_button(tr("Button Tester"), PAGE_TESTER, false)) {
                 last_button = -1;
                 b_hold_start = 0;
-                next_page = PAGE_TESTER;
             }
             ImGui::SetItemDefaultFocus();
             ImGui::SameLine();
@@ -937,7 +961,7 @@ int main(int argc, char* argv[]) {
 
             ImGui::Separator();   // the scrolling part ends here; the buttons below stay put
             ImGui::Spacing();
-            if (ImGui::Button(tr("Back"))) next_page = PAGE_MAIN;
+            if (ImGui::Button(tr("Back"))) next_page = PAGE_LAUNCHER;
             ImGui::End();
         } else if (page == PAGE_TESTER) {
             ImGui::Begin("Tester", nullptr, window_flags);
@@ -994,11 +1018,8 @@ int main(int argc, char* argv[]) {
             ImGui::ProgressBar(hold, ImVec2(-1.0f, 0.0f), tr("Hold B to go back"));
             if (hold >= 1.0f) next_page = PAGE_INPUT;
             ImGui::End();
-        } else {
-            ImGui::Begin("System", nullptr, window_flags);
-            ImGui::Text("%s", tr("System Info"));
-            ImGui::Separator();
-            ImGui::Spacing();
+        } else if (page == PAGE_SYSTEM) {
+            begin_page("System", "System Info");
 
             char value[160];
             auto row = [&](const char* label, const char* text) {
@@ -1036,19 +1057,11 @@ int main(int argc, char* argv[]) {
                 }
                 ImGui::EndTable();
             }
-
-            ImGui::Spacing();
-            if (ImGui::Button(tr("Back"))) {
-                next_page = PAGE_MAIN;
-            }
-            ImGui::End();
+            end_page();
         }
 
         if (next_page != page) {
-            if (page == PAGE_SYSTEM) focus_system_button = true;
-            if (page == PAGE_INPUT && next_page == PAGE_MAIN) focus_input_button = true;
-            if (page == PAGE_TESTER) focus_tester_button = true;
-            if (page == PAGE_TABS) focus_tabs_button = true;
+            if (next_page == parent_of(page)) focus_opener = page;
             page = next_page;
             startup_frames = 3;
         }
