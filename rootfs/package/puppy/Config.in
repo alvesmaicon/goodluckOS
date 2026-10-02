@@ -1,6 +1,7 @@
 config BR2_PACKAGE_PUPPY
 	bool "puppy"
 	depends on BR2_INSTALL_LIBSTDCPP # C++ is required
+	select BR2_PACKAGE_ALSA_LIB
 	select BR2_PACKAGE_SDL2
 	select BR2_PACKAGE_SDL2_IMAGE
 	select BR2_PACKAGE_SDL2_TTF

@@ -56,6 +56,10 @@ Brightness = Brilho
 Volume = Volume
 Muted = Mudo
 muted = mudo
+Audio output = Saída de áudio
+Speaker = Alto-falante
+Headphones = Fone de ouvido
+Audio output: = Saída de áudio:
 
 # --- Power options
 Power options = Opções de energia
@@ -136,6 +140,7 @@ Screen off / on = Desliga / liga a tela
 Close the app = Fecha o app
 Force close the app = Força o fechamento do app
 FPS / CPU overlay = Indicador de FPS / CPU
+Speaker / headphones = Alto-falante / fone
 Launcher = Launcher
 Previous / next tab = Aba anterior / próxima
 D-pad / left stick = D-pad / analógico esq.
