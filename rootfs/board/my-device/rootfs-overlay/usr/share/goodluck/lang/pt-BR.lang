@@ -196,3 +196,7 @@ Could not create resize-home flag file: %s = Não foi possível criar o arquivo 
 Could not remove request flag: %s = Não foi possível remover o pedido: %s
 Request flag was not found (it may have already been removed). = O pedido não foi encontrado (talvez já tenha sido removido).
 Failed to reboot. Does this app have permission to run 'doas reboot'? = Falha ao reiniciar. Este app tem permissão para reiniciar o aparelho?
+
+# Launcher tabs (System Settings)
+Launcher tabs = Abas do launcher
+Unticked tabs are hidden; their games still show in All Games and My List. = As abas desmarcadas ficam ocultas; os jogos delas continuam em Todos os Jogos e Minha Lista.

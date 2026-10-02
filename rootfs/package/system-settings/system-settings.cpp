@@ -100,6 +100,7 @@ struct LauncherSettings {
     bool list_view = false;
     std::string language = "en";
     std::string font;           // fonts.h key, "" = not chosen (Inter)
+    std::vector<std::string> hidden_tabs;   // "hidden_tab=<name>" lines: tabs left out of the launcher's strip
 };
 
 LauncherSettings load_launcher_settings() {
@@ -112,6 +113,7 @@ LauncherSettings load_launcher_settings() {
         else if (line == "tabs=on") s.show_tabs = true;
         else if (line.compare(0, 9, "language=") == 0 && line.size() > 9) s.language = line.substr(9);
         else if (line.compare(0, 5, "font=") == 0 && line.size() > 5) s.font = line.substr(5);
+        else if (line.compare(0, 11, "hidden_tab=") == 0 && line.size() > 11) s.hidden_tabs.push_back(line.substr(11));
     }
     return s;
 }
@@ -124,13 +126,14 @@ void save_launcher_settings(const LauncherSettings& s) {
         for (std::string line; std::getline(file, line);) {
             if (line.compare(0, 5, "view=") != 0 && line.compare(0, 5, "tabs=") != 0 &&
                 line.compare(0, 9, "language=") != 0 && line.compare(0, 5, "font=") != 0 &&
-                !line.empty()) lines.push_back(line);
+                line.compare(0, 11, "hidden_tab=") != 0 && !line.empty()) lines.push_back(line);
         }
     }
     lines.push_back(std::string("view=") + (s.list_view ? "list" : "grid"));
     lines.push_back(std::string("tabs=") + (s.show_tabs ? "on" : "off"));
     lines.push_back("language=" + s.language);
     if (!s.font.empty()) lines.push_back("font=" + s.font);
+    for (const auto& t : s.hidden_tabs) lines.push_back("hidden_tab=" + t);
 
     mkdir("/home/player/.config", 0755);
     mkdir(LAUNCHER_SETTINGS_DIR, 0755);
@@ -141,6 +144,25 @@ void save_launcher_settings(const LauncherSettings& s) {
         for (const auto& line : lines) file << line << "\n";
     }
     rename(tmp.c_str(), LAUNCHER_SETTINGS_FILE);
+}
+
+// The launcher's tabs, written by Puppy as "name<TAB>label" lines.
+struct LauncherTab {
+    std::string name, label;
+};
+
+std::vector<LauncherTab> read_launcher_tabs() {
+    std::vector<LauncherTab> tabs;
+    std::ifstream file((std::string(LAUNCHER_SETTINGS_DIR) + "/tabs").c_str());
+    for (std::string line; std::getline(file, line);) {
+        size_t tab = line.find('\t');
+        if (tab == std::string::npos || tab == 0) continue;
+        LauncherTab t;
+        t.name = line.substr(0, tab);
+        t.label = line.substr(tab + 1);
+        tabs.push_back(t);
+    }
+    return tabs;
 }
 
 const char* HOME_MOUNT = "/home/player";
@@ -505,10 +527,12 @@ int main(int argc, char* argv[]) {
     // frames right away instead of waiting for the first input event
     int startup_frames = 3;
 
-    enum Page { PAGE_MAIN, PAGE_SYSTEM, PAGE_INPUT, PAGE_TESTER };
+    enum Page { PAGE_MAIN, PAGE_SYSTEM, PAGE_INPUT, PAGE_TESTER, PAGE_TABS };
     Page page = PAGE_MAIN;
     // Coming back from a sub-page puts the focus on the button that opened it
     bool focus_system_button = false, focus_input_button = false, focus_tester_button = false;
+    bool focus_tabs_button = false, focus_first_tab = false;
+    std::vector<LauncherTab> launcher_tabs = read_launcher_tabs();
     SDL_Joystick* joystick = controller ? SDL_GameControllerGetJoystick(controller) : nullptr;
     int last_button = -1;
     Uint32 b_hold_start = 0;
@@ -586,7 +610,7 @@ int main(int argc, char* argv[]) {
         Page next_page = page;
         if (!editing && (ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false) ||
                          ImGui::IsKeyPressed(ImGuiKey_Escape, false))) {
-            if (page == PAGE_SYSTEM || page == PAGE_INPUT) next_page = PAGE_MAIN;
+            if (page == PAGE_SYSTEM || page == PAGE_INPUT || page == PAGE_TABS) next_page = PAGE_MAIN;
             else if (page == PAGE_MAIN) running = false;
             // PAGE_TESTER: B is one of the buttons being tested, it leaves only when held
         }
@@ -657,6 +681,18 @@ int main(int argc, char* argv[]) {
             if (ImGui::RadioButton(tr("List"), launcher.list_view)) {
                 launcher.list_view = true;
                 save_launcher_settings(launcher);
+            }
+
+            // Which tabs the launcher shows, next to the other launcher options (the list comes from the launcher, see read_launcher_tabs)
+            if (!launcher_tabs.empty()) {
+                if (focus_tabs_button) {
+                    ImGui::SetKeyboardFocusHere();
+                    focus_tabs_button = false;
+                }
+                if (ImGui::Button(tr("Launcher tabs"))) {
+                    next_page = PAGE_TABS;
+                    focus_first_tab = true;
+                }
             }
 
             // Languages come from the files in /usr/share/goodluck/lang (see i18n.h)
@@ -796,6 +832,39 @@ int main(int argc, char* argv[]) {
                 next_page = PAGE_MAIN;
             }
             ImGui::End();
+        } else if (page == PAGE_TABS) {
+            ImGui::Begin("Tabs", nullptr, window_flags);
+            ImGui::Text("%s", tr("Launcher tabs"));
+            ImGui::Separator();
+            ImGui::TextWrapped("%s", tr("Unticked tabs are hidden; their games still show in All Games and My List."));
+            ImGui::Spacing();
+
+            const float back_h = ImGui::GetFrameHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y;
+            ImGui::BeginChild("tab_list", ImVec2(0, ImGui::GetContentRegionAvail().y - back_h), ImGuiChildFlags_NavFlattened);
+            for (size_t i = 0; i < launcher_tabs.size(); ++i) {
+                const LauncherTab& t = launcher_tabs[i];
+                std::vector<std::string>& hidden = launcher.hidden_tabs;
+                std::vector<std::string>::iterator it = std::find(hidden.begin(), hidden.end(), t.name);
+                bool shown = it == hidden.end();
+                std::string label = tr(t.label);
+                if (t.label != t.name) label += std::string("  (") + tr(t.name) + ")";
+                ImGui::PushID((int)i);
+                if (i == 0 && focus_first_tab) {
+                    ImGui::SetKeyboardFocusHere();
+                    focus_first_tab = false;
+                }
+                if (ImGui::Checkbox(label.c_str(), &shown)) {
+                    if (shown) hidden.erase(it);
+                    else hidden.push_back(t.name);
+                    save_launcher_settings(launcher);
+                }
+                ImGui::PopID();
+            }
+            ImGui::EndChild();
+
+            ImGui::Spacing();
+            if (ImGui::Button(tr("Back"))) next_page = PAGE_MAIN;
+            ImGui::End();
         } else if (page == PAGE_TESTER) {
             ImGui::Begin("Tester", nullptr, window_flags);
             ImGui::Text("%s", tr("Button Tester"));
@@ -905,6 +974,7 @@ int main(int argc, char* argv[]) {
             if (page == PAGE_SYSTEM) focus_system_button = true;
             if (page == PAGE_INPUT && next_page == PAGE_MAIN) focus_input_button = true;
             if (page == PAGE_TESTER) focus_tester_button = true;
+            if (page == PAGE_TABS) focus_tabs_button = true;
             page = next_page;
             startup_frames = 3;
         }

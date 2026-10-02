@@ -53,6 +53,7 @@ struct Config {
     std::string settingsFile() const  { return configDir + "/settings"; }
     std::string favoritesFile() const { return configDir + "/favorites"; }   // "category<TAB>id" lines
     std::string thumbDir() const      { return cacheDir + "/thumbs"; }
+    std::string tabsFile() const      { return configDir + "/tabs"; }    // the tabs System Settings lists
 };
 static Config cfg;
 
@@ -339,6 +340,7 @@ struct Category {
     int sel = 0;                // position in 'visible'
     mutable int scroll = 0;     // first list row / grid row on screen, kept in view by the renderer
     mutable int tagColumn = -1; // list view: width of the system tag column (-1: to be measured)
+    bool hidden = false;        // left out of the tab strip (System Settings); still in All Games / My List
 };
 
 enum class View { Grid, List };
@@ -409,8 +411,12 @@ struct Model {
     void switchTab(int delta) {
         descScroll = 0;
         int n = (int)categories.size();
-        if (n > 0) tab = ((tab + delta) % n + n) % n;
+        for (int i = 0; i < n; ++i) {   // skipping hidden tabs
+            tab = ((tab + delta) % n + n) % n;
+            if (!categories[tab].hidden) break;
+        }
     }
+
 
     void moveSel(int delta) {
         descScroll = 0;
@@ -1136,8 +1142,31 @@ static void loadSettings(Model& m) {
         else if (line == "view=grid") m.view = View::Grid;
         else if (line == "tabs=off") m.showTabs = false;
         else if (line == "tabs=on") m.showTabs = true;
+        else if (line.compare(0, 11, "hidden_tab=") == 0) {    // System Settings -> Launcher tabs
+            const std::string name = line.substr(11);
+            for (auto& c : m.categories)
+                if (!c.mixed && c.name == name) c.hidden = true;
+        }
     }
 }
+
+// The tabs System Settings offers to hide, as "name<TAB>label" lines (rewritten only when they change).
+static void writeTabsList(const Model& m) {
+    std::string text;
+    for (const auto& c : m.categories)
+        if (!c.mixed) text += c.name + "\t" + c.label + "\n";
+    {
+        std::ifstream in(cfg.tabsFile(), std::ios::binary);
+        const std::string old((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+        if (old == text) return;
+    }
+    std::error_code ec;
+    fs::create_directories(cfg.configDir, ec);
+    const std::string tmp = cfg.tabsFile() + ".tmp";
+    { std::ofstream out(tmp, std::ios::binary); if (!out) return; out << text; }
+    fs::rename(tmp, cfg.tabsFile(), ec);
+}
+
 
 static int readBattery() {
     std::error_code ec;
@@ -1495,13 +1524,21 @@ private:
         sideTriangle(kScreenW - kMargin - 4, top + kTabsH / 2, 4, false, kGrey);
         const int left = kMargin + arrowW + 6, right = kScreenW - kMargin - arrowW - 6;
 
-        const int n = (int)m.categories.size();
+        // The ring holds the tabs that aren't hidden (System Settings -> Launcher tabs)
+        std::vector<int> order;
+        for (int t = 0; t < (int)m.categories.size(); ++t)
+            if (!m.categories[t].hidden || t == m.tab) order.push_back(t);
+        const int n = (int)order.size();
+        int pos = 0;
+        for (int i = 0; i < n; ++i)
+            if (order[i] == m.tab) pos = i;
+        auto at = [&](int i) { return order[((pos + i) % n + n) % n]; };   // i tabs right of the current one
         const int gap = 18, pad = 8;
         auto width = [&](int t) { return textWidth(smallFont, tr(m.categories[t].label)) + 2 * pad; };
 
         // Slide: start the new tab where it was drawn before the switch and ease it to the centre
-        if (lastTab >= 0 && lastTab != m.tab && lastTab < n) {
-            int dir = (lastTab + 1) % n == m.tab ? 1 : ((m.tab + 1) % n == lastTab ? -1 : 0);
+        if (lastTab >= 0 && lastTab != m.tab && lastTab < (int)m.categories.size()) {
+            int dir = at(-1) == lastTab ? 1 : (at(1) == lastTab ? -1 : 0);
             tabOffset += dir * (width(lastTab) / 2.0f + gap + width(m.tab) / 2.0f);
         }
         lastTab = m.tab;
@@ -1529,14 +1566,14 @@ private:
         for (int i = 1; used < n; ++i) {
             bool placed = false;
             if (xr < right && used < n) {
-                int t = (m.tab + i) % n;
+                int t = at(i);
                 drawTab(t, xr);
                 xr += width(t) + gap;
                 ++used;
                 placed = true;
             }
             if (xl > left && used < n) {
-                int t = ((m.tab - i) % n + n) % n;
+                int t = at(-i);
                 xl -= width(t);
                 drawTab(t, xl);
                 xl -= gap;
@@ -2006,8 +2043,10 @@ int main(int argc, char** argv) {
     }
 
     loadSettings(model);
+    writeTabsList(model);
     model.applyFilter();
     restoreCursor(model);
+    if (model.cur().hidden) model.tab = 0;   // All Games
     {
         std::string cat, name;
         if (readAutoStartId(cat, name)) { model.autoCategory = cat; model.autoName = name; }
