@@ -6,7 +6,6 @@
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_sdlrenderer2.h"
 #include <algorithm>
-#include <cfloat>
 #include <cstdio>
 #include <fstream>
 #include <string>
@@ -702,26 +701,26 @@ int main(int argc, char* argv[]) {
             }
             ImGui::End();
         };
-        // A button that opens another page (wide: the main menu's full-width rows)
-        auto page_button = [&](const char* label, Page target, bool wide) {
+        // A button that opens another page
+        auto page_button = [&](const char* label, Page target) {
             if (focus_opener == target) {
                 ImGui::SetKeyboardFocusHere();
                 focus_opener = PAGE_NONE;
             }
-            if (!ImGui::Button(label, ImVec2(wide ? -FLT_MIN : 0.0f, 0.0f))) return false;
+            if (!ImGui::Button(label)) return false;
             next_page = target;
             return true;
         };
 
         if (page == PAGE_MAIN) {
             begin_page("Settings", "System Settings");
-            page_button(tr("Display & Audio"), PAGE_DISPLAY, true);
+            page_button(tr("Display & Audio"), PAGE_DISPLAY);
             ImGui::SetItemDefaultFocus();
-            page_button(tr("Launcher"), PAGE_LAUNCHER, true);
-            page_button(tr("Interface"), PAGE_INTERFACE, true);
-            page_button(tr("Storage"), PAGE_STORAGE, true);
-            page_button(tr("System"), PAGE_SYSTEM_MENU, true);
-            page_button(tr("Input Settings"), PAGE_INPUT, true);
+            page_button(tr("Launcher"), PAGE_LAUNCHER);
+            page_button(tr("Interface"), PAGE_INTERFACE);
+            page_button(tr("Storage"), PAGE_STORAGE);
+            page_button(tr("System"), PAGE_SYSTEM_MENU);
+            page_button(tr("Input Settings"), PAGE_INPUT);
             // TODO: Date/Time (the RTC has no backup battery, so the clock resets on every boot)
             end_page();
         } else if (page == PAGE_DISPLAY) {
@@ -769,7 +768,7 @@ int main(int argc, char* argv[]) {
                 save_launcher_settings(launcher);
             }
             // Which tabs the launcher shows (the list comes from the launcher, see read_launcher_tabs)
-            if (!launcher_tabs.empty() && page_button(tr("Launcher tabs"), PAGE_TABS, false)) focus_first_tab = true;
+            if (!launcher_tabs.empty() && page_button(tr("Launcher tabs"), PAGE_TABS)) focus_first_tab = true;
             end_page();
         } else if (page == PAGE_INTERFACE) {
             begin_page("Interface", "Interface");
@@ -877,7 +876,7 @@ int main(int argc, char* argv[]) {
                 }
                 ImGui::SetItemDefaultFocus();
             }
-            if (page_button(tr("System Info"), PAGE_SYSTEM, false)) info = gather_system_info();
+            if (page_button(tr("System Info"), PAGE_SYSTEM)) info = gather_system_info();
             end_page();
         } else if (page == PAGE_INPUT) {
             ImGui::Begin("Input", nullptr, window_flags);
@@ -919,7 +918,7 @@ int main(int argc, char* argv[]) {
 
             ImGui::Separator();   // the scrolling part ends here; the buttons below stay put
             ImGui::Spacing();
-            if (page_button(tr("Button Tester"), PAGE_TESTER, false)) {
+            if (page_button(tr("Button Tester"), PAGE_TESTER)) {
                 last_button = -1;
                 b_hold_start = 0;
             }
