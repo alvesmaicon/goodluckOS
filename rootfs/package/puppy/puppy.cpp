@@ -1427,12 +1427,18 @@ static void writeTabsList(const Model& m) {
     fs::rename(tmp, cfg.tabsFile(), ec);
 }
 
+static bool batteryCharging = false;
+
 static int readBattery() {
     std::error_code ec;
+    batteryCharging = false;
     for (fs::directory_iterator it("/sys/class/power_supply", ec), end; !ec && it != end; it.increment(ec)) {
         std::ifstream typeFile(it->path() / "type");
         std::string type;
         if (!(typeFile >> type) || type != "Battery") continue;
+        std::ifstream statusFile(it->path() / "status");
+        std::string status;
+        batteryCharging = (statusFile >> status) && status == "Charging";
         std::ifstream capFile(it->path() / "capacity");
         int cap;
         if (capFile >> cap) return std::clamp(cap, 0, 100);
@@ -1806,6 +1812,13 @@ private:
         }
     }
 
+    // 24x12, yellow while charging
+    void batteryIcon(int x, int y, int percent, bool charging) {
+        frame(kGrey, {x, y, 22, 12}, 1);
+        fill(kGrey, {x + 22, y + 3, 2, 6});
+        if (percent > 0) fill(charging ? kYellow : kGrey, {x + 2, y + 2, std::max(1, 18 * std::min(percent, 100) / 100), 8});
+    }
+
     void headphonesIcon(int x, int y, SDL_Color c) {
         fill(c, {x + 4, y, 8, 2});
         fill(c, {x + 2, y + 1, 2, 2});
@@ -1822,18 +1835,18 @@ private:
         const int nameY = (kHeaderH - TTF_FontHeight(uiFont)) / 2;
 
         std::string bat = battery >= 0 ? std::to_string(battery) + "%" : "??";
-        int batX = kScreenW - kMargin - textWidth(uiFont, bat);
-        drawText(renderer, uiFont, bat, batX, nameY, kGrey);
+        int statusX = kScreenW - kMargin - textWidth(uiFont, bat);
+        drawText(renderer, uiFont, bat, statusX, nameY, kGrey);
+        statusX -= 30;
+        batteryIcon(statusX, (kHeaderH - 12) / 2, battery, batteryCharging);
 
-        int statusX = batX;
         if (audio.volume >= 0) {
             std::string vol = audio.muted ? tr("muted") : std::to_string(audio.volume) + "%";
-            int x = batX - 18 - textWidth(uiFont, vol);
-            drawText(renderer, uiFont, vol, x, nameY, kGrey);
-            x -= 24;
-            if (audio.headphones) headphonesIcon(x, (kHeaderH - 16) / 2, kWhite);
-            else speakerIcon(x, (kHeaderH - 16) / 2, kWhite, audio.muted);
-            statusX = x;
+            statusX -= 18 + textWidth(uiFont, vol);
+            drawText(renderer, uiFont, vol, statusX, nameY, kGrey);
+            statusX -= 24;
+            if (audio.headphones) headphonesIcon(statusX, (kHeaderH - 16) / 2, kGrey);
+            else speakerIcon(statusX, (kHeaderH - 16) / 2, kGrey, audio.muted);
         }
 
         // "686 games", or "12 of 686 games" while searching
@@ -2152,11 +2165,15 @@ private:
         frame(kTile, panel, 2);
 
         if (osd.kind == "output") {
-            std::string value = tr(osd.flag == "headphones" ? "Headphones" : "Speaker");
-            drawText(renderer, descFont, tr("Audio output"), panel.x + pad, panel.y + 8, kWhite);
-            drawText(renderer, descFont, value, panel.x + w - pad - textWidth(descFont, value), panel.y + 8, kYellow);
-            if (osd.flag == "headphones") headphonesIcon(panel.x + pad, panel.y + h - 26, kYellow);
-            else speakerIcon(panel.x + pad, panel.y + h - 26, kYellow, false);
+            const bool hp = osd.flag == "headphones";
+            const std::string value = tr(hp ? "Headphones" : "Speaker");
+            drawText(renderer, descFont, tr("Audio output"), panel.x + pad, panel.y + 6, kWhite, w - 2 * pad);
+            const int rowY = panel.y + h - 8 - TTF_FontHeight(descFont);
+            const int x = panel.x + (w - 16 - 8 - textWidth(descFont, value)) / 2;
+            const int iconY = rowY + (TTF_FontHeight(descFont) - 16) / 2;
+            if (hp) headphonesIcon(x, iconY, kYellow);
+            else speakerIcon(x, iconY, kYellow, false);
+            drawText(renderer, descFont, value, x + 24, rowY, kYellow);
             return;
         }
 
