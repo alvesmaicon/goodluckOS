@@ -409,7 +409,7 @@ int main(int argc, char* argv[]) {
     ImGui::GetStyle().FontScaleMain = 1.65;
     i18n::loadConfigured();
     // The interface font chosen in System Settings
-    const fonts::Font& ui_font = fonts::current();
+    const fonts::Font& ui_font = fonts::current(false);
     if (fonts::available(ui_font))
         ImGui::GetIO().Fonts->AddFontFromFileTTF(fonts::path(ui_font).c_str(), 13.0f * ui_font.scale);
 

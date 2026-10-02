@@ -1977,9 +1977,9 @@ int main(int argc, char** argv) {
     i18n::settingsPath() = cfg.settingsFile();
     if (!cfg.language.empty()) i18n::load(cfg.language);
     else i18n::loadConfigured();
-    // the font chosen in System Settings, from the folder of puppy.conf's font
+    // the font chosen in System Settings, from the folder of puppy.conf's font ("original": that one)
     fonts::dirPath() = fs::path(cfg.font).parent_path().string();
-    if (!fonts::configuredKey().empty()) {
+    if (fonts::find(fonts::configuredKey()).file) {
         const fonts::Font& f = fonts::find(fonts::configuredKey());
         if (fonts::available(f)) {
             cfg.font = fonts::path(f);

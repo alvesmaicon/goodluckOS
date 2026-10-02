@@ -453,7 +453,7 @@ int main(int argc, char* argv[]) {
     std::vector<int> font_choices;          // indexes in fonts::all() of the fonts that are there
     std::vector<ImFont*> loaded_fonts;
     for (size_t i = 0; i < fonts::all().size(); ++i) {
-        const fonts::Font& f = fonts::all()[i];
+        const fonts::Font& f = fonts::forApp(fonts::all()[i], false);
         if (!fonts::available(f)) continue;
         ImFont* font = ImGui::GetIO().Fonts->AddFontFromFileTTF(fonts::path(f).c_str(), 13.0f * f.scale);
         if (!font) continue;
@@ -462,7 +462,7 @@ int main(int argc, char* argv[]) {
     }
     int current_font = 0;   // in font_choices
     for (size_t i = 0; i < font_choices.size(); ++i)
-        if (&fonts::all()[font_choices[i]] == &fonts::current()) current_font = (int)i;
+        if (&fonts::all()[font_choices[i]] == &fonts::find(fonts::configuredKey())) current_font = (int)i;
     if (!loaded_fonts.empty()) ImGui::GetIO().FontDefault = loaded_fonts[current_font];
     int pending_font = -1;  // switched before the next frame
     ImGuiIO& io = ImGui::GetIO(); (void)io;
