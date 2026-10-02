@@ -1840,17 +1840,18 @@ private:
         const Category& c = m.cur();
         const int nameY = (kHeaderH - TTF_FontHeight(uiFont)) / 2;
 
+        const int statusY = (kHeaderH - TTF_FontHeight(smallFont)) / 2;
         std::string bat = battery >= 0 ? std::to_string(battery) + "%" : "??";
-        int statusX = kScreenW - kMargin - textWidth(uiFont, bat);
-        drawText(renderer, uiFont, bat, statusX, nameY, kGrey);
-        statusX -= 30;
+        int statusX = kScreenW - kMargin - textWidth(smallFont, bat);
+        drawText(renderer, smallFont, bat, statusX, statusY, kGrey);
+        statusX -= 28;
         batteryIcon(statusX, (kHeaderH - 12) / 2, battery, batteryCharging, batteryFull);
 
         if (audio.volume >= 0) {
             std::string vol = audio.muted ? tr("muted") : std::to_string(audio.volume) + "%";
-            statusX -= 18 + textWidth(uiFont, vol);
-            drawText(renderer, uiFont, vol, statusX, nameY, kGrey);
-            statusX -= 24;
+            statusX -= 14 + textWidth(smallFont, vol);
+            drawText(renderer, smallFont, vol, statusX, statusY, kGrey);
+            statusX -= 22;
             if (audio.headphones) headphonesIcon(statusX, (kHeaderH - 16) / 2, kGrey);
             else speakerIcon(statusX, (kHeaderH - 16) / 2, kGrey, audio.muted);
         }
