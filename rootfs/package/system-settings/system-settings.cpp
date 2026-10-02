@@ -414,6 +414,13 @@ void set_speaker(bool on) {
     snd_mixer_elem_t* elem = snd_mixer_find_selem(handle, sid);
     if (elem && snd_mixer_selem_has_playback_switch(elem))
         snd_mixer_selem_set_playback_switch_all(elem, on ? 1 : 0);
+    // the speaker's high-pass filter, as audio-output.sh sets it
+    snd_mixer_selem_id_set_name(sid, "DAC High-Pass Filter Cutoff");
+    if (on && (elem = snd_mixer_find_selem(handle, sid)) && snd_mixer_selem_is_enumerated(elem))
+        snd_mixer_selem_set_enum_item(elem, SND_MIXER_SCHN_FRONT_LEFT, 4);   // 500 Hz
+    snd_mixer_selem_id_set_name(sid, "DAC High-Pass Filter");
+    if ((elem = snd_mixer_find_selem(handle, sid)) && snd_mixer_selem_has_playback_switch(elem))
+        snd_mixer_selem_set_playback_switch_all(elem, on ? 1 : 0);
     snd_mixer_close(handle);
 }
 
