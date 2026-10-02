@@ -38,6 +38,7 @@ Please Note: At the time of writing, Allwinner-A23 based GA36-MB devices (which 
 - Translatable interface, with English and Brazilian Portuguese included (see [Translations](#translations))
 - Autostart any application on boot, including games or a front-end like EmulationStation (coming soon)
 - USB terminal access for remote debugging. Log in with `sudo screen /dev/ttyACM* 115200` and `root:root`
+- HOME shows up on your PC over USB (MTP), like a phone: copy games and saves without taking the SD card out
 - Half Life 1 ported and playable: [Get It Here](https://github.com/CodeZombie/glOSports-half-life)
 
 ### Features In Development
@@ -46,7 +47,6 @@ Please Note: At the time of writing, Allwinner-A23 based GA36-MB devices (which 
 - USB Networking
 - Headphone support
 - GA36-MB TF-2 support (If the hardware supports it)
-- Mount device storage via USB
 - CPU overclocking
 - Improve performance of PPSSPP emulator core. 
 - Portable Puppy for other firmwares (see below; config file, es_systems.cfg support and runner done)
@@ -185,7 +185,9 @@ Stock firmware:
 6. [optional] Select the `Resize Home` application in the launcher (or in System Settings) to expand your HOME partition to fill all the remaining space on your SD card. Do it before copying your games: HOME is backed up to RAM while it's resized. You only need to do this once, after that it's hidden from the launcher.
 
 ## How do I add games?
-Plug the SD card into your PC and open up the HOME partition. In there you'll find a `roms` folder with a few subfolders for each system. Add your roms to those.
+Plug the console into your PC with a USB cable and open `GA36MB -> HOME` (Windows: This PC; Linux: your file manager; macOS needs an MTP app such as [OpenMTP](https://openmtp.ganeshrvel.com/)). Or plug the SD card into your PC and open up the HOME partition. In there you'll find a `roms` folder with a few subfolders for each system. Add your roms to those.
+
+If the console was connected to a charger when it booted (no PC), restart it before plugging it into a PC to get MTP; the serial console works either way. Games copied while Puppy is open show up after you reopen it.
 
 Already have a scraped collection (e.g. made with [Skraper](https://www.skraper.net/) for EmulationStation)? Copy it as it is, `gamelist.xml` and `media` folder included: Puppy reads them.
 
