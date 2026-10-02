@@ -1434,6 +1434,17 @@ private:
         SDL_RenderGeometry(renderer, nullptr, v, 3, nullptr, 0);
     }
 
+    // Pointing left or right; drawn rather than a text arrow, which not every font has.
+    void sideTriangle(int cx, int cy, int r, bool left, SDL_Color c) {
+        SDL_Vertex v[3];
+        const float d = left ? -1.0f : 1.0f;
+        v[0].position = {cx + d * r, (float)cy};
+        v[1].position = {cx - d * r, (float)(cy - r)};
+        v[2].position = {cx - d * r, (float)(cy + r)};
+        for (auto& vert : v) { vert.color = c; vert.tex_coord = {0, 0}; }
+        SDL_RenderGeometry(renderer, nullptr, v, 3, nullptr, 0);
+    }
+
     int wrappedHeight(TTF_Font* font, const std::string& text, int width) {
         if (!font || text.empty()) return 0;
         SDL_Surface* s = TTF_RenderUTF8_Blended_Wrapped(font, text.c_str(), kWhite, width);
@@ -1479,9 +1490,9 @@ private:
         const int pillY = top + (kTabsH - pillH) / 2;
 
         // Arrows at the ends: the tabs wrap around in both directions
-        const int arrowW = textWidth(smallFont, "\u2039") + 6;
-        drawText(renderer, smallFont, "\u2039", kMargin, pillY + 2, kGrey);
-        drawText(renderer, smallFont, "\u203a", kScreenW - kMargin - arrowW + 6, pillY + 2, kGrey);
+        const int arrowW = 12;
+        sideTriangle(kMargin + 4, top + kTabsH / 2, 4, true, kGrey);
+        sideTriangle(kScreenW - kMargin - 4, top + kTabsH / 2, 4, false, kGrey);
         const int left = kMargin + arrowW + 6, right = kScreenW - kMargin - arrowW - 6;
 
         const int n = (int)m.categories.size();

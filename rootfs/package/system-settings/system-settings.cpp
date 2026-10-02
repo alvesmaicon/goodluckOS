@@ -448,8 +448,8 @@ int main(int argc, char* argv[]) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     i18n::loadConfigured();
-    // Interface fonts (ImGui's built-in one has no accented letters): every available one is loaded,
-    // so the Font option switches right away; the chosen one is the default
+    // Interface fonts: every available one is loaded, so the Font option switches right away; the
+    // chosen one is the default
     std::vector<int> font_choices;          // indexes in fonts::all() of the fonts that are there
     std::vector<ImFont*> loaded_fonts;
     for (size_t i = 0; i < fonts::all().size(); ++i) {

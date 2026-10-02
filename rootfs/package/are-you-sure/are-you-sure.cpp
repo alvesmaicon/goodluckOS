@@ -76,7 +76,7 @@ int main(int argc, char* argv[]) {
     i18n::loadConfigured();
     message = i18n::tr(message);
     if (done_message) done_message = i18n::tr(done_message);
-    // The interface font chosen in System Settings (ImGui's built-in one has no accented letters)
+    // The interface font chosen in System Settings
     const fonts::Font& ui_font = fonts::current();
     if (fonts::available(ui_font))
         ImGui::GetIO().Fonts->AddFontFromFileTTF(fonts::path(ui_font).c_str(), 13.0f * ui_font.scale);

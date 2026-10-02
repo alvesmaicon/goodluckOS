@@ -25,6 +25,7 @@ inline const std::vector<Font>& all() {
         {"inter", "Inter", "Inter_24pt-Medium.ttf", 1.0f},
         {"vt323", "VT323", "VT323-Regular.ttf", 1.2f},
         {"pixelify", "Pixelify Sans", "PixelifySans-VF.ttf", 1.05f},
+        {"proggy", "ProggyClean", "ProggyClean.ttf", 1.0f},     // ImGui's own font, as System Settings had
     };
     return fonts;
 }

@@ -408,7 +408,7 @@ int main(int argc, char* argv[]) {
     ImGui_ImplSDLRenderer2_Init(renderer);
     ImGui::GetStyle().FontScaleMain = 1.65;
     i18n::loadConfigured();
-    // The interface font chosen in System Settings (ImGui's built-in one has no accented letters)
+    // The interface font chosen in System Settings
     const fonts::Font& ui_font = fonts::current();
     if (fonts::available(ui_font))
         ImGui::GetIO().Fonts->AddFontFromFileTTF(fonts::path(ui_font).c_str(), 13.0f * ui_font.scale);

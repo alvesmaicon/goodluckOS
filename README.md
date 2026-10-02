@@ -135,9 +135,9 @@ FN is the hotkey:
 The same list is in System Settings -> Input Settings, next to a button tester.
 
 ## System Settings
-Opened with START from the launcher. It has brightness, volume and mute, a performance mode (keeps the CPU at full speed, uses more battery), the launcher options (tabs, grid or list view), the interface language, the interface font (Inter, or the retro VT323 and Pixelify Sans, used by every app), `Resize Home`, a System Info page and Input Settings, with the list of every shortcut and a button tester. Changes are saved as soon as you make them. The page scrolls with the d-pad when it doesn't fit the screen.
+Opened with START from the launcher. It has brightness, volume and mute, a performance mode (keeps the CPU at full speed, uses more battery), the launcher options (tabs, grid or list view), the interface language, the interface font (Inter, or the retro ProggyClean, VT323 and Pixelify Sans, used by every app), `Resize Home`, a System Info page and Input Settings, with the list of every shortcut and a button tester. Changes are saved as soon as you make them. The page scrolls with the d-pad when it doesn't fit the screen.
 
-VT323 and Pixelify Sans are under the SIL Open Font License; their license files are next to them in `/usr/share/fonts`.
+VT323 and Pixelify Sans are under the SIL Open Font License and ProggyClean under the MIT License; their license files are next to them in `/usr/share/fonts`.
 
 ![System Settings](docs/screenshots/system-settings.png)
 
