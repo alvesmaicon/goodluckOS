@@ -115,6 +115,13 @@
 		"Speaker", "Speaker",
 		"Headphone", "Headphone Jack";
 
+	/*
+	 * There is no jack detection (no GPIO changes when headphones go in), and the speaker
+	 * amp is fed from the headphone output, so both play. "Speaker Switch" lets userspace
+	 * turn the speaker off.
+	 */
+	simple-audio-card,pin-switches = "Speaker";
+
 	simple-audio-card,routing =
         "Left DAC", "DACL",
 		"Right DAC", "DACR",
