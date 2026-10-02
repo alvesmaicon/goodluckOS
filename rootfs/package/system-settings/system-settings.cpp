@@ -63,8 +63,14 @@ void send_power_request(const std::string& cmd) {
     close(fd);
 }
 
+// The in-game status bar's volume and output (Gallium HUD)
+void update_hud_status() {
+    if (system("/usr/local/bin/hud-status.sh >/dev/null 2>&1 &") != 0) {}
+}
+
 void request_volume_save() {
     send_power_request("save-settings");
+    update_hud_status();
 }
 
 std::string read_line(const std::string& path) {
@@ -469,6 +475,7 @@ void set_speaker(bool on) {
     if ((elem = snd_mixer_find_selem(handle, sid)) && snd_mixer_selem_has_playback_switch(elem))
         snd_mixer_selem_set_playback_switch_all(elem, on ? 1 : 0);
     snd_mixer_close(handle);
+    update_hud_status();
 }
 
 
@@ -651,7 +658,7 @@ int main(int argc, char* argv[]) {
 
     // The volume/brightness hotkeys change the levels behind our back (triggerhappy scripts): after
     // one is pressed, re-read the levels for a moment so the sliders follow
-    const Uint32 HOTKEY_FOLLOW_MS = 600, HOTKEY_POLL_MS = 100;
+    const Uint32 HOTKEY_FOLLOW_MS = 2200, HOTKEY_POLL_MS = 100;   // until the HUD feedback is gone
     Uint32 follow_until = 0;
 
     // ImGui applies the default focus a couple of frames after the window appears, so render those
@@ -716,8 +723,10 @@ int main(int argc, char* argv[]) {
                 if (event.type == SDL_QUIT) {
                     running = false;
                 }
-                if (event.type == SDL_KEYDOWN &&
-                    (event.key.keysym.sym == SDLK_VOLUMEUP || event.key.keysym.sym == SDLK_VOLUMEDOWN)) {
+                // volume / brightness keys, and FN (FN + DOWN switches the audio output)
+                if ((event.type == SDL_KEYDOWN &&
+                     (event.key.keysym.sym == SDLK_VOLUMEUP || event.key.keysym.sym == SDLK_VOLUMEDOWN)) ||
+                    (event.type == SDL_JOYBUTTONDOWN && event.jbutton.button == 10)) {
                     follow_until = SDL_GetTicks() + HOTKEY_FOLLOW_MS;
                     following = true;
                 }
