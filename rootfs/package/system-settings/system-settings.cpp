@@ -560,16 +560,27 @@ bool level_slider(const char* label, int* value, int min, int max, int step) {
     ImGui::PushStyleColor(ImGuiCol_FrameBgActive, clear);
     ImGui::PushStyleColor(ImGuiCol_SliderGrab, clear);
     ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, clear);
+    // the next step on the min + n * step grid, so 46 goes to 50 or 40
+    auto stepped = [&](int v, int dir) {
+        int k = (v - min) / step;
+        if (dir > 0) k++;
+        else if ((v - min) % step == 0) k--;
+        return std::max(min, std::min(max, min + k * step));
+    };
+    const int before = *value;
     bool changed = ImGui::SliderInt(label, value, min, max, "");
     ImGui::PopStyleColor(5);
     const bool active = ImGui::IsItemActive() || ImGui::IsItemFocused();
+    // editing it after A moves it by 1: same step as when it is only focused
+    if (ImGui::IsItemActive() && *value != before) *value = stepped(before, *value > before ? 1 : -1);
     if (ImGui::IsItemFocused() && !ImGui::IsItemActive()) {
-        int delta = 0;
-        if (ImGui::IsKeyPressed(ImGuiKey_GamepadDpadRight, true) || ImGui::IsKeyPressed(ImGuiKey_RightArrow, true)) delta = step;
-        if (ImGui::IsKeyPressed(ImGuiKey_GamepadDpadLeft, true) || ImGui::IsKeyPressed(ImGuiKey_LeftArrow, true)) delta = -step;
-        int v = std::max(min, std::min(max, *value + delta));
+        int dir = 0;
+        if (ImGui::IsKeyPressed(ImGuiKey_GamepadDpadRight, true) || ImGui::IsKeyPressed(ImGuiKey_RightArrow, true)) dir = 1;
+        if (ImGui::IsKeyPressed(ImGuiKey_GamepadDpadLeft, true) || ImGui::IsKeyPressed(ImGuiKey_LeftArrow, true)) dir = -1;
+        int v = dir ? stepped(*value, dir) : *value;
         if (v != *value) { *value = v; changed = true; }
     }
+    changed = changed && *value != before;
 
     char text[16];
     snprintf(text, sizeof(text), "%d%%", max > 0 ? *value * 100 / max : 0);
@@ -838,7 +849,7 @@ int main(int argc, char* argv[]) {
             }
             ImGui::SetItemDefaultFocus();
 
-            if (level_slider(tr("Master Volume"), &current_volume, 0, 100, 5)) {
+            if (level_slider(tr("Master Volume"), &current_volume, 0, 100, 10)) {
                 set_alsa_volume(current_volume);
 
                 if (current_mute && current_volume > 0) {
