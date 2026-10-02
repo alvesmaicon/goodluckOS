@@ -686,7 +686,7 @@ int main(int argc, char* argv[]) {
 
     // The main page is a menu of sections; each opens its own page
     enum Page { PAGE_NONE, PAGE_MAIN, PAGE_DISPLAY, PAGE_LAUNCHER, PAGE_INTERFACE, PAGE_STORAGE,
-                PAGE_SYSTEM_MENU, PAGE_SYSTEM, PAGE_INPUT, PAGE_TESTER, PAGE_TABS };
+                PAGE_SYSTEM_MENU, PAGE_SYSTEM, PAGE_INPUT, PAGE_TESTER, PAGE_TABS, PAGE_OVERLAY };
     Page page = PAGE_MAIN;
     // Where B / Back goes from each page (PAGE_NONE: leave the app)
     auto parent_of = [](Page p) {
@@ -837,6 +837,7 @@ int main(int argc, char* argv[]) {
             ImGui::SetItemDefaultFocus();
             page_button(tr("Launcher"), PAGE_LAUNCHER);
             page_button(tr("Interface"), PAGE_INTERFACE);
+            page_button(tr("Overlay"), PAGE_OVERLAY);
             page_button(tr("Storage"), PAGE_STORAGE);
             page_button(tr("System"), PAGE_SYSTEM_MENU);
             page_button(tr("Input Settings"), PAGE_INPUT);
@@ -952,11 +953,11 @@ int main(int argc, char* argv[]) {
                     ImGui::EndCombo();
                 }
             }
-            ImGui::Spacing();
-            ImGui::Text("%s", tr("Overlay"));
-            ImGui::Separator();
-            ImGui::Spacing();
+            end_page();
+        } else if (page == PAGE_OVERLAY) {
+            begin_page("Overlay", "Overlay");
             bool hud_changed = ImGui::Checkbox(tr("In-game status bar"), &hud.status);
+            ImGui::SetItemDefaultFocus();
             ImGui::AlignTextToFramePadding();
             ImGui::Text("%s", tr("Show:"));
             ImGui::SameLine();
@@ -964,6 +965,7 @@ int main(int argc, char* argv[]) {
             ImGui::SameLine();
             if (ImGui::RadioButton(tr("Battery only"), hud.status_battery_only)) { hud.status_battery_only = true; hud_changed = true; }
             hud_changed |= level_slider(tr("Opacity"), &hud.status_opacity, 0, 100, 10);
+            ImGui::Spacing();
             ImGui::TextDisabled("%s", tr("Performance (FN + UP)"));
             hud_changed |= ImGui::Checkbox(tr("Show on game start"), &hud.visible);
             ImGui::AlignTextToFramePadding();
