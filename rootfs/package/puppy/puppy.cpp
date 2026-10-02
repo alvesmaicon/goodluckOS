@@ -117,6 +117,7 @@ constexpr SDL_Color kGrey   {170, 170, 170, 255};
 constexpr SDL_Color kBlack  {0, 0, 0, 255};
 constexpr SDL_Color kYellow {255, 205, 60, 255};
 constexpr SDL_Color kRed    {230, 60, 50, 255};
+constexpr SDL_Color kGreen  {80, 200, 90, 255};
 constexpr SDL_Color kTile   {40, 40, 44, 255};
 constexpr SDL_Color kRowSel {56, 56, 64, 255};
 constexpr SDL_Color kBar    {12, 12, 14, 255};
@@ -1428,18 +1429,20 @@ static void writeTabsList(const Model& m) {
     fs::rename(tmp, cfg.tabsFile(), ec);
 }
 
-static bool batteryCharging = false;
+static bool batteryCharging = false, batteryFull = false;
 
 static int readBattery() {
     std::error_code ec;
-    batteryCharging = false;
+    batteryCharging = batteryFull = false;
     for (fs::directory_iterator it("/sys/class/power_supply", ec), end; !ec && it != end; it.increment(ec)) {
         std::ifstream typeFile(it->path() / "type");
         std::string type;
         if (!(typeFile >> type) || type != "Battery") continue;
         std::ifstream statusFile(it->path() / "status");
         std::string status;
-        batteryCharging = (statusFile >> status) && status == "Charging";
+        statusFile >> status;
+        batteryCharging = status == "Charging";
+        batteryFull = status == "Full";
         std::ifstream capFile(it->path() / "capacity");
         int cap;
         if (capFile >> cap) return std::clamp(cap, 0, 100);
@@ -1813,15 +1816,13 @@ private:
         }
     }
 
-    static bool batteryLow(int percent, bool charging) { return !charging && percent >= 0 && percent <= 10; }
-
-    // 24x12, yellow while charging, red at 10% or less
-    void batteryIcon(int x, int y, int percent, bool charging) {
-        const SDL_Color outline = batteryLow(percent, charging) ? kRed : kGrey;
-        frame(outline, {x, y, 22, 12}, 1);
-        fill(outline, {x + 22, y + 3, 2, 6});
-        const SDL_Color c = charging ? kYellow : outline;
-        if (percent > 0) fill(c, {x + 2, y + 2, std::max(1, 18 * std::min(percent, 100) / 100), 8});
+    // 24x12: green when full, yellow while charging, red at 10% or less
+    void batteryIcon(int x, int y, int percent, bool charging, bool full) {
+        frame(kGrey, {x, y, 22, 12}, 1);
+        fill(kGrey, {x + 22, y + 3, 2, 6});
+        const SDL_Color c = full || (charging && percent >= 100) ? kGreen
+                          : charging ? kYellow : percent <= 10 ? kRed : kGrey;
+        if (percent > 0) fill(c, {x + 2, y + 2, std::max(3, 18 * std::min(percent, 100) / 100), 8});
     }
 
     void headphonesIcon(int x, int y, SDL_Color c) {
@@ -1841,9 +1842,9 @@ private:
 
         std::string bat = battery >= 0 ? std::to_string(battery) + "%" : "??";
         int statusX = kScreenW - kMargin - textWidth(uiFont, bat);
-        drawText(renderer, uiFont, bat, statusX, nameY, batteryLow(battery, batteryCharging) ? kRed : kGrey);
+        drawText(renderer, uiFont, bat, statusX, nameY, kGrey);
         statusX -= 30;
-        batteryIcon(statusX, (kHeaderH - 12) / 2, battery, batteryCharging);
+        batteryIcon(statusX, (kHeaderH - 12) / 2, battery, batteryCharging, batteryFull);
 
         if (audio.volume >= 0) {
             std::string vol = audio.muted ? tr("muted") : std::to_string(audio.volume) + "%";
