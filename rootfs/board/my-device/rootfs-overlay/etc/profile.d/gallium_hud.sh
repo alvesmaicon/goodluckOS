@@ -2,6 +2,7 @@ HUD_VISIBLE=false
 HUD_ITEMS=fps,cpu
 HUD_STYLE=graph
 HUD_POSITION=top-left
+HUD_STATUS=false
 [ -f /home/player/.config/gallium_hud.conf ] && . /home/player/.config/gallium_hud.conf
 
 hud_x=10
@@ -18,4 +19,5 @@ fi
 export GALLIUM_HUD
 export GALLIUM_HUD_VISIBLE=$HUD_VISIBLE
 export GALLIUM_HUD_TOGGLE_SIGNAL=34
-unset HUD_VISIBLE HUD_ITEMS HUD_STYLE HUD_POSITION hud_x hud_y
+export GALLIUM_HUD_STATUS=$HUD_STATUS
+unset HUD_VISIBLE HUD_ITEMS HUD_STYLE HUD_POSITION HUD_STATUS hud_x hud_y

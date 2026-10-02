@@ -2404,6 +2404,7 @@ static bool loadConfig(int argc, char** argv) {
 }
 
 int main(int argc, char** argv) {
+    unsetenv("GALLIUM_HUD_STATUS");     // the top bar already shows it
     if (!loadConfig(argc, argv)) return 2;
     i18n::langDirPath() = cfg.langDir;
     i18n::settingsPath() = cfg.settingsFile();

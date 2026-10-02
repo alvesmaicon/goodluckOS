@@ -152,6 +152,7 @@ const char* HUD_POSITIONS[] = {"top-left", "top-right", "bottom-left", "bottom-r
 const char* HUD_POSITION_NAMES[] = {"Top left", "Top right", "Bottom left", "Bottom right"};
 
 struct HudSettings {
+    bool status = false;
     bool visible = false;
     bool cpu = true;
     bool text = false;
@@ -165,7 +166,8 @@ HudSettings load_hud_settings() {
         size_t eq = line.find('=');
         if (eq == std::string::npos) continue;
         std::string key = line.substr(0, eq), value = line.substr(eq + 1);
-        if (key == "HUD_VISIBLE") hud.visible = value == "true";
+        if (key == "HUD_STATUS") hud.status = value == "true";
+        else if (key == "HUD_VISIBLE") hud.visible = value == "true";
         else if (key == "HUD_ITEMS") hud.cpu = value == "fps,cpu";
         else if (key == "HUD_STYLE") hud.text = value == "text";
         else if (key == "HUD_POSITION") {
@@ -182,7 +184,8 @@ void save_hud_settings(const HudSettings& hud) {
     {
         std::ofstream file(tmp.c_str());
         if (!file.is_open()) return;
-        file << "HUD_VISIBLE=" << (hud.visible ? "true" : "false") << "\n"
+        file << "HUD_STATUS=" << (hud.status ? "true" : "false") << "\n"
+             << "HUD_VISIBLE=" << (hud.visible ? "true" : "false") << "\n"
              << "HUD_ITEMS=" << (hud.cpu ? "fps,cpu" : "fps") << "\n"
              << "HUD_STYLE=" << (hud.text ? "text" : "graph") << "\n"
              << "HUD_POSITION=" << HUD_POSITIONS[hud.position] << "\n";
@@ -922,10 +925,12 @@ int main(int argc, char* argv[]) {
                 }
             }
             ImGui::Spacing();
-            ImGui::Text("%s", tr("Performance overlay"));
+            ImGui::Text("%s", tr("Overlay"));
             ImGui::Separator();
             ImGui::Spacing();
-            bool hud_changed = ImGui::Checkbox(tr("Show on game start"), &hud.visible);
+            bool hud_changed = ImGui::Checkbox(tr("In-game status bar"), &hud.status);
+            ImGui::TextDisabled("%s", tr("Performance (FN + UP)"));
+            hud_changed |= ImGui::Checkbox(tr("Show on game start"), &hud.visible);
             ImGui::AlignTextToFramePadding();
             ImGui::Text("%s", tr("Content:"));
             ImGui::SameLine();
@@ -954,7 +959,6 @@ int main(int argc, char* argv[]) {
                 }
                 ImGui::EndCombo();
             }
-            ImGui::TextDisabled("%s", tr("FN + UP shows or hides it in game"));
             if (hud_changed) save_hud_settings(hud);
             end_page();
         } else if (page == PAGE_STORAGE) {

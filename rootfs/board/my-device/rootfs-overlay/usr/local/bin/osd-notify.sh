@@ -10,6 +10,7 @@ kind=$1
 pct=$2
 
 echo "$kind $pct $3" > /dev/shm/osd.tmp && mv /dev/shm/osd.tmp /dev/shm/osd
+[ "$kind" = brightness ] || /usr/local/bin/hud-status.sh
 
 ascii() {
     printf '%s' "$1" | sed 's/á/a/g; s/à/a/g; s/â/a/g; s/ã/a/g; s/é/e/g; s/ê/e/g; s/í/i/g;
