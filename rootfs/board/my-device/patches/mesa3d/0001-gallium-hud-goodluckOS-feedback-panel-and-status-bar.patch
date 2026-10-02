@@ -10,8 +10,8 @@ Both use the launcher's colors and icons. Text can now have a color and a
 scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
 
 ---
---- a/src/gallium/auxiliary/hud/hud_context.c	2026-10-02 18:51:38.215237430 -0300
-+++ b/src/gallium/auxiliary/hud/hud_context.c	2026-10-02 18:51:38.216470046 -0300
+--- a/src/gallium/auxiliary/hud/hud_context.c	2026-10-02 19:55:44.437618385 -0300
++++ b/src/gallium/auxiliary/hud/hud_context.c	2026-10-02 19:55:44.438653979 -0300
 @@ -68,6 +68,9 @@
  #include "util/u_upload_mgr.h"
  #include "tgsi/tgsi_text.h"
@@ -463,9 +463,11 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
  hud_draw_results(struct hud_context *hud, struct pipe_resource *tex)
  {
     struct cso_context *cso = hud->cso;
-@@ -497,8 +881,10 @@
+@@ -496,9 +880,12 @@
+          { &hud->font_sampler_state };
     struct hud_pane *pane;
     struct pipe_resource *releasebuf[3] = { 0 };
++   struct pipe_resource *vertex_buffer = NULL;
  
 -   if (!huds_visible)
 +   if (!huds_visible && !num_quads) {
@@ -475,10 +477,12 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
  
     hud->fb_width = tex->width0;
     hud->fb_height = tex->height0;
-@@ -606,18 +992,29 @@
+@@ -606,18 +993,31 @@
     }
     hud->bg.vbuf.buffer.resource = NULL;
  
++   /* uploading the quads can retire the buffer that holds the text and lines */
++   pipe_resource_reference(&vertex_buffer, hud->text.vbuf.buffer.resource);
 +   hud_draw_quads(hud);
 +
     /* draw accumulated vertices for text */
@@ -507,7 +511,15 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
        goto done;
  
     /* draw accumulated vertices for white lines */
-@@ -745,12 +1142,16 @@
+@@ -650,6 +1050,7 @@
+    }
+ 
+ done:
++   pipe_resource_reference(&vertex_buffer, NULL);
+    pipe_resource_release(pipe, releasebuf[2]);
+    pipe_resource_release(pipe, releasebuf[1]);
+    pipe_resource_release(pipe, releasebuf[0]);
+@@ -745,12 +1146,16 @@
           }
        }
  
@@ -524,7 +536,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
     /* unmap the uploader's vertex buffer before drawing */
     u_upload_unmap(pipe->stream_uploader);
  }
-@@ -1774,13 +2175,14 @@
+@@ -1774,13 +2179,14 @@
        static const char *fragment_shader_text = {
           "FRAG\n"
           "DCL IN[0], GENERIC[0], LINEAR\n"
@@ -540,7 +552,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
           "END\n"
        };
  
-@@ -1845,6 +2247,7 @@
+@@ -1845,6 +2251,7 @@
           "DCL IN[0..1]\n"
           "DCL OUT[0], POSITION\n"
           "DCL OUT[1], GENERIC[0]\n" /* texcoord */
@@ -548,7 +560,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
           /* [0] = color,
            * [1] = (2/fb_width, 2/fb_height, xoffset, yoffset)
            * [2] = (xscale, yscale, 0, 0)
-@@ -1865,6 +2268,7 @@
+@@ -1865,6 +2272,7 @@
           "MOV OUT[0].zw, IMM[0]\n"
  
           "MUL OUT[1], IN[1], IMM[1]\n"
