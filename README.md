@@ -28,7 +28,7 @@ Please Note: At the time of writing, Allwinner-A23 based GA36-MB devices (which 
 - Brightness, volume and CPU mode are kept across reboots
 - SELECT+START closes the active application cleanly (RetroArch saves first), bringing you right back to the launcher
 - FN+START+SELECT force-kills the active application
-- FN+DPAD_UP toggles a live FPS/CPU graph for monitoring in-game performance. What it shows, its style and its corner are set in System Settings -> Interface -> Performance overlay.
+- FN+DPAD_UP toggles a live FPS/CPU graph for monitoring in-game performance. What it shows, its style and its corner are set in System Settings -> Overlay.
 - FN+DPAD_DOWN switches the sound between the speaker and the headphones only
 - If the screen is on, the LEDs are off. Nothing blinding you while you're playing in the dark
 - Comes stock with Chocolate Doom, ready to play
@@ -156,16 +156,16 @@ System Settings
 │   └── Launcher tabs ─ which tabs to show
 ├── Interface
 │   ├── Language
-│   ├── Font
-│   └── Overlay
-│       ├── In-game status bar
-│       │   ├── Show: Battery and audio / Battery only
-│       │   └── Opacity
-│       └── Performance (FN + UP)
-│           ├── Show on game start
-│           ├── Content: FPS / FPS + CPU
-│           ├── Style: Graph / Text
-│           └── Position: top or bottom, left or right
+│   └── Font
+├── Overlay
+│   ├── In-game status bar
+│   ├── Show: Battery and audio / Battery only
+│   ├── Opacity
+│   └── Performance (FN + UP)
+│       ├── Show on game start
+│       ├── Content: FPS / FPS + CPU
+│       ├── Style: Graph / Text
+│       └── Position: top or bottom, left or right
 ├── Storage
 │   ├── HOME usage
 │   ├── Resize Home
@@ -193,8 +193,8 @@ VT323 and Pixelify Sans are under the SIL Open Font License and ProggyClean unde
 | Main page | Display & Audio |
 | --- | --- |
 | ![System Settings](docs/screenshots/system-settings.png) | ![Display & Audio](docs/screenshots/system-settings-audio.png) |
-| Interface | In-game status bar |
-| ![Interface](docs/screenshots/system-settings-overlay.png) | ![In-game status bar](docs/screenshots/status-bar.png) |
+| Overlay | In-game status bar |
+| ![Overlay](docs/screenshots/system-settings-overlay.png) | ![In-game status bar](docs/screenshots/status-bar.png) |
 | Performance overlay in game (FN + D-pad up) | |
 | ![Performance overlay in game](docs/screenshots/performance-overlay.png) | |
 
