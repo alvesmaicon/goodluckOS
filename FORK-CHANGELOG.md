@@ -2,15 +2,15 @@
 
 What this fork ([alvesmaicon/goodluckOS](https://github.com/alvesmaicon/goodluckOS), branch `develop`) adds on top of [CodeZombie/goodluckOS](https://github.com/CodeZombie/goodluckOS) `main`, and where each change stands on its way upstream.
 
-> [!WARNING]
-> **Everything here is under review and testing.** Most of it has only run on one GA36-MB v1.1 (A33), and none of it is part of an official goodluckOS release. It was written with an AI coding assistant and is still being reviewed line by line.
+> [!IMPORTANT]
+> **This is not a goodluckOS distribution.** For goodluckOS, use the official project: [CodeZombie/goodluckOS](https://github.com/CodeZombie/goodluckOS).
 >
-> If you want to try this early version, go ahead, **at your own risk**. There is no prebuilt image: build it from `develop` (see [BUILD.md](BUILD.md)), and back up your whole SD card first. Report problems on this fork, not upstream.
+> This fork is my personal workspace. I use it to improve my own console (a GA36-MB v1.1, A33) and to prepare contributions, which I offer upstream as small pull requests, only the ones Jeremy wants. It is not meant to compete with goodluckOS or to be installed by anyone else: there are no releases or images here, and none are planned. Everything in it was written with an AI coding assistant (Claude Code), has only run on my device, and is still being reviewed.
 
 Status:
 
 - **Merged upstream**: in CodeZombie/goodluckOS `main`.
-- **Waiting for a PR**: done and tested here; the pull request isn't open yet. Changes go upstream as small, separate PRs, in the order below.
+- **Waiting for a PR**: done and tested here; the pull request isn't open yet. Changes go upstream as small, separate PRs, only if Jeremy wants them.
 - **Fork only**: not meant for upstream.
 
 ## Merged upstream
