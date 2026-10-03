@@ -649,7 +649,7 @@ bool number_stepper(const char* label, int* value, int min, int max, const char*
     char text[32];
     if (hour12) snprintf(text, sizeof(text), "%02d %s", *value % 12 ? *value % 12 : 12, *value < 12 ? "AM" : "PM");
     else snprintf(text, sizeof(text), format, *value);
-    ImGui::Button((std::string("< ") + text + " >##" + label).c_str(), ImVec2(ImGui::GetFontSize() * 6.0f, 0));
+    ImGui::Button((std::string("< ") + text + " >###" + label).c_str(), ImVec2(ImGui::GetFontSize() * 6.0f, 0));
     bool changed = false;
     if (ImGui::IsItemFocused()) {
         int dir = 0;
