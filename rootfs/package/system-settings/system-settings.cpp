@@ -1113,8 +1113,6 @@ int main(int argc, char* argv[]) {
                 strftime(now_text, sizeof(now_text), fmt.c_str(), &tm);
                 ImGui::Text("%s %s", tr("Now:"), now_text);
             }
-            ImGui::Spacing();
-            ImGui::TextDisabled("%s", tr("Launcher and in-game status bar"));
             bool shown_changed = ImGui::Checkbox(tr("Show date"), &hud.date);
             ImGui::SetItemDefaultFocus();
             shown_changed |= ImGui::Checkbox(tr("Show time"), &hud.time);
