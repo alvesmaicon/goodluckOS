@@ -24,7 +24,8 @@ Please Note: At the time of writing, Allwinner-A23 based GA36-MB devices (which 
 - No swap on SD card (massively improves the life of your card over the stock f/w)
 - Built-in `Resize Home` app which grows your HOME partition to fill all the available space on your microSD card.
 - Volume buttons change the volume and FN+Vol the screen brightness from anywhere, with a level bar shown over whatever is on screen: the launcher, the settings or any game
-- Optional in-game status bar with the battery, the volume and the audio output, over any game
+- Optional in-game status bar with the date and time, the battery, the volume and the audio output, over any game
+- Date and time with a time zone, kept while the console is off, shown in the launcher and the status bar (12/24-hour, several date formats)
 - Brightness, volume and CPU mode are kept across reboots
 - SELECT+START closes the active application cleanly (RetroArch saves first), bringing you right back to the launcher
 - FN+START+SELECT force-kills the active application
@@ -35,7 +36,7 @@ Please Note: At the time of writing, Allwinner-A23 based GA36-MB devices (which 
 - Comes stock with Retroarch and several optimized cores (PCSX-ReArmed, Snes9x, QuickNES, DOSbox, Genesis Plus GX, mGBA, etc)
 - Games perform very well. Metal Gear Solid 1 is completely playable at reasonable framerates
 - Comes with a custom, optimized launcher application, with tabs per system, search, favourites and game artwork/descriptions from `gamelist.xml`
-- System Settings app: brightness, volume, performance mode, launcher options, language, interface font, system info and a button tester
+- System Settings app: brightness, volume, audio output, launcher options, language, interface font, overlay, date and time, performance mode, system info, a button tester and a restore of the default settings
 - Translatable interface, with English and Brazilian Portuguese included (see [Translations](#translations))
 - Autostart any application on boot, including games or a front-end like EmulationStation (coming soon)
 - USB terminal access for remote debugging. Log in with `sudo screen /dev/ttyACM* 115200` and `root:root`
