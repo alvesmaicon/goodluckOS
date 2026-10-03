@@ -165,7 +165,8 @@ const char* DATE_FORMATS[] = {"%m/%d", "%d/%m", "%m/%d/%Y", "%d/%m/%Y", "%Y-%m-%
 const int DATE_FORMAT_COUNT = sizeof(DATE_FORMATS) / sizeof(DATE_FORMATS[0]);
 
 struct HudSettings {
-    bool status_clock = false;     // the in-game status bar's items
+    bool status_date = false;      // the in-game status bar's items
+    bool status_time = false;
     bool status_battery = false;
     bool status_audio = false;
     int status_opacity = 50;
@@ -173,8 +174,6 @@ struct HudSettings {
     bool cpu = true;
     bool text = false;
     int position = 0;
-    bool date = true;
-    bool time = true;
     bool h24 = false;
     int date_format = 0;   // DATE_FORMATS
 };
@@ -187,12 +186,11 @@ void read_hud_settings(const char* path, HudSettings& hud) {
         size_t eq = line.find('=');
         if (eq == std::string::npos) continue;
         std::string key = line.substr(0, eq), value = line.substr(eq + 1);
-        if (key == "HUD_STATUS_CLOCK") hud.status_clock = value == "true";
+        if (key == "HUD_STATUS_DATE") hud.status_date = value == "true";
+        else if (key == "HUD_STATUS_TIME") hud.status_time = value == "true";
         else if (key == "HUD_STATUS_BATTERY") hud.status_battery = value == "true";
         else if (key == "HUD_STATUS_AUDIO") hud.status_audio = value == "true";
         else if (key == "HUD_STATUS_OPACITY") hud.status_opacity = std::max(0, std::min(100, atoi(value.c_str())));
-        else if (key == "HUD_DATE") hud.date = value == "true";
-        else if (key == "HUD_TIME") hud.time = value == "true";
         else if (key == "HUD_24H") hud.h24 = value == "true";
         else if (key == "HUD_DATE_FORMAT") {
             for (int i = 0; i < DATE_FORMAT_COUNT; i++)
@@ -222,7 +220,8 @@ void save_hud_settings(const HudSettings& hud) {
     {
         std::ofstream file(tmp.c_str());
         if (!file.is_open()) return;
-        file << "HUD_STATUS_CLOCK=" << (hud.status_clock ? "true" : "false") << "\n"
+        file << "HUD_STATUS_DATE=" << (hud.status_date ? "true" : "false") << "\n"
+             << "HUD_STATUS_TIME=" << (hud.status_time ? "true" : "false") << "\n"
              << "HUD_STATUS_BATTERY=" << (hud.status_battery ? "true" : "false") << "\n"
              << "HUD_STATUS_AUDIO=" << (hud.status_audio ? "true" : "false") << "\n"
              << "HUD_STATUS_OPACITY=" << hud.status_opacity << "\n"
@@ -230,8 +229,6 @@ void save_hud_settings(const HudSettings& hud) {
              << "HUD_ITEMS=" << (hud.cpu ? "fps,cpu" : "fps") << "\n"
              << "HUD_STYLE=" << (hud.text ? "text" : "graph") << "\n"
              << "HUD_POSITION=" << HUD_POSITIONS[hud.position] << "\n"
-             << "HUD_DATE=" << (hud.date ? "true" : "false") << "\n"
-             << "HUD_TIME=" << (hud.time ? "true" : "false") << "\n"
              << "HUD_24H=" << (hud.h24 ? "true" : "false") << "\n"
              << "HUD_DATE_FORMAT=" << DATE_FORMATS[hud.date_format] << "\n";
     }
@@ -1087,10 +1084,12 @@ int main(int argc, char* argv[]) {
             end_page();
         } else if (page == PAGE_OVERLAY) {
             begin_page("Overlay", "Overlay");
-            // The in-game status bar; the launcher has its own top bar
+            // The in-game status bar; the launcher has its own top bar. The clock's format and
+            // 12/24 hours come from Date & Time
             ImGui::TextDisabled("%s", tr("In-game status bar"));
-            bool hud_changed = ImGui::Checkbox(tr("Show date and time"), &hud.status_clock);
+            bool hud_changed = ImGui::Checkbox(tr("Show date"), &hud.status_date);
             ImGui::SetItemDefaultFocus();
+            hud_changed |= ImGui::Checkbox(tr("Show time"), &hud.status_time);
             hud_changed |= ImGui::Checkbox(tr("Show battery"), &hud.status_battery);
             hud_changed |= ImGui::Checkbox(tr("Show audio"), &hud.status_audio);
             hud_changed |= level_slider(tr("Opacity"), &hud.status_opacity, 0, 100, 10);
@@ -1138,10 +1137,8 @@ int main(int argc, char* argv[]) {
                 strftime(now_text, sizeof(now_text), fmt.c_str(), &tm);
                 ImGui::Text("%s %s", tr("Now:"), now_text);
             }
-            bool shown_changed = ImGui::Checkbox(tr("Show date"), &hud.date);
+            bool shown_changed = ImGui::Checkbox(tr("24-hour clock"), &hud.h24);
             ImGui::SetItemDefaultFocus();
-            shown_changed |= ImGui::Checkbox(tr("Show time"), &hud.time);
-            shown_changed |= ImGui::Checkbox(tr("24-hour clock"), &hud.h24);
             ImGui::AlignTextToFramePadding();
             ImGui::Text("%s", tr("Date format:"));
             ImGui::SameLine();

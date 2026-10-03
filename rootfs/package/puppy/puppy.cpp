@@ -1433,24 +1433,19 @@ static void writeTabsList(const Model& m) {
 
 static bool batteryCharging = false, batteryFull = false;
 
-// strftime format of the top bar's clock, from the HUD settings System Settings writes
-// over the system's defaults
+// strftime format of the top bar's clock: the date and the time, with the date format and
+// 12/24 hours System Settings writes over the system's defaults
 static std::string clockFormat() {
-    bool date = true, time = true, h24 = false;
+    bool h24 = false;
     std::string dateFormat = "%m/%d";
     for (const char* path : {"/usr/share/goodluck/defaults/gallium_hud.conf", "/home/player/.config/gallium_hud.conf"}) {
         std::ifstream in(path);
         for (std::string line; std::getline(in, line);) {
-            if (line.compare(0, 9, "HUD_DATE=") == 0) date = line == "HUD_DATE=true";
-            else if (line.compare(0, 9, "HUD_TIME=") == 0) time = line == "HUD_TIME=true";
-            else if (line.compare(0, 8, "HUD_24H=") == 0) h24 = line == "HUD_24H=true";
+            if (line.compare(0, 8, "HUD_24H=") == 0) h24 = line == "HUD_24H=true";
             else if (line.compare(0, 16, "HUD_DATE_FORMAT=") == 0 && line.size() > 16) dateFormat = line.substr(16);
         }
     }
-    std::string fmt;
-    if (date) fmt = dateFormat;
-    if (time) fmt += std::string(fmt.empty() ? "" : " ") + (h24 ? "%H:%M" : "%I:%M %p");
-    return fmt;
+    return dateFormat + (h24 ? " %H:%M" : " %I:%M %p");
 }
 
 static std::string clockText(const std::string& fmt) {
