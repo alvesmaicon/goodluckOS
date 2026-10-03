@@ -166,13 +166,19 @@ System Settings
 │       ├── Content: FPS / FPS + CPU
 │       ├── Style: Graph / Text
 │       └── Position: top or bottom, left or right
+├── Date & Time
+│   ├── Now: the current date and time
+│   ├── Show date / Show time / 24-hour clock
+│   ├── Year, Month, Day, Hour, Minute ─ Set date and time
+│   └── Time zone
 ├── Storage
 │   ├── HOME usage
 │   ├── Resize Home
 │   └── Empty trash
 ├── System
 │   ├── Performance mode (uses more battery)
-│   └── System Info
+│   ├── System Info
+│   └── Restore default settings
 └── Input Settings
     ├── every shortcut
     └── Button Tester
@@ -183,8 +189,10 @@ System Settings
 - **In-game status bar**: battery, volume and audio output in the top right corner of every game, with the launcher's icons; Opacity sets its background.
 - **Performance**: the Gallium HUD graphs that FN + D-pad up shows in game. Text only goes at the top.
 - Overlay changes apply from the next game on.
+- **Date & Time**: the date and time in the launcher's top bar and the in-game status bar (12-hour by default). The clock chip keeps the time while the console is off, so it only needs setting once; the time zone applies to the apps opened afterwards.
 - **Empty trash**: deletes for good the games moved to the trash in the launcher.
 - **Performance mode**: keeps the CPU at full speed.
+- **Restore default settings**: puts Overlay, Date & Time and the launcher's view, tabs and font back to the defaults in `/usr/share/goodluck/defaults`, keeping the language, the time zone and the clock.
 
 B goes back one page; Back stays at the bottom of every page. Changes are saved as soon as you make them. The page scrolls with the d-pad when it doesn't fit the screen.
 
@@ -195,8 +203,8 @@ VT323 and Pixelify Sans are under the SIL Open Font License and ProggyClean unde
 | ![System Settings](docs/screenshots/system-settings.png) | ![Display & Audio](docs/screenshots/system-settings-audio.png) |
 | Overlay | In-game status bar |
 | ![Overlay](docs/screenshots/system-settings-overlay.png) | ![In-game status bar](docs/screenshots/status-bar.png) |
-| Performance overlay in game (FN + D-pad up) | |
-| ![Performance overlay in game](docs/screenshots/performance-overlay.png) | |
+| Date & Time | Performance overlay in game (FN + D-pad up) |
+| ![Date & Time](docs/screenshots/system-settings-datetime.png) | ![Performance overlay in game](docs/screenshots/performance-overlay.png) |
 
 ## Translations
 Every text in the launcher, System Settings, the confirmation screens and `Resize Home` can be translated, and new languages need no code changes. Languages live in `/usr/share/goodluck/lang/<code>.lang` (in the repository: `rootfs/board/my-device/rootfs-overlay/usr/share/goodluck/lang/`) and show up in System Settings -> Interface -> Language as soon as the file is there.

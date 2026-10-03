@@ -6,6 +6,7 @@
 #include <cctype>
 #include <cmath>
 #include <filesystem>
+#include <ctime>
 #include <fstream>
 #include <functional>
 #include <iterator>
@@ -395,6 +396,7 @@ struct Model {
     std::string renameText;
     size_t renameCursor = 0;    // byte position in renameText, moved with L1/R1
     std::string notice;         // short message over the footer (renamed, moved to the trash...)
+    std::string clock;          // date and/or time in the top bar, per System Settings -> Date & Time
     Uint32 noticeUntil = 0;
     std::string status;     // full-screen message while restarting / shutting down
     int descScroll = 0;     // lines the list preview's description is scrolled (right stick)
@@ -1431,6 +1433,35 @@ static void writeTabsList(const Model& m) {
 
 static bool batteryCharging = false, batteryFull = false;
 
+// strftime format of the top bar's clock, from the HUD settings System Settings writes
+// over the system's defaults
+static std::string clockFormat() {
+    bool date = true, time = true, h24 = false;
+    std::string dateFormat = "%m/%d";
+    for (const char* path : {"/usr/share/goodluck/defaults/gallium_hud.conf", "/home/player/.config/gallium_hud.conf"}) {
+        std::ifstream in(path);
+        for (std::string line; std::getline(in, line);) {
+            if (line.compare(0, 9, "HUD_DATE=") == 0) date = line == "HUD_DATE=true";
+            else if (line.compare(0, 9, "HUD_TIME=") == 0) time = line == "HUD_TIME=true";
+            else if (line.compare(0, 8, "HUD_24H=") == 0) h24 = line == "HUD_24H=true";
+            else if (line.compare(0, 16, "HUD_DATE_FORMAT=") == 0 && line.size() > 16) dateFormat = line.substr(16);
+        }
+    }
+    std::string fmt;
+    if (date) fmt = dateFormat;
+    if (time) fmt += std::string(fmt.empty() ? "" : " ") + (h24 ? "%H:%M" : "%I:%M %p");
+    return fmt;
+}
+
+static std::string clockText(const std::string& fmt) {
+    if (fmt.empty()) return "";
+    char text[32];
+    time_t now = time(nullptr);
+    struct tm tm;
+    localtime_r(&now, &tm);
+    return strftime(text, sizeof(text), fmt.c_str(), &tm) ? text : "";
+}
+
 static int readBattery() {
     std::error_code ec;
     batteryCharging = batteryFull = false;
@@ -1854,6 +1885,10 @@ private:
             statusX -= 22;
             if (audio.headphones) headphonesIcon(statusX, (kHeaderH - 16) / 2, kGrey);
             else speakerIcon(statusX, (kHeaderH - 16) / 2, kGrey, audio.muted);
+        }
+        if (!m.clock.empty()) {
+            statusX -= 14 + textWidth(smallFont, m.clock);
+            drawText(renderer, smallFont, m.clock, statusX, statusY, kGrey);
         }
 
         // "686 games", or "12 of 686 games" while searching
@@ -2470,6 +2505,7 @@ int main(int argc, char** argv) {
     bool running = true;
     bool dirty = true;
     int shownBattery = -2;
+    const std::string clock = clockFormat();
     Uint32 lastActivity = SDL_GetTicks();
 
     // d-pad auto-repeat
@@ -2679,6 +2715,7 @@ int main(int argc, char** argv) {
     while (running) {
         if (dirty) {
             shownBattery = readBattery();
+            model.clock = clockText(clock);
             ui.render(model, kb, osd, shownBattery, audio);
             if (!consoleCleared) {
                 // The boot's "Starting system..." stays on the text console, which flashes between
@@ -2708,6 +2745,8 @@ int main(int argc, char** argv) {
                 timeout = std::min(timeout, (int)kOsdRefreshMs);
             }
         }
+        if (!clock.empty())   // wake up when the minute changes
+            timeout = std::min(timeout, (int)(60 - time(nullptr) % 60) * 1000);
         if (!model.notice.empty()) {
             if ((Sint32)(now - model.noticeUntil) >= 0) {
                 model.notice.clear();
@@ -2745,6 +2784,7 @@ int main(int argc, char** argv) {
                 a.read();
                 if (a != audio) { audio = a; dirty = true; }
             }
+            if (clockText(clock) != model.clock) dirty = true;
             continue;
         }
 
