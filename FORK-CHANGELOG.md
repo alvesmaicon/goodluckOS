@@ -57,7 +57,7 @@ These are bigger and will be proposed in an issue first.
   - the volume, brightness and audio output feedback;
   - an optional status bar with the date and time, the battery, the volume and the output.
 
-  RetroArch's own notifications, menu clock and battery are turned off, so nothing overlaps.
+  RetroArch's own notifications, menu clock and battery, and PCSX-ReARMed's FPS counter, are turned off, so nothing overlaps.
 - **Power mode:** Battery saver, Balanced (the default) or Performance, in System Settings > System. Each one sets the CPU governor and top speed and the GPU speed range, and it is kept across reboots. It replaces the Performance mode checkbox.
 - **Date and time:**
   - set from System Settings, and kept by the clock chip while the console is off;
