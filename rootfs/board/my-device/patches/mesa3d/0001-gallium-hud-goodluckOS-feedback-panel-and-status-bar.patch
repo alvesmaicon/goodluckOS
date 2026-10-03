@@ -4,14 +4,15 @@ Subject: [PATCH] gallium/hud: goodluckOS feedback panel and status bar
 Draws over any app, even with the graphs hidden:
 - the volume / brightness / audio output feedback that osd-notify.sh writes
   to /dev/shm/hud-osd, for 1.5 s;
-- with GALLIUM_HUD_STATUS set, a status bar with the battery (from sysfs) and
-  the volume and output that hud-status.sh writes to /dev/shm/hud-status.
+- a status bar with the items GALLIUM_HUD_STATUS lists: clock (in the
+  GALLIUM_HUD_STATUS_CLOCK strftime format), battery (from sysfs) and audio
+  (the volume and output that hud-status.sh writes to /dev/shm/hud-status).
 Both use the launcher's colors and icons. Text can now have a color and a
 scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
 
 ---
---- a/src/gallium/auxiliary/hud/hud_context.c	2026-10-02 20:46:44.928267836 -0300
-+++ b/src/gallium/auxiliary/hud/hud_context.c	2026-10-02 20:46:44.929414483 -0300
+--- a/src/gallium/auxiliary/hud/hud_context.c	2026-10-03 11:29:08.431032937 -0300
++++ b/src/gallium/auxiliary/hud/hud_context.c	2026-10-03 11:29:08.432845645 -0300
 @@ -68,6 +68,9 @@
  #include "util/u_upload_mgr.h"
  #include "tgsi/tgsi_text.h"
@@ -49,7 +50,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
 +
 +static struct {
 +   int enabled;
-+   bool battery_only;
++   bool show_clock, show_battery, show_audio;
 +   float opacity;
 +   char clock_format[32];
 +   struct timespec mtime;
@@ -133,7 +134,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
        s++;
     }
  
-@@ -485,6 +546,343 @@
+@@ -485,6 +546,358 @@
   * The texture is usually the back buffer being displayed.
   */
  static void
@@ -234,11 +235,14 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
 +   if (status.enabled < 0) {
 +      const char *env = getenv("GALLIUM_HUD_STATUS");
 +      const char *opacity = getenv("GALLIUM_HUD_STATUS_OPACITY");
-+      status.enabled = env && strcmp(env, "0") && strcmp(env, "false");
-+      status.battery_only = env && !strcmp(env, "battery");
-+      status.opacity = opacity ? atoi(opacity) / 100.0 : 0.5;
 +      const char *clock = getenv("GALLIUM_HUD_STATUS_CLOCK");
++      /* the items to show: a list of clock, battery and audio */
 +      snprintf(status.clock_format, sizeof(status.clock_format), "%s", clock ? clock : "");
++      status.show_clock = env && strstr(env, "clock") && status.clock_format[0];
++      status.show_battery = env && strstr(env, "battery");
++      status.show_audio = env && strstr(env, "audio");
++      status.enabled = status.show_clock || status.show_battery || status.show_audio;
++      status.opacity = opacity ? atoi(opacity) / 100.0 : 0.5;
 +   }
 +   if (!status.enabled)
 +      return;
@@ -365,34 +369,44 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
 +   char bat[16], vol[16], clock[32] = "";
 +   unsigned th = hud_text_height(hud);
 +   unsigned bh = (th > 16 ? th : 16) + 8;
-+   unsigned y = 6, x;
-+   unsigned bat_w, vol_w = 0, total;
++   unsigned y = 6, x, items = 0;
++   unsigned clock_w = 0, vol_w = 0, bat_w = 0, total = 8 + 8;
++   bool audio = status.show_audio && status.volume >= 0;
++   float bg[] = {12 / 255.0, 12 / 255.0, 14 / 255.0, status.opacity};
 +
-+   snprintf(bat, sizeof(bat), status.battery >= 0 ? "%d%%" : "??", status.battery);
-+   bat_w = hud_text_width(hud, bat);
-+   total = 8 + 28 + bat_w + 8;
-+   if (status.clock_format[0]) {
++   if (status.show_clock) {
 +      time_t now = time(NULL);
 +      struct tm tm;
 +      localtime_r(&now, &tm);
-+      strftime(clock, sizeof(clock), status.clock_format, &tm);
-+      total += hud_text_width(hud, clock) + 14;
++      if (strftime(clock, sizeof(clock), status.clock_format, &tm)) {
++         clock_w = hud_text_width(hud, clock);
++         total += clock_w;
++         items++;
++      }
 +   }
-+   bool audio = status.volume >= 0 && !status.battery_only;
-+   float bg[] = {12 / 255.0, 12 / 255.0, 14 / 255.0, status.opacity};
 +   if (audio) {
 +      snprintf(vol, sizeof(vol), status.muted ? "mute" : "%d%%", status.volume);
 +      vol_w = hud_text_width(hud, vol);
-+      total += 22 + vol_w + 14;
++      total += 22 + vol_w;
++      items++;
 +   }
++   if (status.show_battery) {
++      snprintf(bat, sizeof(bat), status.battery >= 0 ? "%d%%" : "??", status.battery);
++      bat_w = hud_text_width(hud, bat);
++      total += 28 + bat_w;
++      items++;
++   }
++   if (!items)
++      return;
++   total += 14 * (items - 1);
 +   x = hud->fb_width - 8 - total;
 +
 +   if (status.opacity > 0)
 +      hud_quad(x, y, total, bh, bg);
 +   x += 8;
-+   if (clock[0]) {
++   if (clock_w) {
 +      hud_colored_string(hud, x, y + (bh - th) / 2, kGrey, clock);
-+      x += hud_text_width(hud, clock) + 14;
++      x += clock_w + 14;
 +   }
 +   if (audio) {
 +      if (status.headphones)
@@ -403,9 +417,11 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
 +      hud_colored_string(hud, x, y + (bh - th) / 2, kGrey, vol);
 +      x += vol_w + 14;
 +   }
-+   battery_icon(x, y + (bh - 12) / 2, status.battery, status.charging, status.full);
-+   x += 28;
-+   hud_colored_string(hud, x, y + (bh - th) / 2, kGrey, bat);
++   if (status.show_battery) {
++      battery_icon(x, y + (bh - 12) / 2, status.battery, status.charging, status.full);
++      x += 28;
++      hud_colored_string(hud, x, y + (bh - th) / 2, kGrey, bat);
++   }
 +}
 +
 +static void
@@ -477,7 +493,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
  hud_draw_results(struct hud_context *hud, struct pipe_resource *tex)
  {
     struct cso_context *cso = hud->cso;
-@@ -496,9 +894,12 @@
+@@ -496,9 +909,12 @@
           { &hud->font_sampler_state };
     struct hud_pane *pane;
     struct pipe_resource *releasebuf[3] = { 0 };
@@ -491,7 +507,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
  
     hud->fb_width = tex->width0;
     hud->fb_height = tex->height0;
-@@ -606,18 +1007,31 @@
+@@ -606,18 +1022,31 @@
     }
     hud->bg.vbuf.buffer.resource = NULL;
  
@@ -525,7 +541,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
        goto done;
  
     /* draw accumulated vertices for white lines */
-@@ -650,6 +1064,7 @@
+@@ -650,6 +1079,7 @@
     }
  
  done:
@@ -533,7 +549,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
     pipe_resource_release(pipe, releasebuf[2]);
     pipe_resource_release(pipe, releasebuf[1]);
     pipe_resource_release(pipe, releasebuf[0]);
-@@ -745,12 +1160,16 @@
+@@ -745,12 +1175,16 @@
           }
        }
  
@@ -550,7 +566,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
     /* unmap the uploader's vertex buffer before drawing */
     u_upload_unmap(pipe->stream_uploader);
  }
-@@ -1774,13 +2193,14 @@
+@@ -1774,13 +2208,14 @@
        static const char *fragment_shader_text = {
           "FRAG\n"
           "DCL IN[0], GENERIC[0], LINEAR\n"
@@ -566,7 +582,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
           "END\n"
        };
  
-@@ -1845,6 +2265,7 @@
+@@ -1845,6 +2280,7 @@
           "DCL IN[0..1]\n"
           "DCL OUT[0], POSITION\n"
           "DCL OUT[1], GENERIC[0]\n" /* texcoord */
@@ -574,7 +590,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
           /* [0] = color,
            * [1] = (2/fb_width, 2/fb_height, xoffset, yoffset)
            * [2] = (xscale, yscale, 0, 0)
-@@ -1865,6 +2286,7 @@
+@@ -1865,6 +2301,7 @@
           "MOV OUT[0].zw, IMM[0]\n"
  
           "MUL OUT[1], IN[1], IMM[1]\n"

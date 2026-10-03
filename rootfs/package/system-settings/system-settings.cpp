@@ -165,8 +165,9 @@ const char* DATE_FORMATS[] = {"%m/%d", "%d/%m", "%m/%d/%Y", "%d/%m/%Y", "%Y-%m-%
 const int DATE_FORMAT_COUNT = sizeof(DATE_FORMATS) / sizeof(DATE_FORMATS[0]);
 
 struct HudSettings {
-    bool status = false;
-    bool status_battery_only = false;
+    bool status_clock = false;     // the in-game status bar's items
+    bool status_battery = false;
+    bool status_audio = false;
     int status_opacity = 50;
     bool visible = false;
     bool cpu = true;
@@ -186,8 +187,9 @@ void read_hud_settings(const char* path, HudSettings& hud) {
         size_t eq = line.find('=');
         if (eq == std::string::npos) continue;
         std::string key = line.substr(0, eq), value = line.substr(eq + 1);
-        if (key == "HUD_STATUS") hud.status = value == "true";
-        else if (key == "HUD_STATUS_ITEMS") hud.status_battery_only = value == "battery";
+        if (key == "HUD_STATUS_CLOCK") hud.status_clock = value == "true";
+        else if (key == "HUD_STATUS_BATTERY") hud.status_battery = value == "true";
+        else if (key == "HUD_STATUS_AUDIO") hud.status_audio = value == "true";
         else if (key == "HUD_STATUS_OPACITY") hud.status_opacity = std::max(0, std::min(100, atoi(value.c_str())));
         else if (key == "HUD_DATE") hud.date = value == "true";
         else if (key == "HUD_TIME") hud.time = value == "true";
@@ -220,8 +222,9 @@ void save_hud_settings(const HudSettings& hud) {
     {
         std::ofstream file(tmp.c_str());
         if (!file.is_open()) return;
-        file << "HUD_STATUS=" << (hud.status ? "true" : "false") << "\n"
-             << "HUD_STATUS_ITEMS=" << (hud.status_battery_only ? "battery" : "all") << "\n"
+        file << "HUD_STATUS_CLOCK=" << (hud.status_clock ? "true" : "false") << "\n"
+             << "HUD_STATUS_BATTERY=" << (hud.status_battery ? "true" : "false") << "\n"
+             << "HUD_STATUS_AUDIO=" << (hud.status_audio ? "true" : "false") << "\n"
              << "HUD_STATUS_OPACITY=" << hud.status_opacity << "\n"
              << "HUD_VISIBLE=" << (hud.visible ? "true" : "false") << "\n"
              << "HUD_ITEMS=" << (hud.cpu ? "fps,cpu" : "fps") << "\n"
@@ -1084,14 +1087,12 @@ int main(int argc, char* argv[]) {
             end_page();
         } else if (page == PAGE_OVERLAY) {
             begin_page("Overlay", "Overlay");
-            bool hud_changed = ImGui::Checkbox(tr("In-game status bar"), &hud.status);
+            // The in-game status bar; the launcher has its own top bar
+            ImGui::TextDisabled("%s", tr("In-game status bar"));
+            bool hud_changed = ImGui::Checkbox(tr("Show date and time"), &hud.status_clock);
             ImGui::SetItemDefaultFocus();
-            ImGui::AlignTextToFramePadding();
-            ImGui::Text("%s", tr("Show:"));
-            ImGui::SameLine();
-            if (ImGui::RadioButton(tr("Battery and audio"), !hud.status_battery_only)) { hud.status_battery_only = false; hud_changed = true; }
-            ImGui::SameLine();
-            if (ImGui::RadioButton(tr("Battery only"), hud.status_battery_only)) { hud.status_battery_only = true; hud_changed = true; }
+            hud_changed |= ImGui::Checkbox(tr("Show battery"), &hud.status_battery);
+            hud_changed |= ImGui::Checkbox(tr("Show audio"), &hud.status_audio);
             hud_changed |= level_slider(tr("Opacity"), &hud.status_opacity, 0, 100, 10);
             ImGui::Spacing();
             ImGui::TextDisabled("%s", tr("Performance (FN + UP)"));

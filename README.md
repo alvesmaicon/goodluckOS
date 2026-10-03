@@ -164,8 +164,9 @@ System Settings
 │   ├── Language
 │   └── Font
 ├── Overlay
-│   ├── In-game status bar
-│   ├── Show: Battery and audio / Battery only
+│   ├── In-game status bar: Show date and time
+│   ├── Show battery
+│   ├── Show audio
 │   ├── Opacity
 │   ├── Performance (FN + UP): Show on game start
 │   ├── Content: FPS / FPS + CPU
@@ -195,10 +196,10 @@ System Settings
 
 - **Launcher tabs**: hidden tabs' games still appear in All Games and My List.
 - **Font**: Default keeps each app's own font (Inter in the launcher, ProggyClean elsewhere); or Inter, ProggyClean, VT323 or Pixelify Sans in every app.
-- **In-game status bar**: battery, volume and audio output in the top right corner of every game, with the launcher's icons; Opacity sets its background.
+- **In-game status bar**: the date and time, the battery and the volume and audio output, each one on or off, in the top right corner of every game, with the launcher's icons; Opacity sets its background. All off by default, so nothing covers the game. The launcher keeps its own top bar.
 - **Performance**: the Gallium HUD graphs that FN + D-pad up shows in game. Text only goes at the top.
 - Overlay changes apply from the next game on.
-- **Date & Time**: the date and time in the launcher's top bar and the in-game status bar (12-hour by default). The clock chip keeps the time while the console is off, so it only needs setting once; the time zone applies to the apps opened afterwards.
+- **Date & Time**: what the clock shows and how, in the launcher's top bar and, when Overlay turns it on, the in-game status bar (12-hour by default). The clock chip keeps the time while the console is off, so it only needs setting once; the time zone applies to the apps opened afterwards.
 - **Empty trash**: deletes for good the games moved to the trash in the launcher.
 - **Power mode**: Balanced (the default) speeds the CPU and GPU up only when a game needs it; Battery saver caps the CPU at 816 MHz and the GPU at 240 MHz, for a longer battery life (heavy PS1 games may slow down); Performance keeps both at full speed. The choice is kept across reboots.
 - **Restore default settings**: puts Overlay, Date & Time, the launcher's view, tabs and font, and the power mode back to the defaults in `/usr/share/goodluck/defaults`, keeping the language, the time zone and the clock.
