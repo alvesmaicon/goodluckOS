@@ -39,7 +39,7 @@ Please Note: At the time of writing, Allwinner-A23 based GA36-MB devices (which 
 - Comes stock with Retroarch and several optimized cores (PCSX-ReArmed, Snes9x, QuickNES, DOSbox, Genesis Plus GX, mGBA, etc)
 - Games perform very well. Metal Gear Solid 1 is completely playable at reasonable framerates
 - Comes with a custom, optimized launcher application, with tabs per system, search, favourites and game artwork/descriptions from `gamelist.xml`
-- System Settings app: brightness, volume, audio output, launcher options, language, interface font, overlay, date and time, performance mode, system info, a button tester and a restore of the default settings
+- System Settings app: brightness, volume, audio output, launcher options, language, interface font, overlay, date and time, power mode (Battery saver, Balanced, Performance), system info, a button tester and a restore of the default settings
 - Translatable interface, with English and Brazilian Portuguese included (see [Translations](#translations))
 - Autostart any application on boot, including games or a front-end like EmulationStation (coming soon)
 - USB terminal access for remote debugging. Log in with `sudo screen /dev/ttyACM* 115200` and `root:root`
@@ -183,7 +183,7 @@ System Settings
 │   ├── Resize Home
 │   └── Empty trash
 ├── System
-│   ├── Performance mode (uses more battery)
+│   ├── Power mode: Battery saver / Balanced / Performance
 │   ├── System Info
 │   └── Restore default settings
 └── Input Settings
@@ -198,8 +198,8 @@ System Settings
 - Overlay changes apply from the next game on.
 - **Date & Time**: the date and time in the launcher's top bar and the in-game status bar (12-hour by default). The clock chip keeps the time while the console is off, so it only needs setting once; the time zone applies to the apps opened afterwards.
 - **Empty trash**: deletes for good the games moved to the trash in the launcher.
-- **Performance mode**: keeps the CPU at full speed.
-- **Restore default settings**: puts Overlay, Date & Time and the launcher's view, tabs and font back to the defaults in `/usr/share/goodluck/defaults`, keeping the language, the time zone and the clock.
+- **Power mode**: Balanced (the default) speeds the CPU and GPU up only when a game needs it; Battery saver caps the CPU at 816 MHz and the GPU at 240 MHz, for a longer battery life (heavy PS1 games may slow down); Performance keeps both at full speed. The choice is kept across reboots.
+- **Restore default settings**: puts Overlay, Date & Time, the launcher's view, tabs and font, and the power mode back to the defaults in `/usr/share/goodluck/defaults`, keeping the language, the time zone and the clock.
 
 B goes back one page; Back stays at the bottom of every page. Changes are saved as soon as you make them. The page scrolls with the d-pad when it doesn't fit the screen.
 
@@ -212,6 +212,8 @@ VT323 and Pixelify Sans are under the SIL Open Font License and ProggyClean unde
 | ![Overlay](docs/screenshots/system-settings-overlay.png) | ![In-game status bar](docs/screenshots/status-bar.png) |
 | Date & Time | Performance overlay in game (FN + D-pad up) |
 | ![Date & Time](docs/screenshots/system-settings-datetime.png) | ![Performance overlay in game](docs/screenshots/performance-overlay.png) |
+| System (Power mode) | |
+| ![System](docs/screenshots/system-settings-system.png) | |
 
 ## Translations
 Every text in the launcher, System Settings, the confirmation screens and `Resize Home` can be translated, and new languages need no code changes. Languages live in `/usr/share/goodluck/lang/<code>.lang` (in the repository: `rootfs/board/my-device/rootfs-overlay/usr/share/goodluck/lang/`) and show up in System Settings -> Interface -> Language as soon as the file is there.
