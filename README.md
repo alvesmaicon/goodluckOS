@@ -1,7 +1,7 @@
 # goodluckOS
 An uncompromisingly fast, small, modern, and feature-rich custom firmware for A23/A33-based handheld consoles.
 
-> **About this fork:** this is a fork of [CodeZombie/goodluckOS](https://github.com/CodeZombie/goodluckOS) with fixes for the GA36-MB v1.1 and a reworked launcher, System Settings and translations. Everything in it was vibe coded: written with an AI coding assistant (Claude Code), with me describing what I wanted, testing every change on my own device and steering the result. I picked up AI tools at work and, honestly, now I can barely code without them. So read the code with that in mind, and expect bugs. Changes go back upstream as small, separate pull requests, each one saying it was AI-assisted.
+> **About this fork:** this is a fork of [CodeZombie/goodluckOS](https://github.com/CodeZombie/goodluckOS) with fixes for the GA36-MB v1.1 and a reworked launcher, System Settings and translations. Everything in it was vibe coded: written with an AI coding assistant (Claude Code), with me describing what I wanted, testing every change on my own device and steering the result. I picked up AI tools at work and, honestly, now I can barely code without them. So read the code with that in mind, and expect bugs. Changes go back upstream as small, separate pull requests, each one saying it was AI-assisted. What's here and where each change stands is in the [fork changelog](FORK-CHANGELOG.md): it is all under review and testing, so if you install it, you do so at your own risk.
 
 ## PLEASE READ
 goodluckOS is PRE-RELEASE software. There are no gaurantees that it will work on your hardware.
