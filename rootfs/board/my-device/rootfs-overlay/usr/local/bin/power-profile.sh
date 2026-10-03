@@ -20,12 +20,12 @@ default_profile() {
 
 apply() {
     case "$1" in battery) gov=schedutil ;; balanced) gov=schedutil ;; performance) gov=performance ;; *) return 1 ;; esac
-    for p in $CPUFREQ/policy*; do
-        max=$(cat "$p/cpuinfo_max_freq")
+    for c in $CPUFREQ/policy*; do
+        max=$(cat "$c/cpuinfo_max_freq")
         top=$max
         [ "$1" = battery ] && [ "$BATTERY_CPU_KHZ" -lt "$max" ] && top=$BATTERY_CPU_KHZ
-        echo "$gov" > "$p/scaling_governor"
-        echo "$top" > "$p/scaling_max_freq"
+        echo "$gov" > "$c/scaling_governor"
+        echo "$top" > "$c/scaling_max_freq"
     done
     for d in /sys/class/devfreq/*.gpu; do
         [ -d "$d" ] || continue
