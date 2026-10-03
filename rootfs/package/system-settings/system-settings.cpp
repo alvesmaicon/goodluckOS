@@ -343,14 +343,47 @@ const char* HOME_MOUNT = "/home/player";
 const char* CARD_SYSFS = "/sys/class/block/mmcblk0";
 const char* HOME_PART_SYSFS = "/sys/class/block/mmcblk0p2";
 const char* CPUFREQ_SYSFS = "/sys/devices/system/cpu/cpu0/cpufreq";
-const char* PERFORMANCE_GOVERNOR = "performance";
 // S01resize-home grows the partition and leaves less than this untouched
 const unsigned long long RESIZE_MIN_FREE_KB = 8192;
+
+// Power profiles, applied by power-profile.sh (run as root by the power manager)
+const char* POWER_PROFILE_STATE = "/etc/player-flags/power-profile";
+const char* POWER_DEFAULTS = "/usr/share/goodluck/defaults/power.conf";
+const char* POWER_PROFILES[] = {"battery", "balanced", "performance"};
+const char* POWER_PROFILE_NAMES[] = {"Battery saver", "Balanced", "Performance"};
+const char* POWER_PROFILE_HINTS[] = {
+    "Slower CPU and GPU: the battery lasts longer",
+    "Speeds up only when a game needs it",
+    "Always at full speed: uses more battery",
+};
+const int POWER_PROFILE_COUNT = 3;
+
+int power_profile_index(const std::string& name) {
+    for (int i = 0; i < POWER_PROFILE_COUNT; ++i)
+        if (name == POWER_PROFILES[i]) return i;
+    return -1;
+}
+
+int default_power_profile() {
+    std::ifstream file(POWER_DEFAULTS);
+    for (std::string line; std::getline(file, line);) {
+        if (line.compare(0, 14, "POWER_PROFILE=") != 0) continue;
+        int i = power_profile_index(line.substr(14));
+        if (i >= 0) return i;
+    }
+    return 1;
+}
+
+int load_power_profile() {
+    int i = power_profile_index(read_line(POWER_PROFILE_STATE));
+    // before the profiles, only "Performance mode" was stored, as the governor
+    if (i < 0 && read_line("/etc/player-flags/governor") == "performance") i = 2;
+    return i >= 0 ? i : default_power_profile();
+}
 
 struct SystemInfo {
     std::string model, os, kernel;
     int cpu_mhz = -1, cpu_max_mhz = -1, temp_c = -1000;
-    std::string governor, normal_governor;   // normal_governor: what "Performance mode" off means
     long long mem_total_kb = -1, mem_avail_kb = -1;
     int battery = -1;
     std::string battery_status;
@@ -380,15 +413,6 @@ SystemInfo gather_system_info() {
     if (max > 0) s.cpu_max_mhz = (int)(max / 1000);
     long long temp = read_number("/sys/class/thermal/thermal_zone0/temp", -1000000);
     if (temp > -1000000) s.temp_c = (int)(temp / 1000);
-
-    s.governor = read_line(cpufreq + "/scaling_governor");
-    std::ifstream governors((cpufreq + "/scaling_available_governors").c_str());
-    bool has_performance = false;
-    for (std::string g; governors >> g;) {
-        if (g == PERFORMANCE_GOVERNOR) has_performance = true;
-        else if (s.normal_governor.empty() || g == "schedutil") s.normal_governor = g;
-    }
-    if (!has_performance) s.normal_governor.clear();
 
     std::ifstream meminfo("/proc/meminfo");
     for (std::string key; meminfo >> key;) {
@@ -805,7 +829,7 @@ int main(int argc, char* argv[]) {
     int last_button = -1;
     Uint32 b_hold_start = 0;
     SystemInfo info = gather_system_info();
-    bool performance_mode = info.governor == PERFORMANCE_GOVERNOR;
+    int power_profile = load_power_profile();
     LauncherSettings launcher = load_launcher_settings();
     HudSettings hud = load_hud_settings();
     int timezone = load_timezone();
@@ -1238,17 +1262,27 @@ int main(int argc, char* argv[]) {
             end_page();
         } else if (page == PAGE_SYSTEM_MENU) {
             begin_page("SystemMenu", "System");
-            if (!info.normal_governor.empty()) {
-                if (ImGui::Checkbox(tr("Performance mode (uses more battery)"), &performance_mode)) {
-                    send_power_request(std::string("set-governor ") +
-                                       (performance_mode ? PERFORMANCE_GOVERNOR : info.normal_governor));
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("%s", tr("Power mode:"));
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 11.0f);
+            if (ImGui::BeginCombo("##power_profile", tr(POWER_PROFILE_NAMES[power_profile]))) {
+                for (int i = 0; i < POWER_PROFILE_COUNT; ++i) {
+                    bool selected = i == power_profile;
+                    if (ImGui::Selectable(tr(POWER_PROFILE_NAMES[i]), selected) && !selected) {
+                        power_profile = i;
+                        send_power_request(std::string("set-profile ") + POWER_PROFILES[i]);
+                    }
+                    if (selected) ImGui::SetItemDefaultFocus();
                 }
-                ImGui::SetItemDefaultFocus();
+                ImGui::EndCombo();
             }
+            ImGui::SetItemDefaultFocus();
+            ImGui::TextDisabled("%s", tr(POWER_PROFILE_HINTS[power_profile]));
             if (page_button(tr("System Info"), PAGE_SYSTEM)) info = gather_system_info();
 
-            // Overlay, Date & Time and the launcher's view, tabs and font; the language, the time
-            // zone and the clock stay
+            // Overlay, Date & Time, the launcher's view, tabs and font, and the power mode; the
+            // language, the time zone and the clock stay
             ImGui::Spacing();
             if (!defaults_confirm) {
                 if (ImGui::Button(tr("Restore default settings"))) {
@@ -1261,7 +1295,7 @@ int main(int argc, char* argv[]) {
                     ImGui::TextDisabled("%s", tr("Done"));
                 }
             } else {
-                ImGui::TextWrapped("%s", tr("Restore the Overlay, Date & Time and launcher settings? The language and the time zone stay."));
+                ImGui::TextWrapped("%s", tr("Restore the Overlay, Date & Time, launcher and power mode settings? The language and the time zone stay."));
                 if (focus_defaults_cancel) {
                     ImGui::SetKeyboardFocusHere();
                     focus_defaults_cancel = false;
@@ -1276,6 +1310,8 @@ int main(int argc, char* argv[]) {
                     save_launcher_settings(launcher);
                     for (size_t i = 0; i < font_choices.size(); ++i)
                         if (&fonts::all()[font_choices[i]] == &fonts::find("")) pending_font = (int)i;
+                    power_profile = default_power_profile();
+                    send_power_request("set-profile default");
                     defaults_confirm = false;
                     defaults_restored = true;
                 }
