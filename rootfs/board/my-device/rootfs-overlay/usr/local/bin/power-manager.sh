@@ -42,8 +42,8 @@ while true; do
             t=${cmd#set-time }
             case "$t" in ''|*[!0-9]*) ;; *) date -u -s "@$t" >/dev/null && hwclock -w -u ;; esac
             ;;
-        set-governor\ *) # sent by system-settings; persist-settings.sh only accepts governors the kernel offers
-            /usr/local/bin/persist-settings.sh governor "${cmd#set-governor }"
+        set-profile\ *)  # sent by system-settings; power-profile.sh only accepts the profiles it knows
+            /usr/local/bin/power-profile.sh "${cmd#set-profile }"
             ;;
     esac
 done
