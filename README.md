@@ -165,15 +165,18 @@ System Settings
 │   ├── In-game status bar
 │   ├── Show: Battery and audio / Battery only
 │   ├── Opacity
-│   └── Performance (FN + UP)
-│       ├── Show on game start
-│       ├── Content: FPS / FPS + CPU
-│       ├── Style: Graph / Text
-│       └── Position: top or bottom, left or right
+│   ├── Performance (FN + UP): Show on game start
+│   ├── Content: FPS / FPS + CPU
+│   ├── Style: Graph / Text
+│   └── Position: top or bottom, left or right
 ├── Date & Time
 │   ├── Now: the current date and time
-│   ├── Show date / Show time / 24-hour clock
-│   ├── Year, Month, Day, Hour, Minute ─ Set date and time
+│   ├── Show date
+│   ├── Show time
+│   ├── 24-hour clock
+│   ├── Date format
+│   ├── Year, Month, Day, Hour, Minute
+│   ├── Set date and time
 │   └── Time zone
 ├── Storage
 │   ├── HOME usage
