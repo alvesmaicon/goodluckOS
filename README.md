@@ -84,6 +84,8 @@ Puppy is goodluckOS' application launcher. It's what you see when you start good
 | Grid view | List view |
 | --- | --- |
 | ![Puppy in grid view](docs/screenshots/puppy-grid.png) | ![Puppy in list view](docs/screenshots/puppy-list.png) |
+| Search (X): the on-screen keyboard filters every tab as you type | |
+| ![Search with the on-screen keyboard](docs/screenshots/puppy-search.png) | |
 
 The top bar shows the volume (a headphones icon when the sound goes to the headphones only) and the battery, whose level turns yellow while charging, green when full and red at 10% or less.
 
