@@ -1,14 +1,4 @@
-HUD_VISIBLE=false
-HUD_ITEMS=fps,cpu
-HUD_STYLE=graph
-HUD_POSITION=top-left
-HUD_STATUS=false
-HUD_STATUS_ITEMS=all
-HUD_STATUS_OPACITY=50
-HUD_DATE=true
-HUD_TIME=true
-HUD_24H=false
-HUD_DATE_FORMAT=%m/%d
+. /usr/share/goodluck/defaults/gallium_hud.conf
 [ -f /home/player/.config/gallium_hud.conf ] && . /home/player/.config/gallium_hud.conf
 
 hud_x=10

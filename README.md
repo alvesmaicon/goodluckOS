@@ -177,7 +177,8 @@ System Settings
 │   └── Empty trash
 ├── System
 │   ├── Performance mode (uses more battery)
-│   └── System Info
+│   ├── System Info
+│   └── Restore default settings
 └── Input Settings
     ├── every shortcut
     └── Button Tester
@@ -191,6 +192,7 @@ System Settings
 - **Date & Time**: the date and time in the launcher's top bar and the in-game status bar (12-hour by default). The clock chip keeps the time while the console is off, so it only needs setting once; the time zone applies to the apps opened afterwards.
 - **Empty trash**: deletes for good the games moved to the trash in the launcher.
 - **Performance mode**: keeps the CPU at full speed.
+- **Restore default settings**: puts Overlay, Date & Time and the launcher's view, tabs and font back to the defaults in `/usr/share/goodluck/defaults`, keeping the language, the time zone and the clock.
 
 B goes back one page; Back stays at the bottom of every page. Changes are saved as soon as you make them. The page scrolls with the d-pad when it doesn't fit the screen.
 

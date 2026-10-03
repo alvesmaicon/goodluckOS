@@ -178,9 +178,10 @@ struct HudSettings {
     int date_format = 0;   // DATE_FORMATS
 };
 
-HudSettings load_hud_settings() {
-    HudSettings hud;
-    std::ifstream file(HUD_CONFIG);
+const char* HUD_DEFAULTS = "/usr/share/goodluck/defaults/gallium_hud.conf";
+
+void read_hud_settings(const char* path, HudSettings& hud) {
+    std::ifstream file(path);
     for (std::string line; std::getline(file, line);) {
         size_t eq = line.find('=');
         if (eq == std::string::npos) continue;
@@ -203,6 +204,13 @@ HudSettings load_hud_settings() {
                 if (value == HUD_POSITIONS[i]) hud.position = i;
         }
     }
+}
+
+// The system's defaults, then the user's choices
+HudSettings load_hud_settings() {
+    HudSettings hud;
+    read_hud_settings(HUD_DEFAULTS, hud);
+    read_hud_settings(HUD_CONFIG, hud);
     return hud;
 }
 
@@ -792,6 +800,7 @@ int main(int argc, char* argv[]) {
     std::vector<LauncherTab> launcher_tabs = read_launcher_tabs();
     TrashStats trash = trash_stats();
     bool trash_confirm = false, focus_trash_cancel = false;   // "Empty trash" asks before deleting
+    bool defaults_confirm = false, focus_defaults_cancel = false, defaults_restored = false;
     SDL_Joystick* joystick = controller ? SDL_GameControllerGetJoystick(controller) : nullptr;
     int last_button = -1;
     Uint32 b_hold_start = 0;
@@ -879,6 +888,7 @@ int main(int argc, char* argv[]) {
         if (!editing && (ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false) ||
                          ImGui::IsKeyPressed(ImGuiKey_Escape, false))) {
             if (page == PAGE_STORAGE && trash_confirm) trash_confirm = false;
+            else if (page == PAGE_SYSTEM_MENU && defaults_confirm) defaults_confirm = false;
             else if (page != PAGE_TESTER) {     // the tester: B is a button being tested, it leaves only when held
                 Page up = parent_of(page);
                 if (up == PAGE_NONE) running = false;
@@ -1238,6 +1248,40 @@ int main(int argc, char* argv[]) {
                 ImGui::SetItemDefaultFocus();
             }
             if (page_button(tr("System Info"), PAGE_SYSTEM)) info = gather_system_info();
+
+            // Overlay, Date & Time and the launcher's view, tabs and font; the language, the time
+            // zone and the clock stay
+            ImGui::Spacing();
+            if (!defaults_confirm) {
+                if (ImGui::Button(tr("Restore default settings"))) {
+                    defaults_confirm = true;
+                    focus_defaults_cancel = true;
+                    defaults_restored = false;
+                }
+                if (defaults_restored) {
+                    ImGui::SameLine();
+                    ImGui::TextDisabled("%s", tr("Done"));
+                }
+            } else {
+                ImGui::TextWrapped("%s", tr("Restore the Overlay, Date & Time and launcher settings? The language and the time zone stay."));
+                if (focus_defaults_cancel) {
+                    ImGui::SetKeyboardFocusHere();
+                    focus_defaults_cancel = false;
+                }
+                if (ImGui::Button(tr("Cancel"))) defaults_confirm = false;
+                if (ImGui::Button(tr("Restore"))) {
+                    unlink(HUD_CONFIG);
+                    hud = load_hud_settings();
+                    LauncherSettings fresh;
+                    fresh.language = launcher.language;
+                    launcher = fresh;
+                    save_launcher_settings(launcher);
+                    for (size_t i = 0; i < font_choices.size(); ++i)
+                        if (&fonts::all()[font_choices[i]] == &fonts::find("")) pending_font = (int)i;
+                    defaults_confirm = false;
+                    defaults_restored = true;
+                }
+            }
             end_page();
         } else if (page == PAGE_INPUT) {
             ImGui::Begin("Input", nullptr, window_flags);
