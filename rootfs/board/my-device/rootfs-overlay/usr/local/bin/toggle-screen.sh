@@ -15,8 +15,8 @@ if [ "$current_brightness" -eq 0 ]; then
     fi
     echo "0" > /sys/class/leds/blue:status/brightness
 else
-    # no active app means Puppy is in the foreground
-    [ "$1" != "off" ] && [ ! -f /dev/shm/puppy-active-process-id ] && exit 0
+    # appd's app group empty means Puppy is in the foreground
+    [ "$1" != "off" ] && ! read -r _ < /sys/fs/cgroup/appd/app/cgroup.procs 2>/dev/null && exit 0
     echo "$current_brightness" > /tmp/last-brightness
     echo "0" > "$BL"
     echo "1" > /sys/class/leds/blue:status/brightness
