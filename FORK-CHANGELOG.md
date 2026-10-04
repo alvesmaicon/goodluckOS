@@ -79,6 +79,12 @@ These are bigger and will be proposed in an issue first.
   - thumbnails: a frame of each video taken with ffmpeg into `icons/`, and the cover art embedded in the MP3 or a `cover.jpg` in the album folder;
   - a PC script that converts videos to 640x480 H.264, since the A33 decodes in software: up to 480p plays smoothly, 1080p and H.265 don't.
 
+- **Launcher themes and options:**
+  - a Retro theme (today's look, in the EmulationStation style) and a Modern one (the game's art in the background, rounded cards, button hints drawn like the console's buttons), picked in System Settings;
+  - the on-screen keyboard's layout as a setting: QWERTY (default) or ABC;
+  - later, the launcher on its own name and package, next to Puppy, so upstream merges stop touching it.
+- **Battery:** time left next to the level, and a low-battery warning in game (and maybe save and quit when it's about to run out).
+
 ## Fork only
 
 - README notes about this fork and the AI-assisted workflow.
