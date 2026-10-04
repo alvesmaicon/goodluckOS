@@ -12,6 +12,7 @@ Status:
 - **Merged upstream**: in CodeZombie/goodluckOS `main`.
 - **Waiting for a PR**: done and tested here; the pull request isn't open yet. Changes go upstream as small, separate PRs, only if Jeremy wants them.
 - **Fork only**: not meant for upstream.
+- **Planned**: not started yet.
 
 ## Merged upstream
 
@@ -26,6 +27,7 @@ Status:
 - SELECT+START closes the active app cleanly (RetroArch saves first).
 - Silent boot, with "Starting system...", "Restarting..." and "Shutting down..." on screen.
 - The image build no longer starts two power managers, and incremental builds work.
+- Resize Home mounts HOME again with its fstab options, so it stays owned by the player instead of root until the next boot.
 - Launcher: Game Boy entries, and zip/7z games.
 - FN+D-pad up's FPS/CPU overlay (Gallium HUD) is configurable: content, graph or text, corner, shown on game start ([#23](https://github.com/CodeZombie/goodluckOS/issues/23)).
 
@@ -62,6 +64,14 @@ These are bigger and will be proposed in an issue first.
 - **Date and time:**
   - set from System Settings, and kept by the clock chip while the console is off;
   - time zone, 12/24-hour and the date format.
+
+## Planned
+
+- **Music and video player:**
+  - mpv (a Buildroot package) drawing straight to the screen through DRM/KMS, with gamepad controls: A play/pause, left/right seek 10 s, up/down seek 1 min, L1/R1 previous/next, B quit;
+  - Music and Videos tabs in the launcher, as `apps.puppy` entries for `HOME/media/music` and `HOME/media/videos`;
+  - thumbnails: a frame of each video taken with ffmpeg into `icons/`, and the cover art embedded in the MP3 or a `cover.jpg` in the album folder;
+  - a PC script that converts videos to 640x480 H.264, since the A33 decodes in software: up to 480p plays smoothly, 1080p and H.265 don't.
 
 ## Fork only
 
