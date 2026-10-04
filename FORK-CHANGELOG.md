@@ -11,6 +11,7 @@ Status:
 
 - **Merged upstream**: in CodeZombie/goodluckOS `main`.
 - **Waiting for a PR**: done and tested here; the pull request isn't open yet. Changes go upstream as small, separate PRs, only if Jeremy wants them.
+- **PR open**: the pull request is waiting for review.
 - **Fork only**: not meant for upstream.
 - **Planned**: not started yet.
 
@@ -18,13 +19,19 @@ Status:
 
 - Shutdown and reboot no longer hang when no USB cable is plugged in.
 - Power off works: the AXP223 is the system power controller.
+- HOME shows up on the PC over USB (MTP), like a phone, with a kernel fix for USB copies that hung ([#52](https://github.com/CodeZombie/goodluckOS/pull/52)).
+- SELECT+START closes the active app and FN+SELECT+START kills it: Jeremy built it into appctl from this idea.
+
+## PR open
+
+- Headphones play on both sides, and FN+D-pad down switches between the speaker and the headphones ([#56](https://github.com/CodeZombie/goodluckOS/pull/56), fixes [#7](https://github.com/CodeZombie/goodluckOS/issues/7)).
+- Boot on upstream main: the launcher starts again (appctl's full path) and init no longer respawns the removed power-manager.sh ([#55](https://github.com/CodeZombie/goodluckOS/pull/55), [#54](https://github.com/CodeZombie/goodluckOS/issues/54)).
 
 ## Waiting for a PR: fixes
 
-- RetroArch: A/B and Select/Start mapped right on the GA36-MB gamepad, and FN hotkeys (menu, save/load state, fast forward, pause, quit).
+- RetroArch FN hotkeys: menu, save/load state, fast forward, pause, quit. (The A/B and Select/Start mapping went upstream through [#48](https://github.com/CodeZombie/goodluckOS/pull/48).)
 - System Settings: the brightness shows its real level, the volume slider works, and both are saved on change.
 - Brightness, volume and CPU mode are kept across reboots.
-- SELECT+START closes the active app cleanly (RetroArch saves first).
 - Silent boot, with "Starting system...", "Restarting..." and "Shutting down..." on screen.
 - The image build no longer starts two power managers, and incremental builds work.
 - Resize Home mounts HOME again with its fstab options, so it stays owned by the player instead of root until the next boot.
@@ -33,8 +40,6 @@ Status:
 
 ## Waiting for a PR: hardware
 
-- HOME shows up on the PC over USB (MTP), like a phone, with a kernel fix for USB copies that hung. The serial console stays available.
-- Headphones play on both sides, and FN+D-pad down switches the sound between the speaker and the headphones only. There's no automatic jack detection on this board ([#7](https://github.com/CodeZombie/goodluckOS/issues/7)).
 - The speaker gets a 500 Hz high-pass filter, so it stays clean instead of buzzing on bass. There's also no more digital clipping.
 
 ## Waiting for a PR: interface
