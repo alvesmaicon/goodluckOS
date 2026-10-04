@@ -157,7 +157,8 @@ if [ "$MKFS_RC" -ne 0 ]; then
     exit 1
 fi
 
-if ! mount "$PART" "$MOUNT_POINT" 2>>"$LOG"; then
+# fstab has the options (owner player, umask): mounting by hand left HOME owned by root
+if ! mount "$MOUNT_POINT" 2>>"$LOG"; then
     log "ERROR: mount failed after reformat"
     exit 1
 fi
