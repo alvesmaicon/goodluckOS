@@ -52,6 +52,7 @@ These are bigger and will be proposed in an issue first.
   - names, descriptions and covers from `gamelist.xml`;
   - game options: rename, move to trash;
   - power and START menus, analog sticks;
+  - button hints in the bottom bar;
   - a top bar with the date and time, the volume and the battery.
 - **System Settings redesign:**
   - a menu of sections: Display & Audio, Launcher, Interface, Overlay, Date & Time, Storage, System, Input Settings;
@@ -62,7 +63,7 @@ These are bigger and will be proposed in an issue first.
 - **Interface font option:** Inter, ProggyClean, VT323, Pixelify Sans.
 - **Overlay over every game, drawn by a patch to Mesa's Gallium HUD** ([#24](https://github.com/CodeZombie/goodluckOS/issues/24)):
   - the volume, brightness and audio output feedback;
-  - an optional status bar with the date and time, the battery, the volume and the output.
+  - an optional status bar with the date, the time, the battery and the volume and output, each one on or off.
 
   RetroArch's own notifications, menu clock and battery, and PCSX-ReARMed's FPS counter, are turned off, so nothing overlaps.
 - **Power mode:** Battery saver, Balanced (the default) or Performance, in System Settings > System. Each one sets the CPU governor and top speed and the GPU speed range, and it is kept across reboots. It replaces the Performance mode checkbox.
