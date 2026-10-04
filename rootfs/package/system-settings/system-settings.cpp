@@ -27,8 +27,6 @@ const char* ALSA_CARD = "hw:GA36mbAudio";
 
 // Restored on boot by S91settings / persist-settings.sh
 const char* BRIGHTNESS_STATE_FILE = "/etc/player-flags/brightness";
-// Handled by the root power-manager, which stores the ALSA state
-const char* POWER_REQUEST_FIFO = "/run/power-request";
 const Uint32 SAVE_DELAY_MS = 800;
 
 int get_brightness() {
@@ -56,13 +54,10 @@ void save_brightness(int brightness) {
     rename(tmp.c_str(), BRIGHTNESS_STATE_FILE);
 }
 
-void send_power_request(const std::string& cmd) {
-    int fd = open(POWER_REQUEST_FIFO, O_WRONLY | O_NONBLOCK);
-    if (fd < 0) return;
-    std::string line = cmd + "\n";
-    ssize_t written = write(fd, line.c_str(), line.size());
-    (void)written;
-    close(fd);
+// Runs one of the root scripts doas.conf allows (each checks its own arguments), in the background
+void run_as_root(const std::string& script_and_args) {
+    std::string cmd = "doas /usr/local/bin/" + script_and_args + " >/dev/null 2>&1 &";
+    if (system(cmd.c_str()) != 0) {}
 }
 
 // The in-game status bar's volume and output (Gallium HUD)
@@ -71,7 +66,7 @@ void update_hud_status() {
 }
 
 void request_volume_save() {
-    send_power_request("save-settings");
+    run_as_root("persist-settings.sh save");
     update_hud_status();
 }
 
@@ -346,7 +341,7 @@ const char* CPUFREQ_SYSFS = "/sys/devices/system/cpu/cpu0/cpufreq";
 // S01resize-home grows the partition and leaves less than this untouched
 const unsigned long long RESIZE_MIN_FREE_KB = 8192;
 
-// Power profiles, applied by power-profile.sh (run as root by the power manager)
+// Power profiles, applied by power-profile.sh (run as root through doas)
 const char* POWER_PROFILE_STATE = "/etc/player-flags/power-profile";
 const char* POWER_DEFAULTS = "/usr/share/goodluck/defaults/power.conf";
 const char* POWER_PROFILES[] = {"battery", "balanced", "performance"};
@@ -1181,7 +1176,7 @@ int main(int argc, char* argv[]) {
                 t.tm_isdst = -1;
                 time_t when = mktime(&t);
                 if (when > 0) {
-                    send_power_request("set-time " + std::to_string((long long)when));
+                    run_as_root("set-time.sh " + std::to_string((long long)when));
                     clock_set = true;
                 }
             }
@@ -1269,7 +1264,7 @@ int main(int argc, char* argv[]) {
                     bool selected = i == power_profile;
                     if (ImGui::Selectable(tr(POWER_PROFILE_NAMES[i]), selected) && !selected) {
                         power_profile = i;
-                        send_power_request(std::string("set-profile ") + POWER_PROFILES[i]);
+                        run_as_root(std::string("power-profile.sh ") + POWER_PROFILES[i]);
                     }
                     if (selected) ImGui::SetItemDefaultFocus();
                 }
@@ -1309,7 +1304,7 @@ int main(int argc, char* argv[]) {
                     for (size_t i = 0; i < font_choices.size(); ++i)
                         if (&fonts::all()[font_choices[i]] == &fonts::find("")) pending_font = (int)i;
                     power_profile = default_power_profile();
-                    send_power_request("set-profile default");
+                    run_as_root("power-profile.sh default");
                     defaults_confirm = false;
                     defaults_restored = true;
                 }

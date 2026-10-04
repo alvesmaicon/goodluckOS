@@ -2,14 +2,14 @@
 CATEGORY=System
 NAME=Reboot
 DESCRIPTION=Reboot the device
-COMMAND=are-you-sure "Are you sure you want to reboot the device?" "echo reboot > /run/power-request" "Restarting..."
+COMMAND=are-you-sure "Are you sure you want to reboot the device?" "doas /sbin/reboot" "Restarting..."
 ICON=/usr/share/icons/reboot.png
 
 [ENTRY]
 CATEGORY=System
 NAME=Power Off
 DESCRIPTION=Power off the device
-COMMAND=are-you-sure "Are you sure you want to power off the device?" "echo poweroff > /run/power-request" "Shutting down..."
+COMMAND=are-you-sure "Are you sure you want to power off the device?" "doas /sbin/poweroff" "Shutting down..."
 ICON=/usr/share/icons/poweroff.png
 
 [ENTRY]

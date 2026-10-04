@@ -1,0 +1,12 @@
+#!/bin/sh
+# /etc/init.d/S99appd
+
+case "$1" in
+    start|stop|restart|status)
+        appctl "$1"
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|status}" >&2
+        exit 1
+        ;;
+esac

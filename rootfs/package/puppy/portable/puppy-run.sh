@@ -1,7 +1,7 @@
 #!/bin/sh
 # Runs Puppy on firmwares other than goodluckOS: shows the launcher, runs what was picked in it and
 # comes back to it, until Puppy is left with "Quit Puppy" (it then exits without a pick).
-# goodluckOS does the same with puppy-bootstrap.sh.
+# On goodluckOS, appd does this (Puppy launches through appctl).
 #
 # Usage: puppy-run.sh [puppy.conf]     (default: the puppy.conf next to this script)
 

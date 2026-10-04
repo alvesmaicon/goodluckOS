@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <cstdlib>
 #include <filesystem>
 #include <ctime>
 #include <fstream>
@@ -37,7 +38,11 @@ struct Config {
     std::vector<std::string> apps     = {"/usr/share/puppy/apps.puppy", "/home/player/apps.puppy"};
     std::vector<std::string> appsDirs = {"/home/player/.local/share/applications"};   // *.puppy files
     std::vector<std::string> esSystems;     // EmulationStation es_systems.cfg files to take systems from
-    std::string launchFile    = "/dev/shm/launch";      // the picked command, run by the bootstrap
+    // goodluckOS's appd runs the picked app and closes Puppy meanwhile; with launch_command empty
+    // (puppy.conf), Puppy writes the command to launch_file and quits, for a script that runs it
+    std::string launchCommand = "doas appctl launch-application";
+    std::string launchFile    = "/dev/shm/launch";
+    std::string autoStartMark = "/dev/shm/puppy-autolaunched";   // the autolaunch runs once per boot
     std::string stateFile     = "/dev/shm/launcher_state";
     std::string autoStartFile = "/home/player/autolaunch";
     std::string configDir     = "/home/player/.config/puppy";   // settings, favorites
@@ -45,15 +50,16 @@ struct Config {
     std::string langDir       = "/usr/share/goodluck/lang";
     std::string language;                   // overrides the one in the settings file
     std::string view, tabs;                 // defaults for the settings file's view= and tabs=
-    std::string powerFifo     = "/run/power-request";   // root power-manager.sh
+    std::string powerFifo;                  // a root daemon reading requests, e.g. "screen-off" (puppy.conf)
     std::string backlight     = "/sys/class/backlight/backlight/brightness";
     std::string osdFile       = "/dev/shm/osd";  // "volume|brightness <percent> [muted]", from osd-notify.sh
     std::string alsaCard      = "hw:GA36mbAudio";   // volume and audio output shown in the header
     std::string trashDir      = "/home/player/.trash";   // deleted games, until System Settings empties it
     // RetroArch saves and states, renamed along with a game (sort_savefiles: one folder per core)
     std::vector<std::string> saveDirs = {"/home/player/.config/retroarch/saves", "/home/player/.config/retroarch/states"};
-    // When set, these replace the System entries of apps.puppy and the power-manager.sh requests
-    std::string settingsCommand, restartCommand, shutdownCommand, screenOffCommand;
+    // When set, these replace the System entries of apps.puppy and the power_fifo requests
+    std::string settingsCommand, restartCommand, shutdownCommand;
+    std::string screenOffCommand = "doas /usr/local/bin/toggle-screen.sh off";
     bool quit = false;      // a "Quit Puppy" power option, for when Puppy is started from another frontend
 
     std::string settingsFile() const  { return configDir + "/settings"; }
@@ -332,6 +338,7 @@ struct Entry {
                             // used for favourites, autolaunch and the cursor; the name can come from a gamelist
     std::string name;
     std::string description;    // the system or app description
+    bool terminal = false;      // apps.puppy TERMINAL=: runs on the text console (less, vim, shells)
     std::string synopsis;       // from gamelist.xml
     std::string meta;           // "year · genre · players", from gamelist.xml
     std::string command;
@@ -360,7 +367,7 @@ enum class View { Grid, List };
 // One action of the POWER menu (see powerItems).
 struct PowerItem {
     const char* label;
-    const char* request;    // for the root power-manager.sh (nullptr: none)
+    const char* request;    // for the power_fifo daemon (nullptr: none)
     const char* status;     // shown while it happens (nullptr: nothing to wait for)
     const char* confirmEntry;   // System entry to launch (nullptr: none)
     const std::string* command; // puppy.conf command (nullptr: none)
@@ -527,6 +534,7 @@ static void parseAppsFile(const std::string& path, std::vector<Record>& records)
             rec.entry.id          = rec.entry.name;
             rec.entry.description = get("DESCRIPTION");
             rec.entry.command     = get("COMMAND");
+            rec.entry.terminal    = !get("TERMINAL").empty();
             rec.entry.iconPath    = get("ICON");
             // HIDE_IF_EXISTS=<path>: one-time entries (e.g. Resize Home) disappear once their job is done
             std::error_code ec;
@@ -963,10 +971,32 @@ static void toggleAutoStart(Model& m) {
     }
 }
 
-static void launch(const Model& m, const Entry& e) {
-    { std::ofstream out(cfg.launchFile); if (out) out << e.command << "\n"; }
-    std::ofstream state(cfg.stateFile);
-    if (state) state << m.cur().name << "\n" << e.category << "\n" << e.id << "\n";
+// Returns whether Puppy keeps running: appd stops it itself once the app starts.
+static bool launch(const Model& m, const Entry& e) {
+    {
+        std::ofstream state(cfg.stateFile);
+        if (state) state << m.cur().name << "\n" << e.category << "\n" << e.id << "\n";
+    }
+    if (cfg.launchCommand.empty()) {
+        std::ofstream out(cfg.launchFile);
+        if (out) out << e.command << "\n";
+        return false;
+    }
+    std::string command = cfg.launchCommand + " " + shellQuote(e.command) + (e.terminal ? " 1" : "");
+    if (std::system(command.c_str()) != 0) {}
+    return true;
+}
+
+// The autolaunch entry, once per boot: its command is the file's second line.
+static bool runAutoStart() {
+    std::error_code ec;
+    if (cfg.launchCommand.empty() || fs::exists(cfg.autoStartMark, ec)) return false;
+    { std::ofstream mark(cfg.autoStartMark); }
+    std::ifstream in(cfg.autoStartFile);
+    std::string header, command;
+    if (!std::getline(in, header) || !std::getline(in, command) || command.empty()) return false;
+    command = cfg.launchCommand + " " + shellQuote(command);
+    return std::system(command.c_str()) == 0;
 }
 
 static void restoreCursor(Model& m) {
@@ -1342,7 +1372,7 @@ static void applySettingsCommand(Model& m) {
 
 // The POWER menu. Each action, in order of preference: the puppy.conf command (run in the
 // background); the System entry of apps.puppy (launched, so Reboot/Power Off ask for confirmation
-// with are-you-sure); the request for the root power-manager.sh. Actions with none are left out.
+// with are-you-sure); the request for the power_fifo daemon. Actions with none are left out.
 static std::vector<PowerItem> powerItems(const Model& m) {
     std::error_code ec;
     const bool fifo = fs::exists(cfg.powerFifo, ec);
@@ -1374,7 +1404,7 @@ static void runDetached(const std::string& command) {
     }
 }
 
-// Non-blocking: if power-manager.sh isn't reading (e.g. being respawned), drop the request rather
+// Non-blocking: if the power_fifo daemon isn't reading (e.g. being respawned), drop the request rather
 // than freeze the launcher.
 static void sendPowerRequest(const char* request) {
     int fd = open(cfg.powerFifo.c_str(), O_WRONLY | O_NONBLOCK);
@@ -2402,6 +2432,7 @@ static bool loadConfig(int argc, char** argv) {
     };
     std::map<std::string, std::string*> paths = {
         {"font", &cfg.font}, {"fallback_icon", &cfg.fallbackIcon}, {"launch_file", &cfg.launchFile},
+        {"autolaunch_mark", &cfg.autoStartMark},
         {"state_file", &cfg.stateFile}, {"autolaunch_file", &cfg.autoStartFile}, {"config_dir", &cfg.configDir},
         {"cache_dir", &cfg.cacheDir}, {"lang_dir", &cfg.langDir}, {"power_fifo", &cfg.powerFifo},
         {"backlight", &cfg.backlight}, {"osd_file", &cfg.osdFile}, {"trash_dir", &cfg.trashDir},
@@ -2409,6 +2440,7 @@ static bool loadConfig(int argc, char** argv) {
     };
     std::map<std::string, std::string*> texts = {
         {"language", &cfg.language}, {"view", &cfg.view}, {"tabs", &cfg.tabs},
+        {"launch_command", &cfg.launchCommand},
         {"settings_command", &cfg.settingsCommand}, {"restart_command", &cfg.restartCommand},
         {"shutdown_command", &cfg.shutdownCommand}, {"screen_off_command", &cfg.screenOffCommand},
     };
@@ -2437,6 +2469,8 @@ static bool loadConfig(int argc, char** argv) {
 int main(int argc, char** argv) {
     unsetenv("GALLIUM_HUD_STATUS");     // the top bar already shows it
     if (!loadConfig(argc, argv)) return 2;
+    if (runAutoStart())
+        for (;;) pause();           // appd stops the launcher once the app starts
     i18n::langDirPath() = cfg.langDir;
     i18n::settingsPath() = cfg.settingsFile();
     if (!cfg.language.empty()) i18n::load(cfg.language);
@@ -2492,7 +2526,6 @@ int main(int argc, char** argv) {
     Audio audio;
     audio.read();
     bool fnHeld = false;        // FN + UP/DOWN are triggerhappy hotkeys, not navigation
-    bool consoleCleared = false;
     bool selectHeld = false, selectCombo = false;
     Action leftStick = Action::None, rightStick = Action::None;
     bool triggerL = false, triggerR = false;    // L2 / R2 held (they're axes); both: game options
@@ -2601,8 +2634,7 @@ int main(int argc, char** argv) {
                         auto confirm = std::find_if(model.systemEntries.begin(), model.systemEntries.end(),
                                                     [&](const Entry& e) { return e.name == item.confirmEntry; });
                         if (confirm != model.systemEntries.end()) {
-                            launch(model, *confirm);
-                            running = false;
+                            if (!launch(model, *confirm)) running = false;
                             break;
                         }
                     }
@@ -2642,8 +2674,7 @@ int main(int argc, char** argv) {
         }
         if (a == Action::Start && !kb.open) {
             if (model.hasSettings) {
-                launch(model, model.settings);
-                running = false;
+                if (!launch(model, model.settings)) running = false;
                 return;
             }
             // no settings app (e.g. on other firmwares, where POWER may suspend): START opens the menu
@@ -2699,8 +2730,7 @@ int main(int argc, char** argv) {
             case Action::ScrollDown: model.descScroll = std::min(ui.descMaxScroll(), model.descScroll + 1); break;
             case Action::Launch:
                 if (const Entry* e = model.selected()) {
-                    launch(model, *e);
-                    running = false;
+                    if (!launch(model, *e)) running = false;
                 }
                 break;
             default: break;
@@ -2712,12 +2742,6 @@ int main(int argc, char** argv) {
             shownBattery = readBattery();
             model.clock = clockText(clock);
             ui.render(model, kb, osd, shownBattery, audio);
-            if (!consoleCleared) {
-                // The boot's "Starting system..." stays on the text console, which flashes between
-                // apps; we can't write to it as player, so ask the root power-manager.sh
-                sendPowerRequest("clear-console");
-                consoleCleared = true;
-            }
             dirty = false;
         }
 

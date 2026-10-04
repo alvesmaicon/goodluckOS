@@ -41,4 +41,3 @@ console::respawn:/sbin/getty -L  console 0 vt100 # GENERIC_SERIAL
 
 # USB Gadget Serial - Standard login
 ttyGS0::respawn:/sbin/getty -L ttyGS0 115200 vt100
-::respawn:/usr/local/bin/power-manager.sh

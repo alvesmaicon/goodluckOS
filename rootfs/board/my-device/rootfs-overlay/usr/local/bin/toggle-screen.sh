@@ -2,7 +2,7 @@
 # POWER key: screen off/on.
 #   toggle-screen.sh       - from the key (triggerhappy). In the launcher, with the screen on, does
 #                            nothing: Puppy opens its power menu instead.
-#   toggle-screen.sh off   - turn the screen off (Puppy's "Display off", through power-manager.sh)
+#   toggle-screen.sh off   - turn the screen off (Puppy's "Display off", through doas)
 BL=/sys/class/backlight/backlight/brightness
 current_brightness=$(cat "$BL")
 
