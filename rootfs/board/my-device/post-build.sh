@@ -24,6 +24,9 @@ fi
 
 mkdir -p ${TARGET_DIR}/etc/player-flags
 
+# mpv's OSD font (no fontconfig)
+ln -sf /usr/share/fonts/Inter_24pt-Medium.ttf ${TARGET_DIR}/etc/mpv/subfont.ttf
+
 # SHUTDOWN_LINE='::shutdown:/etc/init.d/S99puppy-bootstrap stop'
 
 # if [ -f "${INITTAB}" ]; then

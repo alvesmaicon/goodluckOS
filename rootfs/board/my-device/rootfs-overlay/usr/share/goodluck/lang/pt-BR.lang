@@ -20,6 +20,10 @@ game = jogo
 games = jogos
 app = app
 apps = apps
+item = item
+items = itens
+Music = Músicas
+Videos = Vídeos
 player = jogador
 players = jogadores
 
