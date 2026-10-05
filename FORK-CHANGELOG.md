@@ -93,4 +93,5 @@ These are bigger and will be proposed in an issue first.
 ## Fork only
 
 - The fork follows upstream's appd/appctl and doas: power-manager.sh is gone, and the launcher, System Settings and the power menu run their root actions through doas.
+- The screen shown while an app starts is a translated "Loading..." instead of the ASCII-art dog.
 - README notes about this fork and the AI-assisted workflow.
