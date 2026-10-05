@@ -36,6 +36,7 @@ Please Note: At the time of writing, Allwinner-A23 based GA36-MB devices (which 
 - FN+DPAD_DOWN switches the sound between the speaker and the headphones only
 - If the screen is on, the LEDs are off. Nothing blinding you while you're playing in the dark
 - Comes stock with Chocolate Doom, ready to play
+- Music and video player (mpv): Music and Videos tabs in the launcher, played full screen with the console's buttons
 - Comes stock with Retroarch and several optimized cores (PCSX-ReArmed, Snes9x, QuickNES, DOSbox, Genesis Plus GX, mGBA, etc)
 - Games perform very well. Metal Gear Solid 1 is completely playable at reasonable framerates
 - Comes with a custom, optimized launcher application, with tabs per system, search, favourites and game artwork/descriptions from `gamelist.xml`
@@ -269,6 +270,13 @@ To add a new emulator, find an appropriate armhf libretro core .so file (e.g. fr
 2. Anywhere in your HOME partition, e.g. a `cores` folder
 
 Then modify `HOME -> apps.puppy` with a new `[ARCHIVE]` entry, pointing the COMMAND to your new libretro core. Take a look at `HOME -> apps.puppy` for an exmaple.
+
+## How do I add music and videos?
+Copy them into `HOME -> media -> music` and `HOME -> media -> videos`. The Music and Videos tabs show up in the launcher once there's something in them. A folder (an album, a series) is one entry that plays whole, with its `cover.jpg` or `folder.jpg` as the art; a single file plays along with the rest of its folder. Other art goes in the `icons` folder, named like the file or folder.
+
+Controls: A or START pause, B quit, D-pad left/right seek 10 s, up/down 1 min, L1/R1 previous/next, X the playlist, Y repeat on/off, L2/R2 the audio/subtitle track.
+
+The A33 decodes video in software: up to 640x480 H.264 plays smoothly, 1080p and H.265 don't. Convert bigger videos on your PC first, e.g. `ffmpeg -i in.mp4 -vf scale=640:480:force_original_aspect_ratio=decrease:force_divisible_by=2 -c:v libx264 -tune fastdecode -crf 23 -c:a aac -ac 2 out.mkv`.
 
 ## Does goodluckOS come with any games?
 Only Doom, through Chocolate Doom.

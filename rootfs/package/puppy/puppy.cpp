@@ -353,6 +353,7 @@ struct Category {
     std::string name;
     std::string label;          // short name for the tab strip (TAB= in apps.puppy), defaults to the name
     bool isArchive = false;     // games from a ROM folder, as opposed to apps
+    bool media = false;         // music or videos: not games, so left out of All Games
     bool mixed = false;         // the "All Games" tab: entries from every system
     std::vector<Entry> entries;
     std::vector<int> visible;   // indices of the entries matching the search, in display order
@@ -489,6 +490,7 @@ struct Archive {
     std::string name, tab, description, command, defaultIcon;
     std::vector<std::string> dirs, exts, iconDirs;
     bool es = false;    // from es_systems.cfg: the command uses %ROM%-style placeholders
+    bool media = false; // MEDIA=1: folders with matching files (albums, series) are entries too
     std::string system, emulator, core;     // for %SYSTEM%, %EMULATOR% and %CORE%
 };
 
@@ -553,6 +555,7 @@ static void parseAppsFile(const std::string& path, std::vector<Record>& records)
             a.exts        = splitList(get("ENTRY_EXTENSIONS"));
             a.iconDirs    = splitList(get("ENTRY_ICONS_DIRECTORIES"));
             a.tab         = get("TAB");
+            a.media       = !get("MEDIA").empty() && get("MEDIA") != "0";
             if (!a.name.empty() && !a.dirs.empty()) upsert(records, rec);
         }
         kv.clear();
@@ -720,6 +723,18 @@ static std::string findArchiveIcon(const Archive& a, const std::string& stem) {
     return {};
 }
 
+// An album's or series' cover.jpg / folder.jpg, or "".
+static std::string findFolderCover(const fs::path& dir) {
+    std::error_code ec;
+    for (fs::directory_iterator it(dir, ec), end; !ec && it != end; it.increment(ec)) {
+        const std::string stem = lower(it->path().stem().string());
+        const std::string ext = lower(it->path().extension().string());
+        if ((stem == "cover" || stem == "folder") && (ext == ".jpg" || ext == ".jpeg" || ext == ".png"))
+            return it->path().string();
+    }
+    return {};
+}
+
 // What an EmulationStation/Skraper gamelist.xml says about one ROM.
 struct GameInfo {
     std::string name, synopsis, image, meta;
@@ -842,30 +857,43 @@ static std::vector<Entry> expandArchive(const Archive& a) {
         exts.push_back(lower(e));
     }
 
+    auto matches = [&](const fs::path& p) {
+        std::string ext = lower(p.extension().string());
+        if (!ext.empty()) ext.erase(0, 1);
+        return exts.empty() || std::find(exts.begin(), exts.end(), ext) != exts.end();
+    };
+    // a media folder (album, series) with at least one matching file
+    auto mediaFolder = [&](const fs::path& d) {
+        std::error_code ec;
+        for (fs::directory_iterator it(d, ec), end; !ec && it != end; it.increment(ec)) {
+            std::error_code ec2;
+            if (it->is_regular_file(ec2) && matches(it->path())) return true;
+        }
+        return false;
+    };
+
     std::vector<Entry> out;
     for (const auto& dir : a.dirs) {
         const auto gamelist = loadGamelist(dir);
         std::error_code ec;
         for (fs::directory_iterator it(dir, ec), end; !ec && it != end; it.increment(ec)) {
-            std::error_code ec2;
-            if (!it->is_regular_file(ec2)) continue;
-
             const fs::path& p = it->path();
             if (p.filename().string().empty() || p.filename().string()[0] == '.') continue;
 
-            std::string ext = lower(p.extension().string());
-            if (!ext.empty()) ext.erase(0, 1);
-            if (!exts.empty() && std::find(exts.begin(), exts.end(), ext) == exts.end()) continue;
+            std::error_code ec2;
+            bool folder = a.media && it->is_directory(ec2) && mediaFolder(p);
+            if (!folder && (!it->is_regular_file(ec2) || !matches(p))) continue;
 
             Entry e;
             e.category    = a.name;
-            e.id          = p.stem().string();
+            e.id          = folder ? p.filename().string() : p.stem().string();
             e.name        = e.id;
             e.description = a.description;
             e.command     = a.es ? buildEsCommand(a, p) : buildArchiveCommand(a.command, p.string());
             e.file        = p.string();
             // Cover: the icons folder wins (small, hand-picked), then the gamelist's image
             e.iconPath    = findArchiveIcon(a, e.id);
+            if (folder && e.iconPath.empty()) e.iconPath = findFolderCover(p);
 
             auto info = gamelist.find(p.filename().string());
             if (info != gamelist.end()) {
@@ -920,9 +948,11 @@ static std::vector<Category> loadCatalog() {
 
     std::vector<Category> cats;
     std::map<std::string, std::string> archiveTabs;
+    std::set<std::string> mediaArchives;
     for (const auto& rec : records) {
         if (rec.isArchive) {
             archiveTabs[rec.archive.name] = rec.archive.tab;
+            if (rec.archive.media) mediaArchives.insert(rec.archive.name);
             for (const auto& e : expandArchive(rec.archive)) addToCategory(cats, e);
         } else {
             addToCategory(cats, rec.entry);
@@ -931,6 +961,7 @@ static std::vector<Category> loadCatalog() {
     for (auto& c : cats) {
         auto it = archiveTabs.find(c.name);
         c.isArchive = it != archiveTabs.end();
+        c.media = mediaArchives.count(c.name) > 0;
         c.label = (c.isArchive && !it->second.empty()) ? it->second : c.name;
     }
     return cats;
@@ -1022,7 +1053,7 @@ static void addAllGamesTab(Model& m) {
     all.isArchive = true;
     all.mixed = true;
     for (const auto& c : m.categories) {
-        if (!c.isArchive) continue;
+        if (!c.isArchive || c.media) continue;
         for (Entry e : c.entries) {
             e.tag = c.label;
             all.entries.push_back(std::move(e));
@@ -1919,8 +1950,9 @@ private:
         // "686 games", or "12 of 686 games" while searching
         std::string count = std::to_string(c.visible.size());
         if (!m.query.empty()) count += std::string(" ") + tr("of") + " " + std::to_string(c.entries.size());
-        count += std::string(" ") + tr(c.isArchive ? (c.entries.size() == 1 ? "game" : "games")
-                                                   : (c.entries.size() == 1 ? "app" : "apps"));
+        const bool one = c.entries.size() == 1;
+        count += std::string(" ") + tr(c.media ? (one ? "item" : "items")
+                                     : c.isArchive ? (one ? "game" : "games") : (one ? "app" : "apps"));
         if (!m.query.empty()) count += "  \u00b7  \"" + m.query + "\"";
         int countW = textWidth(smallFont, count);
 

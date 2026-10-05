@@ -76,14 +76,13 @@ These are bigger and will be proposed in an issue first.
 - **Date and time:**
   - set from System Settings, and kept by the clock chip while the console is off;
   - time zone, 12/24-hour and the date format.
+- **Music and video player:**
+  - mpv (a Buildroot package), full screen through DRM/KMS, with the console's buttons: A or START pause, B quit, left/right seek 10 s, up/down 1 min, L1/R1 previous/next, X the playlist, Y repeat, L2/R2 the audio/subtitle track;
+  - Music and Videos tabs in the launcher for `HOME/media/music` and `HOME/media/videos`, left out of All Games. A folder (an album, a series) is one entry that plays whole, with its `cover.jpg` as the art; a single file plays along with the rest of its folder;
+  - songs show the artist, the title, the time and the position in the playlist;
+  - the A33 decodes in software: 640x480 H.264 plays smoothly (tested with a full-screen music video and a film), 1080p and H.265 don't. The README has the ffmpeg line to convert bigger videos.
 
 ## Planned
-
-- **Music and video player:**
-  - mpv (a Buildroot package) drawing straight to the screen through DRM/KMS, with gamepad controls: A play/pause, left/right seek 10 s, up/down seek 1 min, L1/R1 previous/next, B quit;
-  - Music and Videos tabs in the launcher, as `apps.puppy` entries for `HOME/media/music` and `HOME/media/videos`;
-  - thumbnails: a frame of each video taken with ffmpeg into `icons/`, and the cover art embedded in the MP3 or a `cover.jpg` in the album folder;
-  - a PC script that converts videos to 640x480 H.264, since the A33 decodes in software: up to 480p plays smoothly, 1080p and H.265 don't.
 
 - **Launcher themes and options:**
   - a Retro theme (today's look, in the EmulationStation style) and a Modern one (the game's art in the background, rounded cards, button hints drawn like the console's buttons), picked in System Settings;

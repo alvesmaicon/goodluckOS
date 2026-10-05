@@ -160,3 +160,25 @@ ENTRY_EXTENSIONS=wad;iwad;
 ENTRY_ICONS_DIRECTORIES=/home/player/roms/doom/icons
 DEFAULT_ICON=/usr/share/icons/chocolate-doom.png
 COMMAND=chocolate-doom -iwad %s
+
+[ARCHIVE]
+NAME=Music
+TAB=Music
+MEDIA=1
+Description=Songs and albums
+ENTRY_DIRECTORIES=/home/player/media/music
+ENTRY_EXTENSIONS=mp3;flac;ogg;opus;m4a;aac;wav;wma
+ENTRY_ICONS_DIRECTORIES=/home/player/media/music/icons
+DEFAULT_ICON=/usr/share/icons/music.png
+COMMAND=mpv %s
+
+[ARCHIVE]
+NAME=Videos
+TAB=Videos
+MEDIA=1
+Description=Videos and series
+ENTRY_DIRECTORIES=/home/player/media/videos
+ENTRY_EXTENSIONS=mp4;mkv;avi;webm;mov;m4v;mpg;mpeg;wmv;flv;3gp
+ENTRY_ICONS_DIRECTORIES=/home/player/media/videos/icons
+DEFAULT_ICON=/usr/share/icons/videos.png
+COMMAND=mpv %s

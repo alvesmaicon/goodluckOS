@@ -19,6 +19,8 @@ mkdir -p overlay/roms/sms/icons
 mkdir -p overlay/roms/gg/icons
 mkdir -p overlay/roms/segacd/icons
 mkdir -p overlay/.config/retroarch/cores
+mkdir -p overlay/media/music/icons
+mkdir -p overlay/media/videos/icons
 
 rm -rf staging
 rm -rf out/*
