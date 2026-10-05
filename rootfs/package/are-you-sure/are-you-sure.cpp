@@ -11,6 +11,7 @@
 #include <array>
 #include <cstdio>
 #include <sys/wait.h>
+#include <unistd.h>
 
 // Helper to execute a command, capture its stdout/stderr, and return the exit code
 std::string ExecuteCommand(const char* cmd, int& out_exit_code) {
@@ -39,6 +40,16 @@ std::string ExecuteCommand(const char* cmd, int& out_exit_code) {
     }
 
     return result;
+}
+
+// The status message also goes on the console, which shows once reboot/poweroff closes this app
+void ShowOnConsole(const char* text) {
+    pid_t pid = fork();
+    if (pid == 0) {
+        execlp("doas", "doas", "/usr/local/bin/console-message.sh", text, (char*)nullptr);
+        _exit(127);
+    }
+    if (pid > 0) waitpid(pid, nullptr, 0);
 }
 
 enum class AppState {
@@ -172,6 +183,7 @@ int main(int argc, char* argv[]) {
             ImGui::SameLine(0.0f, spacing);
 
             if (ImGui::Button(i18n::tr("Confirm"), ImVec2(buttonWidth, buttonHeight))) {
+                if (done_message) ShowOnConsole(done_message);
                 errorOutput = ExecuteCommand(command, exitCode);
 
                 if (exitCode != 0) {
