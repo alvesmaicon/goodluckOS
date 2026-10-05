@@ -200,8 +200,8 @@ EOF
 }
 
 show_loading() {
-    # loading=puppy in the launcher settings (System Settings > Interface)
-    if grep -qx "loading=puppy" /home/player/.config/puppy/settings 2>/dev/null; then
+    # loading=text in the launcher settings (System Settings > Interface)
+    if ! grep -qx "loading=text" /home/player/.config/puppy/settings 2>/dev/null; then
         show_dog; return
     fi
     _msg=$(/usr/local/bin/gl-tr "Loading...")

@@ -103,7 +103,7 @@ struct LauncherSettings {
     bool list_view = false;
     std::string language = "en";
     std::string font;           // fonts.h key, "" = not chosen (Inter)
-    bool loading_puppy = false; // appctl's screen while an app starts: the ASCII-art dog or "Loading..."
+    bool loading_text = false;  // appctl's screen while an app starts: "Loading..." instead of the ASCII-art dog
     std::vector<std::string> hidden_tabs;   // "hidden_tab=<name>" lines: tabs left out of the launcher's strip
 };
 
@@ -117,7 +117,7 @@ LauncherSettings load_launcher_settings() {
         else if (line == "tabs=on") s.show_tabs = true;
         else if (line.compare(0, 9, "language=") == 0 && line.size() > 9) s.language = line.substr(9);
         else if (line.compare(0, 5, "font=") == 0 && line.size() > 5) s.font = line.substr(5);
-        else if (line == "loading=puppy") s.loading_puppy = true;
+        else if (line == "loading=text") s.loading_text = true;
         else if (line.compare(0, 11, "hidden_tab=") == 0 && line.size() > 11) s.hidden_tabs.push_back(line.substr(11));
     }
     return s;
@@ -139,7 +139,7 @@ void save_launcher_settings(const LauncherSettings& s) {
     lines.push_back(std::string("tabs=") + (s.show_tabs ? "on" : "off"));
     lines.push_back("language=" + s.language);
     if (!s.font.empty()) lines.push_back("font=" + s.font);
-    lines.push_back(std::string("loading=") + (s.loading_puppy ? "puppy" : "text"));
+    if (s.loading_text) lines.push_back("loading=text");
     for (const auto& t : s.hidden_tabs) lines.push_back("hidden_tab=" + t);
 
     mkdir("/home/player/.config", 0755);
@@ -1081,16 +1081,9 @@ int main(int argc, char* argv[]) {
                 }
             }
 
-            ImGui::AlignTextToFramePadding();
-            ImGui::Text("%s", tr("Loading screen:"));
-            ImGui::SameLine();
-            if (ImGui::RadioButton(tr("Text"), !launcher.loading_puppy) && launcher.loading_puppy) {
-                launcher.loading_puppy = false;
-                save_launcher_settings(launcher);
-            }
-            ImGui::SameLine();
-            if (ImGui::RadioButton(tr("Puppy"), launcher.loading_puppy) && !launcher.loading_puppy) {
-                launcher.loading_puppy = true;
+            bool show_puppy = !launcher.loading_text;
+            if (ImGui::Checkbox(tr("Show Puppy on loading screens"), &show_puppy)) {
+                launcher.loading_text = !show_puppy;
                 save_launcher_settings(launcher);
             }
             end_page();

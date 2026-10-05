@@ -164,7 +164,7 @@ System Settings
 ├── Interface
 │   ├── Language
 │   ├── Font
-│   └── Loading screen: Text / Puppy (what shows while a game starts)
+│   └── Show Puppy on loading screens (off: a plain "Loading..." while a game starts)
 ├── Overlay
 │   ├── In-game status bar: Show date
 │   ├── Show time

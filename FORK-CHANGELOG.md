@@ -93,5 +93,5 @@ These are bigger and will be proposed in an issue first.
 ## Fork only
 
 - The fork follows upstream's appd/appctl and doas: power-manager.sh is gone, and the launcher, System Settings and the power menu run their root actions through doas.
-- The screen shown while an app starts is a translated "Loading..." by default; the ASCII-art dog is an option (System Settings > Interface > Loading screen).
+- System Settings > Interface > Show Puppy on loading screens: on by default (the ASCII-art dog, as upstream); off shows a translated "Loading..." instead.
 - README notes about this fork and the AI-assisted workflow.
