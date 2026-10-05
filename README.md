@@ -163,7 +163,8 @@ System Settings
 │   └── Launcher tabs ─ which tabs to show
 ├── Interface
 │   ├── Language
-│   └── Font
+│   ├── Font
+│   └── Loading screen: Text / Puppy (what shows while a game starts)
 ├── Overlay
 │   ├── In-game status bar: Show date
 │   ├── Show time
