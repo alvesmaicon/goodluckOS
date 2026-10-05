@@ -38,6 +38,12 @@ Status:
 - Launcher: Game Boy entries, and zip/7z games.
 - FN+D-pad up's FPS/CPU overlay (Gallium HUD) is configurable: content, graph or text, corner, shown on game start ([#23](https://github.com/CodeZombie/goodluckOS/issues/23)).
 
+- After upstream's move to appd/appctl, a few things lost their target; fixed here, to offer upstream:
+  - the autolaunch entry runs again at boot (nothing read `/home/player/autolaunch` once puppy-bootstrap.sh was gone);
+  - FN+D-pad up's FPS overlay finds the running app through appd's cgroup, and signals only the processes that catch it;
+  - the POWER key turns the screen off in game again;
+  - `exit-active-process.sh` and `kill-active-process.sh` call appctl (S99appd doesn't accept stop-application).
+
 ## Waiting for a PR: hardware
 
 - The speaker gets a 500 Hz high-pass filter, so it stays clean instead of buzzing on bass. There's also no more digital clipping.
@@ -87,4 +93,5 @@ These are bigger and will be proposed in an issue first.
 
 ## Fork only
 
+- The fork follows upstream's appd/appctl and doas: power-manager.sh is gone, and the launcher, System Settings and the power menu run their root actions through doas.
 - README notes about this fork and the AI-assisted workflow.
