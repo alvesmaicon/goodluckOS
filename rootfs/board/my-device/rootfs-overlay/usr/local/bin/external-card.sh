@@ -11,7 +11,7 @@ trap 'rmdir "$L"' EXIT
 case "$1" in
     add)
         # already mounted and readable; a mount left from a card that came out isn't
-        mountpoint -q "$M" && ls "$M" >/dev/null 2>&1 && exit 0
+        mountpoint -q "$M" && df "$M" >/dev/null 2>&1 && exit 0
         while mountpoint -q "$M"; do umount -l "$M"; done
         best=""; size=0
         for p in /sys/block/mmcblk1/mmcblk1p*; do
