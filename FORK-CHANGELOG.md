@@ -54,7 +54,6 @@ Status:
 
 ## Waiting for a PR: interface
 
-- The console shows up on the PC as "goodluckOS" instead of "GA36MB", the board's code: the system's name is right on every console it runs on.
 These are bigger and will be proposed in an issue first.
 
 - **Launcher (Puppy) redesign:**
@@ -97,6 +96,7 @@ These are bigger and will be proposed in an issue first.
 
 ## Fork only
 
+- The console shows up on the PC as "goodluckOS" instead of "GA36MB", the board's code: the system's name is right on every console it runs on.
 - The fork follows upstream's appd/appctl and doas: power-manager.sh is gone, and the launcher, System Settings and the power menu run their root actions through doas.
 - System Settings > Interface > Show Puppy on loading screens: on by default (the ASCII-art dog, as upstream); off shows a translated "Loading..." instead.
 - Restart and Shut down leave "Restarting..." / "Shutting down..." on the screen until the console goes off (since appd, the loading screen stayed there instead).
