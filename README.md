@@ -36,6 +36,7 @@ Please Note: At the time of writing, Allwinner-A23 based GA36-MB devices (which 
 - FN+DPAD_DOWN switches the sound between the speaker and the headphones only
 - If the screen is on, the LEDs are off. Nothing blinding you while you're playing in the dark
 - Comes stock with Chocolate Doom, ready to play
+- Second SD card (TF-2 slot) for more games, with its own launcher tab
 - Music and video player (mpv): Music and Videos tabs in the launcher, played full screen with the console's buttons
 - Comes stock with Retroarch and several optimized cores (PCSX-ReArmed, Snes9x, QuickNES, DOSbox, Genesis Plus GX, mGBA, etc)
 - Games perform very well. Metal Gear Solid 1 is completely playable at reasonable framerates
@@ -262,6 +263,11 @@ Already have a scraped collection (e.g. made with [Skraper](https://www.skraper.
 To add custom art to Puppy, add an image file into the `icons` folder in your rom folder with the same name as the rom file. (eg. if your game is `roms/snes/super-mario.smc`, your image would be `roms/snes/icons/super-mario.png`)
 
 Puppy also reads a `gamelist.xml` in the rom folder (as written by Skraper or EmulationStation): it takes each game's name, description, year/genre/players and image from it. An image in `icons` still wins over the gamelist's. With the interface in another language, a `gamelist.<code>.xml` next to it (e.g. `gamelist.pt-BR.xml`, written by a scraper pass in that language) supplies that language's names, descriptions and genres; images and anything it lacks still come from `gamelist.xml`. Big images are scaled down once and cached in `~/.cache/puppy/thumbs`.
+
+### Second card (TF-2 slot)
+A FAT32 card in the second slot shows up in the launcher, in its own External Card tab and in each system's tab. Put the games in a `roms` folder with the same system folders as HOME (`roms/snes`, `roms/psx`, `roms/gba`...), and covers in each folder's `icons`. A card with no `roms` folder gets the folders created the first time it's mounted; existing folders and files are never touched. Music and videos go in `media/music` and `media/videos`.
+
+Puppy finds games by folder, not by file type: games loose on the card, or in the wrong system's folder, won't show up or won't start. exFAT cards (most cards over 32 GB come that way) aren't read yet, so format the card as FAT32.
 
 ### Can I add my own archives?
 You sure can!
