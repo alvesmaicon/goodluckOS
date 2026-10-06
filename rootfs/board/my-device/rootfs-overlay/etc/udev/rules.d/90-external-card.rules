@@ -1,0 +1,3 @@
+# TF-2 slot: its card's first FAT partition at /media/external
+ACTION=="add", SUBSYSTEM=="block", KERNEL=="mmcblk1p[0-9]*", RUN+="/usr/local/bin/external-card.sh add %k"
+ACTION=="remove", SUBSYSTEM=="block", KERNEL=="mmcblk1p[0-9]*", RUN+="/usr/local/bin/external-card.sh remove %k"
