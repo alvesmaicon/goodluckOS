@@ -3,10 +3,34 @@
 G=/sys/kernel/config/usb_gadget/g1
 LOG=/tmp/usb-gadget.log
 
+# timed <tenths of a second> <command...>: runs the command, gives up on it after that long.
+# Tearing the gadget down can block in the kernel, which hung shutdowns and reboots.
+timed() {
+    limit=$1; shift
+    ( "$@" ) &
+    p=$!; i=0
+    while kill -0 $p 2>/dev/null; do
+        [ $i -ge "$limit" ] && return 1
+        sleep 0.1; i=$((i + 1))
+    done
+    return 0
+}
+
+# umtprd keeps the MTP endpoints open until it exits: wait for it, then make sure
+stop_umtprd() {
+    [ -f /run/umtprd.pid ] || return 0
+    pid=$(cat /run/umtprd.pid)
+    kill "$pid" 2>/dev/null
+    i=0
+    while kill -0 "$pid" 2>/dev/null && [ $i -lt 20 ]; do sleep 0.1; i=$((i + 1)); done
+    kill -9 "$pid" 2>/dev/null
+    rm -f /run/umtprd.pid
+}
+
 # Rebuild the gadget with the serial console alone (MTP did not work)
 serial_only() {
     echo "$1: serial only" >> $LOG
-    [ -f /run/umtprd.pid ] && kill "$(cat /run/umtprd.pid)" 2>/dev/null && rm -f /run/umtprd.pid
+    stop_umtprd
     echo "" > $G/UDC 2>/dev/null
     rm -f $G/configs/c.1/ffs.mtp
     ls /sys/class/udc > $G/UDC
@@ -15,6 +39,12 @@ serial_only() {
 case "$1" in
   start)
     echo "Starting USB Gadget (serial + MTP)..."
+
+    # leftovers of a stop that gave up would be built over: restart the console instead
+    if [ -n "$(cat $G/UDC 2>/dev/null)" ] || mountpoint -q /dev/ffs-mtp; then
+        echo "start: last gadget still up, skipped" >> $LOG
+        exit 0
+    fi
 
     mount -t configfs none /sys/kernel/config 2>/dev/null
 
@@ -83,7 +113,7 @@ case "$1" in
   stop)
     echo "Stopping USB Gadget..."
 
-    [ -f /run/umtprd.pid ] && kill "$(cat /run/umtprd.pid)" 2>/dev/null && rm -f /run/umtprd.pid
+    stop_umtprd
 
     # With no USB cable the unbind below never returns, which hung every shutdown and reboot
     # (rcK stops here). There is nothing to tear down before the power goes off anyway.
@@ -91,24 +121,19 @@ case "$1" in
         exit 0
     fi
 
-    # Unbind from UDC. This can also hang with the cable in (e.g. a half-started MTP function),
-    # so give it 3s and let the shutdown go on without the teardown.
-    ( echo "" > $G/UDC ) &
-    i=0
-    while kill -0 $! 2>/dev/null; do
-        [ $i -ge 30 ] && exit 0
-        sleep 0.1; i=$((i + 1))
-    done
+    # Unbind from UDC, then take the gadget apart. Any of these can block with the cable in
+    # (e.g. a half-started MTP function): give up on the teardown and let the shutdown go on.
+    timed 30 sh -c "echo '' > $G/UDC" || { echo "stop: unbind timed out" >> $LOG; exit 0; }
 
     # Remove symlinks
     rm -f $G/configs/c.1/acm.usb0 $G/configs/c.1/ffs.mtp
-    umount /dev/ffs-mtp 2>/dev/null
+    timed 20 umount /dev/ffs-mtp || { echo "stop: umount timed out" >> $LOG; exit 0; }
 
     # Remove directories in reverse order of creation
     rmdir $G/configs/c.1/strings/0x409
     rmdir $G/configs/c.1
     rmdir $G/functions/acm.usb0
-    rmdir $G/functions/ffs.mtp 2>/dev/null
+    timed 20 rmdir $G/functions/ffs.mtp 2>/dev/null || { echo "stop: rmdir ffs.mtp timed out" >> $LOG; exit 0; }
     rmdir $G/strings/0x409
     rmdir $G
     ;;
