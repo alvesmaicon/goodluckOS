@@ -54,6 +54,7 @@ Status:
 
 ## Waiting for a PR: interface
 
+- The console shows up on the PC as "goodluckOS" instead of "GA36MB", the board's code: the system's name is right on every console it runs on.
 These are bigger and will be proposed in an issue first.
 
 - **Launcher (Puppy) redesign:**

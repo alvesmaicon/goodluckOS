@@ -37,7 +37,7 @@ case "$1" in
     mkdir -p strings/0x409
     echo "0123456789" > strings/0x409/serialnumber
     echo "goodluckOS"  > strings/0x409/manufacturer
-    echo "GA36MB" > strings/0x409/product
+    echo "goodluckOS" > strings/0x409/product
 
     # Create the configuration
     mkdir -p configs/c.1/strings/0x409
