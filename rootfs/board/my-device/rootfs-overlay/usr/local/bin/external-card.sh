@@ -1,7 +1,17 @@
 #!/bin/sh
-# Mounts the TF-2 card's largest FAT partition at /media/external (udev, 90-external-card.rules)
+# The TF-2 card: its largest FAT partition at /media/external
+#   add / remove   from udev (90-external-card.rules)
+#   detect         look for a card again: rebinds the slot's controller (System Settings)
+#   eject          unmount and power the slot down, so the card can come out (System Settings)
 M=/media/external
 L=/run/external-card.lock
+SLOT=1c10000.mmc
+DRV=/sys/bus/platform/drivers/sunxi-mmc
+
+unmount() {
+    sync
+    while mountpoint -q "$M"; do umount "$M" 2>/dev/null || umount -l "$M"; done
+}
 
 # udev runs one copy per partition at once: take turns
 n=0
@@ -28,7 +38,16 @@ case "$1" in
         fi
         ;;
     remove)
-        while mountpoint -q "$M"; do umount -l "$M"; done
+        unmount
+        ;;
+    detect)
+        [ -e "$DRV/$SLOT" ] && echo "$SLOT" > "$DRV/unbind"
+        sleep 1
+        echo "$SLOT" > "$DRV/bind"
+        ;;
+    eject)
+        unmount
+        [ -e "$DRV/$SLOT" ] && echo "$SLOT" > "$DRV/unbind"
         ;;
 esac
 exit 0
