@@ -235,7 +235,7 @@
 };
 &mmc1 {
     bus-width = <4>;
-    broken-cd;
+    non-removable;
     pinctrl-names = "default";
     pinctrl-0 = <&mmc1_pg_pins>;
     vmmc-supply = <&reg_dcdc1>;
