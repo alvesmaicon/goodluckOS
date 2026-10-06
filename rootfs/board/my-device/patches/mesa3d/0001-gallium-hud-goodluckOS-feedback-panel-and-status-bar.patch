@@ -4,31 +4,33 @@ Subject: [PATCH] gallium/hud: goodluckOS feedback panel and status bar
 Draws over any app, even with the graphs hidden:
 - the volume / brightness / audio output feedback that osd-notify.sh writes
   to /dev/shm/hud-osd, for 1.5 s;
-- a status bar with the items GALLIUM_HUD_STATUS lists: clock (in the
-  GALLIUM_HUD_STATUS_CLOCK strftime format), battery (from sysfs) and audio
-  (the volume and output that hud-status.sh writes to /dev/shm/hud-status).
+- a status bar with the items GALLIUM_HUD_STATUS lists: cputemp and pmictemp
+  (the SoC's and the AXP's sensors), clock (in the GALLIUM_HUD_STATUS_CLOCK
+  strftime format), battery (from sysfs) and audio (the volume and output that
+  hud-status.sh writes to /dev/shm/hud-status).
 Both use the launcher's colors and icons. Text can now have a color and a
 scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
 
 ---
---- a/src/gallium/auxiliary/hud/hud_context.c	2026-10-03 11:29:08.431032937 -0300
-+++ b/src/gallium/auxiliary/hud/hud_context.c	2026-10-03 11:29:08.432845645 -0300
-@@ -68,6 +68,9 @@
+--- a/src/gallium/auxiliary/hud/hud_context.c	2026-10-06 14:50:40.594777900 -0300
++++ b/src/gallium/auxiliary/hud/hud_context.c	2026-10-06 14:51:50.896752600 -0300
+@@ -68,6 +68,10 @@
  #include "util/u_upload_mgr.h"
  #include "tgsi/tgsi_text.h"
  #include "tgsi/tgsi_dump.h"
 +#include "util/os_time.h"
 +#include <dirent.h>
++#include <limits.h>
 +#include <sys/stat.h>
  
  #define HUD_DEFAULT_VISIBILITY true
  #define HUD_DEFAULT_SCALE 1
-@@ -80,6 +83,61 @@
+@@ -80,6 +84,61 @@
  static int hud_rotate = HUD_DEFAULT_ROTATION;
  static float hud_opacity = HUD_DEFAULT_OPACITY / 100.0f;
  
 +/* goodluckOS: a feedback panel (volume, brightness, audio output) and a status
-+ * bar (battery, volume, output) drawn over any app, even with the graphs
++ * bar (temperatures, battery, volume, output) drawn over any app, even with the graphs
 + * hidden. osd-notify.sh writes the panel as three lines (label, value, bar
 + * percent or -1) and hud-status.sh the volume, mute and headphones state. */
 +#define OSD_FILE "/dev/shm/hud-osd"
@@ -50,15 +52,15 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
 +
 +static struct {
 +   int enabled;
-+   bool show_clock, show_battery, show_audio;
++   bool show_clock, show_battery, show_audio, show_cpu_temp, show_pmic_temp;
 +   float opacity;
 +   char clock_format[32];
 +   struct timespec mtime;
 +   int64_t next_ms;
-+   char battery_dir[300];
-+   int battery, volume;
++   char battery_dir[300], pmic_dir[300];
++   int battery, volume, cpu_temp, pmic_temp;
 +   bool charging, full, muted, headphones;
-+} status = { .enabled = -1, .battery = -1, .volume = -1 };
++} status = { .enabled = -1, .battery = -1, .volume = -1, .cpu_temp = -1, .pmic_temp = -1 };
 +
 +#define MAX_QUADS 96
 +static struct {
@@ -85,7 +87,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
  #if DETECT_OS_POSIX
  static void
  signal_visible_handler(int sig, siginfo_t *siginfo, void *context)
-@@ -169,6 +227,8 @@
+@@ -169,6 +228,8 @@
     char *s = buf;
     float *vertices = hud->text.vertices + hud->text.num_vertices*4;
     unsigned num = 0;
@@ -94,7 +96,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
  
     va_list ap;
     va_start(ap, str);
-@@ -178,23 +238,24 @@
+@@ -178,23 +239,24 @@
     if (!*s)
        return;
  
@@ -125,7 +127,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
           s++;
           continue;
        }
-@@ -221,7 +282,7 @@
+@@ -221,7 +283,7 @@
        vertices[num++] = (float) tx2;
        vertices[num++] = (float) ty1;
  
@@ -134,7 +136,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
        s++;
     }
  
-@@ -485,6 +546,358 @@
+@@ -485,6 +547,435 @@
   * The texture is usually the back buffer being displayed.
   */
  static void
@@ -227,6 +229,52 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
 +   osd.visible = now < osd.until_ms;
 +}
 +
++/* the SoC's sensor (thermal_zone0) and the AXP's, an IIO device with no name
++ * file, in degrees C */
++static void
++hud_temps_update(void)
++{
++   static bool searched;
++   char buf[64], path[340];
++
++   if (status.show_cpu_temp)
++      status.cpu_temp = read_line("/sys/class/thermal/thermal_zone0/temp", buf, sizeof(buf)) ?
++                        atoi(buf) / 1000 : -1;
++   if (!status.show_pmic_temp)
++      return;
++
++   if (!searched) {
++      DIR *dir = opendir("/sys/bus/iio/devices");
++      struct dirent *e;
++
++      searched = true;
++      while (dir && (e = readdir(dir))) {
++         char real[PATH_MAX];
++         snprintf(path, sizeof(path), "/sys/bus/iio/devices/%s", e->d_name);
++         if (e->d_name[0] != '.' && realpath(path, real) && strstr(real, "axp")) {
++            snprintf(status.pmic_dir, sizeof(status.pmic_dir), "%s", path);
++            break;
++         }
++      }
++      if (dir)
++         closedir(dir);
++   }
++   if (!status.pmic_dir[0])
++      return;
++
++   double v[3];
++   const char *files[] = {"in_temp_raw", "in_temp_offset", "in_temp_scale"};
++   for (int i = 0; i < 3; i++) {
++      snprintf(path, sizeof(path), "%s/%s", status.pmic_dir, files[i]);
++      if (!read_line(path, buf, sizeof(buf))) {
++         status.pmic_temp = -1;
++         return;
++      }
++      v[i] = atof(buf);
++   }
++   status.pmic_temp = (v[0] + v[1]) * v[2] / 1000;
++}
++
 +static void
 +hud_status_update(int64_t now)
 +{
@@ -236,12 +284,15 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
 +      const char *env = getenv("GALLIUM_HUD_STATUS");
 +      const char *opacity = getenv("GALLIUM_HUD_STATUS_OPACITY");
 +      const char *clock = getenv("GALLIUM_HUD_STATUS_CLOCK");
-+      /* the items to show: a list of clock, battery and audio */
++      /* the items to show: a list of cputemp, pmictemp, clock, battery and audio */
 +      snprintf(status.clock_format, sizeof(status.clock_format), "%s", clock ? clock : "");
 +      status.show_clock = env && strstr(env, "clock") && status.clock_format[0];
 +      status.show_battery = env && strstr(env, "battery");
 +      status.show_audio = env && strstr(env, "audio");
-+      status.enabled = status.show_clock || status.show_battery || status.show_audio;
++      status.show_cpu_temp = env && strstr(env, "cputemp");
++      status.show_pmic_temp = env && strstr(env, "pmictemp");
++      status.enabled = status.show_clock || status.show_battery || status.show_audio ||
++                       status.show_cpu_temp || status.show_pmic_temp;
 +      status.opacity = opacity ? atoi(opacity) / 100.0 : 0.5;
 +   }
 +   if (!status.enabled)
@@ -258,6 +309,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
 +   if (now < status.next_ms)
 +      return;
 +   status.next_ms = now + 5000;
++   hud_temps_update();
 +
 +   if (!status.battery_dir[0]) {
 +      DIR *dir = opendir("/sys/class/power_supply");
@@ -363,17 +415,36 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
 +   }
 +}
 +
++/* the A33's trip points: it slows down from 75 C, 90 C is "hot" */
++static const float *
++temp_color(int temp)
++{
++   return temp >= 90 ? kRed : temp >= 75 ? kYellow : kGrey;
++}
++
 +static void
 +hud_status_accumulate(struct hud_context *hud)
 +{
-+   char bat[16], vol[16], clock[32] = "";
++   char bat[16], vol[16], clock[32] = "", cpu[16], pmic[16];
 +   unsigned th = hud_text_height(hud);
 +   unsigned bh = (th > 16 ? th : 16) + 8;
 +   unsigned y = 6, x, items = 0;
-+   unsigned clock_w = 0, vol_w = 0, bat_w = 0, total = 8 + 8;
++   unsigned clock_w = 0, vol_w = 0, bat_w = 0, cpu_w = 0, pmic_w = 0, total = 8 + 8;
 +   bool audio = status.show_audio && status.volume >= 0;
 +   float bg[] = {12 / 255.0, 12 / 255.0, 14 / 255.0, status.opacity};
 +
++   if (status.show_cpu_temp) {
++      snprintf(cpu, sizeof(cpu), status.cpu_temp >= 0 ? "CPU %dC" : "CPU ??", status.cpu_temp);
++      cpu_w = hud_text_width(hud, cpu);
++      total += cpu_w;
++      items++;
++   }
++   if (status.show_pmic_temp) {
++      snprintf(pmic, sizeof(pmic), status.pmic_temp >= 0 ? "PMIC %dC" : "PMIC ??", status.pmic_temp);
++      pmic_w = hud_text_width(hud, pmic);
++      total += pmic_w;
++      items++;
++   }
 +   if (status.show_clock) {
 +      time_t now = time(NULL);
 +      struct tm tm;
@@ -404,6 +475,14 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
 +   if (status.opacity > 0)
 +      hud_quad(x, y, total, bh, bg);
 +   x += 8;
++   if (cpu_w) {
++      hud_colored_string(hud, x, y + (bh - th) / 2, temp_color(status.cpu_temp), cpu);
++      x += cpu_w + 14;
++   }
++   if (pmic_w) {
++      hud_colored_string(hud, x, y + (bh - th) / 2, temp_color(status.pmic_temp), pmic);
++      x += pmic_w + 14;
++   }
 +   if (clock_w) {
 +      hud_colored_string(hud, x, y + (bh - th) / 2, kGrey, clock);
 +      x += clock_w + 14;
@@ -493,7 +572,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
  hud_draw_results(struct hud_context *hud, struct pipe_resource *tex)
  {
     struct cso_context *cso = hud->cso;
-@@ -496,9 +909,12 @@
+@@ -496,9 +987,12 @@
           { &hud->font_sampler_state };
     struct hud_pane *pane;
     struct pipe_resource *releasebuf[3] = { 0 };
@@ -507,7 +586,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
  
     hud->fb_width = tex->width0;
     hud->fb_height = tex->height0;
-@@ -606,18 +1022,31 @@
+@@ -606,18 +1100,31 @@
     }
     hud->bg.vbuf.buffer.resource = NULL;
  
@@ -541,7 +620,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
        goto done;
  
     /* draw accumulated vertices for white lines */
-@@ -650,6 +1079,7 @@
+@@ -650,6 +1157,7 @@
     }
  
  done:
@@ -549,7 +628,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
     pipe_resource_release(pipe, releasebuf[2]);
     pipe_resource_release(pipe, releasebuf[1]);
     pipe_resource_release(pipe, releasebuf[0]);
-@@ -745,12 +1175,16 @@
+@@ -745,12 +1253,16 @@
           }
        }
  
@@ -566,7 +645,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
     /* unmap the uploader's vertex buffer before drawing */
     u_upload_unmap(pipe->stream_uploader);
  }
-@@ -1774,13 +2208,14 @@
+@@ -1774,13 +2286,14 @@
        static const char *fragment_shader_text = {
           "FRAG\n"
           "DCL IN[0], GENERIC[0], LINEAR\n"
@@ -582,7 +661,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
           "END\n"
        };
  
-@@ -1845,6 +2280,7 @@
+@@ -1845,6 +2358,7 @@
           "DCL IN[0..1]\n"
           "DCL OUT[0], POSITION\n"
           "DCL OUT[1], GENERIC[0]\n" /* texcoord */
@@ -590,7 +669,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
           /* [0] = color,
            * [1] = (2/fb_width, 2/fb_height, xoffset, yoffset)
            * [2] = (xscale, yscale, 0, 0)
-@@ -1865,6 +2301,7 @@
+@@ -1865,6 +2379,7 @@
           "MOV OUT[0].zw, IMM[0]\n"
  
           "MUL OUT[1], IN[1], IMM[1]\n"

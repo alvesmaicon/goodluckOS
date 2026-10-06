@@ -22,10 +22,12 @@ hud_clock=""
 [ "$HUD_24H" = true ] && hud_time=%H:%M || hud_time="%I:%M %p"
 [ "$HUD_STATUS_TIME" = true ] && hud_clock="${hud_clock:+$hud_clock }$hud_time"
 hud_status=""
-[ -n "$hud_clock" ] && hud_status=clock
+[ "$HUD_STATUS_CPU_TEMP" = true ] && hud_status=cputemp
+[ "$HUD_STATUS_PMIC_TEMP" = true ] && hud_status="${hud_status:+$hud_status,}pmictemp"
+[ -n "$hud_clock" ] && hud_status="${hud_status:+$hud_status,}clock"
 [ "$HUD_STATUS_BATTERY" = true ] && hud_status="${hud_status:+$hud_status,}battery"
 [ "$HUD_STATUS_AUDIO" = true ] && hud_status="${hud_status:+$hud_status,}audio"
 export GALLIUM_HUD_STATUS="${hud_status:-0}"
 export GALLIUM_HUD_STATUS_OPACITY=$HUD_STATUS_OPACITY
 export GALLIUM_HUD_STATUS_CLOCK="$hud_clock"
-unset HUD_VISIBLE HUD_ITEMS HUD_STYLE HUD_POSITION HUD_STATUS_DATE HUD_STATUS_TIME HUD_STATUS_BATTERY HUD_STATUS_AUDIO HUD_STATUS_OPACITY HUD_24H HUD_DATE_FORMAT hud_x hud_y hud_time hud_clock hud_status
+unset HUD_VISIBLE HUD_ITEMS HUD_STYLE HUD_POSITION HUD_STATUS_DATE HUD_STATUS_TIME HUD_STATUS_BATTERY HUD_STATUS_AUDIO HUD_STATUS_CPU_TEMP HUD_STATUS_PMIC_TEMP HUD_STATUS_OPACITY HUD_24H HUD_DATE_FORMAT hud_x hud_y hud_time hud_clock hud_status
