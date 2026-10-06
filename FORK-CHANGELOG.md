@@ -21,14 +21,17 @@ Status:
 - Power off works: the AXP223 is the system power controller.
 - HOME shows up on the PC over USB (MTP), like a phone, with a kernel fix for USB copies that hung ([#52](https://github.com/CodeZombie/goodluckOS/pull/52)).
 - SELECT+START closes the active app and FN+SELECT+START kills it: Jeremy built it into appctl from this idea.
-
-## PR open
-
 - Headphones play on both sides, and FN+D-pad down switches between the speaker and the headphones ([#56](https://github.com/CodeZombie/goodluckOS/pull/56), fixes [#7](https://github.com/CodeZombie/goodluckOS/issues/7)).
 - Boot on upstream main: the launcher starts again (appctl's full path) and init no longer respawns the removed power-manager.sh ([#55](https://github.com/CodeZombie/goodluckOS/pull/55), [#54](https://github.com/CodeZombie/goodluckOS/issues/54)).
 
+## PR open
+
+- The second SD card (TF-2 slot) works and its games show up in the launcher ([#59](https://github.com/CodeZombie/goodluckOS/pull/59), fixes [#15](https://github.com/CodeZombie/goodluckOS/issues/15)).
+- `post-build.sh` can run again on the same target, so incremental builds don't fail ([#60](https://github.com/CodeZombie/goodluckOS/pull/60)).
+
 ## Waiting for a PR: fixes
 
+- Shutting down or restarting with the USB cable in no longer hangs on the USB teardown: every step that can block has a timeout, and MTP is waited for before it's taken down.
 - RetroArch FN hotkeys: menu, save/load state, fast forward, pause, quit. (The A/B and Select/Start mapping went upstream through [#48](https://github.com/CodeZombie/goodluckOS/pull/48).)
 - System Settings: the brightness shows its real level, the volume slider works, and both are saved on change.
 - Brightness, volume and CPU mode are kept across reboots.
@@ -48,7 +51,7 @@ Status:
 
 - The speaker gets a 500 Hz high-pass filter, so it stays clean instead of buzzing on bass. There's also no more digital clipping.
 
-- **Second SD card (TF-2 slot):** the slot had no power supply in the device tree, so the kernel turned cards down; it now works and is polled, so cards can come and go. A FAT32 card there is mounted at `/media/external` and its `roms/<system>` folders are listed in every system's tab, plus an External Card tab (fork only). Fixes [#15](https://github.com/CodeZombie/goodluckOS/issues/15).
+- **Second SD card (TF-2 slot):** the slot had no power supply in the device tree, so the kernel turned cards down; it now works and is polled, so cards can come and go. A FAT32 card there is mounted at `/media/external` and its `roms/<system>` folders are listed in every system's tab, plus an External Card tab (fork only). PR [#59](https://github.com/CodeZombie/goodluckOS/pull/59) has the part for upstream.
 
 ## Waiting for a PR: interface
 
@@ -94,6 +97,7 @@ These are bigger and will be proposed in an issue first.
 
 ## Fork only
 
+- The console shows up on the PC as "goodluckOS" instead of "GA36MB", the board's code: the system's name is right on every console it runs on.
 - The fork follows upstream's appd/appctl and doas: power-manager.sh is gone, and the launcher, System Settings and the power menu run their root actions through doas.
 - System Settings > Interface > Show Puppy on loading screens: on by default (the ASCII-art dog, as upstream); off shows a translated "Loading..." instead.
 - Restart and Shut down leave "Restarting..." / "Shutting down..." on the screen until the console goes off (since appd, the loading screen stayed there instead).

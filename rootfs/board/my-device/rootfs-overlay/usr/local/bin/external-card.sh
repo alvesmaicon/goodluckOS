@@ -3,12 +3,19 @@
 #   add / remove   from udev (90-external-card.rules)
 #   detect         look for a card again: rebinds the slot's controller (System Settings)
 #   eject          unmount and power the slot down, so the card can come out (System Settings)
+#   mtp            show a mounted card on the PC too (S30usb-gadget, once umtprd is up)
 M=/media/external
 L=/run/external-card.lock
 SLOT=1c10000.mmc
 DRV=/sys/bus/platform/drivers/sunxi-mmc
 
+# Shows or hides the card on the PC (MTP). Only while umtprd runs: started by -cmd, it'd become the daemon
+mtp() {
+    [ -f /run/umtprd.pid ] && kill -0 "$(cat /run/umtprd.pid)" 2>/dev/null && umtprd "-cmd:$1:External card" >/dev/null 2>&1
+}
+
 unmount() {
+    mountpoint -q "$M" && mtp unmount
     sync
     while mountpoint -q "$M"; do umount "$M" 2>/dev/null || umount -l "$M"; done
 }
@@ -36,6 +43,7 @@ case "$1" in
             for d in nes snes gba gbc gb psx genesis sms gg segacd; do mkdir -p "$M/roms/$d/icons"; done
             mkdir -p "$M/media/music" "$M/media/videos"
         fi
+        mtp mount
         ;;
     remove)
         unmount
@@ -44,6 +52,9 @@ case "$1" in
         [ -e "$DRV/$SLOT" ] && echo "$SLOT" > "$DRV/unbind"
         sleep 1
         echo "$SLOT" > "$DRV/bind"
+        ;;
+    mtp)
+        mountpoint -q "$M" && mtp mount
         ;;
     eject)
         unmount
