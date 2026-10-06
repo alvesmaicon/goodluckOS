@@ -31,6 +31,7 @@ Status:
 
 ## Waiting for a PR: fixes
 
+- Shutting down or restarting with the USB cable in no longer hangs on the USB teardown: every step that can block has a timeout, and MTP is waited for before it's taken down.
 - RetroArch FN hotkeys: menu, save/load state, fast forward, pause, quit. (The A/B and Select/Start mapping went upstream through [#48](https://github.com/CodeZombie/goodluckOS/pull/48).)
 - System Settings: the brightness shows its real level, the volume slider works, and both are saved on change.
 - Brightness, volume and CPU mode are kept across reboots.
