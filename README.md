@@ -219,7 +219,7 @@ VT323 and Pixelify Sans are under the SIL Open Font License and ProggyClean unde
 | Date & Time | Performance overlay in game (FN + D-pad up) |
 | ![Date & Time](docs/screenshots/system-settings-datetime.png) | ![Performance overlay in game](docs/screenshots/performance-overlay.png) |
 | System (Power mode) | |
-| ![System](docs/screenshots/system-settings-system.png) | |
+| ![System](docs/screenshots/system-settings-system.png) | ![Storage: the second card and the trash](docs/screenshots/system-settings-storage.png) |
 
 ## Translations
 Every text in the launcher, System Settings, the confirmation screens and `Resize Home` can be translated, and new languages need no code changes. Languages live in `/usr/share/goodluck/lang/<code>.lang` (in the repository: `rootfs/board/my-device/rootfs-overlay/usr/share/goodluck/lang/`) and show up in System Settings -> Interface -> Language as soon as the file is there.
