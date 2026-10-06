@@ -48,6 +48,8 @@ Status:
 
 - The speaker gets a 500 Hz high-pass filter, so it stays clean instead of buzzing on bass. There's also no more digital clipping.
 
+- **Second SD card (TF-2 slot):** the slot had no power supply in the device tree, so the kernel turned cards down; it now works and is polled, so cards can come and go. A FAT32 card there is mounted at `/media/external` and its `roms/<system>` folders are listed in every system's tab, plus an External Card tab (fork only). Fixes [#15](https://github.com/CodeZombie/goodluckOS/issues/15).
+
 ## Waiting for a PR: interface
 
 These are bigger and will be proposed in an issue first.

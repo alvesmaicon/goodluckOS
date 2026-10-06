@@ -1111,6 +1111,30 @@ static void rebuildMyList(Model& m) {
     m.categories[t].tagColumn = -1;
 }
 
+// Adds an "External Card" tab with everything found on the TF-2 card (external-card.sh mounts it).
+static void addExternalTab(Model& m) {
+    static const std::string kRoot = "/media/external/";
+    Category ext;
+    ext.name = "External Card";
+    ext.label = "External Card";
+    ext.isArchive = true;
+    ext.mixed = true;
+    for (const auto& c : m.categories) {
+        if (c.mixed) continue;
+        for (Entry e : c.entries) {
+            if (e.file.compare(0, kRoot.size(), kRoot) != 0) continue;
+            e.tag = c.label;
+            ext.entries.push_back(std::move(e));
+        }
+    }
+    if (ext.entries.empty()) return;
+    std::stable_sort(ext.entries.begin(), ext.entries.end(), [](const Entry& l, const Entry& r) {
+        return l.searchKey < r.searchKey;
+    });
+    int t = myListTab(m);
+    m.categories.insert(m.categories.begin() + (t < 0 ? 0 : t + 1), std::move(ext));
+}
+
 // Adds the My List tab right after All Games (one R1 press from the boot tab).
 static void addMyListTab(Model& m) {
     Category list;
@@ -2530,6 +2554,7 @@ int main(int argc, char** argv) {
     addAllGamesTab(model);   // first tab, and the one shown at boot
     loadFavorites(model);
     addMyListTab(model);
+    addExternalTab(model);
     if (model.categories.empty()) {
         std::cerr << "Nothing to show\n";
         return 1;

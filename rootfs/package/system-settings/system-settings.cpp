@@ -86,6 +86,27 @@ long long read_number(const std::string& path, long long fallback = -1) {
     return (file >> value) ? value : fallback;
 }
 
+struct ExternalCard {
+    bool mounted = false;
+    unsigned long long total_kb = 0, used_kb = 0;
+};
+
+// The TF-2 card, if external-card.sh has it mounted
+ExternalCard external_card() {
+    ExternalCard c;
+    std::ifstream mounts("/proc/mounts");
+    for (std::string line; std::getline(mounts, line);)
+        if (line.find(" /media/external ") != std::string::npos) c.mounted = true;
+    struct statvfs vfs;
+    if (c.mounted && statvfs("/media/external", &vfs) == 0) {
+        c.total_kb = (unsigned long long)vfs.f_blocks * vfs.f_frsize / 1024;
+        c.used_kb = c.total_kb - (unsigned long long)vfs.f_bfree * vfs.f_frsize / 1024;
+    } else {
+        c.mounted = false;     // a card that came out without Eject
+    }
+    return c;
+}
+
 std::string human_size_kb(unsigned long long kb) {
     char buf[32];
     if (kb >= 1024ULL * 1024) snprintf(buf, sizeof(buf), "%.1f GB", kb / (1024.0 * 1024.0));
@@ -798,6 +819,7 @@ int main(int argc, char* argv[]) {
     // one is pressed, re-read the levels for a moment so the sliders follow
     const Uint32 HOTKEY_FOLLOW_MS = 2200, HOTKEY_POLL_MS = 100;   // until the HUD feedback is gone
     Uint32 follow_until = 0;
+    Uint32 card_watch_until = 0;    // redraw for a while after Detect / Eject, while the script runs
 
     // ImGui applies the default focus a couple of frames after the window appears, so render those
     // frames right away instead of waiting for the first input event
@@ -855,6 +877,7 @@ int main(int argc, char* argv[]) {
             // the current time ticks on the Date & Time page
             else if (page == PAGE_DATETIME) got_event = SDL_WaitEventTimeout(&event, 1000);
             else if (following) got_event = SDL_WaitEventTimeout(&event, HOTKEY_POLL_MS);
+            else if ((Sint32)(card_watch_until - SDL_GetTicks()) > 0) got_event = SDL_WaitEventTimeout(&event, 500);
             // keep drawing while left/right is held, so holding it keeps changing a level bar
             else if (ImGui::IsKeyDown(ImGuiKey_GamepadDpadLeft) || ImGui::IsKeyDown(ImGuiKey_GamepadDpadRight) ||
                      ImGui::IsKeyDown(ImGuiKey_LeftArrow) || ImGui::IsKeyDown(ImGuiKey_RightArrow))
@@ -1236,6 +1259,27 @@ int main(int argc, char* argv[]) {
             if (can_grow && !fits) {
                 ImGui::TextWrapped("%s", tr("Too much data in HOME to resize. Resize right after flashing, before copying games."));
             }
+
+            // The card in the TF-2 slot (external-card.sh): found at boot, or here with Detect
+            ImGui::Spacing();
+            const ExternalCard card = external_card();
+            if (card.mounted) {
+                char card_usage[96];
+                snprintf(card_usage, sizeof(card_usage), tr("%s used of %s"), human_size_kb(card.used_kb).c_str(),
+                         human_size_kb(card.total_kb).c_str());
+                ImGui::Text("%s %s", tr("Second card:"), card_usage);
+                if (ImGui::Button(tr("Eject card"))) {
+                    run_as_root("external-card.sh eject");
+                    card_watch_until = SDL_GetTicks() + 6000;
+                }
+            } else {
+                ImGui::Text("%s %s", tr("Second card:"), tr("none"));
+                if (ImGui::Button(tr("Detect card"))) {
+                    run_as_root("external-card.sh detect");
+                    card_watch_until = SDL_GetTicks() + 10000;
+                }
+            }
+            ImGui::Spacing();
 
             // Games moved to the trash in the launcher, deleted for good only from here
             if (trash.files > 0) {

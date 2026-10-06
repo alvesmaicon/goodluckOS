@@ -36,6 +36,7 @@ Please Note: At the time of writing, Allwinner-A23 based GA36-MB devices (which 
 - FN+DPAD_DOWN switches the sound between the speaker and the headphones only
 - If the screen is on, the LEDs are off. Nothing blinding you while you're playing in the dark
 - Comes stock with Chocolate Doom, ready to play
+- Second SD card (TF-2 slot) for more games, with its own launcher tab
 - Music and video player (mpv): Music and Videos tabs in the launcher, played full screen with the console's buttons
 - Comes stock with Retroarch and several optimized cores (PCSX-ReArmed, Snes9x, QuickNES, DOSbox, Genesis Plus GX, mGBA, etc)
 - Games perform very well. Metal Gear Solid 1 is completely playable at reasonable framerates
@@ -185,6 +186,7 @@ System Settings
 ├── Storage
 │   ├── HOME usage
 │   ├── Resize Home
+│   ├── Second card: usage, Eject card / Detect card
 │   └── Empty trash
 ├── System
 │   ├── Power mode: Battery saver / Balanced / Performance
@@ -217,7 +219,7 @@ VT323 and Pixelify Sans are under the SIL Open Font License and ProggyClean unde
 | Date & Time | Performance overlay in game (FN + D-pad up) |
 | ![Date & Time](docs/screenshots/system-settings-datetime.png) | ![Performance overlay in game](docs/screenshots/performance-overlay.png) |
 | System (Power mode) | |
-| ![System](docs/screenshots/system-settings-system.png) | |
+| ![System](docs/screenshots/system-settings-system.png) | ![Storage: the second card and the trash](docs/screenshots/system-settings-storage.png) |
 
 ## Translations
 Every text in the launcher, System Settings, the confirmation screens and `Resize Home` can be translated, and new languages need no code changes. Languages live in `/usr/share/goodluck/lang/<code>.lang` (in the repository: `rootfs/board/my-device/rootfs-overlay/usr/share/goodluck/lang/`) and show up in System Settings -> Interface -> Language as soon as the file is there.
@@ -262,6 +264,11 @@ Already have a scraped collection (e.g. made with [Skraper](https://www.skraper.
 To add custom art to Puppy, add an image file into the `icons` folder in your rom folder with the same name as the rom file. (eg. if your game is `roms/snes/super-mario.smc`, your image would be `roms/snes/icons/super-mario.png`)
 
 Puppy also reads a `gamelist.xml` in the rom folder (as written by Skraper or EmulationStation): it takes each game's name, description, year/genre/players and image from it. An image in `icons` still wins over the gamelist's. With the interface in another language, a `gamelist.<code>.xml` next to it (e.g. `gamelist.pt-BR.xml`, written by a scraper pass in that language) supplies that language's names, descriptions and genres; images and anything it lacks still come from `gamelist.xml`. Big images are scaled down once and cached in `~/.cache/puppy/thumbs`.
+
+### Second card (TF-2 slot)
+A FAT32 card in the second slot shows up in the launcher, in its own External Card tab and in each system's tab. The card is found when the console starts; to swap it with the console on, use System Settings -> Storage: Eject card before taking it out, and Detect card after putting one in. Put the games in a `roms` folder with the same system folders as HOME (`roms/snes`, `roms/psx`, `roms/gba`...), and covers in each folder's `icons`. A card with no `roms` folder gets the folders created the first time it's mounted; existing folders and files are never touched. Music and videos go in `media/music` and `media/videos`.
+
+Puppy finds games by folder, not by file type: games loose on the card, or in the wrong system's folder, won't show up or won't start. exFAT cards (most cards over 32 GB come that way) aren't read yet, so format the card as FAT32.
 
 ### Can I add my own archives?
 You sure can!
