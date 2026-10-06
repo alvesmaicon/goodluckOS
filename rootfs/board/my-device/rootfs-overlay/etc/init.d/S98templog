@@ -1,0 +1,13 @@
+#!/bin/sh
+# Temperature log for issue #1, only when /etc/player-flags/templog exists
+
+case "$1" in
+    start)
+        [ -f /etc/player-flags/templog ] || exit 0
+        /usr/local/bin/templog.sh "$(cat /etc/player-flags/templog)" </dev/null >/dev/null 2>&1 &
+        ;;
+    stop)
+        kill $(ps | grep '[t]emplog.sh' | awk '{ print $1 }') 2>/dev/null
+        ;;
+esac
+exit 0
