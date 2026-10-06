@@ -7,7 +7,7 @@ INTERVAL=${1:-10}
 
 pmic=
 for d in /sys/bus/iio/devices/iio:device*; do
-    case "$(cat "$d/name" 2>/dev/null)" in *axp*) [ -f "$d/in_temp_raw" ] && pmic=$d ;; esac
+    case "$(readlink -f "$d")" in *axp*) pmic=$d ;; esac   # the AXP's IIO device has no name file
 done
 
 mkdir -p "${LOG%/*}"
