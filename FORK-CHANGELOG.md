@@ -40,6 +40,7 @@ Status:
 - Resize Home mounts HOME again with its fstab options, so it stays owned by the player instead of root until the next boot.
 - Launcher: Game Boy entries, and zip/7z games.
 - FN+D-pad up's FPS/CPU overlay (Gallium HUD) is configurable: content, graph or text, corner, shown on game start ([#23](https://github.com/CodeZombie/goodluckOS/issues/23)).
+- Launcher: no more grey tile behind a game's cover in grid or list view, so a scraped image's own transparency shows the background through instead.
 
 - After upstream's move to appd/appctl, a few things lost their target; fixed here, to offer upstream:
   - the autolaunch entry runs again at boot (nothing read `/home/player/autolaunch` once puppy-bootstrap.sh was gone);

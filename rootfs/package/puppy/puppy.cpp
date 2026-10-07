@@ -2141,7 +2141,6 @@ private:
             if (row > kGridFullRows) break;    // one extra, partly hidden row hints that the list goes on
             int col = k % kGridCols;
             SDL_Rect cell{x0 + col * (kCellWidth + kGridGap), gridTop(m.showTabs) + row * kGridPitchY, kCellWidth, kCellHeight};
-            fill(kTile, cell);
             drawIcon(*gridIcons, c.entries[c.visible[k]].iconPath, cell);
             if (k == c.sel) frame(kYellow, cell, kBorder);
             const Entry& entry = c.entries[c.visible[k]];
@@ -2264,7 +2263,6 @@ private:
         const Entry* e = m.selected();
         if (!e) return;
         SDL_Rect box{kPreviewX, top, kPreviewW, kPreviewH};
-        fill(kTile, box);
         drawIcon(*previewIcons, e->iconPath, box);
         int y = box.y + box.h + 10;
         y += drawWrapped(uiFont, e->name, kPreviewX, y, kWhite, kPreviewW) + 4;
