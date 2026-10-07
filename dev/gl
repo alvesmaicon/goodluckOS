@@ -1,0 +1,207 @@
+#!/usr/bin/env bash
+# gl: partial builds for goodluckOS, so a one-file change never needs a full image.
+# Runs itself inside the dev container (Docker or Colima) or, without docker, natively on a
+# Debian with the packages of dev/Dockerfile (e.g. WSL). Output goes to dev/out. See dev/README.md.
+set -euo pipefail
+
+DEV=$(cd "$(dirname "$0")" && pwd)
+REPO=$(dirname "$DEV")
+IMAGE=goodluck-dev
+VOLUME=goodluck-work
+
+usage() {
+    cat <<'EOF'
+usage: dev/gl <command> [args]
+  image                     (re)build the dev container image
+  shell                     shell in the dev container
+  app <name>...             puppy, system-settings, are-you-sure, resize-home: armhf + native binaries
+  deploy <overlay files>... dev/out/deploy.tar.gz: the built apps + rootfs-overlay files, console paths
+  shot <app> <name> <keys>  native app in Xvfb, a screenshot at each "|" (keys: xdotool names, "_" waits 1 s)
+  rootfs [make targets]     Buildroot, incremental (e.g. mesa3d-rebuild, system-settings-rebuild)
+  ext4                      dev/out/rootfs.ext4 from the last rootfs.tar (partition 1, 384 MiB)
+  kernel                    dev/out/android_boot_a33.img (+a23), like kernel/Dockerfile
+EOF
+    exit 1
+}
+
+[ $# -ge 1 ] || usage
+
+# --- outside the container: hand everything to it ---------------------------------------------
+if [ ! -f /.dockerenv ] && [ -z "${GL_NATIVE:-}" ]; then
+    if command -v docker >/dev/null 2>&1; then
+        if [ "$1" = image ] || ! docker image inspect $IMAGE >/dev/null 2>&1; then
+            docker build -t $IMAGE "$DEV"
+            [ "$1" = image ] && exit 0
+        fi
+        tty=; [ -t 0 ] && tty=-t
+        exec docker run --rm -i $tty --privileged -v "$REPO:/repo" -v $VOLUME:/work \
+            -e GL_JOBS="${GL_JOBS:-}" $IMAGE /repo/dev/gl "$@"
+    fi
+    command -v arm-linux-gnueabihf-g++ >/dev/null || { echo "no docker and no armhf cross compiler: see dev/README.md"; exit 1; }
+    export GL_NATIVE=1
+fi
+
+# --- inside the container (or a prepared Debian) -----------------------------------------------
+WORK=${GL_WORK:-/work}
+[ -f /.dockerenv ] || WORK=${GL_WORK:-$HOME/.cache/goodluck-work}
+OUT=$REPO/dev/out
+PKG=$REPO/rootfs/package
+OVERLAY=$REPO/rootfs/board/my-device/rootfs-overlay
+JOBS=${GL_JOBS:-$(nproc)}
+ARCH=$(uname -m)
+mkdir -p "$WORK" "$OUT"
+PCA="env PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabihf/pkgconfig pkg-config"
+ARMFLAGS="-march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard"
+
+# ImGui at the version Buildroot uses (rootfs/package/imgui/imgui.mk)
+imgui() {
+    local v; v=$(sed -n 's/^IMGUI_VERSION = //p' "$PKG/imgui/imgui.mk")
+    if [ ! -d "$WORK/imgui-$v" ]; then
+        git -c advice.detachedHead=false clone -q --depth 1 -b "$v" https://github.com/ocornut/imgui.git "$WORK/imgui-$v"
+    fi
+    echo "$WORK/imgui-$v"
+}
+
+build_app() {
+    local app=$1 std=c++11 libs="" srcs="" inc="-I$PKG/common"
+    case $app in
+        puppy) std=c++17; libs="-lSDL2_image -lSDL2_ttf -lasound" ;;
+        system-settings) libs="-lasound" ;;
+        are-you-sure|resize-home) ;;
+        *) echo "unknown app: $app"; exit 1 ;;
+    esac
+    if [ "$app" != puppy ]; then
+        local I; I=$(imgui)
+        inc="$inc -I$I -I$I/backends"
+        srcs="$I/imgui.cpp $I/imgui_draw.cpp $I/imgui_tables.cpp $I/imgui_widgets.cpp $I/backends/imgui_impl_sdl2.cpp $I/backends/imgui_impl_sdlrenderer2.cpp"
+    fi
+    local src=$PKG/$app/$app.cpp
+    arm-linux-gnueabihf-g++ -O2 -std=$std $ARMFLAGS $inc $($PCA --cflags sdl2) "$src" $srcs \
+        -o "$OUT/$app.armhf" $($PCA --libs sdl2) $libs -lpthread
+    arm-linux-gnueabihf-strip "$OUT/$app.armhf"
+    g++ -O2 -std=$std $inc $(pkg-config --cflags sdl2) "$src" $srcs \
+        -o "$OUT/$app.$ARCH" $(pkg-config --libs sdl2) $libs -lpthread
+    echo "OK $app: $(stat -c %s "$OUT/$app.armhf") bytes armhf, glibc max $(arm-linux-gnueabihf-objdump -T "$OUT/$app.armhf" | grep -oE 'GLIBC_[0-9.]+' | sort -Vu | tail -1); native: dev/out/$app.$ARCH"
+}
+
+# The console's /usr/share files, so native builds run as they do on the device
+fake_device() {
+    mkdir -p /usr/share/puppy /usr/share/fonts /usr/share/icons /usr/share/goodluck /home/player/roms
+    cp -r "$OVERLAY/usr/share/puppy/." /usr/share/puppy/
+    cp "$OVERLAY"/usr/share/fonts/*.ttf /usr/share/fonts/
+    cp -r "$OVERLAY/usr/share/goodluck/." /usr/share/goodluck/
+    cp "$OVERLAY"/usr/share/icons/*.png /usr/share/icons/ 2>/dev/null || true
+    for s in nes snes gba gb gbc genesis psx; do mkdir -p /home/player/roms/$s/icons; done
+}
+
+shot() {
+    local bin=$OUT/$1.$ARCH name=$2 keys=$3 n=0
+    [ -x "$bin" ] || build_app "$1"
+    fake_device
+    mkdir -p "$OUT/shots"
+    Xvfb :99 -screen 0 640x480x24 -nolisten tcp >/dev/null 2>&1 & local X=$!
+    sleep 1
+    DISPLAY=:99 SDL_VIDEODRIVER=x11 "$bin" >/tmp/app.log 2>&1 & local P=$!
+    sleep 2
+    for k in $keys; do
+        if [ "$k" = "|" ]; then
+            n=$((n + 1)); sleep 0.6
+            DISPLAY=:99 xwd -root -silent | convert xwd:- "$OUT/shots/$name-$n.png"; echo "dev/out/shots/$name-$n.png"
+        elif [ "$k" = "_" ]; then sleep 1
+        else DISPLAY=:99 xdotool key "$k"; sleep 0.3; fi
+    done
+    kill $P $X 2>/dev/null || true
+}
+
+# Buildroot the way rootfs/Dockerfile + scripts/build.sh do, but with its tree on a Linux
+# filesystem (the work volume): macOS bind mounts are case-insensitive and slow
+rootfs() {
+    local br=$WORK/br
+    local ver; ver=$(sed -n 's/.* -b \([^ ]*\) https:\/\/gitlab.com\/buildroot.*/\1/p' "$REPO/rootfs/Dockerfile")
+    mkdir -p "$br"
+    [ -d "$br/buildroot" ] || git clone -q --depth 1 -b "$ver" https://gitlab.com/buildroot.org/buildroot.git "$br/buildroot"
+    for d in board configs package; do rsync -a --delete "$REPO/rootfs/$d/" "$br/$d/"; done
+    printf 'name: GOODLUCKOS\ndesc: An enthusiast OS for the GA36-MB\n' > "$br/external.desc"
+    echo 'include $(sort $(wildcard $(BR2_EXTERNAL_GOODLUCKOS_PATH)/package/*/*.mk))' > "$br/external.mk"
+    echo "source \"$br/package/Config.in\"" > "$br/Config.in"
+    local mk="make -C $br/buildroot O=$br/out BR2_EXTERNAL=$br BR2_DL_DIR=$br/dl BR2_JLEVEL=$JOBS"
+    # the defconfig only when it changed, so an incremental build stays incremental
+    if ! cmp -s "$br/configs/goodluck_defconfig" "$br/.defconfig-used"; then
+        $mk goodluck_defconfig && cp "$br/configs/goodluck_defconfig" "$br/.defconfig-used"
+    fi
+    date +%T; $mk "$@"; date +%T
+    if [ -f "$br/out/images/rootfs.tar" ]; then
+        cp "$br/out/images/rootfs.tar" "$OUT/"
+        echo "dev/out/rootfs.tar; single files are in $br/out/target (e.g. usr/lib/libgallium-*.so)"
+    fi
+}
+
+ext4() {
+    local t=$WORK/ext4-root
+    [ -f "$OUT/rootfs.tar" ] || { echo "no dev/out/rootfs.tar: run dev/gl rootfs first"; exit 1; }
+    rm -rf "$t"; mkdir -p "$t"
+    tar -xpf "$OUT/rootfs.tar" -C "$t"
+    rm -f "$OUT/rootfs.ext4"
+    mkfs.ext4 -q -L linux -d "$t" "$OUT/rootfs.ext4" 384M
+    rm -rf "$t"
+    echo "dev/out/rootfs.ext4 (partition 1: sector 262144, 384 MiB)"
+}
+
+kernel() {
+    local k=$REPO/kernel src=$WORK/linux
+    export ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf-
+    local branch; branch=$(sed -n 's/.* -b \(linux-[^ ]*\) https.*/\1/p' "$k/Dockerfile")
+    [ -d "$src" ] || git clone -q --depth=1 -b "$branch" https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git "$src"
+    cd "$src"
+    git checkout -q -- . && git clean -qfd   # undo the previous run's patches and drivers
+    make sunxi_defconfig >/dev/null
+    grep -v '^ *#' "$k/Dockerfile" | grep -o '\./scripts/config [^&]*' | sed 's/ *$//' | sh
+    make olddefconfig >/dev/null
+    git apply "$k"/patches/*.patch
+    cp "$k/drivers/jd9366-ga36mbv1-2.c" drivers/gpu/drm/panel/
+    echo 'obj-$(CONFIG_DRM_PANEL_JD9366) += jd9366-ga36mbv1-2.o' >> drivers/gpu/drm/panel/Makefile
+    sed -i '/^endmenu/i config DRM_PANEL_JD9366\n\ttristate "JD9366 panel"\n\tdepends on OF \&\& DRM \&\& BACKLIGHT_CLASS_DEVICE\n' drivers/gpu/drm/panel/Kconfig
+    cp "$k/drivers/ga36mb-gamepad.c" drivers/input/joystick/
+    echo 'obj-$(CONFIG_GA36MB_GAMEPAD) += ga36mb-gamepad.o' >> drivers/input/joystick/Makefile
+    sed -i '/^endif/i config GA36MB_GAMEPAD\n\ttristate "GA36MB GAMEPAD"\n\tdepends on SERIAL_DEV_BUS\n' drivers/input/joystick/Kconfig
+    cp "$k/dts/sun8i-a33-ga36mb.dts" "$k/dts/sun8i-a23-ga36mb.dts" arch/arm/boot/dts/allwinner/
+    printf 'dtb-$(CONFIG_MACH_SUN8I) += sun8i-a33-ga36mb.dtb sun8i-a23-ga36mb.dtb\n' >> arch/arm/boot/dts/allwinner/Makefile
+    ./scripts/config --enable CONFIG_DRM_PANEL_JD9366 --enable CONFIG_GA36MB_GAMEPAD
+    make olddefconfig >/dev/null
+    make -j"$JOBS" zImage dtbs
+    : > /tmp/empty_ramdisk
+    for soc in a33 a23; do
+        cat arch/arm/boot/zImage arch/arm/boot/dts/allwinner/sun8i-$soc-ga36mb.dtb > /tmp/zImage_$soc
+        mkbootimg --kernel /tmp/zImage_$soc --ramdisk /tmp/empty_ramdisk --base 0x40000000 \
+            --board sun8i --pagesize 2048 -o "$OUT/android_boot_$soc.img"
+    done
+    cp .config "$OUT/kernel_config.txt"
+    echo "dev/out/android_boot_a33.img (sector 172032)"
+}
+
+deploy() {
+    local s=$WORK/deploy
+    rm -rf "$s"; mkdir -p "$s/usr/bin"
+    for app in puppy system-settings are-you-sure resize-home; do
+        [ -f "$OUT/$app.armhf" ] && install -m 0755 "$OUT/$app.armhf" "$s/usr/bin/$app"
+    done
+    for f in "$@"; do
+        f=${f#/}
+        mkdir -p "$s/$(dirname "$f")"; cp -p "$OVERLAY/$f" "$s/$f"
+    done
+    tar -C "$s" --owner=0 --group=0 -czf "$OUT/deploy.tar.gz" .
+    tar -tzvf "$OUT/deploy.tar.gz" | awk '$1 !~ /^d/ {print $3, $6}'
+    echo "dev/out/deploy.tar.gz: copy it to HOME, then on the console: tar -xzf /home/player/deploy.tar.gz -C /"
+}
+
+cmd=$1; shift
+case $cmd in
+    shell) exec bash ;;
+    app) [ $# -ge 1 ] || usage; for a in "$@"; do build_app "$a"; done ;;
+    shot) [ $# -eq 3 ] || usage; shot "$@" ;;
+    rootfs) rootfs "$@" ;;
+    ext4) ext4 ;;
+    kernel) kernel ;;
+    deploy) deploy "$@" ;;
+    *) usage ;;
+esac

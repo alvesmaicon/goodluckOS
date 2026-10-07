@@ -102,3 +102,4 @@ These are bigger and will be proposed in an issue first.
 - System Settings > Interface > Show Puppy on loading screens: on by default (the ASCII-art dog, as upstream); off shows a translated "Loading..." instead.
 - Restart and Shut down leave "Restarting..." / "Shutting down..." on the screen until the console goes off (since appd, the loading screen stayed there instead).
 - README notes about this fork and the AI-assisted workflow.
+- `CLAUDE.md` and `dev/`: notes for the AI assistant, partial builds (`dev/gl`: one app, overlay files, the Mesa patch or the kernel, in a native Debian container on Intel or Apple Silicon), a serial shell tool (`dev/glserial.py`) and a Mac card writer for the kernel or rootfs regions (`dev/sdcard-mac.sh`).
