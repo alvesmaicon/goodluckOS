@@ -1,6 +1,6 @@
 # goodluckOS fork: notes for Claude
 
-This is **alvesmaicon/goodluckOS**, a personal fork of **CodeZombie/goodluckOS** (author: Jeremy). It adds features and fixes for one console, a **GA36-MB v1.1 (Allwinner A33)** R36S clone. Fixes go upstream as small PRs; the rest stays here. `FORK-CHANGELOG.md` lists what is ahead of upstream and the state of each change.
+This is **alvesmaicon/goodluckOS**, a personal fork of **CodeZombie/goodluckOS** (author: Jeremy). It adds features and fixes for one console, a **GA36-MB v1.1 (Allwinner A33)** R36S clone. Fixes go upstream as small PRs; the rest stays here. Discussion [#3](https://github.com/alvesmaicon/goodluckOS/discussions/3) lists what is ahead of upstream and the state of each change. It is edited on GitHub, not in the repo.
 
 ## Building: never the full image for a small change
 
@@ -19,7 +19,7 @@ On the Mac, `dev/gl` runs everything in a native arm64 Debian container (Colima)
 - Commit before every deploy to the console. Put the commit and the send in separate steps, and say what is going out and how long it takes. A serial send shows no progress and looks frozen.
 - Code comments: few and one line, like Jeremy's code. The reasoning goes in the commit body.
 - Any UI change (System Settings, launcher): in the same commit, update the settings tree in `README.md`, retake the affected screenshots in `docs/screenshots/` (interface in English), and add every new `tr("...")` string to `usr/share/goodluck/lang/pt-BR.lang`.
-- Update `FORK-CHANGELOG.md` when something user-visible changes or a PR changes state.
+- When something user-visible changes or a PR changes state, give the owner the lines to update in discussion #3 (no commit for it).
 - Never bump versions or edit upstream's `CHANGELOG.md`: Jeremy does that.
 - Commits that touch a fork issue cite it as `alvesmaicon/goodluckOS#N`, so a cherry-pick upstream doesn't link to the wrong issue.
 - Upstream PRs: open an issue first, keep each PR small and on a branch from `origin/main` (cherry-picked from `develop`), test the PR's own image on the device, and say that AI was used. The owner reviews every diff before it goes out.
