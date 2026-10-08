@@ -33,7 +33,8 @@ private:
     void openGameMenu();
     void confirmTrash(const Entry& e);
     bool openPowerMenu(int bodyY);
-    void runPowerItem(const PowerItem& item);
+    void runPowerItem(const PowerItem& item, int bodyY);
+    void powerAction(const PowerItem& item);
     bool builtinSettings() const;
     void openSettings();
     void reloadGames();

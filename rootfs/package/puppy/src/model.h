@@ -14,7 +14,7 @@ struct PowerItem {
     const char* label;
     const char* request;    // for the power_fifo daemon (nullptr: none)
     const char* status;     // shown while it happens (nullptr: nothing to wait for)
-    const char* confirmEntry;   // System entry to launch (nullptr: none)
+    const char* question;   // asked first (nullptr: done right away)
     const std::string* command; // puppy.conf command (nullptr: none)
     bool quit = false;      // leave Puppy without launching anything
 };
@@ -34,7 +34,6 @@ struct Model {
     // START opens System Settings; POWER opens the power menu (both from any tab)
     Entry settings;
     bool hasSettings = false;
-    std::vector<Entry> systemEntries;   // the System category, e.g. Reboot/Power Off with their are-you-sure
     int descScroll = 0;     // lines the list preview's description is scrolled (right stick)
 
     Category& cur() { return categories[tab]; }

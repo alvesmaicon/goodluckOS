@@ -249,6 +249,10 @@ void SettingsScreen::levelChanged() {
 
 void SettingsScreen::onAction(Action a) {
     if (a == Action::Power) {
+        if (saveAt) {       // before a restart from the menu
+            saveLevels();
+            saveAt = 0;
+        }
         if (hooks.powerMenu) hooks.powerMenu();
         return;
     }

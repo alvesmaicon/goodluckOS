@@ -426,8 +426,8 @@ std::string deleteEntry(Model& m, const Entry& e) {
     return tr("Moved to the trash");
 }
 
-// Takes the System category out of the tabs: its settings entry opens with START and the power
-// actions live in the POWER menu, so they don't mean scrolling through every tab.
+// Takes the System category out of the tabs: START runs its System Settings entry when Puppy's own
+// isn't used, and restarting and shutting down are in the POWER menu.
 void extractSystemMenu(Model& m) {
     auto sys = std::find_if(m.categories.begin(), m.categories.end(),
                             [](const Category& c) { return c.name == kMenuCategory; });
@@ -435,7 +435,6 @@ void extractSystemMenu(Model& m) {
     for (const Entry& e : sys->entries) {
         if (e.name == kSettingsName) { m.settings = e; m.hasSettings = true; }
     }
-    m.systemEntries = sys->entries;
     m.categories.erase(sys);
 }
 
@@ -450,23 +449,20 @@ void applySettingsCommand(Model& m) {
 }
 
 // The POWER menu. Each action, in order of preference: the puppy.conf command (run in the
-// background); the System entry of apps.puppy (launched, so Reboot/Power Off ask for confirmation
-// with are-you-sure); the request for the power_fifo daemon. Actions with none are left out.
-std::vector<PowerItem> powerItems(const Model& m) {
+// background), or the request for the power_fifo daemon; actions with neither are left out.
+// Restarting and shutting down ask first.
+std::vector<PowerItem> powerItems() {
     std::error_code ec;
     const bool fifo = fs::exists(cfg.powerFifo, ec);
     const PowerItem all[] = {
         {"Display off", "screen-off", nullptr, nullptr, &cfg.screenOffCommand},
-        {"Restart", "reboot", "Restarting...", "Reboot", &cfg.restartCommand},
-        {"Shut down", "poweroff", "Shutting down...", "Power Off", &cfg.shutdownCommand},
+        {"Restart", "reboot", "Restarting...", "Are you sure you want to reboot the device?", &cfg.restartCommand},
+        {"Shut down", "poweroff", "Shutting down...", "Are you sure you want to power off the device?", &cfg.shutdownCommand},
         {"Quit Puppy", nullptr, nullptr, nullptr, nullptr, true},
     };
     std::vector<PowerItem> items;
     for (const PowerItem& item : all) {
-        bool entry = item.confirmEntry && std::any_of(m.systemEntries.begin(), m.systemEntries.end(),
-                                                      [&](const Entry& e) { return e.name == item.confirmEntry; });
-        bool available = item.quit ? cfg.quit
-                       : !item.command->empty() || entry || (item.request && fifo);
+        bool available = item.quit ? cfg.quit : !item.command->empty() || (item.request && fifo);
         if (available) items.push_back(item);
     }
     return items;

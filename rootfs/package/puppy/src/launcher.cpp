@@ -91,7 +91,7 @@ void LauncherScreen::openRename(const Entry& e) {
 void LauncherScreen::fromKeyboard(KeyboardScreen& k, Action a) {
     if (a == Action::PrevTab || a == Action::NextTab) {
         model.switchTab(a == Action::PrevTab ? -1 : 1);
-    } else if (a == Action::Power && screenOn() && !powerItems(model).empty()) {
+    } else if (a == Action::Power && screenOn() && !powerItems().empty()) {
         k.close(false);
         openPowerMenu(bodyTop(model.showTabs));
     }
@@ -124,36 +124,39 @@ void LauncherScreen::confirmTrash(const Entry& e) {
 }
 
 bool LauncherScreen::openPowerMenu(int bodyY) {
-    const std::vector<PowerItem> items = powerItems(model);
+    const std::vector<PowerItem> items = powerItems();
     if (items.empty()) return false;
     Dialog d;
     d.title = "Power options";
     for (const PowerItem& item : items) d.choices.push_back(item.label);
     d.bodyY = bodyY;
-    app.push(std::make_unique<DialogScreen>(app, d, [this, items](int choice) { runPowerItem(items[choice]); }));
+    app.push(std::make_unique<DialogScreen>(app, d, [this, items, bodyY](int choice) { runPowerItem(items[choice], bodyY); }));
     return true;
 }
 
-void LauncherScreen::runPowerItem(const PowerItem& item) {
+void LauncherScreen::runPowerItem(const PowerItem& item, int bodyY) {
     if (item.quit) {
         app.quit();
         return;
     }
-    if (item.command && !item.command->empty()) {
-        if (item.status) app.push(std::make_unique<StatusScreen>(app, tr(item.status)));
-        runDetached(*item.command);
+    if (!item.question) {
+        powerAction(item);
         return;
     }
-    if (item.confirmEntry) {
-        auto confirm = std::find_if(model.systemEntries.begin(), model.systemEntries.end(),
-                                    [&](const Entry& e) { return e.name == item.confirmEntry; });
-        if (confirm != model.systemEntries.end()) {
-            if (!launch(model, *confirm)) app.quit();
-            return;
-        }
-    }
+    Dialog d;
+    d.title = item.label;
+    d.message = item.question;
+    d.choices = {"Cancel", item.label};
+    d.bodyY = bodyY;
+    app.push(std::make_unique<DialogScreen>(app, d, [this, item](int choice) {
+        if (choice == 1) powerAction(item);
+    }));
+}
+
+void LauncherScreen::powerAction(const PowerItem& item) {
     if (item.status) app.push(std::make_unique<StatusScreen>(app, tr(item.status)));
-    if (item.request) sendPowerRequest(item.request);
+    if (item.command && !item.command->empty()) runDetached(*item.command);
+    else if (item.request) sendPowerRequest(item.request);
 }
 
 // puppy.conf's settings_command, when set, wins over the System Settings in Puppy

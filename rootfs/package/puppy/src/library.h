@@ -21,6 +21,6 @@ std::string renameEntry(Model& m, const Entry& e, const std::string& newName);
 std::string deleteEntry(Model& m, const Entry& e);
 void extractSystemMenu(Model& m);
 void applySettingsCommand(Model& m);
-std::vector<PowerItem> powerItems(const Model& m);
+std::vector<PowerItem> powerItems();
 void loadSettings(Model& m);
 void writeTabsList(const Model& m);

@@ -28,8 +28,11 @@ struct Config {
     std::string trashDir      = "/home/player/.trash";   // deleted games, until System Settings empties it
     // RetroArch saves and states, renamed along with a game (sort_savefiles: one folder per core)
     std::vector<std::string> saveDirs = {"/home/player/.config/retroarch/saves", "/home/player/.config/retroarch/states"};
-    // When set, these replace the System entries of apps.puppy and the power_fifo requests
-    std::string settingsCommand, restartCommand, shutdownCommand;
+    std::string settingsCommand;            // START runs it instead of opening System Settings
+    // The POWER menu's restart and shut down (goodluckOS: power-action.sh); when empty, the power_fifo
+    // requests
+    std::string restartCommand = "doas /usr/local/bin/power-action.sh reboot";
+    std::string shutdownCommand = "doas /usr/local/bin/power-action.sh poweroff";
     std::string screenOffCommand = "doas /usr/local/bin/toggle-screen.sh off";
     bool quit = false;      // a "Quit Puppy" power option, for when Puppy is started from another frontend
     bool builtinSettings = false;   // START opens System Settings in Puppy (goodluckOS); settings_command wins

@@ -119,7 +119,7 @@ Each system and app category gets its own tab, plus an "All Games" tab with ever
 | X | Search by name with the on-screen keyboard (the search applies to every tab) |
 | B | Clear the search, or close the keyboard / power options |
 | START | System Settings |
-| POWER | Power options: display off, restart, shut down |
+| POWER | Power options: display off, restart, shut down (these two ask first) |
 
 Grid or list view, whether the tabs are shown and which ones are set in System Settings. In list view, a selected name that doesn't fit scrolls to show the rest.
 
