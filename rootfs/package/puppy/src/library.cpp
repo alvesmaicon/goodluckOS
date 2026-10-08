@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <fstream>
+#include <iostream>
 #include <iterator>
 
 #include "catalog.h"
@@ -496,4 +497,36 @@ void writeTabsList(const Model& m) {
     const std::string tmp = cfg.tabsFile() + ".tmp";
     { std::ofstream out(tmp, std::ios::binary); if (!out) return; out << text; }
     fs::rename(tmp, cfg.tabsFile(), ec);
+}
+
+// Everything the launcher shows: the catalog, the extra tabs, favourites, the options and the
+// autolaunch entry. False when there is nothing to show.
+bool loadModel(Model& m) {
+    m.categories = loadCatalog();
+    if (m.categories.empty()) {
+        std::cerr << "Nothing to show: no entries in the apps files and no games in the es_systems.cfg systems\n";
+        return false;
+    }
+    for (auto& c : m.categories)
+        for (auto& e : c.entries) e.searchKey = lower(e.id == e.name ? e.name : e.name + " " + e.id);
+    extractSystemMenu(m);
+    applySettingsCommand(m);
+    addAllGamesTab(m);   // first tab, and the one shown at boot
+    loadFavorites(m);
+    addMyListTab(m);
+    addExternalTab(m);
+    if (m.categories.empty()) {
+        std::cerr << "Nothing to show\n";
+        return false;
+    }
+
+    loadSettings(m);
+    writeTabsList(m);
+    m.applyFilter();
+    std::string cat, name;
+    if (readAutoStartId(cat, name)) {
+        m.autoCategory = cat;
+        m.autoName = name;
+    }
+    return true;
 }

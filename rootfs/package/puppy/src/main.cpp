@@ -26,46 +26,18 @@ int main(int argc, char** argv) {
     i18n::settingsPath() = cfg.settingsFile();
     if (!cfg.language.empty()) i18n::load(cfg.language);
     else i18n::loadConfigured();
-    // the font chosen in System Settings, from the folder of puppy.conf's font ("default": that one)
+    // the fonts System Settings offers sit next to puppy.conf's font
     fonts::dirPath() = fs::path(cfg.font).parent_path().string();
-    if (fonts::find(fonts::configuredKey()).file) {
-        const fonts::Font& f = fonts::find(fonts::configuredKey());
-        if (fonts::available(f)) {
-            cfg.font = fonts::path(f);
-            cfg.fontScale = f.scale;
-        }
-    }
 
     Model model;
-    model.categories = loadCatalog();
-    if (model.categories.empty()) {
-        std::cerr << "Nothing to show: no entries in the apps files and no games in the es_systems.cfg systems\n";
-        return 1;
-    }
-    for (auto& c : model.categories)
-        for (auto& e : c.entries) e.searchKey = lower(e.id == e.name ? e.name : e.name + " " + e.id);
-    extractSystemMenu(model);
-    applySettingsCommand(model);
-    addAllGamesTab(model);   // first tab, and the one shown at boot
-    loadFavorites(model);
-    addMyListTab(model);
-    addExternalTab(model);
-    if (model.categories.empty()) {
-        std::cerr << "Nothing to show\n";
-        return 1;
-    }
-
-    loadSettings(model);
-    writeTabsList(model);
-    model.applyFilter();
+    if (!loadModel(model)) return 1;
     restoreCursor(model);
     if (model.cur().hidden) model.tab = 0;   // All Games
-    {
-        std::string cat, name;
-        if (readAutoStartId(cat, name)) { model.autoCategory = cat; model.autoName = name; }
-    }
 
-    Ui ui;
+    std::string font;
+    float fontScale;
+    interfaceFont(fonts::configuredKey(), font, fontScale);
+    Ui ui(font, fontScale);
     if (!ui.ok()) return 1;
 
     SDL_GameController* pad = nullptr;

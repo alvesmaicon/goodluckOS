@@ -69,15 +69,28 @@ private:
 };
 
 // A message over the whole screen while something happens that takes Puppy down (restarting,
-// shutting down). It takes no input.
+// shutting down). It takes no input. then runs once the message is on screen.
 class StatusScreen : public Screen {
 public:
-    StatusScreen(App& app, std::string text) : Screen(app), text(std::move(text)) {}
+    StatusScreen(App& app, std::string text, std::function<void()> then = nullptr)
+        : Screen(app), text(std::move(text)), then(std::move(then)) {}
 
     void onAction(Action) override {}
-    void render(Ui& ui) override { ui.status(text); }
+    void render(Ui& ui) override {
+        ui.status(text);
+        shown = true;
+    }
     bool overlay() const override { return true; }
+    Uint32 wakeAt() const override { return then ? SDL_GetTicks() + 20 : 0; }
+    void tick(Uint32) override {
+        if (!shown || !then) return;
+        const auto run = std::move(then);
+        then = nullptr;
+        run();
+    }
 
 private:
     std::string text;
+    std::function<void()> then;
+    bool shown = false;
 };

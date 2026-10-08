@@ -72,7 +72,7 @@ struct Fonts {
 
 class Ui {
 public:
-    Ui();
+    Ui(const std::string& font, float scale);
     ~Ui();
 
     Ui(const Ui&) = delete;

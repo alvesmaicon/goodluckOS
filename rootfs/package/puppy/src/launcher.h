@@ -32,8 +32,11 @@ private:
     void fromKeyboard(KeyboardScreen& k, Action a);
     void openGameMenu();
     void confirmTrash(const Entry& e);
-    bool openPowerMenu();
+    bool openPowerMenu(int bodyY);
     void runPowerItem(const PowerItem& item);
+    bool builtinSettings() const;
+    void openSettings();
+    void reloadGames();
 
     void renderEmpty(Ui& ui);
     void renderGrid(Ui& ui);

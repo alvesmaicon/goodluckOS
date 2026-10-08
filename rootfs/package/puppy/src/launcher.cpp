@@ -10,6 +10,7 @@
 #include "layout.h"
 #include "library.h"
 #include "overlays.h"
+#include "settings.h"
 #include "util.h"
 
 LauncherScreen::LauncherScreen(App& app, Model model) : Screen(app), model(std::move(model)) {}
@@ -23,16 +24,20 @@ void LauncherScreen::onAction(Action a) {
     }
     if (a == Action::Power) {
         // with the screen off, toggle-screen.sh turns it back on; don't open a menu in the dark
-        if (screenOn()) openPowerMenu();
+        if (screenOn()) openPowerMenu(bodyTop(model.showTabs));
         return;
     }
     if (a == Action::Start) {
+        if (builtinSettings()) {
+            openSettings();
+            return;
+        }
         if (model.hasSettings) {
             if (!launch(model, model.settings)) app.quit();
             return;
         }
         // no settings app (e.g. on other firmwares, where POWER may suspend): START opens the menu
-        openPowerMenu();
+        openPowerMenu(bodyTop(model.showTabs));
         return;
     }
 
@@ -88,7 +93,7 @@ void LauncherScreen::fromKeyboard(KeyboardScreen& k, Action a) {
         model.switchTab(a == Action::PrevTab ? -1 : 1);
     } else if (a == Action::Power && screenOn() && !powerItems(model).empty()) {
         k.close(false);
-        openPowerMenu();
+        openPowerMenu(bodyTop(model.showTabs));
     }
 }
 
@@ -118,13 +123,13 @@ void LauncherScreen::confirmTrash(const Entry& e) {
     }));
 }
 
-bool LauncherScreen::openPowerMenu() {
+bool LauncherScreen::openPowerMenu(int bodyY) {
     const std::vector<PowerItem> items = powerItems(model);
     if (items.empty()) return false;
     Dialog d;
     d.title = "Power options";
     for (const PowerItem& item : items) d.choices.push_back(item.label);
-    d.bodyY = bodyTop(model.showTabs);
+    d.bodyY = bodyY;
     app.push(std::make_unique<DialogScreen>(app, d, [this, items](int choice) { runPowerItem(items[choice]); }));
     return true;
 }
@@ -149,6 +154,46 @@ void LauncherScreen::runPowerItem(const PowerItem& item) {
     }
     if (item.status) app.push(std::make_unique<StatusScreen>(app, tr(item.status)));
     if (item.request) sendPowerRequest(item.request);
+}
+
+// puppy.conf's settings_command, when set, wins over the System Settings in Puppy
+bool LauncherScreen::builtinSettings() const {
+    return cfg.builtinSettings && cfg.settingsCommand.empty();
+}
+
+void LauncherScreen::openSettings() {
+    SettingsScreen::Hooks hooks;
+    hooks.powerMenu = [this] {
+        if (screenOn()) openPowerMenu(kHeaderH);
+    };
+    hooks.fontChanged = [this] {
+        for (Category& c : model.categories) c.tagColumn = -1;
+    };
+    hooks.closed = [this](bool languageChanged) {
+        if (languageChanged) reloadGames();
+        if (model.cur().hidden) model.tab = 0;   // a tab just hidden: All Games
+    };
+    app.push(std::make_unique<SettingsScreen>(app, model, hooks));
+}
+
+// The games' names and descriptions come from the gamelists of the interface language, so a new
+// language reads them again. The cursor stays on the same game.
+void LauncherScreen::reloadGames() {
+    const std::string tabName = model.cur().name;
+    const Entry* sel = model.selected();
+    const std::string category = sel ? sel->category : "", id = sel ? sel->id : "";
+    Model fresh;
+    if (!loadModel(fresh)) return;
+    model = std::move(fresh);
+    int t, e;
+    if (!id.empty() && model.find(tabName, category, id, t, e)) {
+        model.select(t, e);
+    } else {
+        for (size_t i = 0; i < model.categories.size(); ++i)
+            if (model.categories[i].name == tabName) model.tab = (int)i;
+    }
+    lastTab = model.tab;
+    tabOffset = 0.0f;
 }
 
 void LauncherScreen::render(Ui& ui) {
@@ -178,7 +223,7 @@ Hints LauncherScreen::hints() const {
     if (model.query.empty()) hints.push_back({"X", tr("Search")});
     else hints.push_back({"B", tr("Clear")});
     hints.push_back({"SELECT", tr("Autolaunch")});
-    if (model.hasSettings) hints.push_back({"START", tr("Settings")});
+    if (model.hasSettings || builtinSettings()) hints.push_back({"START", tr("Settings")});
     return hints;
 }
 

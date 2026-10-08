@@ -5,8 +5,7 @@
 // Files and commands, from puppy.conf (see loadConfig). The defaults are goodluckOS's own layout, so
 // goodluckOS needs no config file; on other firmwares a puppy.conf points Puppy at their files.
 struct Config {
-    std::string font          = "/usr/share/fonts/Inter_24pt-Medium.ttf";
-    float fontScale           = 1.0f;   // of the font chosen in System Settings (fonts.h)
+    std::string font          = "/usr/share/fonts/Inter_24pt-Medium.ttf";   // the other fonts (fonts.h) are next to it
     std::string fallbackIcon  = "/usr/share/puppy/assets/fallback.png";
     std::vector<std::string> apps     = {"/usr/share/puppy/apps.puppy", "/home/player/apps.puppy"};
     std::vector<std::string> appsDirs = {"/home/player/.local/share/applications"};   // *.puppy files
@@ -33,6 +32,7 @@ struct Config {
     std::string settingsCommand, restartCommand, shutdownCommand;
     std::string screenOffCommand = "doas /usr/local/bin/toggle-screen.sh off";
     bool quit = false;      // a "Quit Puppy" power option, for when Puppy is started from another frontend
+    bool builtinSettings = false;   // START opens System Settings in Puppy (goodluckOS); settings_command wins
 
     std::string settingsFile() const  { return configDir + "/settings"; }
     std::string favoritesFile() const { return configDir + "/favorites"; }   // "category<TAB>id" lines
@@ -46,3 +46,7 @@ constexpr const char* kMenuCategory  = "System";   // apps.puppy category taken 
 constexpr const char* kSettingsName  = "System Settings";   // entry of that category opened by START
 
 bool loadConfig(int argc, char** argv);
+
+// The interface font for a fonts.h key: its file next to puppy.conf's font, or that font itself for
+// "default", an unknown key or a missing file.
+void interfaceFont(const std::string& key, std::string& path, float& scale);

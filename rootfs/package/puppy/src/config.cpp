@@ -5,6 +5,7 @@
 #include <iostream>
 #include <map>
 
+#include "fonts.h"
 #include "util.h"
 
 Config cfg;
@@ -71,7 +72,18 @@ bool loadConfig(int argc, char** argv) {
         else if (auto it = texts.find(key); it != texts.end()) *it->second = value;
         else if (auto it = lists.find(key); it != lists.end()) *it->second = files(value);
         else if (key == "quit") cfg.quit = value == "on" || value == "yes" || value == "true" || value == "1";
+        else if (key == "settings") cfg.builtinSettings = value == "builtin";
         else std::cerr << path << ":" << lineNo << ": unknown setting " << key << "\n";
     }
     return true;
+}
+
+void interfaceFont(const std::string& key, std::string& path, float& scale) {
+    path = cfg.font;
+    scale = 1.0f;
+    const fonts::Font& f = fonts::find(key);
+    if (f.file && fonts::available(f)) {
+        path = fonts::path(f);
+        scale = f.scale;
+    }
 }

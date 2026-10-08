@@ -143,7 +143,7 @@ void IconCache::evictOldest() {
     slots.erase(oldest);
 }
 
-Ui::Ui() {
+Ui::Ui(const std::string& font, float scale) {
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) != 0) {
@@ -163,7 +163,7 @@ Ui::Ui() {
     SDL_RenderSetLogicalSize(renderer, kScreenW, kScreenH);
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
-    setFont(cfg.font, cfg.fontScale);
+    setFont(font, scale);
 
     gridCache    = std::make_unique<IconCache>(renderer, cfg.fallbackIcon, kCellWidth, kCellHeight, false);
     previewCache = std::make_unique<IconCache>(renderer, cfg.fallbackIcon, kPreviewW, kPreviewH, true);
