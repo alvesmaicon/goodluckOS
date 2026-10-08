@@ -1,6 +1,7 @@
 #include "util.h"
 
 #include <cctype>
+#include <cstdio>
 #include <cstdlib>
 
 // String helper functions
@@ -61,4 +62,19 @@ std::string expandHome(const std::string& path) {
 void replaceAll(std::string& s, const std::string& from, const std::string& to) {
     if (from.empty()) return;
     for (size_t pos = 0; (pos = s.find(from, pos)) != std::string::npos; pos += to.size()) s.replace(pos, from.size(), to);
+}
+
+std::string humanSize(unsigned long long kb) {
+    char buf[32];
+    if (kb >= 1024ULL * 1024) snprintf(buf, sizeof(buf), "%.1f GB", kb / (1024.0 * 1024.0));
+    else if (kb >= 1024) snprintf(buf, sizeof(buf), "%.0f MB", kb / 1024.0);
+    else snprintf(buf, sizeof(buf), "%llu KB", kb);
+    return buf;
+}
+
+std::string trf(const char* english, const std::string& value) {
+    std::string text = tr(english);
+    size_t pos = text.find("%s");
+    if (pos != std::string::npos) text.replace(pos, 2, value);
+    return text;
 }

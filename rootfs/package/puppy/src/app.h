@@ -29,7 +29,7 @@ public:
     virtual bool overlay() const { return false; }   // drawn over the screen below, which keeps the top bar
     virtual bool animating() const { return false; } // wants the next frame right away
     virtual Uint32 wakeAt() const { return 0; }      // when it next needs a frame without input (0: never)
-    virtual void tick(Uint32) {}                     // before each frame; must not push or pop screens
+    virtual void tick(Uint32) {}                     // before each frame
     virtual void levelsChanged() {}                  // a hotkey changed the volume, brightness or audio output
     virtual bool raw() const { return false; }       // gets the SDL events themselves (onEvent), not actions
     virtual void onEvent(const SDL_Event&) {}
@@ -47,6 +47,7 @@ public:
     void notice(const std::string& text);       // a short message over the footer
     void quit() { running = false; }
     void clockChanged();                        // its date format, 12/24 hours or time zone
+    void audioChanged();                        // the top bar reads the mixer again
     SDL_GameController* gamepad() const { return pad; }
     Ui& painter() { return ui; }
     int run();

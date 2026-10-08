@@ -1,9 +1,12 @@
 #include "system/hud.h"
 
 #include <algorithm>
+#include <cstdio>
 #include <cstdlib>
-#include <ctime>
 #include <fstream>
+
+#include <sys/stat.h>
+#include <unistd.h>
 
 static const char* kHudDefaults = "/usr/share/goodluck/defaults/gallium_hud.conf";
 static const char* kHudConfig = "/home/player/.config/gallium_hud.conf";
@@ -38,16 +41,46 @@ HudSettings HudSettings::load() {
     return h;
 }
 
-std::string clockFormat() {
-    const HudSettings h = HudSettings::load();
-    return h.dateFormat + (h.h24 ? " %H:%M" : " %I:%M %p");
+void HudSettings::save() const {
+    mkdir("/home/player/.config", 0755);
+    const std::string tmp = std::string(kHudConfig) + ".tmp";
+    {
+        std::ofstream out(tmp);
+        if (!out) return;
+        auto flag = [](bool on) { return on ? "true" : "false"; };
+        out << "HUD_STATUS_DATE=" << flag(statusDate) << "\n"
+            << "HUD_STATUS_TIME=" << flag(statusTime) << "\n"
+            << "HUD_STATUS_BATTERY=" << flag(statusBattery) << "\n"
+            << "HUD_STATUS_AUDIO=" << flag(statusAudio) << "\n"
+            << "HUD_STATUS_CPU_TEMP=" << flag(statusCpuTemp) << "\n"
+            << "HUD_STATUS_PMIC_TEMP=" << flag(statusPmicTemp) << "\n"
+            << "HUD_STATUS_OPACITY=" << statusOpacity << "\n"
+            << "HUD_VISIBLE=" << flag(visible) << "\n"
+            << "HUD_ITEMS=" << (cpu ? "fps,cpu" : "fps") << "\n"
+            << "HUD_STYLE=" << (text ? "text" : "graph") << "\n"
+            << "HUD_POSITION=" << position << "\n"
+            << "HUD_24H=" << flag(h24) << "\n"
+            << "HUD_DATE_FORMAT=" << dateFormat << "\n";
+    }
+    rename(tmp.c_str(), kHudConfig);
 }
 
-std::string clockText(const std::string& fmt) {
-    if (fmt.empty()) return "";
-    char text[32];
-    time_t now = time(nullptr);
-    struct tm tm;
-    localtime_r(&now, &tm);
-    return strftime(text, sizeof(text), fmt.c_str(), &tm) ? text : "";
+void HudSettings::restoreDefaults() {
+    unlink(kHudConfig);
+}
+
+const std::vector<HudOption>& hudPositions() {
+    static const std::vector<HudOption> positions = {
+        {"top-left", "Top left"}, {"top-right", "Top right"}, {"bottom-left", "Bottom left"}, {"bottom-right", "Bottom right"},
+    };
+    return positions;
+}
+
+// What the settings show, and the strftime format the clocks use
+const std::vector<HudOption>& dateFormats() {
+    static const std::vector<HudOption> formats = {
+        {"%m/%d", "MM/DD"}, {"%d/%m", "DD/MM"}, {"%m/%d/%Y", "MM/DD/YYYY"}, {"%d/%m/%Y", "DD/MM/YYYY"},
+        {"%Y-%m-%d", "YYYY-MM-DD"}, {"%d/%m/%y", "DD/MM/YY"}, {"%y-%m-%d", "YY-MM-DD"},
+    };
+    return formats;
 }

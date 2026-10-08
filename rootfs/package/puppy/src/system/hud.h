@@ -3,6 +3,7 @@
 // in-game status bar and performance overlay (read by /etc/profile.d/gallium_hud.sh when an app
 // starts) and the clock's date format and 12/24 hours, which the launcher's top bar uses too.
 #include <string>
+#include <vector>
 
 struct HudSettings {
     bool statusDate = false, statusTime = false, statusBattery = false, statusAudio = false;
@@ -16,7 +17,14 @@ struct HudSettings {
     std::string dateFormat = "%m/%d";   // strftime
 
     static HudSettings load();
+    void save() const;
+    static void restoreDefaults();      // drops the user's file
 };
 
-std::string clockFormat();      // strftime format of the top bar's clock: the date and the time
-std::string clockText(const std::string& fmt);
+// Values the file takes, with their English names
+struct HudOption {
+    const char* value;
+    const char* name;
+};
+const std::vector<HudOption>& hudPositions();
+const std::vector<HudOption>& dateFormats();

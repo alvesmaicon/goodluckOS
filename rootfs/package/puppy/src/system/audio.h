@@ -22,12 +22,19 @@ private:
 
 struct Audio {
     int volume = -1;          // -1: no mixer
-    bool muted = false;
+    bool muted = false;       // switched off, or at 0
+    bool switchedOff = false; // Global Mute
     bool headphones = false;
 
     bool operator!=(const Audio& o) const {
-        return volume != o.volume || muted != o.muted || headphones != o.headphones;
+        return volume != o.volume || muted != o.muted || switchedOff != o.switchedOff || headphones != o.headphones;
     }
 
     void read();
 };
+
+void setVolume(int percent);
+void setMuted(bool muted);
+// Through audio-output.sh (as root), like FN + DOWN: it also sets the speaker's high-pass filter
+// and shows the change in the HUD.
+void setOutput(bool speaker);

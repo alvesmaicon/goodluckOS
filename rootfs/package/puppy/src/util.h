@@ -17,3 +17,5 @@ std::string shellQuote(const std::string& s);
 void replaceAll(std::string& s, const std::string& from, const std::string& to);
 std::string homeDir();
 std::string expandHome(const std::string& path);
+std::string humanSize(unsigned long long kb);   // "1.5 GB", "300 MB"
+std::string trf(const char* english, const std::string& value);    // tr() with its "%s" filled

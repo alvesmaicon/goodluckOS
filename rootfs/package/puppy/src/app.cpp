@@ -4,7 +4,7 @@
 #include <ctime>
 
 #include "layout.h"
-#include "system/hud.h"
+#include "system/clock.h"
 
 App::App(Ui& ui, SDL_GameController* pad) : ui(ui), pad(pad), input(pad) {}
 
@@ -27,6 +27,11 @@ void App::notice(const std::string& text) {
 
 void App::clockChanged() {
     clockFmt = clockFormat();
+    dirty = true;
+}
+
+void App::audioChanged() {
+    audio.read();
     dirty = true;
 }
 
@@ -60,7 +65,11 @@ int App::run() {
 
     while (running && !stack.empty()) {
         Uint32 now = SDL_GetTicks();
-        for (const auto& s : stack) s->tick(now);
+        // a screen may open or close others in its tick: closed ones stay alive until the loop's end
+        std::vector<Screen*> live;
+        for (const auto& s : stack) live.push_back(s.get());
+        for (Screen* s : live) s->tick(now);
+        if (stack.empty()) break;
         if (dirty) {
             render();
             dirty = false;
