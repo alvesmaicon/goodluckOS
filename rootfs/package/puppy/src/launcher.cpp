@@ -96,17 +96,24 @@ void LauncherScreen::openGameMenu() {
     const Entry* e = model.selected();
     if (!e || e->file.empty()) return;
     const Entry entry = *e;
-    app.push(std::make_unique<DialogScreen>(app, "Game options", entry.name, std::vector<std::string>{"Rename", "Move to trash"},
-                                            bodyTop(model.showTabs), [this, entry](int choice) {
+    Dialog d;
+    d.title = "Game options";
+    d.subtitle = entry.name;
+    d.choices = {"Rename", "Move to trash"};
+    d.bodyY = bodyTop(model.showTabs);
+    app.push(std::make_unique<DialogScreen>(app, d, [this, entry](int choice) {
         if (choice == 0) openRename(entry);
         else confirmTrash(entry);
     }));
 }
 
 void LauncherScreen::confirmTrash(const Entry& e) {
-    app.push(std::make_unique<DialogScreen>(app, "Move this game to the trash?", e.name,
-                                            std::vector<std::string>{"Cancel", "Move to trash"},
-                                            bodyTop(model.showTabs), [this, e](int choice) {
+    Dialog d;
+    d.title = "Move this game to the trash?";
+    d.subtitle = e.name;
+    d.choices = {"Cancel", "Move to trash"};
+    d.bodyY = bodyTop(model.showTabs);
+    app.push(std::make_unique<DialogScreen>(app, d, [this, e](int choice) {
         if (choice == 1) app.notice(deleteEntry(model, e));
     }));
 }
@@ -114,10 +121,11 @@ void LauncherScreen::confirmTrash(const Entry& e) {
 bool LauncherScreen::openPowerMenu() {
     const std::vector<PowerItem> items = powerItems(model);
     if (items.empty()) return false;
-    std::vector<std::string> labels;
-    for (const PowerItem& item : items) labels.push_back(item.label);
-    app.push(std::make_unique<DialogScreen>(app, "Power options", "", labels, bodyTop(model.showTabs),
-                                            [this, items](int choice) { runPowerItem(items[choice]); }));
+    Dialog d;
+    d.title = "Power options";
+    for (const PowerItem& item : items) d.choices.push_back(item.label);
+    d.bodyY = bodyTop(model.showTabs);
+    app.push(std::make_unique<DialogScreen>(app, d, [this, items](int choice) { runPowerItem(items[choice]); }));
     return true;
 }
 

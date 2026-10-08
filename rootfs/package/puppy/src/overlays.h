@@ -6,6 +6,7 @@
 
 #include "app.h"
 #include "keyboard.h"
+#include "layout.h"
 
 // Types into text with the d-pad. For a search the cursor stays at the end and L1/R1 are left to the
 // screen below; for a rename L1/R1 move the cursor.
@@ -38,12 +39,22 @@ private:
     void type(const std::string& key);
 };
 
-// A menu with a title, an optional subtitle (e.g. the game it acts on) and its choices, in English
-// (translated when drawn). onChoose gets the picked choice once the menu has closed.
+// A menu over the screen below. Texts are English and translated when drawn, except the subtitle
+// (e.g. the game the menu acts on) and raw choices (time zones, language names).
+struct Dialog {
+    std::string title;
+    std::string subtitle;
+    std::string message;                // wrapped under the title, e.g. what a confirmation does
+    std::vector<std::string> choices;
+    bool raw = false;
+    int selected = 0;
+    int bodyY = kHeaderH;               // where the screen below starts (under its tab strip): the panel is centred there
+};
+
+// onChoose gets the picked choice once the menu has closed. A list too long for the screen scrolls.
 class DialogScreen : public Screen {
 public:
-    DialogScreen(App& app, std::string title, std::string subtitle, std::vector<std::string> choices, int bodyY,
-                 std::function<void(int)> onChoose);
+    DialogScreen(App& app, Dialog dialog, std::function<void(int)> onChoose);
 
     void onAction(Action a) override;
     void render(Ui& ui) override;
@@ -51,11 +62,10 @@ public:
     bool overlay() const override { return true; }
 
 private:
-    std::string title, subtitle;
-    std::vector<std::string> choices;
-    int bodyY;          // where the screen below starts, under its tab strip: the panel is centred there
+    Dialog d;
     std::function<void(int)> onChoose;
     int sel = 0;
+    int scroll = 0;     // first choice shown
 };
 
 // A message over the whole screen while something happens that takes Puppy down (restarting,

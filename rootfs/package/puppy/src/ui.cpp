@@ -163,14 +163,7 @@ Ui::Ui() {
     SDL_RenderSetLogicalSize(renderer, kScreenW, kScreenH);
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
-    const char* font = cfg.font.c_str();
-    auto size = [](int pt) { return (int)std::lround(pt * cfg.fontScale); };
-    fonts.ui    = TTF_OpenFont(font, size(22));
-    fonts.title = TTF_OpenFont(font, size(30));
-    fonts.desc  = TTF_OpenFont(font, size(20));
-    fonts.small = TTF_OpenFont(font, size(15));
-    if (!fonts.ui || !fonts.title || !fonts.desc || !fonts.small)
-        std::cerr << "Warning: could not load font " << cfg.font << "\n";
+    setFont(cfg.font, cfg.fontScale);
 
     gridCache    = std::make_unique<IconCache>(renderer, cfg.fallbackIcon, kCellWidth, kCellHeight, false);
     previewCache = std::make_unique<IconCache>(renderer, cfg.fallbackIcon, kPreviewW, kPreviewH, true);
@@ -185,6 +178,22 @@ Ui::~Ui() {
     if (renderer) SDL_DestroyRenderer(renderer);
     if (window) SDL_DestroyWindow(window);
     if (sdlUp) { TTF_Quit(); IMG_Quit(); SDL_Quit(); }
+}
+
+// The four sizes of the interface font. What was measured or drawn with the old one is dropped.
+void Ui::setFont(const std::string& path, float scale) {
+    for (TTF_Font* f : {fonts.ui, fonts.title, fonts.desc, fonts.small}) if (f) TTF_CloseFont(f);
+    auto size = [&](int pt) { return (int)std::lround(pt * scale); };
+    fonts.ui    = TTF_OpenFont(path.c_str(), size(22));
+    fonts.title = TTF_OpenFont(path.c_str(), size(30));
+    fonts.desc  = TTF_OpenFont(path.c_str(), size(20));
+    fonts.small = TTF_OpenFont(path.c_str(), size(15));
+    if (!fonts.ui || !fonts.title || !fonts.desc || !fonts.small)
+        std::cerr << "Warning: could not load font " << path << "\n";
+    pillWidths.clear();
+    if (clipTex) SDL_DestroyTexture(clipTex);
+    clipTex = nullptr;
+    clipText.clear();
 }
 
 void Ui::begin() {
@@ -404,6 +413,15 @@ void Ui::sideTriangle(int cx, int cy, int r, bool left, SDL_Color c) {
 }
 
 // Width of a pill() with this text; the system tags are measured once.
+int Ui::wrappedHeight(TTF_Font* font, const std::string& text, int width) {
+    if (!font || text.empty()) return 0;
+    SDL_Surface* s = TTF_RenderUTF8_Blended_Wrapped(font, text.c_str(), kWhite, width);
+    if (!s) return 0;
+    int h = s->h;
+    SDL_FreeSurface(s);
+    return h;
+}
+
 int Ui::pillWidth(const std::string& text) {
     auto it = pillWidths.find(text);
     if (it != pillWidths.end()) return it->second;

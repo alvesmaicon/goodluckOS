@@ -28,6 +28,11 @@ public:
     virtual Hints hints() const { return {}; }
     virtual bool overlay() const { return false; }   // drawn over the screen below, which keeps the top bar
     virtual bool animating() const { return false; } // wants the next frame right away
+    virtual Uint32 wakeAt() const { return 0; }      // when it next needs a frame without input (0: never)
+    virtual void tick(Uint32) {}                     // before each frame; must not push or pop screens
+    virtual void levelsChanged() {}                  // a hotkey changed the volume, brightness or audio output
+    virtual bool raw() const { return false; }       // gets the SDL events themselves (onEvent), not actions
+    virtual void onEvent(const SDL_Event&) {}
 
 protected:
     App& app;
@@ -41,10 +46,14 @@ public:
     void pop();                                 // the top screen, destroyed once the event is handled
     void notice(const std::string& text);       // a short message over the footer
     void quit() { running = false; }
+    void clockChanged();                        // its date format, 12/24 hours or time zone
+    SDL_GameController* gamepad() const { return pad; }
+    Ui& painter() { return ui; }
     int run();
 
 private:
     Ui& ui;
+    SDL_GameController* pad;
     Input input;
     std::vector<std::unique_ptr<Screen>> stack, closed;
     bool running = true;

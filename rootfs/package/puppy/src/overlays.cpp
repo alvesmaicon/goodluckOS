@@ -131,13 +131,17 @@ Hints KeyboardScreen::hints() const {
     return hints;
 }
 
-DialogScreen::DialogScreen(App& app, std::string title, std::string subtitle, std::vector<std::string> choices, int bodyY,
-                           std::function<void(int)> onChoose)
-    : Screen(app), title(std::move(title)), subtitle(std::move(subtitle)), choices(std::move(choices)), bodyY(bodyY),
-      onChoose(std::move(onChoose)) {}
+DialogScreen::DialogScreen(App& app, Dialog dialog, std::function<void(int)> onChoose)
+    : Screen(app), d(std::move(dialog)), onChoose(std::move(onChoose)) {
+    sel = std::clamp(d.selected, 0, std::max(0, (int)d.choices.size() - 1));
+}
 
 void DialogScreen::onAction(Action a) {
-    const int n = (int)choices.size();
+    const int n = (int)d.choices.size();
+    if (n == 0) {
+        if (a == Action::Back || a == Action::Power || a == Action::Launch) app.pop();
+        return;
+    }
     switch (a) {
         case Action::Up:   sel = (sel + n - 1) % n; break;
         case Action::Down: sel = (sel + 1) % n;     break;
@@ -159,28 +163,43 @@ void DialogScreen::render(Ui& ui) {
     const Fonts& fonts = ui.font();
     const int pad = 12, rowH = 40;
     const int titleH = TTF_FontHeight(fonts.ui) + 14;
-    const int subH = subtitle.empty() ? 0 : TTF_FontLineSkip(fonts.small) + 6;
-    const int panelW = subtitle.empty() ? 320 : 400;
-    const int count = (int)choices.size();
-    const int panelH = titleH + subH + count * rowH + 2 * pad;
-    SDL_Rect panel{(kScreenW - panelW) / 2, bodyY + (kScreenH - kFooterH - bodyY - panelH) / 2, panelW, panelH};
+    const int subH = d.subtitle.empty() ? 0 : TTF_FontLineSkip(fonts.small) + 6;
+    const int panelW = d.subtitle.empty() && d.message.empty() ? 320 : 400;
+    const int textW = panelW - 2 * pad - 4;
+    const std::string message = tr(d.message);
+    const int msgH = message.empty() ? 0 : ui.wrappedHeight(fonts.small, message, textW) + 10;
+    const int count = (int)d.choices.size();
+    const int fit = std::max(1, (kScreenH - kFooterH - d.bodyY - 16 - titleH - subH - msgH - 2 * pad) / rowH);
+    const int shown = std::min(count, fit);
+    if (sel < scroll) scroll = sel;
+    if (sel >= scroll + shown) scroll = sel - shown + 1;
+    const int panelH = titleH + subH + msgH + shown * rowH + 2 * pad;
+    SDL_Rect panel{(kScreenW - panelW) / 2, d.bodyY + (kScreenH - kFooterH - d.bodyY - panelH) / 2, panelW, panelH};
     ui.fill({0, 0, 0, 150}, {0, kHeaderH, kScreenW, kScreenH - kFooterH - kHeaderH});   // dim the screen behind
     ui.fill(kBar, panel);
     ui.frame(kTile, panel, 2);
-    drawText(renderer, fonts.ui, tr(title), panel.x + pad + 4, panel.y + pad, kWhite, panelW - 2 * pad - 4);
-    if (!subtitle.empty())
-        drawText(renderer, fonts.small, subtitle, panel.x + pad + 4, panel.y + pad + titleH - 4, kGrey, panelW - 2 * pad - 4);
+    drawText(renderer, fonts.ui, tr(d.title), panel.x + pad + 4, panel.y + pad, kWhite, textW);
+    if (!d.subtitle.empty())
+        drawText(renderer, fonts.small, d.subtitle, panel.x + pad + 4, panel.y + pad + titleH - 4, kGrey, textW);
+    if (!message.empty())
+        ui.drawWrapped(fonts.small, message, panel.x + pad + 4, panel.y + pad + titleH + subH - 4, kGrey, textW);
 
     const int fontH = TTF_FontHeight(fonts.desc);
-    for (int i = 0; i < count; ++i) {
-        SDL_Rect r{panel.x + pad, panel.y + pad + titleH + subH + i * rowH, panelW - 2 * pad, rowH - 4};
-        bool selected = i == sel;
+    const int top = panel.y + pad + titleH + subH + msgH;
+    for (int i = 0; i < shown; ++i) {
+        const int k = scroll + i;
+        SDL_Rect r{panel.x + pad, top + i * rowH, panelW - 2 * pad, rowH - 4};
+        bool selected = k == sel;
         if (selected) {
             ui.fill(kRowSel, r);
             ui.fill(kYellow, {r.x, r.y, 4, r.h});
         }
-        drawText(renderer, fonts.desc, tr(choices[i]), r.x + 16, r.y + (r.h - fontH) / 2, selected ? kWhite : kGrey, r.w - 24);
+        const std::string label = d.raw ? d.choices[k] : tr(d.choices[k]);
+        drawText(renderer, fonts.desc, label, r.x + 16, r.y + (r.h - fontH) / 2, selected ? kWhite : kGrey, r.w - 24);
     }
+    // more choices above / below
+    if (scroll > 0) ui.triangle(panel.x + panelW - pad - 10, top + 8, 5, true, kYellow);
+    if (scroll + shown < count) ui.triangle(panel.x + panelW - pad - 10, top + shown * rowH - 12, 5, false, kYellow);
 }
 
 Hints DialogScreen::hints() const {

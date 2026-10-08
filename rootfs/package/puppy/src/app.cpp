@@ -6,7 +6,7 @@
 #include "layout.h"
 #include "system/hud.h"
 
-App::App(Ui& ui, SDL_GameController* pad) : ui(ui), input(pad) {}
+App::App(Ui& ui, SDL_GameController* pad) : ui(ui), pad(pad), input(pad) {}
 
 void App::push(std::unique_ptr<Screen> screen) {
     stack.push_back(std::move(screen));
@@ -23,6 +23,11 @@ void App::pop() {
 void App::notice(const std::string& text) {
     noticeText = text;
     noticeUntil = SDL_GetTicks() + kNoticeMs;
+}
+
+void App::clockChanged() {
+    clockFmt = clockFormat();
+    dirty = true;
 }
 
 void App::follow() {
@@ -54,12 +59,14 @@ int App::run() {
     lastActivity = SDL_GetTicks();
 
     while (running && !stack.empty()) {
+        Uint32 now = SDL_GetTicks();
+        for (const auto& s : stack) s->tick(now);
         if (dirty) {
             render();
             dirty = false;
         }
 
-        Uint32 now = SDL_GetTicks();
+        now = SDL_GetTicks();
         Uint32 elapsed = now - lastActivity;
         int timeout = elapsed >= kIdleCheckMs ? 0 : (int)(kIdleCheckMs - elapsed);
         if (input.repeatIn(now) >= 0) timeout = std::min(timeout, input.repeatIn(now));
@@ -71,6 +78,7 @@ int App::run() {
             } else {
                 if ((Sint32)(now - followNextRead) >= 0) {
                     audio.read();
+                    for (const auto& s : stack) s->levelsChanged();
                     followNextRead = now + kFollowReadMs;
                     dirty = true;
                 }
@@ -101,6 +109,16 @@ int App::run() {
                 timeout = std::min(timeout, (int)(due - now));
             }
         }
+        for (const auto& s : stack) {
+            if (Uint32 at = s->wakeAt()) {
+                if ((Sint32)(now - at) >= 0) {
+                    dirty = true;
+                    timeout = 0;
+                } else {
+                    timeout = std::min(timeout, (int)(at - now));
+                }
+            }
+        }
 
         SDL_Event ev;
         if (!SDL_WaitEventTimeout(&ev, timeout)) {
@@ -126,6 +144,12 @@ int App::run() {
             if (ev.type == SDL_QUIT) running = false;
             else if (ev.type == SDL_WINDOWEVENT && ev.window.event == SDL_WINDOWEVENT_EXPOSED) dirty = true;
 
+            if (stack.back()->raw()) {
+                stack.back()->onEvent(ev);
+                if (input.translate(ev, false).hotkey) follow();
+                dirty = true;
+                continue;
+            }
             const Input::Result r = input.translate(ev, stack.back()->typing());
             if (r.hotkey) follow();
             if (!r.text.empty()) {
