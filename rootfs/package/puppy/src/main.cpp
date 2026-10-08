@@ -78,14 +78,14 @@ int main(int argc, char** argv) {
     }
 
     Keyboard kb;
-    Osd osd;
     Audio audio;
     audio.read();
     bool fnHeld = false;        // FN + UP/DOWN are triggerhappy hotkeys, not navigation
     bool selectHeld = false, selectCombo = false;
     Action leftStick = Action::None, rightStick = Action::None;
     bool triggerL = false, triggerR = false;    // L2 / R2 held (they're axes); both: game options
-    Uint32 osdUntil = 0, osdNextRead = 0;
+    bool following = false;     // after a volume, brightness or output hotkey, which change the levels behind our back
+    Uint32 followUntil = 0, followNextRead = 0;
     bool running = true;
     bool dirty = true;
     int shownBattery = -2;
@@ -297,7 +297,7 @@ int main(int argc, char** argv) {
         if (dirty) {
             shownBattery = readBattery();
             model.clock = clockText(clock);
-            ui.render(model, kb, osd, shownBattery, audio);
+            ui.render(model, kb, shownBattery, audio);
             dirty = false;
         }
 
@@ -305,19 +305,18 @@ int main(int argc, char** argv) {
         Uint32 elapsed = now - lastActivity;
         int timeout = elapsed >= kIdleCheckMs ? 0 : (int)(kIdleCheckMs - elapsed);
         if (held != Action::None) timeout = std::min(timeout, (int)std::max<Sint32>(0, (Sint32)(nextRepeat - now)));
-        if (osd.visible) {
-            if ((Sint32)(now - osdUntil) >= 0) {
-                osd.visible = false;
+        if (following) {
+            if ((Sint32)(now - followUntil) >= 0) {
+                following = false;
                 dirty = true;
                 timeout = 0;
             } else {
-                if ((Sint32)(now - osdNextRead) >= 0) {
-                    osd.read();
+                if ((Sint32)(now - followNextRead) >= 0) {
                     audio.read();
-                    osdNextRead = now + kOsdRefreshMs;
+                    followNextRead = now + kFollowReadMs;
                     dirty = true;
                 }
-                timeout = std::min(timeout, (int)kOsdRefreshMs);
+                timeout = std::min(timeout, (int)kFollowReadMs);
             }
         }
         if (!clock.empty())   // wake up when the minute changes
@@ -377,9 +376,9 @@ int main(int argc, char** argv) {
                     // volume keys (and FN + volume for brightness) are handled by triggerhappy scripts;
                     // just show the resulting level
                     if (k == SDLK_VOLUMEUP || k == SDLK_VOLUMEDOWN) {
-                        osd.visible = true;
-                        osdUntil = SDL_GetTicks() + kOsdShowMs;
-                        osdNextRead = SDL_GetTicks() + 30;   // give the script a moment to write it
+                        following = true;
+                        followUntil = SDL_GetTicks() + kFollowMs;
+                        followNextRead = SDL_GetTicks() + 30;   // give the script a moment to write it
                         break;
                     }
                     if (kb.open && ((k >= SDLK_a && k <= SDLK_z) || (k >= SDLK_0 && k <= SDLK_9))) {
@@ -412,9 +411,9 @@ int main(int argc, char** argv) {
                     if (fnHeld && (ev.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_UP ||
                                    ev.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_DOWN)) {
                         if (ev.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_DOWN) {
-                            osd.visible = true;
-                            osdUntil = SDL_GetTicks() + kOsdShowMs;
-                            osdNextRead = SDL_GetTicks() + 30;
+                            following = true;
+                            followUntil = SDL_GetTicks() + kFollowMs;
+                            followNextRead = SDL_GetTicks() + 30;
                         }
                         break;
                     }

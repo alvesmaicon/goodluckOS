@@ -25,7 +25,6 @@ struct Config {
     std::string view, tabs;                 // defaults for the settings file's view= and tabs=
     std::string powerFifo;                  // a root daemon reading requests, e.g. "screen-off" (puppy.conf)
     std::string backlight     = "/sys/class/backlight/backlight/brightness";
-    std::string osdFile       = "/dev/shm/osd";  // "volume|brightness <percent> [muted]", from osd-notify.sh
     std::string alsaCard      = "hw:GA36mbAudio";   // volume and audio output shown in the header
     std::string trashDir      = "/home/player/.trash";   // deleted games, until System Settings empties it
     // RetroArch saves and states, renamed along with a game (sort_savefiles: one folder per core)

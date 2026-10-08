@@ -231,7 +231,7 @@ public:
     Uint32 marqueeDue() const { return marqueeNext; }   // when the scrolling name needs a frame (0: never)
     int descMaxScroll() const { return descMax; }   // of the description drawn in the last frame
 
-    void render(const Model& m, const Keyboard& kb, const Osd& osd, int battery, const Audio& audio) {
+    void render(const Model& m, const Keyboard& kb, int battery, const Audio& audio) {
         marqueeNext = 0;    // set again below if the selected name is still scrolling
         setColor(kClear);
         SDL_RenderClear(renderer);

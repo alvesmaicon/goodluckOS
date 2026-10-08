@@ -1,5 +1,5 @@
 #pragma once
-// The device as the launcher sees it: power requests, the screen, battery, clock, mixer and OSD.
+// The device as the launcher sees it: power requests, the screen, battery, clock and mixer.
 #include <SDL2/SDL.h>
 #include <alsa/asoundlib.h>
 
@@ -61,20 +61,3 @@ struct Audio {
     }
 };
 
-// Volume/brightness level written by the hotkey scripts, shown as a bar for a moment.
-struct Osd {
-    bool visible = false;
-    std::string kind;
-    int percent = 0;
-    bool muted = false;
-    std::string flag;
-
-    void read() {
-        std::ifstream in(cfg.osdFile);
-        flag.clear();
-        if (!(in >> kind >> percent)) { kind.clear(); return; }
-        in >> flag;
-        muted = flag == "muted";
-        percent = std::clamp(percent, 0, 100);
-    }
-};

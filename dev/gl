@@ -162,7 +162,6 @@ scenes_run() {
         cp -a /media/games /home/player/roms
         mkdir -p /home/player/.config/puppy
         printf 'view=%s\ntabs=%s\nlanguage=%s\n' "$view" "$tabs" "$lang" >/home/player/.config/puppy/settings
-        echo "volume 60" >/dev/shm/osd
         DISPLAY=:98 SDL_VIDEODRIVER=x11 TZ=UTC0 FAKE_EPOCH=$epoch LD_PRELOAD=$WORK/scene-shim.so \
             "$OUT/puppy.$ARCH" >"$out/$name.log" 2>&1 & pid=$!
         sleep 2

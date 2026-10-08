@@ -45,7 +45,7 @@ bool loadConfig(int argc, char** argv) {
         {"autolaunch_mark", &cfg.autoStartMark},
         {"state_file", &cfg.stateFile}, {"autolaunch_file", &cfg.autoStartFile}, {"config_dir", &cfg.configDir},
         {"cache_dir", &cfg.cacheDir}, {"lang_dir", &cfg.langDir}, {"power_fifo", &cfg.powerFifo},
-        {"backlight", &cfg.backlight}, {"osd_file", &cfg.osdFile}, {"trash_dir", &cfg.trashDir},
+        {"backlight", &cfg.backlight}, {"trash_dir", &cfg.trashDir},
         {"alsa_card", &cfg.alsaCard},
     };
     std::map<std::string, std::string*> texts = {
