@@ -189,6 +189,8 @@ struct HudSettings {
     bool status_time = false;
     bool status_battery = false;
     bool status_audio = false;
+    bool status_cpu_temp = false;
+    bool status_pmic_temp = false;
     int status_opacity = 50;
     bool visible = false;
     bool cpu = true;
@@ -210,6 +212,8 @@ void read_hud_settings(const char* path, HudSettings& hud) {
         else if (key == "HUD_STATUS_TIME") hud.status_time = value == "true";
         else if (key == "HUD_STATUS_BATTERY") hud.status_battery = value == "true";
         else if (key == "HUD_STATUS_AUDIO") hud.status_audio = value == "true";
+        else if (key == "HUD_STATUS_CPU_TEMP") hud.status_cpu_temp = value == "true";
+        else if (key == "HUD_STATUS_PMIC_TEMP") hud.status_pmic_temp = value == "true";
         else if (key == "HUD_STATUS_OPACITY") hud.status_opacity = std::max(0, std::min(100, atoi(value.c_str())));
         else if (key == "HUD_24H") hud.h24 = value == "true";
         else if (key == "HUD_DATE_FORMAT") {
@@ -244,6 +248,8 @@ void save_hud_settings(const HudSettings& hud) {
              << "HUD_STATUS_TIME=" << (hud.status_time ? "true" : "false") << "\n"
              << "HUD_STATUS_BATTERY=" << (hud.status_battery ? "true" : "false") << "\n"
              << "HUD_STATUS_AUDIO=" << (hud.status_audio ? "true" : "false") << "\n"
+             << "HUD_STATUS_CPU_TEMP=" << (hud.status_cpu_temp ? "true" : "false") << "\n"
+             << "HUD_STATUS_PMIC_TEMP=" << (hud.status_pmic_temp ? "true" : "false") << "\n"
              << "HUD_STATUS_OPACITY=" << hud.status_opacity << "\n"
              << "HUD_VISIBLE=" << (hud.visible ? "true" : "false") << "\n"
              << "HUD_ITEMS=" << (hud.cpu ? "fps,cpu" : "fps") << "\n"
@@ -1120,6 +1126,8 @@ int main(int argc, char* argv[]) {
             hud_changed |= ImGui::Checkbox(tr("Show time"), &hud.status_time);
             hud_changed |= ImGui::Checkbox(tr("Show battery"), &hud.status_battery);
             hud_changed |= ImGui::Checkbox(tr("Show audio"), &hud.status_audio);
+            hud_changed |= ImGui::Checkbox(tr("Show CPU temperature"), &hud.status_cpu_temp);
+            hud_changed |= ImGui::Checkbox(tr("Show power chip temperature"), &hud.status_pmic_temp);
             hud_changed |= level_slider(tr("Opacity"), &hud.status_opacity, 0, 100, 10);
             ImGui::Spacing();
             ImGui::TextDisabled("%s", tr("Performance (FN + UP)"));
