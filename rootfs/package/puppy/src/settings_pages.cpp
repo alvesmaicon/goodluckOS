@@ -93,7 +93,7 @@ std::string SettingsScreen::pageHint(Page p) const {
         case Page::Resize:
             if (resize.pending)
                 return tr("A resize is already scheduled for the next boot.") + std::string(" ") +
-                       tr("Reboot the device to apply it. If you didn't request this, you can cancel the request below.");
+                       tr("Reboot the device to apply it, or cancel the request.");
             if (!resize.valid) return tr("Could not read partition table information from sysfs.");
             return tr("This utility resizes your HOME partition to fill the remaining space on your microSD card.");
         default: return "";
@@ -548,7 +548,7 @@ void SettingsScreen::resizeHome() {
             cancelResize(ignored);
             resize = Resize::read();
             app.pop();      // the status message
-            app.notice(tr("Failed to reboot. Does this app have permission to run 'doas reboot'?"));
+            app.notice(tr("Failed to reboot."));
         }));
     }));
 }

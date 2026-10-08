@@ -23,4 +23,3 @@ void extractSystemMenu(Model& m);
 void applySettingsCommand(Model& m);
 std::vector<PowerItem> powerItems();
 void loadSettings(Model& m);
-void writeTabsList(const Model& m);

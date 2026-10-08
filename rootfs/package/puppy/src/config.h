@@ -40,7 +40,6 @@ struct Config {
     std::string settingsFile() const  { return configDir + "/settings"; }
     std::string favoritesFile() const { return configDir + "/favorites"; }   // "category<TAB>id" lines
     std::string thumbDir() const      { return cacheDir + "/thumbs"; }
-    std::string tabsFile() const      { return configDir + "/tabs"; }    // the tabs System Settings lists
 };
 extern Config cfg;
 

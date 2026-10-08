@@ -25,7 +25,7 @@ Please Note: At the time of writing, Allwinner-A23 based GA36-MB devices (which 
 - Speaker and headphone audio. The speaker gets a high-pass filter, so it stays clean instead of distorting on bass it can't play
 - Great battery life
 - No swap on SD card (massively improves the life of your card over the stock f/w)
-- Built-in `Resize Home` app which grows your HOME partition to fill all the available space on your microSD card.
+- `Resize Home` (System Settings -> Storage) grows your HOME partition to fill all the available space on your microSD card.
 - Volume buttons change the volume and FN+Vol the screen brightness from anywhere, with a level bar shown over whatever is on screen: the launcher, the settings or any game
 - Optional in-game status bar with the CPU and power chip temperatures, the date and time, the battery, the volume and the audio output, over any game
 - Date and time with a time zone, kept while the console is off, shown in the launcher and the status bar (12/24-hour, several date formats)
@@ -200,7 +200,7 @@ System Settings
 ```
 
 - **Launcher tabs**: hidden tabs' games still appear in All Games and My List.
-- **Font**: Default keeps each app's own font (Inter in the launcher, ProggyClean elsewhere); or Inter, ProggyClean, VT323 or Pixelify Sans in every app.
+- **Font**: Inter (the default), ProggyClean, VT323 or Pixelify Sans.
 - **In-game status bar**: the CPU temperature, the power chip (AXP223) temperature, the date, the time, the battery and the volume and audio output, each one on or off, in the top right corner of every game, with the launcher's icons; Opacity sets its background. All off by default, so nothing covers the game. The launcher keeps its own top bar.
 - **Performance**: the Gallium HUD graphs that FN + D-pad up shows in game. Text only goes at the top.
 - Overlay changes apply from the next game on.

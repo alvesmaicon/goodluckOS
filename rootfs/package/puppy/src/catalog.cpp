@@ -63,7 +63,7 @@ static void parseAppsFile(const std::string& path, std::vector<Record>& records)
             rec.entry.command     = get("COMMAND");
             rec.entry.terminal    = !get("TERMINAL").empty();
             rec.entry.iconPath    = get("ICON");
-            // HIDE_IF_EXISTS=<path>: one-time entries (e.g. Resize Home) disappear once their job is done
+            // HIDE_IF_EXISTS=<path>: one-time entries (e.g. a first-boot setup) disappear once their job is done
             std::error_code ec;
             const std::string hideIf = get("HIDE_IF_EXISTS");
             bool hidden = !hideIf.empty() && fs::exists(hideIf, ec);

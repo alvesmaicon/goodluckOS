@@ -478,23 +478,6 @@ void loadSettings(Model& m) {
             if (!c.mixed && c.name == name) c.hidden = true;
 }
 
-// The tabs System Settings offers to hide, as "name<TAB>label" lines (rewritten only when they change).
-void writeTabsList(const Model& m) {
-    std::string text;
-    for (const auto& c : m.categories)
-        if (!c.mixed) text += c.name + "\t" + c.label + "\n";
-    {
-        std::ifstream in(cfg.tabsFile(), std::ios::binary);
-        const std::string old((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-        if (old == text) return;
-    }
-    std::error_code ec;
-    fs::create_directories(cfg.configDir, ec);
-    const std::string tmp = cfg.tabsFile() + ".tmp";
-    { std::ofstream out(tmp, std::ios::binary); if (!out) return; out << text; }
-    fs::rename(tmp, cfg.tabsFile(), ec);
-}
-
 // Everything the launcher shows: the catalog, the extra tabs, favourites, the options and the
 // autolaunch entry. False when there is nothing to show.
 bool loadModel(Model& m) {
@@ -517,7 +500,6 @@ bool loadModel(Model& m) {
     }
 
     loadSettings(m);
-    writeTabsList(m);
     m.applyFilter();
     std::string cat, name;
     if (readAutoStartId(cat, name)) {

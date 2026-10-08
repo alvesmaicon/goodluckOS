@@ -6,11 +6,12 @@ This is **alvesmaicon/goodluckOS**, a personal fork of **CodeZombie/goodluckOS**
 
 A full image takes 1-2 hours and is only needed for a new card. Use `dev/gl` (see `dev/README.md`):
 
-- C++ app (`puppy`, `system-settings`, `are-you-sure`, `resize-home`): `dev/gl app <name>`, a few seconds.
+- Puppy, the launcher with System Settings in it (`rootfs/package/puppy/src/`): `dev/gl app puppy`, a few seconds.
 - Overlay files (`rootfs/board/my-device/rootfs-overlay/...`): no build, just `dev/gl deploy <paths>`.
 - Mesa patch: `dev/gl rootfs mesa3d-rebuild`, then copy `libgallium-*.so`.
 - Kernel/DTS: `dev/gl kernel`, then write `android_boot_a33.img` at sector 172032.
-- UI check without the console: `dev/gl shot <app> <name> "<keys> |"`, then look at the PNG.
+- UI check without the console: `dev/gl shot puppy <name> "<keys> |"`, then look at the PNG.
+- Regression check: `dev/gl scenes <dir>` before and after a change, then `dev/gl scenes-diff <dir> <dir>` (pixel for pixel, `dev/scenes/scenes.txt`). Its games are fake; README screenshots need the real covers (the owner's `readme-shots.sh` set).
 
 On the Mac, `dev/gl` runs everything in a native arm64 Debian container (Colima). The upstream `rootfs/start.sh` and `image/build.sh` are not for daily work: the compose file bind-mounts `out/` onto the case-insensitive macOS disk, and `image/Dockerfile` installs `linux-image-amd64` and `qemu-system-x86`, so it only runs on x86 or under slow emulation.
 
@@ -61,7 +62,9 @@ Card layout (A33):
 ## Known traps
 
 - Buildroot doesn't rebuild local packages on its own: use `<pkg>-rebuild` (or `-dirclean`). `mesa3d-rebuild` doesn't reapply the patch.
-- The ImGui apps compile as C++11 in Buildroot (`std::clamp` broke a build); Puppy as C++17. `dev/gl app` uses the same standards and ImGui version (`rootfs/package/imgui/imgui.mk`).
+- Puppy compiles as C++17 (`puppy.mk`), and `dev/gl app` the same way. Its code: `src/` has the screens (`app` runs a stack of them: launcher, keyboard, dialogs, System Settings, the button tester) and `src/system/` the device and its files, one owner each (mixer, prefs file, HUD file, clock, storage...). Settings code goes through `src/system/`, never straight to a file or a sysfs node.
+- `<pkg>-rebuild` doesn't delete a file removed from a local package's source: after deleting or moving sources, run `puppy-dirclean puppy`.
+- What Puppy starts in the background dies with it when appd starts an app (cgroup kill): anything that must finish (saving the mixer, a reboot request) runs in the foreground (`runScript(..., true)`).
 - `post-build.sh` must stay re-runnable (upstream #60).
 - Never leave backups (`*.orig`, `*.bak`) in `/etc/init.d`: rcS/rcK run every `S??*` file there.
 - A new rootfs on a card with an older HOME: appd needs `HOME/.local/launcher.sh` (contains `/usr/bin/puppy`). Without it the console hangs at "Starting system...".

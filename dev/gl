@@ -14,12 +14,12 @@ usage() {
 usage: dev/gl <command> [args]
   image                     (re)build the dev container image
   shell                     shell in the dev container
-  app <name>...             puppy, system-settings, are-you-sure, resize-home: armhf + native binaries
+  app puppy                 the launcher: armhf + native binaries
   deploy <overlay files>... dev/out/deploy.tar.gz: the built apps + rootfs-overlay files, console paths
   shot <app> <name> <keys>  native app in Xvfb, a screenshot at each "|" (keys: xdotool names, "_" waits 1 s)
   scenes [dir]              launcher scenes of dev/scenes, one screenshot each (default dev/out/scenes)
   scenes-diff <dir> <dir>   the scenes whose screenshots differ between two runs, pixel by pixel
-  rootfs [make targets]     Buildroot, incremental (e.g. mesa3d-rebuild, system-settings-rebuild)
+  rootfs [make targets]     Buildroot, incremental (e.g. mesa3d-rebuild, puppy-rebuild)
   ext4                      dev/out/rootfs.ext4 from the last rootfs.tar (partition 1, 384 MiB)
   kernel                    dev/out/android_boot_a33.img (+a23), like kernel/Dockerfile
 EOF
@@ -55,34 +55,16 @@ mkdir -p "$WORK" "$OUT"
 PCA="env PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabihf/pkgconfig pkg-config"
 ARMFLAGS="-march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard"
 
-# ImGui at the version Buildroot uses (rootfs/package/imgui/imgui.mk)
-imgui() {
-    local v; v=$(sed -n 's/^IMGUI_VERSION = //p' "$PKG/imgui/imgui.mk")
-    if [ ! -d "$WORK/imgui-$v" ]; then
-        git -c advice.detachedHead=false clone -q --depth 1 -b "$v" https://github.com/ocornut/imgui.git "$WORK/imgui-$v"
-    fi
-    echo "$WORK/imgui-$v"
-}
-
+# Puppy as puppy.mk builds it
 build_app() {
-    local app=$1 std=c++11 libs="" srcs="" inc="-I$PKG/common"
-    case $app in
-        puppy) std=c++17; libs="-lSDL2_image -lSDL2_ttf -lasound"; inc="$inc -I$PKG/puppy/src" ;;
-        system-settings) libs="-lasound" ;;
-        are-you-sure|resize-home) ;;
-        *) echo "unknown app: $app"; exit 1 ;;
-    esac
-    if [ "$app" != puppy ]; then
-        local I; I=$(imgui)
-        inc="$inc -I$I -I$I/backends"
-        srcs="$I/imgui.cpp $I/imgui_draw.cpp $I/imgui_tables.cpp $I/imgui_widgets.cpp $I/backends/imgui_impl_sdl2.cpp $I/backends/imgui_impl_sdlrenderer2.cpp"
-    fi
-    local src=$PKG/$app/$app.cpp
-    [ "$app" = puppy ] && src=$(ls "$PKG"/puppy/src/*.cpp "$PKG"/puppy/src/system/*.cpp)
-    arm-linux-gnueabihf-g++ -O2 -std=$std $ARMFLAGS $inc $($PCA --cflags sdl2) $src $srcs \
+    local app=$1
+    [ "$app" = puppy ] || { echo "unknown app: $app (the only one is puppy)"; exit 1; }
+    local src inc="-I$PKG/common -I$PKG/puppy/src" libs="-lSDL2_image -lSDL2_ttf -lasound"
+    src=$(ls "$PKG"/puppy/src/*.cpp "$PKG"/puppy/src/system/*.cpp)
+    arm-linux-gnueabihf-g++ -O2 -std=c++17 $ARMFLAGS $inc $($PCA --cflags sdl2) $src \
         -o "$OUT/$app.armhf" $($PCA --libs sdl2) $libs -lpthread
     arm-linux-gnueabihf-strip "$OUT/$app.armhf"
-    g++ -O2 -std=$std $inc $(pkg-config --cflags sdl2) $src $srcs \
+    g++ -O2 -std=c++17 $inc $(pkg-config --cflags sdl2) $src \
         -o "$OUT/$app.$ARCH" $(pkg-config --libs sdl2) $libs -lpthread
     echo "OK $app: $(stat -c %s "$OUT/$app.armhf") bytes armhf, glibc max $(arm-linux-gnueabihf-objdump -T "$OUT/$app.armhf" | grep -oE 'GLIBC_[0-9.]+' | sort -Vu | tail -1); native: dev/out/$app.$ARCH"
 }
@@ -270,7 +252,7 @@ kernel() {
 deploy() {
     local s=$WORK/deploy
     rm -rf "$s"; mkdir -p "$s/usr/bin"
-    for app in puppy system-settings are-you-sure resize-home; do
+    for app in puppy; do
         [ -f "$OUT/$app.armhf" ] && install -m 0755 "$OUT/$app.armhf" "$s/usr/bin/$app"
     done
     for f in "$@"; do
