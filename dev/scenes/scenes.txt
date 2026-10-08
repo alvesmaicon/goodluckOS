@@ -1,7 +1,8 @@
 # dev/gl scenes: one launcher screenshot per line, taken after the keys are pressed.
 # Each scene starts Puppy afresh on the games of games.txt, with no favourites or autolaunch.
-# Keys are xdotool names; "_" waits 1 s. Puppy's keys: F1/F2 = L1/R1, F3 = SELECT, F4 = X (search),
-# F5 = START, F6 = POWER, F7 = L2 + R2, space = Y, Return = A, Escape = B.
+# Keys are xdotool names; "_" waits 1 s; conf:key=value goes into a puppy.conf for that scene. Puppy's
+# keys: F1/F2 = L1/R1, F3 = SELECT, F4 = X (search), F5 = START, F6 = POWER, F7 = L2 + R2, space = Y,
+# Return = A, Escape = B.
 # Tabs from the boot one (All Games): F2 My List, F2 F2 Terminal...; F1 Genesis, F1 F1 NES.
 #
 # name           view  tabs  language  keys
@@ -39,3 +40,26 @@ trash-notice     list  on    en        F1 F1 F7 Down Return Down Return
 power-closed     grid  on    en        F6 Escape
 power-wrap       grid  on    en        F6 Up
 list-scroll      list  on    en        F1 F1 Down Down Down Next Next
+settings         grid  on    en        conf:settings=builtin F5
+settings-display grid  on    en        conf:settings=builtin F5 Return
+settings-volume  grid  on    en        conf:settings=builtin F5 Return Down Right
+settings-launcher grid on    en        conf:settings=builtin F5 Down Return
+settings-tabs    grid  on    en        conf:settings=builtin F5 Down Return Down Down Return
+settings-interface grid on   en        conf:settings=builtin F5 Down Down Return
+settings-overlay grid  on    en        conf:settings=builtin F5 Down Down Down Return
+settings-overlay-end grid on en        conf:settings=builtin F5 Down Down Down Return Down Down Down Down Down Down Down Down Down Down Down
+settings-datetime grid on    en        conf:settings=builtin F5 Down Down Down Down Return
+settings-timezone grid on    en        conf:settings=builtin F5 Down Down Down Down Return Down Down Down Down Down Down Down Down Return
+settings-storage grid  on    en        conf:settings=builtin F5 Down Down Down Down Down Return
+settings-resize  grid  on    en        conf:settings=builtin F5 Down Down Down Down Down Return Return
+settings-system  grid  on    en        conf:settings=builtin F5 Down Down Down Down Down Down Return
+settings-info    grid  on    en        conf:settings=builtin F5 Down Down Down Down Down Down Return Down Return
+settings-restore grid  on    en        conf:settings=builtin F5 Down Down Down Down Down Down Return Down Down Return
+settings-input   grid  on    en        conf:settings=builtin F5 Down Down Down Down Down Down Down Return
+settings-shortcuts grid on   en        conf:settings=builtin F5 Down Down Down Down Down Down Down Return Return
+settings-tester  grid  on    en        conf:settings=builtin F5 Down Down Down Down Down Down Down Return Down Return
+settings-power   grid  on    en        conf:settings=builtin F5 F6
+settings-pt      grid  on    pt-BR     conf:settings=builtin F5 Down Down Down Return
+settings-list-view grid on   en        conf:settings=builtin F5 Down Return Down Right Escape Escape
+settings-font    grid  on    en        conf:settings=builtin F5 Down Down Return Down Right Right Escape Escape
+settings-language grid on    en        conf:settings=builtin F5 Down Down Return Right Escape Escape
