@@ -34,12 +34,17 @@ dev/gl deploy etc/profile.d/gallium_hud.sh usr/share/goodluck/lang/pt-BR.lang
                                         # dev/out/deploy.tar.gz: built apps in usr/bin + these overlay files
 dev/gl shot system-settings overlay "Down Down Down Return |"
                                         # dev/out/shots/overlay-1.png (keys are xdotool names)
+dev/gl scenes dev/out/scenes-before     # one launcher screenshot per line of dev/scenes/scenes.txt
+dev/gl scenes-diff dev/out/scenes-before dev/out/scenes-after
+                                        # the scenes that changed, pixel by pixel
 dev/gl rootfs                           # first time: full Buildroot (1-2 h on an M1)
 dev/gl rootfs system-settings-rebuild   # then: one package, seconds; output in the work volume
 dev/gl ext4                             # dev/out/rootfs.ext4 from dev/out/rootfs.tar
 dev/gl kernel                           # dev/out/android_boot_a33.img
 dev/gl shell                            # a shell in the container (/repo, /work)
 ```
+
+`dev/gl scenes` checks that a change to Puppy draws what it drew before (or shows exactly what it changed). The fake games of `dev/scenes/games.txt` get generated covers. A shim (`dev/scenes/shim.c`) freezes the clock and fakes the mixer, and a mount namespace gives each scene an empty HOME and a fake battery. Two runs of the same code give the same pixels. Run it before a refactor and again after, then diff the two runs. The scenes are not for the README: those screenshots need real covers.
 
 Buildroot runs with its tree in the `goodluck-work` volume, not in the repo. A macOS folder is case-insensitive (the kernel headers have files that differ only in case) and slow through virtiofs. `dev/gl rootfs` copies `rootfs/{board,configs,package}` in on each run, then runs `make` with whatever targets you pass. Things to know:
 

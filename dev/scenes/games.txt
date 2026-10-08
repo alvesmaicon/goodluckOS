@@ -1,0 +1,32 @@
+# Fake games for dev/gl scenes: empty ROM files with generated covers. One per line:
+# system folder | file | gamelist name | year | genre | players | description (gamelist fields optional)
+nes|3-D WorldRunner.nes|3-D WorldRunner|1987|Platform|1|A pseudo-3D shooter: Jack runs into the screen across a chain of planets, jumping over pits and shooting the serpent beasts at the end of each world.
+nes|8 Eyes.nes|8 Eye's|1988|Action|1-2|
+nes|Abadox - The Deadly Inner War.zip|Abadox : The Deadly Inner War|1990|Shoot'em Up|1|Somewhere in the galaxy, a huge alien space creature known as Parasitis travels from planet to planet, swallowing them whole. A lone soldier flies into its body to rescue the princess it took with the planet Abadox. The trip goes through blood vessels, organs and nerves, each with its own guardian.
+nes|Crackout.nes|Crackout|1991|Breakout|1|
+nes|Dragon Strike.nes||||||
+nes|Ice Climber.nes|Ice Climber|1985|Platform|1-2|
+nes|Nightmare on Elm Street, A.nes|A Nightmare on Elm Street|1990|Action|1-4|
+nes|Teenage Mutant Ninja Turtles II - The Arcade Game.nes|Teenage Mutant Ninja Turtles II : The Arcade Game|1990|Beat'em Up|1-2|
+nes|Adventure Island.nes|Adventure Island|1988|Platform|1|
+nes|Zanac.nes||||||
+snes|3 Ninjas Kick Back.sfc||||||
+snes|ActRaiser.sfc||||||
+snes|Breath of Fire.sfc||||||
+snes|Donkey Kong Country.sfc||||||
+snes|F-Zero.sfc||||||
+snes|Super Metroid.sfc||||||
+gba|Advance Wars.gba||||||
+gba|Golden Sun.gba||||||
+gba|Metroid Fusion.gba||||||
+gba|Mother 3.gba||||||
+gb|Kirby's Dream Land.gb||||||
+gb|Tetris.gb||||||
+gbc|Crazy Castle 3.gbc||||||
+gbc|Shantae.gbc||||||
+genesis|3 Ninjas Kick Back.md||||||
+genesis|Aaahh!!! Real Monsters.md||||||
+genesis|Gunstar Heroes.md||||||
+genesis|Streets of Rage 2.md||||||
+psx|Crash Bandicoot.bin||||||
+psx|Spyro the Dragon.bin||||||

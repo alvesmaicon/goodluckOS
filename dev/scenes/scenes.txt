@@ -1,0 +1,30 @@
+# dev/gl scenes: one launcher screenshot per line, taken after the keys are pressed.
+# Each scene starts Puppy afresh on the games of games.txt, with no favourites or autolaunch.
+# Keys are xdotool names; "_" waits 1 s. Puppy's keys: F1/F2 = L1/R1, F3 = SELECT, F4 = X (search),
+# F5 = START, F6 = POWER, F7 = L2 + R2, space = Y, Return = A, Escape = B.
+# Tabs from the boot one (All Games): F2 My List, F2 F2 Terminal...; F1 Genesis, F1 F1 NES.
+#
+# name           view  tabs  language  keys
+grid             grid  on    en
+grid-moved       grid  on    en        Down Down Right
+grid-nes         grid  on    en        F1 F1
+grid-no-tabs     grid  off   en        F1 F1
+list             list  on    en        Down Down Down Down Down
+list-page        list  on    en        Right Right
+list-nes         list  on    en        F1 F1 Down Down
+list-long-name   list  on    en        F1 F1 Down Down Down Down Down Down Down Down
+apps-tab         list  on    en        F2 F2 F2
+my-list-empty    grid  on    en        F2
+favorites        list  on    en        F1 F1 Down space Down space F2 F2 F2
+autolaunch       grid  on    en        Right F3
+search           grid  on    en        F4 c r a
+search-done      grid  on    en        F4 c r a F5
+search-none      list  on    en        F4 z q x F5
+game-menu        grid  on    en        F1 F1 F7
+rename           grid  on    en        F1 F1 F7 Return
+rename-notice    grid  on    en        F1 F1 F7 Return x F5
+trash-confirm    list  on    en        F1 F1 F7 Down Return
+power-menu       grid  on    en        F6
+osd-volume       grid  on    en        XF86AudioRaiseVolume
+pt-grid          grid  on    pt-BR     F1 F1
+pt-list-menu     list  on    pt-BR     F1 F1 F7
