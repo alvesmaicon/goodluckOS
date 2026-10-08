@@ -88,7 +88,7 @@ std::string SettingsScreen::title(Page p) const {
 // Under the page, when the selected row has no hint of its own
 std::string SettingsScreen::pageHint(Page p) const {
     switch (p) {
-        case Page::Tabs: return tr("Unticked tabs are hidden; their games still show in All Games and My List.");
+        case Page::Tabs: return tr("Tabs switched off are hidden; their games still show in All Games and My List.");
         case Page::System: return tr(powerProfiles()[profile].hint);
         case Page::Resize:
             if (resize.pending)

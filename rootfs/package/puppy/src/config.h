@@ -35,7 +35,7 @@ struct Config {
     std::string shutdownCommand = "doas /usr/local/bin/power-action.sh poweroff";
     std::string screenOffCommand = "doas /usr/local/bin/toggle-screen.sh off";
     bool quit = false;      // a "Quit Puppy" power option, for when Puppy is started from another frontend
-    bool builtinSettings = false;   // START opens System Settings in Puppy (goodluckOS); settings_command wins
+    bool builtinSettings = true;    // START opens System Settings in Puppy (puppy.conf: settings = builtin|off); settings_command wins
 
     std::string settingsFile() const  { return configDir + "/settings"; }
     std::string favoritesFile() const { return configDir + "/favorites"; }   // "category<TAB>id" lines

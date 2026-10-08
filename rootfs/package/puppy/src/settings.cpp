@@ -433,7 +433,7 @@ void SettingsScreen::renderPage(Ui& ui) {
     SDL_Rect clip{kPageX, top, width, room};
     SDL_RenderSetClipRect(renderer, &clip);
     int y = top;
-    for (int k = c.scroll; k < n && y < bottom; ++k) {
+    for (int k = c.scroll; k < n && y + list[k].height() <= bottom; ++k) {   // whole rows only
         const Row& row = list[k];
         const bool sel = inPage && k == c.sel;
         const int h = row.height();

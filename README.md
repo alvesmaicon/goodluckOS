@@ -41,7 +41,7 @@ Please Note: At the time of writing, Allwinner-A23 based GA36-MB devices (which 
 - Comes stock with Retroarch and several optimized cores (PCSX-ReArmed, Snes9x, QuickNES, DOSbox, Genesis Plus GX, mGBA, etc)
 - Games perform very well. Metal Gear Solid 1 is completely playable at reasonable framerates
 - Comes with a custom, optimized launcher application, with tabs per system, search, favourites and game artwork/descriptions from `gamelist.xml`
-- System Settings app: brightness, volume, audio output, launcher options, language, interface font, overlay, date and time, power mode (Battery saver, Balanced, Performance), system info, a button tester and a restore of the default settings
+- System Settings, in the launcher: brightness, volume, audio output, launcher options, language, interface font, overlay, date and time, storage (second card, trash, Resize Home), power mode (Battery saver, Balanced, Performance), system info, a button tester and a restore of the default settings
 - Translatable interface, with English and Brazilian Portuguese included (see [Translations](#translations))
 - Autostart any application on boot, including games or a front-end like EmulationStation (coming soon)
 - USB terminal access for remote debugging. Log in with `sudo screen /dev/ttyACM* 115200` and `root:root`
@@ -149,7 +149,7 @@ FN is the hotkey:
 The same list is in System Settings -> Input Settings, next to a button tester.
 
 ## System Settings
-Opened with START from the launcher. Its main page is a menu of sections, each with its own page:
+Opened with START from the launcher, which it is part of: there's no loading screen on the way in or out, and the launcher comes back as you left it. The sections are on the left, and the page of the selected one on the right:
 
 ```
 System Settings
@@ -187,7 +187,7 @@ System Settings
 │   └── Time zone
 ├── Storage
 │   ├── HOME usage
-│   ├── Resize Home
+│   ├── Resize Home ─ the card's and HOME's sizes, and the resize
 │   ├── Second card: usage, Eject card / Detect card
 │   └── Empty trash
 ├── System
@@ -195,7 +195,7 @@ System Settings
 │   ├── System Info
 │   └── Restore default settings
 └── Input Settings
-    ├── every shortcut
+    ├── Shortcuts ─ every shortcut
     └── Button Tester
 ```
 
@@ -204,27 +204,28 @@ System Settings
 - **In-game status bar**: the CPU temperature, the power chip (AXP223) temperature, the date, the time, the battery and the volume and audio output, each one on or off, in the top right corner of every game, with the launcher's icons; Opacity sets its background. All off by default, so nothing covers the game. The launcher keeps its own top bar.
 - **Performance**: the Gallium HUD graphs that FN + D-pad up shows in game. Text only goes at the top.
 - Overlay changes apply from the next game on.
-- **Date & Time**: the date format and 12/24 hours (12-hour by default) of the launcher's top bar clock, which always shows the date and the time, and of the in-game status bar, which shows what Overlay turns on. The clock chip keeps the time while the console is off, so it only needs setting once; the time zone applies to the apps opened afterwards.
+- **Date & Time**: the date format and 12/24 hours (12-hour by default) of the launcher's top bar clock, which always shows the date and the time, and of the in-game status bar, which shows what Overlay turns on. The clock chip keeps the time while the console is off, so it only needs setting once; the time zone applies to the launcher right away and to the apps opened afterwards.
+- **Resize Home**: expands HOME to fill the rest of the card, at the next boot (it asks first, then restarts). HOME is backed up to RAM while it's resized, so do it right after flashing, before copying your games.
 - **Empty trash**: deletes for good the games moved to the trash in the launcher.
 - **Power mode**: Balanced (the default) speeds the CPU and GPU up only when a game needs it; Battery saver caps the CPU at 816 MHz and the GPU at 240 MHz, for a longer battery life (heavy PS1 games may slow down); Performance keeps both at full speed. The choice is kept across reboots.
 - **Restore default settings**: puts Overlay, Date & Time, the launcher's view, tabs and font, and the power mode back to the defaults in `/usr/share/goodluck/defaults`, keeping the language, the time zone and the clock.
 
-B goes back one page; Back stays at the bottom of every page. Changes are saved as soon as you make them. The page scrolls with the d-pad when it doesn't fit the screen.
+UP / DOWN pick a section and A or RIGHT opens its page; there, LEFT / RIGHT change the selected setting (A opens the list of choices, or turns a switch on or off), B goes back, and L1 / R1 go to the previous / next section from anywhere. START closes System Settings, and POWER opens the power options here too. A change applies and is saved right away, the language and the font included. A page scrolls with the d-pad when it doesn't fit the screen.
 
 VT323 and Pixelify Sans are under the SIL Open Font License and ProggyClean under the MIT License; their license files are next to them in `/usr/share/fonts`.
 
-| Main page | Display & Audio |
+| Sections, with Display & Audio | Launcher tabs |
 | --- | --- |
-| ![System Settings](docs/screenshots/system-settings.png) | ![Display & Audio](docs/screenshots/system-settings-audio.png) |
+| ![System Settings](docs/screenshots/system-settings.png) | ![Launcher tabs](docs/screenshots/system-settings-tabs.png) |
 | Overlay | In-game status bar |
 | ![Overlay](docs/screenshots/system-settings-overlay.png) | ![In-game status bar](docs/screenshots/status-bar.png) |
 | Date & Time | Performance overlay in game (FN + D-pad up) |
 | ![Date & Time](docs/screenshots/system-settings-datetime.png) | ![Performance overlay in game](docs/screenshots/performance-overlay.png) |
-| System (Power mode) | |
+| System (Power mode) | Storage: the second card and the trash |
 | ![System](docs/screenshots/system-settings-system.png) | ![Storage: the second card and the trash](docs/screenshots/system-settings-storage.png) |
 
 ## Translations
-Every text in the launcher, System Settings, the confirmation screens and `Resize Home` can be translated, and new languages need no code changes. Languages live in `/usr/share/goodluck/lang/<code>.lang` (in the repository: `rootfs/board/my-device/rootfs-overlay/usr/share/goodluck/lang/`) and show up in System Settings -> Interface -> Language as soon as the file is there.
+Every text in the launcher, System Settings included, and in the console's messages ("Restarting...") can be translated, and new languages need no code changes. Languages live in `/usr/share/goodluck/lang/<code>.lang` (in the repository: `rootfs/board/my-device/rootfs-overlay/usr/share/goodluck/lang/`) and show up in System Settings -> Interface -> Language as soon as the file is there.
 
 To add a language:
 1. Copy `pt-BR.lang` to a file named after your language's code, e.g. `es.lang` or `fr.lang`.
@@ -254,7 +255,7 @@ Stock firmware:
 3. Open the [Firmware Builder](https://codezombie.github.io/goodluckOS/download.html), load your card image and the goodluckOS image, and download your personalised image. Don't flash the release image directly: without your board's boot data it won't start.
 4. Flash your image to a good microSD card of at least 1gb with [balenaEtcher](https://etcher.balena.io/), [Rufus (in DD mode)](https://rufus.ie/en/), [dd](https://man7.org/linux/man-pages/man1/dd.1.html), etc
 5. Plug the micro SD card into TF Slot 1 (TF1-OS) on your GA36-MB and power it on.
-6. [optional] Select the `Resize Home` application in the launcher (or in System Settings) to expand your HOME partition to fill all the remaining space on your SD card. Do it before copying your games: HOME is backed up to RAM while it's resized. You only need to do this once, after that it's hidden from the launcher.
+6. [optional] In System Settings -> Storage, `Resize Home` expands your HOME partition to fill all the remaining space on your SD card. Do it before copying your games: HOME is backed up to RAM while it's resized. You only need to do this once.
 
 ## How do I add games?
 Plug the console into your PC with a USB cable and open `goodluckOS -> HOME` (Windows: This PC; Linux: your file manager; macOS needs an MTP app such as [OpenMTP](https://openmtp.ganeshrvel.com/)). Or plug the SD card into your PC and open up the HOME partition. In there you'll find a `roms` folder with a few subfolders for each system. Add your roms to those.
