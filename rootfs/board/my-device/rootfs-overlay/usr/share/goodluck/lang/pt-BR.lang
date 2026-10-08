@@ -1,5 +1,5 @@
 # Portuguese (Brazil) translation of goodluckOS.
-# Format: "English text = Translation", one per line (see rootfs/package/common/i18n.h).
+# Format: "English text = Translation", one per line (see rootfs/package/puppy/src/i18n.h).
 # Keep the launcher hints short: the bottom bar is nearly full.
 language = Português (Brasil)
 language_en = Portuguese (Brazil)

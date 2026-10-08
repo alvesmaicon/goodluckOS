@@ -200,7 +200,7 @@ System Settings
 ```
 
 - **Launcher tabs**: hidden tabs' games still appear in All Games and My List.
-- **Font**: Inter (the default), ProggyClean, VT323 or Pixelify Sans.
+- **Font**: Default (Inter), VT323, Pixelify Sans or ProggyClean.
 - **In-game status bar**: the CPU temperature, the power chip (AXP223) temperature, the date, the time, the battery and the volume and audio output, each one on or off, in the top right corner of every game, with the launcher's icons; Opacity sets its background. All off by default, so nothing covers the game. The launcher keeps its own top bar.
 - **Performance**: the Gallium HUD graphs that FN + D-pad up shows in game. Text only goes at the top.
 - Overlay changes apply from the next game on.
@@ -230,7 +230,7 @@ Every text in the launcher, System Settings included, and in the console's messa
 To add a language:
 1. Copy `pt-BR.lang` to a file named after your language's code, e.g. `es.lang` or `fr.lang`.
 2. Change the first lines: `language` is the language's own name (`Español`) and `language_en` its English name (`Spanish`).
-3. Translate the right side of each `English text = Translation` line. Keep the left side exactly as it is: it's the text the apps look up. Keep `%s` / `%d` where they are, and `\n` for line breaks.
+3. Translate the right side of each `English text = Translation` line. Keep the left side exactly as it is: it's the text that is looked up. Keep `%s` / `%d` where they are, and `\n` for line breaks.
 4. Keep the launcher's bottom-bar words short (Prev, Next, Launch...): the bar is nearly full.
 5. Optionally add your language's name to the other files (`Spanish = Espanhol` in `pt-BR.lang`), so the selector shows it in every language.
 

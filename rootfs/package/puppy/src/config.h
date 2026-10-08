@@ -48,7 +48,3 @@ constexpr const char* kMenuCategory  = "System";   // apps.puppy category taken 
 constexpr const char* kSettingsName  = "System Settings";   // entry of that category opened by START
 
 bool loadConfig(int argc, char** argv);
-
-// The interface font for a fonts.h key: its file next to puppy.conf's font, or that font itself for
-// "default", an unknown key or a missing file.
-void interfaceFont(const std::string& key, std::string& path, float& scale);

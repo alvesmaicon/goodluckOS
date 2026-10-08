@@ -5,6 +5,6 @@ STAGING="../../out/host/arm-buildroot-linux-gnueabihf/sysroot"
 
 $CXX -std=c++17 -o puppy \
     src/*.cpp src/system/*.cpp \
-    -I../common -Isrc \
+    -Isrc \
     -I$STAGING/usr/include/SDL2 \
     -O2 -lpthread -lSDL2 -lSDL2_image -lSDL2_ttf -lasound

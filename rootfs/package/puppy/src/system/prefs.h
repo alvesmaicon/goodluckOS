@@ -1,7 +1,6 @@
 #pragma once
 // The launcher options in ~/.config/puppy/settings, with puppy.conf's view and tabs as the defaults.
-// appctl reads loading= from the same file for its loading screen, and i18n.h and fonts.h read
-// language= and font=.
+// Outside Puppy, appctl reads loading= from the same file for its loading screen and gl-tr language=.
 #include <string>
 #include <vector>
 

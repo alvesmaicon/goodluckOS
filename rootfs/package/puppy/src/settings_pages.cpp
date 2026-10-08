@@ -204,10 +204,11 @@ std::vector<Row> SettingsScreen::interfacePage() {
 
     std::vector<std::string> fontNames, keys;
     int currentFont = 0;
-    const fonts::Font& chosen = fonts::find(prefs.font);
-    for (const fonts::Font& f : fonts::all()) {
-        if (!fonts::available(fonts::forApp(f, true))) continue;
-        if (&f == &chosen) currentFont = (int)keys.size();
+    const int chosen = fonts::find(prefs.font);
+    for (size_t i = 0; i < fonts::all().size(); ++i) {
+        const fonts::Font& f = fonts::all()[i];
+        if (!fonts::available(f)) continue;
+        if ((int)i == chosen) currentFont = (int)keys.size();
         keys.push_back(f.key);
         fontNames.push_back(f.name);
     }

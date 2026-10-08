@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "config.h"
+#include "fonts.h"
 #include "layout.h"
 #include "overlays.h"
 #include "system/clock.h"
@@ -339,7 +340,7 @@ void SettingsScreen::levelsChanged() {
 void SettingsScreen::applyFont() {
     std::string path;
     float scale;
-    interfaceFont(prefs.font, path, scale);
+    fonts::choose(prefs.font, path, scale);
     app.painter().setFont(path, scale);
     if (hooks.fontChanged) hooks.fontChanged();
 }

@@ -11,9 +11,11 @@
 #include "catalog.h"
 #include "config.h"
 #include "fonts.h"
+#include "i18n.h"
 #include "launcher.h"
 #include "library.h"
 #include "model.h"
+#include "system/prefs.h"
 #include "ui.h"
 #include "util.h"
 
@@ -22,12 +24,8 @@ int main(int argc, char** argv) {
     if (!loadConfig(argc, argv)) return 2;
     if (runAutoStart())
         for (;;) pause();           // appd stops the launcher once the app starts
-    i18n::langDirPath() = cfg.langDir;
-    i18n::settingsPath() = cfg.settingsFile();
-    if (!cfg.language.empty()) i18n::load(cfg.language);
-    else i18n::loadConfigured();
-    // the fonts System Settings offers sit next to puppy.conf's font
-    fonts::dirPath() = fs::path(cfg.font).parent_path().string();
+    const Prefs prefs = Prefs::load();
+    i18n::load(!cfg.language.empty() ? cfg.language : prefs.language);
 
     Model model;
     if (!loadModel(model)) return 1;
@@ -36,7 +34,7 @@ int main(int argc, char** argv) {
 
     std::string font;
     float fontScale;
-    interfaceFont(fonts::configuredKey(), font, fontScale);
+    fonts::choose(prefs.font, font, fontScale);
     Ui ui(font, fontScale);
     if (!ui.ok()) return 1;
 

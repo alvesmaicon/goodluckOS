@@ -59,7 +59,7 @@ ARMFLAGS="-march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard"
 build_app() {
     local app=$1
     [ "$app" = puppy ] || { echo "unknown app: $app (the only one is puppy)"; exit 1; }
-    local src inc="-I$PKG/common -I$PKG/puppy/src" libs="-lSDL2_image -lSDL2_ttf -lasound"
+    local src inc="-I$PKG/puppy/src" libs="-lSDL2_image -lSDL2_ttf -lasound"
     src=$(ls "$PKG"/puppy/src/*.cpp "$PKG"/puppy/src/system/*.cpp)
     arm-linux-gnueabihf-g++ -O2 -std=c++17 $ARMFLAGS $inc $($PCA --cflags sdl2) $src \
         -o "$OUT/$app.armhf" $($PCA --libs sdl2) $libs -lpthread

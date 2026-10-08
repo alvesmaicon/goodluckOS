@@ -61,7 +61,7 @@ settings-tester  grid  on    en        F5 Down Down Down Down Down Down Down Ret
 settings-power   grid  on    en        F5 F6
 settings-pt      grid  on    pt-BR     F5 Down Down Down Return
 settings-list-view grid on   en        F5 Down Return Down Right Escape Escape
-settings-font    grid  on    en        F5 Down Down Return Down Right Right Escape Escape
+settings-font    grid  on    en        F5 Down Down Return Down Right Escape Escape
 settings-language grid on    en        F5 Down Down Return Right Escape Escape
 power-restart    grid  on    en        F6 Down Return
 power-shutdown   list  on    en        F6 Down Down Return
