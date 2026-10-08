@@ -78,10 +78,11 @@ build_app() {
         srcs="$I/imgui.cpp $I/imgui_draw.cpp $I/imgui_tables.cpp $I/imgui_widgets.cpp $I/backends/imgui_impl_sdl2.cpp $I/backends/imgui_impl_sdlrenderer2.cpp"
     fi
     local src=$PKG/$app/$app.cpp
-    arm-linux-gnueabihf-g++ -O2 -std=$std $ARMFLAGS $inc $($PCA --cflags sdl2) "$src" $srcs \
+    [ "$app" = puppy ] && src=$(ls "$PKG"/puppy/src/*.cpp)
+    arm-linux-gnueabihf-g++ -O2 -std=$std $ARMFLAGS $inc $($PCA --cflags sdl2) $src $srcs \
         -o "$OUT/$app.armhf" $($PCA --libs sdl2) $libs -lpthread
     arm-linux-gnueabihf-strip "$OUT/$app.armhf"
-    g++ -O2 -std=$std $inc $(pkg-config --cflags sdl2) "$src" $srcs \
+    g++ -O2 -std=$std $inc $(pkg-config --cflags sdl2) $src $srcs \
         -o "$OUT/$app.$ARCH" $(pkg-config --libs sdl2) $libs -lpthread
     echo "OK $app: $(stat -c %s "$OUT/$app.armhf") bytes armhf, glibc max $(arm-linux-gnueabihf-objdump -T "$OUT/$app.armhf" | grep -oE 'GLIBC_[0-9.]+' | sort -Vu | tail -1); native: dev/out/$app.$ARCH"
 }
