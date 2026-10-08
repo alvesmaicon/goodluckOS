@@ -1,6 +1,4 @@
 #pragma once
-#include <SDL2/SDL.h>
-
 #include <algorithm>
 #include <set>
 #include <string>
@@ -37,22 +35,6 @@ struct Model {
     Entry settings;
     bool hasSettings = false;
     std::vector<Entry> systemEntries;   // the System category, e.g. Reboot/Power Off with their are-you-sure
-    bool menuOpen = false;
-    // The POWER menu, or the game options menu (L2 + R2) and its delete confirmation
-    enum class Menu { Power, Game, ConfirmDelete };
-    Menu menuKind = Menu::Power;
-    std::vector<PowerItem> menuItems;   // Power: filled when the menu opens
-    std::vector<std::string> menuLabels;    // Game / ConfirmDelete
-    Entry menuEntry;                    // the game those act on
-    int menuSel = 0;
-    int menuCount() const { return menuKind == Menu::Power ? (int)menuItems.size() : (int)menuLabels.size(); }
-    bool renaming = false;      // the keyboard edits renameText (the game's name), not the search
-    std::string renameText;
-    size_t renameCursor = 0;    // byte position in renameText, moved with L1/R1
-    std::string notice;         // short message over the footer (renamed, moved to the trash...)
-    std::string clock;          // date and/or time in the top bar, per System Settings -> Date & Time
-    Uint32 noticeUntil = 0;
-    std::string status;     // full-screen message while restarting / shutting down
     int descScroll = 0;     // lines the list preview's description is scrolled (right stick)
 
     Category& cur() { return categories[tab]; }

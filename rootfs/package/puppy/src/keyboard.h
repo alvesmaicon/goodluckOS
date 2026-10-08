@@ -13,7 +13,6 @@ struct Keyboard {
     static constexpr int kRows = 5;
     static constexpr float kRowUnits = 10.0f;
 
-    bool open = false;
     bool caps = false;      // the Aa key: letters typed in upper case
     int row = 1, col = 0;   // starts on Q
 

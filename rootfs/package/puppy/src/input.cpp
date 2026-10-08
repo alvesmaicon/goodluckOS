@@ -73,3 +73,102 @@ Action actionFromButton(Uint8 b) {
         default:                                  return Action::None;
     }
 }
+
+Input::Result Input::translate(const SDL_Event& ev, bool typing) {
+    Result r;
+    switch (ev.type) {
+        case SDL_KEYDOWN: {
+            SDL_Keycode k = ev.key.keysym.sym;
+            // volume keys (and FN + volume for brightness) are handled by triggerhappy scripts;
+            // just show the resulting level
+            if (k == SDLK_VOLUMEUP || k == SDLK_VOLUMEDOWN) {
+                r.hotkey = true;
+                break;
+            }
+            if (typing && ((k >= SDLK_a && k <= SDLK_z) || (k >= SDLK_0 && k <= SDLK_9))) r.text = std::string(1, (char)k);
+            else if (!ev.key.repeat) r.action = actionFromKey(k);
+            break;
+        }
+        case SDL_KEYUP:
+            if (actionFromKey(ev.key.keysym.sym) == held) held = Action::None;
+            break;
+        case SDL_JOYBUTTONDOWN:
+        case SDL_JOYBUTTONUP:
+            if (ev.jbutton.button == kFnButton) fnHeld = ev.type == SDL_JOYBUTTONDOWN;
+            break;
+        case SDL_CONTROLLERBUTTONDOWN:
+            // SELECT toggles autolaunch when released on its own: SELECT + START is the
+            // close-app shortcut, which must neither set autolaunch nor open the settings
+            if (ev.cbutton.button == SDL_CONTROLLER_BUTTON_BACK) {
+                selectHeld = true;
+                selectCombo = false;
+                break;
+            }
+            if (selectHeld) {
+                selectCombo = true;
+                break;
+            }
+            if (fnHeld && (ev.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_UP ||
+                           ev.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_DOWN)) {
+                if (ev.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_DOWN) r.hotkey = true;
+                break;
+            }
+            r.action = actionFromButton(ev.cbutton.button);
+            break;
+        case SDL_CONTROLLERAXISMOTION: {
+            // Left stick navigates like the d-pad; right stick up/down scrolls the description
+            const Uint8 axis = ev.caxis.axis;
+            if (axis == SDL_CONTROLLER_AXIS_LEFTX || axis == SDL_CONTROLLER_AXIS_LEFTY) {
+                Action dir = stickDirection(SDL_GameControllerGetAxis(pad, SDL_CONTROLLER_AXIS_LEFTX),
+                                            SDL_GameControllerGetAxis(pad, SDL_CONTROLLER_AXIS_LEFTY), leftStick);
+                if (dir != leftStick) {
+                    if (held == leftStick) held = Action::None;
+                    leftStick = dir;
+                    r.action = dir;
+                }
+            } else if (axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT || axis == SDL_CONTROLLER_AXIS_TRIGGERRIGHT) {
+                bool& on = axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT ? triggerL : triggerR;
+                const bool wasBoth = triggerL && triggerR;
+                if (ev.caxis.value > kStickOn) on = true;
+                else if (ev.caxis.value < kStickOff) on = false;
+                if (!wasBoth && triggerL && triggerR) r.action = Action::GameMenu;
+            } else if (axis == SDL_CONTROLLER_AXIS_RIGHTY) {
+                const int v = ev.caxis.value;
+                Action dir = v < -kStickOn ? Action::ScrollUp : v > kStickOn ? Action::ScrollDown
+                           : std::abs(v) < kStickOff ? Action::None : rightStick;
+                if (dir != rightStick) {
+                    if (held == rightStick) held = Action::None;
+                    rightStick = dir;
+                    r.action = dir;
+                }
+            }
+            break;
+        }
+        case SDL_CONTROLLERBUTTONUP:
+            if (ev.cbutton.button == SDL_CONTROLLER_BUTTON_BACK) {
+                if (selectHeld && !selectCombo) r.action = Action::ToggleAutoStart;
+                selectHeld = false;
+                break;
+            }
+            if (actionFromButton(ev.cbutton.button) == held) held = Action::None;
+            break;
+    }
+    return r;
+}
+
+void Input::started(Action a, Uint32 now) {
+    if (!isRepeatable(a)) return;
+    held = a;
+    nextRepeat = now + (isScroll(a) ? kScrollDelayMs : kRepeatDelayMs);
+}
+
+Action Input::due(Uint32 now) {
+    if (held == Action::None || (Sint32)(now - nextRepeat) < 0) return Action::None;
+    nextRepeat = now + (isScroll(held) ? kScrollRateMs : kRepeatRateMs);
+    return held;
+}
+
+int Input::repeatIn(Uint32 now) const {
+    if (held == Action::None) return -1;
+    return (int)std::max<Sint32>(0, (Sint32)(nextRepeat - now));
+}
