@@ -28,3 +28,14 @@ power-menu       grid  on    en        F6
 osd-volume       grid  on    en        XF86AudioRaiseVolume
 pt-grid          grid  on    pt-BR     F1 F1
 pt-list-menu     list  on    pt-BR     F1 F1 F7
+search-tab       grid  on    en        F4 c r F1
+search-closed    grid  on    en        F4 Escape
+search-delete    grid  on    en        F4 c r a Escape
+search-power     grid  on    en        F4 c F6
+search-game-menu grid  on    en        F4 F7
+rename-cancel    grid  on    en        F1 F1 F7 Return x F3
+rename-cursor    grid  on    en        F1 F1 F7 Return F1 F1 x
+trash-notice     list  on    en        F1 F1 F7 Down Return Down Return
+power-closed     grid  on    en        F6 Escape
+power-wrap       grid  on    en        F6 Up
+list-scroll      list  on    en        F1 F1 Down Down Down Next Next
