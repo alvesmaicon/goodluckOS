@@ -7,6 +7,7 @@
 
 #include "catalog.h"
 #include "config.h"
+#include "system/prefs.h"
 #include "util.h"
 
 static void writeAutoStart(const Entry& e) {
@@ -470,26 +471,14 @@ std::vector<PowerItem> powerItems(const Model& m) {
     return items;
 }
 
-// Launcher options, set in System Settings: "view=grid|list" and "tabs=on|off" (puppy.conf can give
-// the defaults).
+// The launcher options set in System Settings (see Prefs).
 void loadSettings(Model& m) {
-    std::vector<std::string> lines;
-    if (!cfg.view.empty()) lines.push_back("view=" + cfg.view);
-    if (!cfg.tabs.empty()) lines.push_back("tabs=" + cfg.tabs);
-    std::ifstream in(cfg.settingsFile());
-    for (std::string line; std::getline(in, line);) lines.push_back(line);
-    for (std::string line : lines) {
-        line = trim(line);
-        if (line == "view=list") m.view = View::List;
-        else if (line == "view=grid") m.view = View::Grid;
-        else if (line == "tabs=off") m.showTabs = false;
-        else if (line == "tabs=on") m.showTabs = true;
-        else if (line.compare(0, 11, "hidden_tab=") == 0) {    // System Settings -> Launcher tabs
-            const std::string name = line.substr(11);
-            for (auto& c : m.categories)
-                if (!c.mixed && c.name == name) c.hidden = true;
-        }
-    }
+    const Prefs p = Prefs::load();
+    m.view = p.listView ? View::List : View::Grid;
+    m.showTabs = p.showTabs;
+    for (const std::string& name : p.hiddenTabs)
+        for (auto& c : m.categories)
+            if (!c.mixed && c.name == name) c.hidden = true;
 }
 
 // The tabs System Settings offers to hide, as "name<TAB>label" lines (rewritten only when they change).

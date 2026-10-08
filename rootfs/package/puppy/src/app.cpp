@@ -4,6 +4,7 @@
 #include <ctime>
 
 #include "layout.h"
+#include "system/hud.h"
 
 App::App(Ui& ui, SDL_GameController* pad) : ui(ui), input(pad) {}
 
@@ -32,7 +33,7 @@ void App::follow() {
 
 // The lowest screen of the overlays on top draws itself and the bars; the overlays go over them.
 void App::render() {
-    battery = readBattery();
+    battery = Battery::read();
     clock = clockText(clockFmt);
     size_t base = stack.size() - 1;
     while (base > 0 && stack[base]->overlay()) --base;
@@ -111,7 +112,7 @@ int App::run() {
                 lastActivity = now;
             } else if (now - lastActivity >= kIdleCheckMs) {
                 lastActivity = now;
-                if (readBattery() != battery) dirty = true;
+                if (Battery::read() != battery) dirty = true;
                 Audio a;
                 a.read();
                 if (a != audio) { audio = a; dirty = true; }

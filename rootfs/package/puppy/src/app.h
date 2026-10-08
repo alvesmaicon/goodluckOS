@@ -8,8 +8,9 @@
 #include <string>
 #include <vector>
 
-#include "device.h"
 #include "input.h"
+#include "system/audio.h"
+#include "system/device.h"
 #include "ui.h"
 
 class App;
@@ -49,7 +50,7 @@ private:
     bool running = true;
     bool dirty = true;
     Audio audio;
-    int battery = -2;
+    Battery battery;
     std::string clockFmt, clock;    // strftime format of the top bar's clock, and what it shows
     bool following = false;     // after a volume, brightness or output hotkey, which change the levels behind our back
     Uint32 followUntil = 0, followNextRead = 0;

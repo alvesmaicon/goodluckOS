@@ -67,7 +67,7 @@ imgui() {
 build_app() {
     local app=$1 std=c++11 libs="" srcs="" inc="-I$PKG/common"
     case $app in
-        puppy) std=c++17; libs="-lSDL2_image -lSDL2_ttf -lasound" ;;
+        puppy) std=c++17; libs="-lSDL2_image -lSDL2_ttf -lasound"; inc="$inc -I$PKG/puppy/src" ;;
         system-settings) libs="-lasound" ;;
         are-you-sure|resize-home) ;;
         *) echo "unknown app: $app"; exit 1 ;;
@@ -78,7 +78,7 @@ build_app() {
         srcs="$I/imgui.cpp $I/imgui_draw.cpp $I/imgui_tables.cpp $I/imgui_widgets.cpp $I/backends/imgui_impl_sdl2.cpp $I/backends/imgui_impl_sdlrenderer2.cpp"
     fi
     local src=$PKG/$app/$app.cpp
-    [ "$app" = puppy ] && src=$(ls "$PKG"/puppy/src/*.cpp)
+    [ "$app" = puppy ] && src=$(ls "$PKG"/puppy/src/*.cpp "$PKG"/puppy/src/system/*.cpp)
     arm-linux-gnueabihf-g++ -O2 -std=$std $ARMFLAGS $inc $($PCA --cflags sdl2) $src $srcs \
         -o "$OUT/$app.armhf" $($PCA --libs sdl2) $libs -lpthread
     arm-linux-gnueabihf-strip "$OUT/$app.armhf"

@@ -198,16 +198,16 @@ void Ui::end() {
     SDL_RenderPresent(renderer);
 }
 
-void Ui::header(const Header& h, int battery, const Audio& audio, const std::string& clock) {
+void Ui::header(const Header& h, const Battery& battery, const Audio& audio, const std::string& clock) {
     fill(kBar, {0, 0, kScreenW, kHeaderH});
     const int nameY = (kHeaderH - TTF_FontHeight(fonts.ui)) / 2;
 
     const int statusY = (kHeaderH - TTF_FontHeight(fonts.small)) / 2;
-    std::string bat = battery >= 0 ? std::to_string(battery) + "%" : "??";
+    std::string bat = battery.percent >= 0 ? std::to_string(battery.percent) + "%" : "??";
     int statusX = kScreenW - kMargin - textWidth(fonts.small, bat);
     drawText(renderer, fonts.small, bat, statusX, statusY, kGrey);
     statusX -= 28;
-    batteryIcon(statusX, (kHeaderH - 12) / 2, battery, batteryCharging, batteryFull);
+    batteryIcon(statusX, (kHeaderH - 12) / 2, battery.percent, battery.charging, battery.full);
 
     if (audio.volume >= 0) {
         std::string vol = audio.muted ? tr("muted") : std::to_string(audio.volume) + "%";

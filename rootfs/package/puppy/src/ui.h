@@ -11,7 +11,8 @@
 #include <utility>
 #include <vector>
 
-#include "device.h"
+#include "system/audio.h"
+#include "system/device.h"
 
 void drawText(SDL_Renderer* r, TTF_Font* font, const std::string& text, int x, int y, SDL_Color color, int maxW = 0,
               int scrollX = 0);
@@ -88,7 +89,7 @@ public:
     Uint32 marqueeDue() const { return marqueeNext; }   // when the scrolling name needs a frame (0: never)
 
     // The bars and messages over everything
-    void header(const Header& h, int battery, const Audio& audio, const std::string& clock);
+    void header(const Header& h, const Battery& battery, const Audio& audio, const std::string& clock);
     void footer(const Hints& hints);
     void notice(const std::string& text);
     void status(const std::string& text);

@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "config.h"
-#include "device.h"
+#include "system/device.h"
 #include "layout.h"
 #include "library.h"
 #include "overlays.h"
