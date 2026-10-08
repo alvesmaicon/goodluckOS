@@ -153,6 +153,8 @@ scenes_run() {
     epoch=$(date -u -d '2026-10-08 12:30' +%s)
     for d in /home/player /dev/shm /media /sys/class/power_supply; do mkdir -p $d; mount -t tmpfs none $d; done
     mkdir $bat; echo Battery >$bat/type; echo 82 >$bat/capacity; echo Discharging >$bat/status
+    printf 'MemTotal:         503000 kB\nMemFree:          200000 kB\nMemAvailable:     310000 kB\n' >/media/meminfo
+    mount --bind /media/meminfo /proc/meminfo      # System Info: the PC's free memory changes all the time
     mkdir -p /media/games; scene_games /media/games
     Xvfb :98 -screen 0 640x480x24 -nolisten tcp >/dev/null 2>&1 & local X=$!
     sleep 1
