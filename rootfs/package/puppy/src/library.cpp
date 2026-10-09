@@ -249,13 +249,13 @@ static void renameInGamelists(const fs::path& dir, const std::string& oldFile, c
 }
 
 // RetroArch saves and states named after a game ("<name>.srm", "<name>.state1"...), in cfg.saveDirs
-// and their per-core folders.
+// and the folders under them (per core, per content folder).
 static void renameSaves(const std::string& oldStem, const std::string& newStem) {
     const std::string prefix = oldStem + ".";
     for (const auto& root : cfg.saveDirs) {
         std::error_code ec;
         std::vector<fs::path> dirs = {root};
-        for (fs::directory_iterator it(root, ec), end; !ec && it != end; it.increment(ec))
+        for (fs::recursive_directory_iterator it(root, ec), end; !ec && it != end; it.increment(ec))
             if (it->is_directory(ec)) dirs.push_back(it->path());
         for (const auto& d : dirs) {
             std::vector<fs::path> found;
