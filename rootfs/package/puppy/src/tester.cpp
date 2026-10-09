@@ -14,6 +14,7 @@ static const char* kButtons[] = {"B", "A", "X", "Y", "L1", "R1", "L2", "R2", "SE
 constexpr int kButtonCount = sizeof(kButtons) / sizeof(kButtons[0]);
 constexpr int kButtonB = 0;
 constexpr Uint32 kExitHoldMs = 1000;
+constexpr Uint32 kFrameMs = 33;
 
 TesterScreen::TesterScreen(App& app) : Screen(app) {
     if (app.gamepad()) joystick = SDL_GameControllerGetJoystick(app.gamepad());
@@ -48,6 +49,7 @@ static void chip(Ui& ui, const char* label, bool on, const SDL_Rect& r) {
 }
 
 void TesterScreen::render(Ui& ui) {
+    nextFrame = SDL_GetTicks() + kFrameMs;
     SDL_Renderer* renderer = ui.sdl();
     const Fonts& fonts = ui.font();
     const int w = 100, h = 34, gap = 10;
@@ -91,8 +93,15 @@ void TesterScreen::render(Ui& ui) {
     const Uint32 held = holdStart ? std::min<Uint32>(SDL_GetTicks() - holdStart, kExitHoldMs) : 0;
     SDL_Rect bar{x0, kScreenH - kFooterH - 14 - h, 5 * w + 4 * gap, h};
     ui.fill(kTile, bar);
-    if (held) ui.fill(kYellow, {bar.x, bar.y, (int)(bar.w * held / kExitHoldMs), bar.h});
     const char* label = tr("Hold B to go back");
-    drawText(renderer, fonts.small, label, bar.x + (bar.w - textWidth(fonts.small, label)) / 2,
-             bar.y + (bar.h - TTF_FontHeight(fonts.small)) / 2, held ? kBlack : kWhite);
+    const int labelX = bar.x + (bar.w - textWidth(fonts.small, label)) / 2;
+    const int labelY = bar.y + (bar.h - TTF_FontHeight(fonts.small)) / 2;
+    drawText(renderer, fonts.small, label, labelX, labelY, kWhite);
+    if (held) {     // black where the bar is full
+        SDL_Rect full{bar.x, bar.y, (int)(bar.w * held / kExitHoldMs), bar.h};
+        ui.fill(kYellow, full);
+        SDL_RenderSetClipRect(renderer, &full);
+        drawText(renderer, fonts.small, label, labelX, labelY, kBlack);
+        SDL_RenderSetClipRect(renderer, nullptr);
+    }
 }

@@ -13,13 +13,14 @@ public:
     bool raw() const override { return true; }
     void render(Ui& ui) override;
     Header header() const override;
-    Uint32 wakeAt() const override { return SDL_GetTicks() + 33; }   // the sticks and the hold of B move
+    Uint32 wakeAt() const override { return nextFrame; }   // the sticks and the hold of B move
     void tick(Uint32 now) override;
 
 private:
     SDL_Joystick* joystick = nullptr;
     int lastButton = -1;
     Uint32 holdStart = 0;       // B held since then (0: not held)
+    Uint32 nextFrame = 0;       // when the next frame is due
 
     bool pressed(int button) const;
     bool backHeld() const;
