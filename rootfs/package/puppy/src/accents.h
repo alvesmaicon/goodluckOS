@@ -18,5 +18,6 @@ struct Accent {
 const std::vector<Accent>& all();
 int find(const std::string& key);       // the index in all(); 0 (yellow) for an unknown key
 void choose(const std::string& key);    // the colour accent() returns from now on
+std::string hex(SDL_Color c);           // "rrggbb", as gallium_hud.conf has it
 
 }  // namespace accents

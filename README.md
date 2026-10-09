@@ -202,7 +202,7 @@ System Settings
 
 - **Launcher tabs**: hidden tabs' games still appear in All Games and My List.
 - **Font**: Default (Inter), VT323, Pixelify Sans or ProggyClean.
-- **Accent color**: the colour of the selection, the buttons in the hints and the bars: yellow (the default), orange, red, pink, purple, blue, cyan or green.
+- **Accent color**: the colour of the selection, the buttons in the hints and the bars, and of the volume and brightness feedback in games (from the next game on): yellow (the default), orange, red, pink, purple, blue, cyan or green.
 - **In-game status bar**: the CPU temperature, the power chip (AXP223) temperature, the date, the time, the battery and the volume and audio output, each one on or off, in the top right corner of every game, with the launcher's icons; Opacity sets its background. All off by default, so nothing covers the game. The launcher keeps its own top bar.
 - **Performance**: the Gallium HUD graphs that FN + D-pad up shows in game. Text only goes at the top.
 - Overlay changes apply from the next game on.

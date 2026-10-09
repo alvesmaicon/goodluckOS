@@ -231,6 +231,8 @@ std::vector<Row> SettingsScreen::interfacePage() {
         prefs.accent = accents::all()[i].key;
         prefs.save();
         accents::choose(prefs.accent);
+        hud.accent = accents::hex(accents::all()[i].color);    // the in-game feedback follows
+        hud.save();
     });
     accentRow.swatches = accentColors;
     rows.push_back(accentRow);

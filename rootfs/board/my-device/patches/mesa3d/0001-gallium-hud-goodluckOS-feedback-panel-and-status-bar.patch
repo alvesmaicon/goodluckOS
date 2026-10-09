@@ -8,12 +8,14 @@ Draws over any app, even with the graphs hidden:
   (the SoC's and the AXP's sensors), clock (in the GALLIUM_HUD_STATUS_CLOCK
   strftime format), battery (from sysfs) and audio (the volume and output that
   hud-status.sh writes to /dev/shm/hud-status).
-Both use the launcher's colors and icons. Text can now have a color and a
-scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
+Both use the launcher's colors and icons; the feedback's highlight is the
+launcher's accent color, GALLIUM_HUD_ACCENT (rrggbb, yellow by default).
+Text can now have a color and a scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by
+default).
 
 ---
---- a/src/gallium/auxiliary/hud/hud_context.c	2026-10-07 01:00:12.329151461 -0300
-+++ b/src/gallium/auxiliary/hud/hud_context.c	2026-10-07 01:01:00.059316194 -0300
+--- a/src/gallium/auxiliary/hud/hud_context.c
++++ b/src/gallium/auxiliary/hud/hud_context.c
 @@ -68,6 +68,10 @@
  #include "util/u_upload_mgr.h"
  #include "tgsi/tgsi_text.h"
@@ -138,7 +140,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
        s++;
     }
  
-@@ -485,6 +547,467 @@
+@@ -485,6 +547,489 @@
   * The texture is usually the back buffer being displayed.
   */
  static void
@@ -417,9 +419,31 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
 +      hud_quad(x + rows[i][0], y + rows[i][1], rows[i][2], 1, c);
 +}
 +
++/* the feedback's colour: the launcher's accent, as rrggbb in GALLIUM_HUD_ACCENT; yellow by default */
++static const float *
++accent_color(void)
++{
++   static float c[] = {1, 205 / 255.0, 60 / 255.0, 1};
++   static bool read;
++   const char *env;
++   unsigned rgb;
++
++   if (!read) {
++      read = true;
++      env = getenv("GALLIUM_HUD_ACCENT");
++      if (env && strlen(env) == 6 && sscanf(env, "%6x", &rgb) == 1) {
++         c[0] = (rgb >> 16 & 0xff) / 255.0;
++         c[1] = (rgb >> 8 & 0xff) / 255.0;
++         c[2] = (rgb & 0xff) / 255.0;
++      }
++   }
++   return c;
++}
++
 +static void
 +hud_osd_accumulate(struct hud_context *hud)
 +{
++   const float *accent = accent_color();
 +   unsigned th = hud_text_height(hud);
 +   unsigned h = 10 + th + 31;
 +   unsigned x = (hud->fb_width > OSD_W ? hud->fb_width - OSD_W : 0) / 2;
@@ -436,12 +460,12 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
 +      unsigned tw = OSD_W - 2 * OSD_PAD;
 +      unsigned pct = osd.percent > 100 ? 100 : osd.percent;
 +
-+      hud_colored_string(hud, x + OSD_W - OSD_PAD - w, y + 10, kYellow, osd.value);
++      hud_colored_string(hud, x + OSD_W - OSD_PAD - w, y + 10, accent, osd.value);
 +      hud_quad(x + OSD_PAD, y + h - 20, tw, 8, kTile);
 +      if (pct)
-+         hud_quad(x + OSD_PAD, y + h - 20, tw * pct / 100, 8, kYellow);
++         hud_quad(x + OSD_PAD, y + h - 20, tw * pct / 100, 8, accent);
 +   } else {
-+      hud_colored_string(hud, x + (OSD_W - w) / 2, y + h - 10 - th, kYellow, osd.value);
++      hud_colored_string(hud, x + (OSD_W - w) / 2, y + h - 10 - th, accent, osd.value);
 +   }
 +}
 +
@@ -606,7 +630,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
  hud_draw_results(struct hud_context *hud, struct pipe_resource *tex)
  {
     struct cso_context *cso = hud->cso;
-@@ -496,9 +1019,12 @@
+@@ -496,9 +1041,12 @@
           { &hud->font_sampler_state };
     struct hud_pane *pane;
     struct pipe_resource *releasebuf[3] = { 0 };
@@ -620,7 +644,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
  
     hud->fb_width = tex->width0;
     hud->fb_height = tex->height0;
-@@ -606,18 +1132,31 @@
+@@ -606,18 +1154,31 @@
     }
     hud->bg.vbuf.buffer.resource = NULL;
  
@@ -654,7 +678,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
        goto done;
  
     /* draw accumulated vertices for white lines */
-@@ -650,6 +1189,7 @@
+@@ -650,6 +1211,7 @@
     }
  
  done:
@@ -662,7 +686,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
     pipe_resource_release(pipe, releasebuf[2]);
     pipe_resource_release(pipe, releasebuf[1]);
     pipe_resource_release(pipe, releasebuf[0]);
-@@ -745,12 +1285,16 @@
+@@ -745,12 +1307,16 @@
           }
        }
  
@@ -679,7 +703,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
     /* unmap the uploader's vertex buffer before drawing */
     u_upload_unmap(pipe->stream_uploader);
  }
-@@ -1774,13 +2318,14 @@
+@@ -1774,13 +2340,14 @@
        static const char *fragment_shader_text = {
           "FRAG\n"
           "DCL IN[0], GENERIC[0], LINEAR\n"
@@ -695,7 +719,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
           "END\n"
        };
  
-@@ -1845,6 +2390,7 @@
+@@ -1845,6 +2412,7 @@
           "DCL IN[0..1]\n"
           "DCL OUT[0], POSITION\n"
           "DCL OUT[1], GENERIC[0]\n" /* texcoord */
@@ -703,7 +727,7 @@ scale (GALLIUM_HUD_TEXT_SCALE, 1.5 by default).
           /* [0] = color,
            * [1] = (2/fb_width, 2/fb_height, xoffset, yoffset)
            * [2] = (xscale, yscale, 0, 0)
-@@ -1865,6 +2411,7 @@
+@@ -1865,6 +2433,7 @@
           "MOV OUT[0].zw, IMM[0]\n"
  
           "MUL OUT[1], IN[1], IMM[1]\n"

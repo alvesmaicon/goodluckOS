@@ -15,6 +15,7 @@ struct HudSettings {
     std::string position = "top-left";  // top-left, top-right, bottom-left, bottom-right
     bool h24 = false;
     std::string dateFormat = "%m/%d";   // strftime
+    std::string accent = "ffcd3c";      // the in-game feedback's colour (rrggbb): the launcher's accent
 
     static HudSettings load();
     void save() const;

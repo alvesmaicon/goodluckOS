@@ -1,5 +1,7 @@
 #include "accents.h"
 
+#include <cstdio>
+
 #include "layout.h"
 
 namespace accents {
@@ -31,6 +33,12 @@ static SDL_Color& current() {
 
 void choose(const std::string& key) {
     current() = all()[find(key)].color;
+}
+
+std::string hex(SDL_Color c) {
+    char s[8];
+    snprintf(s, sizeof(s), "%02x%02x%02x", c.r, c.g, c.b);
+    return s;
 }
 
 }  // namespace accents
