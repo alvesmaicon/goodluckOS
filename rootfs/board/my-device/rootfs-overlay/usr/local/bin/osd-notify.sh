@@ -4,12 +4,10 @@
 #   osd-notify.sh output 0 speaker|headphones
 # Every GL app, Puppy included, shows /dev/shm/hud-osd (label, value and bar percent, -1 for none)
 # through the Gallium HUD patch in Mesa. Its font is ASCII only, so accents are dropped.
-# Puppy also reads /dev/shm/osd to refresh its top bar.
 
 kind=$1
 pct=$2
 
-echo "$kind $pct $3" > /dev/shm/osd.tmp && mv /dev/shm/osd.tmp /dev/shm/osd
 [ "$kind" = brightness ] || /usr/local/bin/hud-status.sh
 
 ascii() {

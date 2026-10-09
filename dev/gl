@@ -14,10 +14,12 @@ usage() {
 usage: dev/gl <command> [args]
   image                     (re)build the dev container image
   shell                     shell in the dev container
-  app <name>...             puppy, system-settings, are-you-sure, resize-home: armhf + native binaries
+  app puppy                 the launcher: armhf + native binaries
   deploy <overlay files>... dev/out/deploy.tar.gz: the built apps + rootfs-overlay files, console paths
   shot <app> <name> <keys>  native app in Xvfb, a screenshot at each "|" (keys: xdotool names, "_" waits 1 s)
-  rootfs [make targets]     Buildroot, incremental (e.g. mesa3d-rebuild, system-settings-rebuild)
+  scenes [dir]              launcher scenes of dev/scenes, one screenshot each (default dev/out/scenes)
+  scenes-diff <dir> <dir>   the scenes whose screenshots differ between two runs, pixel by pixel
+  rootfs [make targets]     Buildroot, incremental (e.g. mesa3d-rebuild, puppy-rebuild)
   ext4                      dev/out/rootfs.ext4 from the last rootfs.tar (partition 1, 384 MiB)
   kernel                    dev/out/android_boot_a33.img (+a23), like kernel/Dockerfile
 EOF
@@ -53,33 +55,16 @@ mkdir -p "$WORK" "$OUT"
 PCA="env PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabihf/pkgconfig pkg-config"
 ARMFLAGS="-march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard"
 
-# ImGui at the version Buildroot uses (rootfs/package/imgui/imgui.mk)
-imgui() {
-    local v; v=$(sed -n 's/^IMGUI_VERSION = //p' "$PKG/imgui/imgui.mk")
-    if [ ! -d "$WORK/imgui-$v" ]; then
-        git -c advice.detachedHead=false clone -q --depth 1 -b "$v" https://github.com/ocornut/imgui.git "$WORK/imgui-$v"
-    fi
-    echo "$WORK/imgui-$v"
-}
-
+# Puppy as puppy.mk builds it
 build_app() {
-    local app=$1 std=c++11 libs="" srcs="" inc="-I$PKG/common"
-    case $app in
-        puppy) std=c++17; libs="-lSDL2_image -lSDL2_ttf -lasound" ;;
-        system-settings) libs="-lasound" ;;
-        are-you-sure|resize-home) ;;
-        *) echo "unknown app: $app"; exit 1 ;;
-    esac
-    if [ "$app" != puppy ]; then
-        local I; I=$(imgui)
-        inc="$inc -I$I -I$I/backends"
-        srcs="$I/imgui.cpp $I/imgui_draw.cpp $I/imgui_tables.cpp $I/imgui_widgets.cpp $I/backends/imgui_impl_sdl2.cpp $I/backends/imgui_impl_sdlrenderer2.cpp"
-    fi
-    local src=$PKG/$app/$app.cpp
-    arm-linux-gnueabihf-g++ -O2 -std=$std $ARMFLAGS $inc $($PCA --cflags sdl2) "$src" $srcs \
+    local app=$1
+    [ "$app" = puppy ] || { echo "unknown app: $app (the only one is puppy)"; exit 1; }
+    local src inc="-I$PKG/puppy/src" libs="-lSDL2_image -lSDL2_ttf -lasound"
+    src=$(ls "$PKG"/puppy/src/*.cpp "$PKG"/puppy/src/system/*.cpp)
+    arm-linux-gnueabihf-g++ -O2 -std=c++17 $ARMFLAGS $inc $($PCA --cflags sdl2) $src \
         -o "$OUT/$app.armhf" $($PCA --libs sdl2) $libs -lpthread
     arm-linux-gnueabihf-strip "$OUT/$app.armhf"
-    g++ -O2 -std=$std $inc $(pkg-config --cflags sdl2) "$src" $srcs \
+    g++ -O2 -std=c++17 $inc $(pkg-config --cflags sdl2) $src \
         -o "$OUT/$app.$ARCH" $(pkg-config --libs sdl2) $libs -lpthread
     echo "OK $app: $(stat -c %s "$OUT/$app.armhf") bytes armhf, glibc max $(arm-linux-gnueabihf-objdump -T "$OUT/$app.armhf" | grep -oE 'GLIBC_[0-9.]+' | sort -Vu | tail -1); native: dev/out/$app.$ARCH"
 }
@@ -111,6 +96,91 @@ shot() {
         else DISPLAY=:99 xdotool key "$k"; sleep 0.3; fi
     done
     kill $P $X 2>/dev/null || true
+}
+
+# Launcher scenes for regression checks: the native Puppy on the fake games of dev/scenes, with a
+# frozen clock and a fake battery and mixer, in its own mount namespace (HOME, /dev/shm and /media
+# are throwaway), so two runs come out the same and nothing is left on the machine.
+scenes() {
+    local out=${1:-$OUT/scenes}
+    build_app puppy >/dev/null
+    gcc -shared -fPIC -O2 -o "$WORK/scene-shim.so" "$DEV/scenes/shim.c" -ldl
+    fake_device
+    rm -rf "$out"; mkdir -p "$out"
+    unshare -m "$DEV/gl" _scenes "$(cd "$out" && pwd)"
+}
+
+# dev/scenes/games.txt -> ROM folders in $1, with generated covers and gamelist.xml files
+scene_games() {
+    local dst=$1 font=/usr/share/fonts/Inter_24pt-Medium.ttf i=0 sys file name year genre players desc dir
+    local colors=('#7a2e2e' '#2e5a7a' '#4d7a2e' '#6b2e7a' '#7a5c2e' '#2e7a6b')
+    while IFS='|' read -r sys file name year genre players desc; do
+        case $sys in ''|'#'*) continue ;; esac
+        dir=$dst/$sys; mkdir -p "$dir/icons"; : >"$dir/$file"
+        convert -size 320x240 "gradient:${colors[i % 6]}-#101014" -font "$font" -pointsize 24 -fill white \
+            -gravity center -annotate +0+0 "${file%.*}" "$dir/icons/${file%.*}.png"
+        if [ -n "$name" ]; then
+            [ -f "$dir/gamelist.xml" ] || echo '<?xml version="1.0"?><gameList>' >"$dir/gamelist.xml"
+            printf '<game><path>./%s</path><name>%s</name><desc>%s</desc><releasedate>%s0101T000000</releasedate><genre>%s</genre><players>%s</players></game>\n' \
+                "$file" "$name" "$desc" "$year" "$genre" "$players" >>"$dir/gamelist.xml"
+        fi
+        i=$((i + 1))
+    done <"$DEV/scenes/games.txt"
+    for g in "$dst"/*/gamelist.xml; do echo '</gameList>' >>"$g"; done
+}
+
+# Inside the namespace of scenes(): one fresh Puppy per line of dev/scenes/scenes.txt
+scenes_run() {
+    local out=$1 epoch name view tabs lang keys k pid n=0 bat=/sys/class/power_supply/battery
+    epoch=$(date -u -d '2026-10-08 12:30' +%s)
+    for d in /home/player /dev/shm /media /sys/class/power_supply; do mkdir -p $d; mount -t tmpfs none $d; done
+    mkdir $bat; echo Battery >$bat/type; echo 82 >$bat/capacity; echo Discharging >$bat/status
+    printf 'MemTotal:         503000 kB\nMemFree:          200000 kB\nMemAvailable:     310000 kB\n' >/media/meminfo
+    mount --bind /media/meminfo /proc/meminfo      # System Info: the PC's free memory changes all the time
+    mkdir -p /media/games; scene_games /media/games
+    Xvfb :98 -screen 0 640x480x24 -nolisten tcp >/dev/null 2>&1 & local X=$!
+    sleep 1
+    while read -r name view tabs lang keys <&3; do
+        case $name in ''|'#'*) continue ;; esac
+        rm -rf /home/player/* /home/player/.[!.]* /dev/shm/*
+        cp -a /media/games /home/player/roms
+        mkdir -p /home/player/.config/puppy
+        printf 'view=%s\ntabs=%s\nlanguage=%s\n' "$view" "$tabs" "$lang" >/home/player/.config/puppy/settings
+        local conf="" press=""
+        for k in $keys; do
+            case $k in conf:*) conf="$conf${k#conf:}"$'\n' ;; *) press="$press $k" ;; esac
+        done
+        [ -n "$conf" ] && printf '%s' "$conf" >/home/player/scene.conf
+        DISPLAY=:98 SDL_VIDEODRIVER=x11 TZ=UTC0 FAKE_EPOCH=$epoch LD_PRELOAD=$WORK/scene-shim.so \
+            env ${conf:+PUPPY_CONFIG=/home/player/scene.conf} "$OUT/puppy.$ARCH" >"$out/$name.log" 2>&1 & pid=$!
+        sleep 2
+        for k in $press; do
+            if [ "$k" = _ ]; then sleep 1; else DISPLAY=:98 xdotool key "$k"; sleep 0.3; fi
+        done
+        sleep 0.6
+        DISPLAY=:98 xwd -root -silent | convert xwd:- "$out/$name.png"
+        kill $pid 2>/dev/null || true; wait $pid 2>/dev/null || true
+        [ -s "$out/$name.log" ] || rm -f "$out/$name.log"
+        n=$((n + 1))
+    done 3<"$DEV/scenes/scenes.txt"
+    kill $X 2>/dev/null || true
+    echo "$n scenes in ${out#"$REPO"/}"
+}
+
+scenes_diff() {
+    local a=$1 b=$2 f n px bad=0
+    for f in "$a"/*.png; do
+        n=$(basename "$f")
+        if [ ! -f "$b/$n" ]; then echo "only in $a: $n"; bad=1; continue; fi
+        px=$(compare -metric AE "$f" "$b/$n" null: 2>&1) || true
+        px=${px%% *}
+        [ "$px" = 0 ] || { echo "differs: ${n%.png} ($px pixels)"; bad=1; }
+    done
+    for f in "$b"/*.png; do
+        [ -f "$a/$(basename "$f")" ] || { echo "only in $b: $(basename "$f")"; bad=1; }
+    done
+    [ $bad = 1 ] || echo "same: $(ls "$a"/*.png | wc -l) scenes"
+    return $bad
 }
 
 # Buildroot the way rootfs/Dockerfile + scripts/build.sh do, but with its tree on a Linux
@@ -182,7 +252,7 @@ kernel() {
 deploy() {
     local s=$WORK/deploy
     rm -rf "$s"; mkdir -p "$s/usr/bin"
-    for app in puppy system-settings are-you-sure resize-home; do
+    for app in puppy; do
         [ -f "$OUT/$app.armhf" ] && install -m 0755 "$OUT/$app.armhf" "$s/usr/bin/$app"
     done
     for f in "$@"; do
@@ -199,6 +269,9 @@ case $cmd in
     shell) exec bash ;;
     app) [ $# -ge 1 ] || usage; for a in "$@"; do build_app "$a"; done ;;
     shot) [ $# -eq 3 ] || usage; shot "$@" ;;
+    scenes) scenes "$@" ;;
+    _scenes) scenes_run "$@" ;;
+    scenes-diff) [ $# -eq 2 ] || usage; scenes_diff "$@" ;;
     rootfs) rootfs "$@" ;;
     ext4) ext4 ;;
     kernel) kernel ;;

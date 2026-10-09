@@ -6,6 +6,5 @@ rootfs/out/*
 image/sdcard.img
 image/staging/*
 rootfs/package/*/local-out/*
-rootfs/package/*/imgui
 rootfs/package/puppy/puppy
 dev/out/*

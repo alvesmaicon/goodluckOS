@@ -1,33 +1,4 @@
 [ENTRY]
-CATEGORY=System
-NAME=Reboot
-DESCRIPTION=Reboot the device
-COMMAND=are-you-sure "Are you sure you want to reboot the device?" "doas /sbin/reboot" "Restarting..."
-ICON=/usr/share/icons/reboot.png
-
-[ENTRY]
-CATEGORY=System
-NAME=Power Off
-DESCRIPTION=Power off the device
-COMMAND=are-you-sure "Are you sure you want to power off the device?" "doas /sbin/poweroff" "Shutting down..."
-ICON=/usr/share/icons/poweroff.png
-
-[ENTRY]
-CATEGORY=System
-NAME=System Settings
-DESCRIPTION=Modify your system's settings
-COMMAND=system-settings
-ICON=/usr/share/icons/system-settings.png
-
-[ENTRY]
-CATEGORY=System
-NAME=Resize Home
-DESCRIPTION=Resize your HOME partition (also in System Settings)
-COMMAND=resize-home
-ICON=/usr/share/icons/resize-home.png
-HIDE_IF_EXISTS=/etc/player-flags/.home_resize_status
-
-[ENTRY]
 CATEGORY=Terminal
 NAME=Last App Log
 DESCRIPTION=View the console logs of the last app

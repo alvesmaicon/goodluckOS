@@ -4,12 +4,12 @@ A full image (kernel + Buildroot + image) takes 1-2 hours and is only needed for
 
 | Changed | Build | Put on the console |
 | --- | --- | --- |
-| `rootfs/package/{puppy,system-settings,are-you-sure,resize-home}/*.cpp`, `common/*.h` | `dev/gl app system-settings` (seconds) | `dev/gl deploy` → HOME → `tar -xzf` |
+| `rootfs/package/puppy/src/**` | `dev/gl app puppy` (seconds) | `dev/gl deploy` → HOME → `tar -xzf` |
 | A file in `rootfs/board/my-device/rootfs-overlay/` | nothing | `dev/gl deploy etc/init.d/S30usb-gadget ...` → HOME → `tar -xzf` |
 | The Mesa patch (`rootfs/board/my-device/patches/mesa3d`) | `dev/gl rootfs mesa3d-rebuild` (see below) | `libgallium-*.so` → HOME → `cp` to `/usr/lib` |
 | Kernel, DTS, kernel patches | `dev/gl kernel` (~5 min after the first) | `android_boot_a33.img` → HOME → `dd` at sector 172032 |
 | Buildroot config, new packages | `dev/gl rootfs` | `dev/gl ext4` → card reader → `dev/sdcard-mac.sh` |
-| A UI change you want to see | `dev/gl shot system-settings overlay "Down Return \|"` | (no console needed) |
+| A UI change you want to see | `dev/gl shot puppy overlay "F5 Down Down Down Return \|"` | (no console needed) |
 
 The console needs the real binary built for armhf. `dev/gl app` also builds a native one (`dev/out/<app>.aarch64` on a Mac, `.x86_64` on a PC) for screenshots in Xvfb.
 
@@ -29,21 +29,26 @@ dev/gl image          # the dev container, ~10 min once
 ## Commands
 
 ```sh
-dev/gl app system-settings puppy        # dev/out/<app>.armhf and dev/out/<app>.<native arch>
+dev/gl app puppy                        # dev/out/puppy.armhf and dev/out/puppy.<native arch>
 dev/gl deploy etc/profile.d/gallium_hud.sh usr/share/goodluck/lang/pt-BR.lang
                                         # dev/out/deploy.tar.gz: built apps in usr/bin + these overlay files
-dev/gl shot system-settings overlay "Down Down Down Return |"
+dev/gl shot puppy overlay "F5 Down Down Down Return |"
                                         # dev/out/shots/overlay-1.png (keys are xdotool names)
+dev/gl scenes dev/out/scenes-before     # one launcher screenshot per line of dev/scenes/scenes.txt
+dev/gl scenes-diff dev/out/scenes-before dev/out/scenes-after
+                                        # the scenes that changed, pixel by pixel
 dev/gl rootfs                           # first time: full Buildroot (1-2 h on an M1)
-dev/gl rootfs system-settings-rebuild   # then: one package, seconds; output in the work volume
+dev/gl rootfs puppy-rebuild             # then: one package, seconds; output in the work volume
 dev/gl ext4                             # dev/out/rootfs.ext4 from dev/out/rootfs.tar
 dev/gl kernel                           # dev/out/android_boot_a33.img
 dev/gl shell                            # a shell in the container (/repo, /work)
 ```
 
+`dev/gl scenes` checks that a change to Puppy draws what it drew before (or shows exactly what it changed). The fake games of `dev/scenes/games.txt` get generated covers. A shim (`dev/scenes/shim.c`) freezes the clock and fakes the mixer, and a mount namespace gives each scene an empty HOME and a fake battery. Two runs of the same code give the same pixels. Run it before a refactor and again after, then diff the two runs. The scenes are not for the README: those screenshots need real covers.
+
 Buildroot runs with its tree in the `goodluck-work` volume, not in the repo. A macOS folder is case-insensitive (the kernel headers have files that differ only in case) and slow through virtiofs. `dev/gl rootfs` copies `rootfs/{board,configs,package}` in on each run, then runs `make` with whatever targets you pass. Things to know:
 
-- Buildroot does not notice changes in local packages (`puppy`, `system-settings`...). Pass `<pkg>-rebuild`, then `all` (or nothing) to remake `rootfs.tar`.
+- Buildroot does not notice changes in local packages (`puppy`). Pass `<pkg>-rebuild`, then `all` (or nothing) to remake `rootfs.tar`. A source file deleted or moved stays in the build directory: use `<pkg>-dirclean` then.
 - Mesa: `mesa3d-rebuild` does not apply the patch again. To change the patch, either `mesa3d-dirclean mesa3d` (slow) or edit `out/build/mesa3d-*/src/gallium/auxiliary/hud/hud_context.c` in `dev/gl shell`, `make mesa3d-rebuild`, and regenerate the patch with `diff -u` against a copy you reverted with `patch -R`. The library to copy is `/work/br/out/target/usr/lib/libgallium-<version>.so` (16 MB).
 - The defconfig is only applied again when `rootfs/configs/goodluck_defconfig` changed.
 
@@ -61,7 +66,7 @@ The console's USB-C data port is a composite gadget: a serial shell (ACM, `ttyGS
 dev/glserial.py cmd "tar -xzf /home/player/deploy.tar.gz -C / && rm /home/player/deploy.tar.gz && sync"
 dev/glserial.py cmd "cp /home/player/libgallium-26.1.8.so /usr/lib/ && sync"
 dev/glserial.py cmd "dd if=/home/player/android_boot_a33.img of=/dev/mmcblk0 bs=512 seek=172032 conv=fsync"
-dev/glserial.py send dev/out/are-you-sure.armhf /usr/bin/are-you-sure   # ~1-2 min per 650 KB
+dev/glserial.py send dev/out/puppy.armhf /usr/bin/puppy   # ~1 min per 300 KB
 dev/glserial.py get /home/player/logs/templog.csv templog.csv
 dev/glserial.py get --cmd "dmesg" dmesg.txt
 ```

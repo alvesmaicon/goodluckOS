@@ -1,6 +1,6 @@
 #!/bin/sh
 # Prints the translation of an English string for the configured language, or the string itself.
-# Same files and setting as the apps (see rootfs/package/common/i18n.h):
+# Same files and setting as Puppy (see rootfs/package/puppy/src/i18n.h):
 #   gl-tr "Shutting down..."
 code=$(sed -n 's/^language=//p' /home/player/.config/puppy/settings 2>/dev/null | tail -n 1)
 file=/usr/share/goodluck/lang/$code.lang

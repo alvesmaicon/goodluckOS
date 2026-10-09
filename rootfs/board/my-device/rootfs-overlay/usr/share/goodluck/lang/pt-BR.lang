@@ -1,5 +1,5 @@
 # Portuguese (Brazil) translation of goodluckOS.
-# Format: "English text = Translation", one per line (see rootfs/package/common/i18n.h).
+# Format: "English text = Translation", one per line (see rootfs/package/puppy/src/i18n.h).
 # Keep the launcher hints short: the bottom bar is nearly full.
 language = Português (Brasil)
 language_en = Portuguese (Brazil)
@@ -29,8 +29,7 @@ player = jogador
 players = jogadores
 
 # --- Launcher: bottom bar hints
-Prev = Ant.
-Next = Próx.
+Tab = Aba
 Launch = Abrir
 Remove = Remover
 Search = Buscar
@@ -64,7 +63,6 @@ muted = mudo
 Audio output = Saída de áudio
 Speaker = Alto-falante
 Headphones = Fone de ouvido
-Audio output: = Saída de áudio:
 
 # --- Power options
 Power options = Opções de energia
@@ -80,10 +78,6 @@ Are you sure you want to reboot the device? = Tem certeza de que quer reiniciar 
 Are you sure you want to power off the device? = Tem certeza de que quer desligar o aparelho?
 
 # --- apps.puppy descriptions
-Reboot the device = Reinicia o aparelho
-Power off the device = Desliga o aparelho
-Modify your system's settings = Altere as configurações do sistema
-Resize your HOME partition (also in System Settings) = Expande a partição HOME (também nas Configurações)
 A frontend for emulators, game engines and media players = Interface para emuladores, motores de jogos e players de mídia
 It's Doom. = É o Doom.
 Doom WADs = WADs de Doom
@@ -95,19 +89,14 @@ Capcom Play System 2 (arcade) = Capcom Play System 2 (fliperama)
 Capcom Play System 3 (arcade) = Capcom Play System 3 (fliperama)
 Arcade (MAME 2003-Plus romset) = Fliperama (romset MAME 2003-Plus)
 
-# --- Confirmation screen
+# --- Dialogs
 Cancel = Cancelar
-Confirm = Confirmar
-Command Failed (Exit Code: %d) = O comando falhou (código de saída: %d)
-No output returned. = Nenhuma saída retornada.
 
 # --- System Settings
 System Settings = Configurações
 Display & Audio = Tela e Áudio
 Master Volume = Volume geral
 Global Mute = Sem som
-Options = Opções
-Power mode: = Modo de energia:
 Battery saver = Economia de bateria
 Balanced = Equilibrado
 Performance = Desempenho
@@ -115,20 +104,13 @@ Slower CPU and GPU: the battery lasts longer = CPU e GPU mais lentas: a bateria 
 Speeds up only when a game needs it = Acelera só quando o jogo precisa
 Always at full speed: uses more battery = Sempre na velocidade máxima: gasta mais bateria
 Show launcher tabs = Mostrar abas no launcher
-Launcher view: = Exibição do launcher:
 Grid = Grade
 List = Lista
-Language: = Idioma:
-Font: = Fonte:
 Show Puppy on loading screens = Mostrar o Puppy ao carregar
-Performance overlay = Painel de desempenho
 Show on game start = Mostrar ao abrir o jogo
-Content: = Conteúdo:
 FPS + CPU = FPS + CPU
-Style: = Estilo:
 Graph = Gráfico
 Text = Texto
-Position: = Posição:
 Top left = Superior esquerdo
 Top right = Superior direito
 Bottom left = Inferior esquerdo
@@ -141,11 +123,9 @@ Show CPU temperature = Mostrar temperatura da CPU
 Show power chip temperature = Mostrar temperatura do chip de energia
 Opacity = Opacidade
 Date & Time = Data e hora
-Now: = Agora:
 Show date = Mostrar data
 Show time = Mostrar hora
 24-hour clock = Relógio de 24 horas
-Date format: = Formato da data:
 Restore default settings = Restaurar configurações padrão
 Restore the Overlay, Date & Time, launcher and power mode settings? The language and the time zone stay. = Restaurar as configurações de Overlay, Data e hora, do launcher e o modo de energia? O idioma e o fuso horário ficam.
 Restore = Restaurar
@@ -155,7 +135,6 @@ Day = Dia
 Hour = Hora
 Minute = Minuto
 Set date and time = Ajustar data e hora
-Time zone: = Fuso horário:
 Performance (FN + UP) = Desempenho (FN + UP)
 Default = Padrão
 Resize Home = Expandir a HOME
@@ -219,41 +198,28 @@ Sticks:  L %+4d %+4d   R %+4d %+4d = Analógicos:  E %+4d %+4d   D %+4d %+4d
 Hold B to go back = Segure B para voltar
 
 # --- Resize Home
-Resize HOME Partition Utility = Expandir a partição HOME
 This utility resizes your HOME partition to fill the remaining space on your microSD card. = Este utilitário expande a partição HOME para ocupar todo o espaço livre do cartão microSD.
-microSD card total size: %s = Tamanho total do cartão: %s
-HOME partition size: %s = Tamanho da partição HOME: %s
-HOME filesystem size: %s = Tamanho do sistema de arquivos da HOME: %s
-HOME used: %s = HOME usada: %s
-HOME free: %s = HOME livre: %s
 HOME is not currently mounted. = A HOME não está montada no momento.
-Unused space on card: %s = Espaço sem uso no cartão: %s
-Last resize attempt: %s = Última tentativa: %s
 success = sucesso
 failed = falhou
 Resize HOME Partition = Expandir a partição HOME
-Refresh = Atualizar
 Are you sure? = Tem certeza?
 You will gain %s after resizing. This backs up your files, expands the partition to fill the card, reformats it, and restores your files. The device will reboot to do this. = Você vai ganhar %s. Seus arquivos são copiados, a partição é expandida até ocupar o cartão, formatada e os arquivos voltam. O aparelho reinicia para fazer isso.
 Heads up: there's no unused space left to reclaim. = Atenção: não sobrou espaço sem uso para aproveitar.
 You probably don't need to do this, but it's safe to run anyway. = Provavelmente não é necessário, mas é seguro fazer assim mesmo.
 Do It. = Expandir
 A resize is already scheduled for the next boot. = Já há uma expansão agendada para o próximo boot.
-Reboot the device to apply it. If you didn't request this, you can cancel the request below. = Reinicie o aparelho para aplicar. Se você não pediu isso, pode cancelar abaixo.
+Reboot the device to apply it, or cancel the request. = Reinicie o aparelho para aplicar, ou cancele o pedido.
 Cancel Resize Request = Cancelar a expansão
 Rebooting... = Reiniciando...
-Please wait while the device restarts. = Aguarde enquanto o aparelho reinicia.
-Something went wrong = Algo deu errado
-Okay = OK
 Could not read partition table information from sysfs. = Não foi possível ler a tabela de partições.
 Could not create resize-home flag file: %s = Não foi possível criar o arquivo de pedido: %s
 Could not remove request flag: %s = Não foi possível remover o pedido: %s
 Request flag was not found (it may have already been removed). = O pedido não foi encontrado (talvez já tenha sido removido).
-Failed to reboot. Does this app have permission to run 'doas reboot'? = Falha ao reiniciar. Este app tem permissão para reiniciar o aparelho?
+Failed to reboot. = Falha ao reiniciar.
 
 # Launcher tabs (System Settings)
 Launcher tabs = Abas do launcher
-Unticked tabs are hidden; their games still show in All Games and My List. = As abas desmarcadas ficam ocultas; os jogos delas continuam em Todos os Jogos e Minha Lista.
 
 # Game options (L2 + R2) and the trash
 Game options = Opções do jogo
@@ -275,7 +241,33 @@ Cursor = Cursor
 
 # System Settings sections
 Interface = Interface
-Second card: = Segundo cartão:
 none = nenhum
 Eject card = Ejetar cartão
 Detect card = Detectar cartão
+
+# System Settings in the launcher: hints, row names, Shortcuts and Resize Home
+Section = Seção
+Open = Abrir
+Change = Mudar
+Scroll = Rolar
+Shortcuts = Atalhos
+Launcher view = Exibição do launcher
+Language = Idioma
+Font = Fonte
+Content = Conteúdo
+Style = Estilo
+Position = Posição
+Now = Agora
+Date format = Formato da data
+Time zone = Fuso horário
+Second card = Segundo cartão
+Empty trash = Esvaziar lixeira
+Power mode = Modo de energia
+microSD card = Cartão microSD
+HOME partition = Partição HOME
+HOME filesystem = Sistema de arquivos da HOME
+HOME used = HOME usada
+HOME free = HOME livre
+Unused space on card = Espaço sem uso no cartão
+Last resize attempt = Última tentativa
+Tabs switched off are hidden; their games still show in All Games and My List. = Abas desligadas ficam ocultas; os jogos delas continuam em Todos os Jogos e Minha Lista.
