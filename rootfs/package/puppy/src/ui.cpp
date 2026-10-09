@@ -442,6 +442,7 @@ int Ui::pillWidth(const std::string& text) {
 }
 
 int Ui::marqueeOffset(const std::string& key, int overflow) {
+    if (!marqueeOn) return 0;
     const Uint32 now = SDL_GetTicks();
     if (key != marqueeKey) { marqueeKey = key; marqueeStart = now; }
     const Uint32 scrollMs = (Uint32)overflow * 1000 / kMarqueeSpeed;

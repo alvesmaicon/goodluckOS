@@ -111,6 +111,7 @@ public:
     int drawWrappedClipped(TTF_Font* font, const std::string& text, int x, int y, SDL_Color color, int width, int maxH,
                            int scrollLines = 0);
     int marqueeOffset(const std::string& key, int overflow);
+    void setMarquee(bool on) { marqueeOn = on; }   // off: marqueeOffset() is 0 (a screen under another)
     void speakerIcon(int x, int y, SDL_Color c, bool muted);
     void batteryIcon(int x, int y, int percent, bool charging, bool full);
     void headphonesIcon(int x, int y, SDL_Color c);
@@ -133,4 +134,5 @@ private:
     static constexpr Uint32 kMarqueeFrameMs = 33;
     std::string marqueeKey;
     Uint32 marqueeStart = 0, marqueeNext = 0;
+    bool marqueeOn = true;
 };

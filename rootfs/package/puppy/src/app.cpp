@@ -49,11 +49,16 @@ void App::render() {
     while (base > 0 && stack[base]->overlay()) --base;
 
     ui.begin();
+    // only the screen on top scrolls its selected text
+    ui.setMarquee(base == stack.size() - 1);
     stack[base]->render(ui);
     // Bars are drawn last so long descriptions or scrolled tiles never spill over them
     ui.header(stack[base]->header(), battery, audio, clock);
     ui.footer(stack.back()->hints());
-    for (size_t i = base + 1; i < stack.size(); ++i) stack[i]->render(ui);
+    for (size_t i = base + 1; i < stack.size(); ++i) {
+        ui.setMarquee(i == stack.size() - 1);
+        stack[i]->render(ui);
+    }
     if (!noticeText.empty()) ui.notice(noticeText);
     ui.end();
 }

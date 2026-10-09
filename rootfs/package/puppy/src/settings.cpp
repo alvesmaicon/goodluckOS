@@ -468,6 +468,7 @@ void SettingsScreen::renderPage(Ui& ui) {
         const int mid = r.y + r.h / 2;
         const int fontH = TTF_FontHeight(fonts.desc);
         int valueW = 0;
+        std::string choice;     // a Choice or Number value: drawn below, scrolling with the label
         switch (row.kind) {
             case Row::Kind::Toggle: {
                 valueW = 40;
@@ -479,12 +480,10 @@ void SettingsScreen::renderPage(Ui& ui) {
             case Row::Kind::Choice:
             case Row::Kind::Number: {
                 valueW = kValueW;
-                const std::string v = row.kind == Row::Kind::Number ? row.value
-                                    : row.choices.empty() ? std::string()
-                                    : row.rawChoices ? row.choices[row.index] : tr(row.choices[row.index]);
+                choice = row.kind == Row::Kind::Number ? row.value
+                       : row.choices.empty() ? std::string()
+                       : row.rawChoices ? row.choices[row.index] : tr(row.choices[row.index]);
                 const int left = right - kValueW;
-                const int vw = std::min(textWidth(fonts.desc, v), kValueW - 28);
-                drawText(renderer, fonts.desc, v, left + (kValueW - vw) / 2, mid - fontH / 2, text, kValueW - 28);
                 if (sel && row.enabled) {
                     ui.sideTriangle(left + 6, mid, 5, true, kYellow);
                     ui.sideTriangle(right - 6, mid, 5, false, kYellow);
@@ -517,15 +516,21 @@ void SettingsScreen::renderPage(Ui& ui) {
             }
             default: break;
         }
-        // a selected label that doesn't fit scrolls, like the launcher's list
+        // a selected label or value that doesn't fit scrolls, like the launcher's list, both on one clock
         const int labelX = r.x + 16;
         const int labelMax = right - (valueW ? valueW + 12 : 0) - labelX;
+        const int choiceMax = kValueW - 36;     // clear of the arrows
+        const int labelOver = std::max(0, textWidth(fonts.desc, label) - labelMax);
+        const int choiceOver = std::max(0, textWidth(fonts.desc, choice) - choiceMax);
         int scrollX = 0;
-        if (sel) {
-            const int overflow = textWidth(fonts.desc, label) - labelMax;
-            if (overflow > 0) scrollX = ui.marqueeOffset("settings\x1f" + label, overflow);
+        if (sel && std::max(labelOver, choiceOver) > 0)
+            scrollX = ui.marqueeOffset("settings\x1f" + label + "\x1f" + choice, std::max(labelOver, choiceOver));
+        drawText(renderer, fonts.desc, label, labelX, mid - fontH / 2, text, labelMax, std::min(scrollX, labelOver));
+        if (!choice.empty()) {
+            const int vw = std::min(textWidth(fonts.desc, choice), choiceMax);
+            drawText(renderer, fonts.desc, choice, right - kValueW + (kValueW - vw) / 2, mid - fontH / 2, text, choiceMax,
+                     std::min(scrollX, choiceOver));
         }
-        drawText(renderer, fonts.desc, label, labelX, mid - fontH / 2, text, labelMax, scrollX);
         y += h;
     }
     SDL_RenderSetClipRect(renderer, nullptr);

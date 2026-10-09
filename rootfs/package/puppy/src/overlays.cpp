@@ -195,7 +195,10 @@ void DialogScreen::render(Ui& ui) {
             ui.fill(kYellow, {r.x, r.y, 4, r.h});
         }
         const std::string label = d.raw ? d.choices[k] : tr(d.choices[k]);
-        drawText(renderer, fonts.desc, label, r.x + 16, r.y + (r.h - fontH) / 2, selected ? kWhite : kGrey, r.w - 24);
+        const int overflow = textWidth(fonts.desc, label) - (r.w - 24);
+        const int scrollX = selected && overflow > 0 ? ui.marqueeOffset("dialog\x1f" + label, overflow) : 0;
+        drawText(renderer, fonts.desc, label, r.x + 16, r.y + (r.h - fontH) / 2, selected ? kWhite : kGrey, r.w - 24,
+                 scrollX);
     }
     // more choices above / below
     if (scroll > 0) ui.triangle(panel.x + panelW - pad - 10, top + 8, 5, true, kYellow);
