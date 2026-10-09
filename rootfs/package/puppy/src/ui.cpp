@@ -40,6 +40,18 @@ int textWidth(TTF_Font* font, const std::string& text) {
     return w;
 }
 
+std::string elided(TTF_Font* font, const std::string& text, int maxW) {
+    if (textWidth(font, text) <= maxW) return text;
+    std::string s = text;
+    while (!s.empty()) {
+        while (!s.empty() && ((unsigned char)s.back() & 0xC0) == 0x80) s.pop_back();   // a whole UTF-8 character
+        if (!s.empty()) s.pop_back();
+        while (!s.empty() && s.back() == ' ') s.pop_back();
+        if (textWidth(font, s + "...") <= maxW) return s + "...";
+    }
+    return "";
+}
+
 IconCache::IconCache(SDL_Renderer* r, const std::string& fallbackPath, int boxW, int boxH, bool fit)
     : renderer(r), boxW(boxW), boxH(boxH), fit(fit) {
     fallback = load(fallbackPath);
@@ -233,8 +245,9 @@ void Ui::header(const Header& h, const Battery& battery, const Audio& audio, con
 
     int countW = textWidth(fonts.small, h.count);
     int maxNameW = statusX - 24 - countW - 10 - kMargin;
-    int nameW = std::min(textWidth(fonts.ui, h.title), maxNameW);
-    drawText(renderer, fonts.ui, h.title, kMargin, nameY, kWhite, maxNameW);
+    const std::string title = elided(fonts.ui, h.title, maxNameW);
+    int nameW = textWidth(fonts.ui, title);
+    drawText(renderer, fonts.ui, title, kMargin, nameY, kWhite);
     drawText(renderer, fonts.small, h.count, kMargin + nameW + 10,
              nameY + TTF_FontAscent(fonts.ui) - TTF_FontAscent(fonts.small), h.highlight ? kYellow : kGrey);
 }

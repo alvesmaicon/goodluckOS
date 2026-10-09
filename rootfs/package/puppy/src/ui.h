@@ -17,6 +17,7 @@
 void drawText(SDL_Renderer* r, TTF_Font* font, const std::string& text, int x, int y, SDL_Color color, int maxW = 0,
               int scrollX = 0);
 int textWidth(TTF_Font* font, const std::string& text);
+std::string elided(TTF_Font* font, const std::string& text, int maxW);   // cut with "..." to fit maxW
 
 class IconCache {
 public:
