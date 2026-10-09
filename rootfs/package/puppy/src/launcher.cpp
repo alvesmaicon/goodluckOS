@@ -395,54 +395,31 @@ void LauncherScreen::renderTabs(Ui& ui) {
     for (int i = 0; i < n; ++i)
         if (order[i] == model.tab) pos = i;
     auto at = [&](int i) { return order[((pos + i) % n + n) % n]; };   // i tabs right of the current one
-    const int gap = 18, pad = 8;
-    auto width = [&](int t) { return textWidth(fonts.small, tr(model.categories[t].label)) + 2 * pad; };
 
-    // Slide: start the new tab where it was drawn before the switch and ease it to the centre
+    // Slots of the same width: the current tab in the middle one, under a fixed highlight
+    const int slots = 5, slotW = (right - left) / slots, pad = 8;
+    const int cx = (left + right) / 2;
+    ui.fill(kRowSel, {cx - slotW / 2, pillY - 2, slotW, pillH + 4});
+    ui.fill(accent(), {cx - slotW / 2, pillY + pillH + 1, slotW, 2});
+
+    // Slide: the strip moves one slot and eases back, so the new tab glides into the highlight
     if (lastTab >= 0 && lastTab != model.tab && lastTab < (int)model.categories.size()) {
         int dir = at(-1) == lastTab ? 1 : (at(1) == lastTab ? -1 : 0);
-        tabOffset += dir * (width(lastTab) / 2.0f + gap + width(model.tab) / 2.0f);
+        tabOffset += dir * slotW;
     }
     lastTab = model.tab;
 
-    auto drawTab = [&](int t, int x) {
-        int w = width(t);
-        if (t == model.tab) {
-            ui.fill(kRowSel, {x, pillY - 2, w, pillH + 4});
-            ui.fill(accent(), {x, pillY + pillH + 1, w, 2});
-            drawText(renderer, fonts.small, tr(model.categories[t].label), x + pad, pillY + 2, kWhite);
-        } else {
-            drawText(renderer, fonts.small, tr(model.categories[t].label), x + pad, pillY + 2, kGrey);
-        }
-    };
-
-    // A ring: the current tab in the middle, neighbours on both sides wrapping around, each tab
-    // drawn once. Tabs cut by the edges are clipped.
+    // A ring: neighbours wrap around, so while sliding a tab can leave on one side and come back on
+    // the other. With fewer tabs than slots each one is drawn once.
     SDL_Rect clip{left, top, right - left, kTabsH};
     SDL_RenderSetClipRect(renderer, &clip);
-    const int cx = (left + right) / 2 + (int)std::lround(tabOffset);
-    drawTab(model.tab, cx - width(model.tab) / 2);
-    int xr = cx + (width(model.tab) + 1) / 2 + gap;
-    int xl = cx - width(model.tab) / 2 - gap;
-    int used = 1;
-    for (int i = 1; used < n; ++i) {
-        bool placed = false;
-        if (xr < right && used < n) {
-            int t = at(i);
-            drawTab(t, xr);
-            xr += width(t) + gap;
-            ++used;
-            placed = true;
-        }
-        if (xl > left && used < n) {
-            int t = at(-i);
-            xl -= width(t);
-            drawTab(t, xl);
-            xl -= gap;
-            ++used;
-            placed = true;
-        }
-        if (!placed) break;
+    const int reach = slots / 2 + 1 + (int)std::ceil(std::fabs(tabOffset) / slotW);
+    for (int k = -reach; k <= reach; ++k) {
+        if (n < slots && (k < -(n - 1) / 2 || k > n / 2)) continue;
+        const int t = at(k);
+        const std::string label = elided(fonts.small, tr(model.categories[t].label), slotW - 2 * pad);
+        const int x = cx + k * slotW + (int)std::lround(tabOffset) - textWidth(fonts.small, label) / 2;
+        drawText(renderer, fonts.small, label, x, pillY + 2, k == 0 ? kWhite : kGrey);
     }
     SDL_RenderSetClipRect(renderer, nullptr);
 
