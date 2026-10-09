@@ -61,6 +61,7 @@ static const char* const kShortcuts[][2] = {
     {"FN + LEFT / RIGHT", "State slot"},
     {"FN + Y", "Pause"},
     {"FN + R2", "Fast forward"},
+    {"FN + L2", "Screenshot"},
     {"FN + START", "Quit the game"},
 };
 

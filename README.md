@@ -144,6 +144,7 @@ FN is the hotkey:
 | FN + LEFT / RIGHT | Previous / next state slot |
 | FN + Y | Pause |
 | FN + R2 | Fast forward |
+| FN + L2 | Screenshot, saved in `HOME/.config/retroarch/screenshots` |
 | FN + START | Quit the game |
 
 The same list is in System Settings -> Input Settings, next to a button tester.
