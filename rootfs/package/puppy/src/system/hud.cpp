@@ -30,6 +30,7 @@ static void readHudFile(const char* path, HudSettings& h) {
         else if (key == "HUD_POSITION" && !value.empty()) h.position = value;
         else if (key == "HUD_24H") h.h24 = value == "true";
         else if (key == "HUD_DATE_FORMAT" && !value.empty()) h.dateFormat = value;
+        else if (key == "HUD_ACCENT" && value.size() == 6) h.accent = value;
     }
 }
 
@@ -60,7 +61,8 @@ void HudSettings::save() const {
             << "HUD_STYLE=" << (text ? "text" : "graph") << "\n"
             << "HUD_POSITION=" << position << "\n"
             << "HUD_24H=" << flag(h24) << "\n"
-            << "HUD_DATE_FORMAT=" << dateFormat << "\n";
+            << "HUD_DATE_FORMAT=" << dateFormat << "\n"
+            << "HUD_ACCENT=" << accent << "\n";
     }
     rename(tmp.c_str(), kHudConfig);
 }

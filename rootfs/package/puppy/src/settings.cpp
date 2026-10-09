@@ -21,6 +21,7 @@ constexpr int kRowH       = 32;
 constexpr int kInfoRowH   = 26;
 constexpr int kSectionRowH = 30;
 constexpr int kValueW     = 168;                    // the value at the right of a row
+constexpr int kSwatchW    = 64;                     // a colour choice's block
 constexpr int kHintLines  = 2;
 constexpr Uint32 kSaveDelayMs = 800;                // holding the d-pad on a level saves once, after it
 constexpr SDL_Color kDim  {100, 100, 104, 255};     // a row that can't be used now
@@ -238,6 +239,7 @@ void SettingsScreen::choose(const Row& row) {
     Dialog d;
     d.title = row.label;
     d.choices = row.choices;
+    d.swatches = row.swatches;
     d.raw = row.rawChoices;
     d.selected = row.index;
     const auto set = row.set;
@@ -382,7 +384,7 @@ void SettingsScreen::renderSections(Ui& ui) {
         const bool sel = i == section;
         if (sel) {
             ui.fill(kRowSel, r);
-            if (!inPage) ui.fill(kYellow, {r.x, r.y, 4, r.h});
+            if (!inPage) ui.fill(accent(), {r.x, r.y, 4, r.h});
         }
         drawText(renderer, fonts.desc, tr(sections()[i].second), r.x + 14, r.y + (r.h - fontH) / 2,
                  sel ? kWhite : kGrey, r.w - 18);
@@ -461,7 +463,7 @@ void SettingsScreen::renderPage(Ui& ui) {
         SDL_Rect r{kPageX, y, width, h - 2};
         if (sel) {
             ui.fill(kRowSel, r);
-            ui.fill(kYellow, {r.x, r.y, 4, r.h});
+            ui.fill(accent(), {r.x, r.y, 4, r.h});
         }
         const SDL_Color text = !row.enabled ? kDim : sel ? kWhite : kGrey;
         const int right = r.x + r.w - 8;
@@ -473,20 +475,23 @@ void SettingsScreen::renderPage(Ui& ui) {
             case Row::Kind::Toggle: {
                 valueW = 40;
                 SDL_Rect track{right - 40, mid - 10, 40, 20};
-                ui.fill(row.on ? (row.enabled ? kYellow : kDim) : kTile, track);
+                ui.fill(row.on ? (row.enabled ? accent() : kDim) : kTile, track);
                 ui.fill(row.on ? kBar : kGrey, {row.on ? track.x + track.w - 18 : track.x + 2, track.y + 2, 16, 16});
                 break;
             }
             case Row::Kind::Choice:
             case Row::Kind::Number: {
                 valueW = kValueW;
-                choice = row.kind == Row::Kind::Number ? row.value
-                       : row.choices.empty() ? std::string()
-                       : row.rawChoices ? row.choices[row.index] : tr(row.choices[row.index]);
                 const int left = right - kValueW;
+                if (row.index < (int)row.swatches.size())
+                    ui.fill(row.swatches[row.index], {left + (kValueW - kSwatchW) / 2, mid - 9, kSwatchW, 18});
+                else
+                    choice = row.kind == Row::Kind::Number ? row.value
+                           : row.choices.empty() ? std::string()
+                           : row.rawChoices ? row.choices[row.index] : tr(row.choices[row.index]);
                 if (sel && row.enabled) {
-                    ui.sideTriangle(left + 6, mid, 5, true, kYellow);
-                    ui.sideTriangle(right - 6, mid, 5, false, kYellow);
+                    ui.sideTriangle(left + 6, mid, 5, true, accent());
+                    ui.sideTriangle(right - 6, mid, 5, false, accent());
                 }
                 break;
             }
@@ -497,12 +502,12 @@ void SettingsScreen::renderPage(Ui& ui) {
                 SDL_Rect bar{right - kValueW, mid - 6, kValueW - pctW - 10, 12};
                 ui.fill(kTile, bar);
                 const int filled = row.max > 0 ? bar.w * std::clamp(row.current, 0, row.max) / row.max : 0;
-                if (filled > 0) ui.fill(sel ? kYellow : kGrey, {bar.x, bar.y, filled, bar.h});
+                if (filled > 0) ui.fill(sel ? accent() : kGrey, {bar.x, bar.y, filled, bar.h});
                 drawText(renderer, fonts.small, pct, right - textWidth(fonts.small, pct), mid - TTF_FontHeight(fonts.small) / 2, text);
                 break;
             }
             case Row::Kind::Link: {
-                ui.sideTriangle(right - 4, mid, 5, false, row.enabled ? (sel ? kYellow : kGrey) : kDim);
+                ui.sideTriangle(right - 4, mid, 5, false, row.enabled ? (sel ? accent() : kGrey) : kDim);
                 const int vw = textWidth(fonts.small, row.value);
                 valueW = 16 + (vw ? vw + 8 : 0);
                 drawText(renderer, fonts.small, row.value, right - valueW + 4, mid - TTF_FontHeight(fonts.small) / 2, kGrey);

@@ -60,3 +60,4 @@ constexpr SDL_Color kTile   {40, 40, 44, 255};
 constexpr SDL_Color kRowSel {56, 56, 64, 255};
 constexpr SDL_Color kBar    {12, 12, 14, 255};
 constexpr SDL_Color kClear  {24, 24, 28, 255};
+SDL_Color accent();         // the highlight colour chosen in System Settings (accents.h); kYellow by default

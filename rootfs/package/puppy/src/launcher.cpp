@@ -265,12 +265,12 @@ void LauncherScreen::renderGrid(Ui& ui) {
         int col = k % kGridCols;
         SDL_Rect cell{x0 + col * (kCellWidth + kGridGap), gridTop(model.showTabs) + row * kGridPitchY, kCellWidth, kCellHeight};
         ui.drawIcon(ui.gridIcons(), c.entries[c.visible[k]].iconPath, cell);
-        if (k == c.sel) ui.frame(kYellow, cell, kBorder);
+        if (k == c.sel) ui.frame(accent(), cell, kBorder);
         const Entry& entry = c.entries[c.visible[k]];
-        if (model.isAutoStart(entry)) ui.pill(tr("autolaunch"), cell.x, cell.y, kYellow, kBlack);
+        if (model.isAutoStart(entry)) ui.pill(tr("autolaunch"), cell.x, cell.y, accent(), kBlack);
         if (model.isFavorite(entry)) {
             ui.fill(kBar, {cell.x + cell.w - 26, cell.y + 2, 24, 24});
-            ui.star(cell.x + cell.w - 14, cell.y + 14, 9, kYellow);
+            ui.star(cell.x + cell.w - 14, cell.y + 14, 9, accent());
         }
         if (c.mixed) {
             int w = textWidth(fonts.small, entry.tag) + 12;
@@ -316,7 +316,7 @@ void LauncherScreen::renderList(Ui& ui) {
         SDL_Rect r{kMargin, top + row * kListRowH, kListWidth, kListRowH - 2};
         if (k == c.sel) {
             ui.fill(kRowSel, r);
-            ui.fill(kYellow, {r.x, r.y, 4, r.h});
+            ui.fill(accent(), {r.x, r.y, 4, r.h});
         }
         const int tagY = r.y + (r.h - TTF_FontHeight(fonts.small) - 4) / 2;
         const int nameX = r.x + 12 + starW;
@@ -328,10 +328,10 @@ void LauncherScreen::renderList(Ui& ui) {
         }
         if (model.isAutoStart(e)) {
             right -= ui.pillWidth(tr("auto"));
-            ui.pill(tr("auto"), right, tagY, kYellow, kBlack);
+            ui.pill(tr("auto"), right, tagY, accent(), kBlack);
             right -= 8;
         }
-        if (model.isFavorite(e)) ui.star(r.x + 12 + starW / 2, r.y + r.h / 2, 7, kYellow);
+        if (model.isFavorite(e)) ui.star(r.x + 12 + starW / 2, r.y + r.h / 2, 7, accent());
         int scrollX = 0;
         if (k == c.sel) {
             const int overflow = textWidth(fonts.desc, e.name) - (right - nameX);
@@ -358,7 +358,7 @@ void LauncherScreen::renderList(Ui& ui) {
     int y = box.y + box.h + 10;
     y += ui.drawWrapped(fonts.ui, e->name, kPreviewX, y, kWhite, kPreviewW) + 4;
     if (!e->meta.empty()) {
-        drawText(renderer, fonts.small, e->meta, kPreviewX, y, kYellow, kPreviewW);
+        drawText(renderer, fonts.small, e->meta, kPreviewX, y, accent(), kPreviewW);
         y += TTF_FontLineSkip(fonts.small) + 4;
     }
     const int textBottom = kScreenH - kFooterH - TTF_FontHeight(fonts.small) - 10;   // above the "n / total"
@@ -409,7 +409,7 @@ void LauncherScreen::renderTabs(Ui& ui) {
         int w = width(t);
         if (t == model.tab) {
             ui.fill(kRowSel, {x, pillY - 2, w, pillH + 4});
-            ui.fill(kYellow, {x, pillY + pillH + 1, w, 2});
+            ui.fill(accent(), {x, pillY + pillH + 1, w, 2});
             drawText(renderer, fonts.small, tr(model.categories[t].label), x + pad, pillY + 2, kWhite);
         } else {
             drawText(renderer, fonts.small, tr(model.categories[t].label), x + pad, pillY + 2, kGrey);

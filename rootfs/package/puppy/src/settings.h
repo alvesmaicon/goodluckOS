@@ -26,6 +26,7 @@ struct Row {
     bool on = false;                            // Toggle
     std::vector<std::string> choices;           // Choice: English, or shown as they are with rawChoices
     bool rawChoices = false;
+    std::vector<SDL_Color> swatches;            // Choice: a colour block for each, shown instead of its text
     int index = 0;                              // Choice: the current one
     int current = 0, min = 0, max = 0, step = 1;    // Level (shown as a percentage of max), Number (wraps around)
     std::function<void(int)> set;               // Toggle (0 or 1), Choice (index), Level and Number (value)

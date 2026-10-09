@@ -25,6 +25,7 @@ Prefs Prefs::load() {
         else if (startsWith(line, "hidden_tab=")) p.hiddenTabs.push_back(line.substr(11));
         else if (startsWith(line, "language=") && line.size() > 9) p.language = line.substr(9);
         else if (startsWith(line, "font=") && line.size() > 5) p.font = line.substr(5);
+        else if (startsWith(line, "accent=") && line.size() > 7) p.accent = line.substr(7);
         else if (line == "loading=text") p.loadingText = true;
     }
     return p;
@@ -36,7 +37,8 @@ void Prefs::save() const {
         std::ifstream in(cfg.settingsFile());
         for (std::string line; std::getline(in, line);) {
             if (line.empty() || startsWith(line, "view=") || startsWith(line, "tabs=") || startsWith(line, "language=") ||
-                startsWith(line, "font=") || startsWith(line, "hidden_tab=") || startsWith(line, "loading=")) continue;
+                startsWith(line, "font=") || startsWith(line, "accent=") || startsWith(line, "hidden_tab=") ||
+                startsWith(line, "loading=")) continue;
             lines.push_back(line);
         }
     }
@@ -44,6 +46,7 @@ void Prefs::save() const {
     lines.push_back(std::string("tabs=") + (showTabs ? "on" : "off"));
     if (!language.empty()) lines.push_back("language=" + language);
     if (!font.empty()) lines.push_back("font=" + font);
+    if (!accent.empty()) lines.push_back("accent=" + accent);
     if (loadingText) lines.push_back("loading=text");
     for (const auto& t : hiddenTabs) lines.push_back("hidden_tab=" + t);
 
