@@ -46,6 +46,7 @@ struct Dialog {
     std::string subtitle;
     std::string message;                // wrapped under the title, e.g. what a confirmation does
     std::vector<std::string> choices;
+    std::vector<SDL_Color> swatches;    // a colour block before each choice
     bool raw = false;
     int selected = 0;
     int bodyY = kHeaderH;               // where the screen below starts (under its tab strip): the panel is centred there

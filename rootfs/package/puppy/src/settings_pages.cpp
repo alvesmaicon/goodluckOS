@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <memory>
 
+#include "accents.h"
 #include "config.h"
 #include "fonts.h"
 #include "overlays.h"
@@ -220,6 +221,20 @@ std::vector<Row> SettingsScreen::interfacePage() {
         }));
     }
 
+    std::vector<std::string> accentNames;
+    std::vector<SDL_Color> accentColors;
+    for (const accents::Accent& a : accents::all()) {
+        accentNames.push_back(a.name);
+        accentColors.push_back(a.color);
+    }
+    Row accentRow = Row::choice("Accent color", accentNames, accents::find(prefs.accent), [this](int i) {
+        prefs.accent = accents::all()[i].key;
+        prefs.save();
+        accents::choose(prefs.accent);
+    });
+    accentRow.swatches = accentColors;
+    rows.push_back(accentRow);
+
     rows.push_back(Row::toggle("Show Puppy on loading screens", !prefs.loadingText, [this](int on) {
         prefs.loadingText = !on;
         prefs.save();
@@ -419,7 +434,7 @@ std::vector<Row> SettingsScreen::systemPage() {
         resize = Resize::read();
         open(Page::Info);
     }));
-    // Overlay, Date & Time, the launcher's view, tabs and font, and the power mode; the language,
+    // Overlay, Date & Time, the launcher's view, tabs, font and accent, and the power mode; the language,
     // the time zone and the clock stay
     rows.push_back(Row::action("Restore default settings", [this] {
         Dialog d;
@@ -440,6 +455,7 @@ void SettingsScreen::restoreDefaults() {
     fresh.language = prefs.language;
     prefs = fresh;
     prefs.save();
+    accents::choose(prefs.accent);
     launcher.view = View::Grid;
     launcher.showTabs = true;
     for (Category& c : launcher.categories) c.hidden = false;

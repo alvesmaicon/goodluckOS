@@ -10,6 +10,7 @@ struct Prefs {
     std::vector<std::string> hiddenTabs;    // left out of the tab strip; their games stay in All Games
     std::string language;                   // a code of /usr/share/goodluck/lang ("" : not chosen)
     std::string font;                       // a fonts.h key ("": not chosen)
+    std::string accent;                     // an accents.h key ("": not chosen)
     bool loadingText = false;               // "Loading..." instead of the ASCII-art dog while an app starts
 
     static Prefs load();

@@ -97,7 +97,7 @@ void KeyboardScreen::render(Ui& ui) {
         const int caretX = textWidth(fonts.ui, text.substr(0, at));
         const int scroll = std::max(0, caretX + 4 - textMax);
         drawText(renderer, fonts.ui, text, textX, panel.y + pad, kWhite, textMax, scroll);
-        ui.fill(kYellow, {textX + caretX - scroll, panel.y + pad, 2, TTF_FontHeight(fonts.ui)});
+        ui.fill(accent(), {textX + caretX - scroll, panel.y + pad, 2, TTF_FontHeight(fonts.ui)});
     } else {
         const std::string shown = text + "_";
         drawText(renderer, fonts.ui, shown, textX, panel.y + pad, kWhite, textMax, std::max(0, textWidth(fonts.ui, shown) - textMax));
@@ -110,8 +110,8 @@ void KeyboardScreen::render(Ui& ui) {
             SDL_Rect k{panel.x + pad + (int)(key.x * unit), panel.y + pad + queryH + r * (keyH + gap),
                        (int)(key.w * unit) - gap, keyH};
             bool sel = r == kb.row && c == kb.col;
-            ui.fill(sel ? kYellow : kTile, k);
-            if (key.label == "shift" && kb.caps) ui.frame(sel ? kBlack : kYellow, k, 2);   // case switch on
+            ui.fill(sel ? accent() : kTile, k);
+            if (key.label == "shift" && kb.caps) ui.frame(sel ? kBlack : accent(), k, 2);   // case switch on
             std::string label = key.label == "shift" ? (kb.caps ? "aA" : "Aa")
                               : key.label.size() > 1 ? tr(key.label) : key.label;   // space / del / ok
             TTF_Font* f = key.label.size() > 1 ? fonts.small : fonts.ui;
@@ -192,17 +192,23 @@ void DialogScreen::render(Ui& ui) {
         bool selected = k == sel;
         if (selected) {
             ui.fill(kRowSel, r);
-            ui.fill(kYellow, {r.x, r.y, 4, r.h});
+            ui.fill(accent(), {r.x, r.y, 4, r.h});
         }
+        int labelX = r.x + 16;
+        if (k < (int)d.swatches.size()) {
+            ui.fill(d.swatches[k], {labelX, r.y + (r.h - 16) / 2, 28, 16});
+            labelX += 28 + 12;
+        }
+        const int labelW = r.x + r.w - 8 - labelX;
         const std::string label = d.raw ? d.choices[k] : tr(d.choices[k]);
-        const int overflow = textWidth(fonts.desc, label) - (r.w - 24);
+        const int overflow = textWidth(fonts.desc, label) - labelW;
         const int scrollX = selected && overflow > 0 ? ui.marqueeOffset("dialog\x1f" + label, overflow) : 0;
-        drawText(renderer, fonts.desc, label, r.x + 16, r.y + (r.h - fontH) / 2, selected ? kWhite : kGrey, r.w - 24,
+        drawText(renderer, fonts.desc, label, labelX, r.y + (r.h - fontH) / 2, selected ? kWhite : kGrey, labelW,
                  scrollX);
     }
     // more choices above / below
-    if (scroll > 0) ui.triangle(panel.x + panelW - pad - 10, top + 8, 5, true, kYellow);
-    if (scroll + shown < count) ui.triangle(panel.x + panelW - pad - 10, top + shown * rowH - 12, 5, false, kYellow);
+    if (scroll > 0) ui.triangle(panel.x + panelW - pad - 10, top + 8, 5, true, accent());
+    if (scroll + shown < count) ui.triangle(panel.x + panelW - pad - 10, top + shown * rowH - 12, 5, false, accent());
 }
 
 Hints DialogScreen::hints() const {

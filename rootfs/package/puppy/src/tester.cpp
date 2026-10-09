@@ -43,7 +43,7 @@ Header TesterScreen::header() const {
 // A button shape that lights up while it's pressed
 static void chip(Ui& ui, const char* label, bool on, const SDL_Rect& r) {
     const Fonts& fonts = ui.font();
-    ui.fill(on ? kYellow : kTile, r);
+    ui.fill(on ? accent() : kTile, r);
     drawText(ui.sdl(), fonts.small, label, r.x + (r.w - textWidth(fonts.small, label)) / 2,
              r.y + (r.h - TTF_FontHeight(fonts.small)) / 2, on ? kBlack : kWhite);
 }
@@ -99,7 +99,7 @@ void TesterScreen::render(Ui& ui) {
     drawText(renderer, fonts.small, label, labelX, labelY, kWhite);
     if (held) {     // black where the bar is full
         SDL_Rect full{bar.x, bar.y, (int)(bar.w * held / kExitHoldMs), bar.h};
-        ui.fill(kYellow, full);
+        ui.fill(accent(), full);
         SDL_RenderSetClipRect(renderer, &full);
         drawText(renderer, fonts.small, label, labelX, labelY, kBlack);
         SDL_RenderSetClipRect(renderer, nullptr);

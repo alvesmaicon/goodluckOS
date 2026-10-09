@@ -7,6 +7,7 @@
 
 #include <unistd.h>
 
+#include "accents.h"
 #include "app.h"
 #include "catalog.h"
 #include "config.h"
@@ -35,6 +36,7 @@ int main(int argc, char** argv) {
     std::string font;
     float fontScale;
     fonts::choose(prefs.font, font, fontScale);
+    accents::choose(prefs.accent);
     Ui ui(font, fontScale);
     if (!ui.ok()) return 1;
 

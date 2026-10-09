@@ -249,7 +249,7 @@ void Ui::header(const Header& h, const Battery& battery, const Audio& audio, con
     int nameW = textWidth(fonts.ui, title);
     drawText(renderer, fonts.ui, title, kMargin, nameY, kWhite);
     drawText(renderer, fonts.small, h.count, kMargin + nameW + 10,
-             nameY + TTF_FontAscent(fonts.ui) - TTF_FontAscent(fonts.small), h.highlight ? kYellow : kGrey);
+             nameY + TTF_FontAscent(fonts.ui) - TTF_FontAscent(fonts.small), h.highlight ? accent() : kGrey);
 }
 
 // Button in the highlight colour, followed by what it does. The gap between hints shrinks when they
@@ -270,7 +270,7 @@ void Ui::footer(const Hints& hints) {
         drawText(renderer, fonts.small, it->second, x, y, kGrey);
         int keyW = textWidth(fonts.small, it->first);
         x -= keyGap + keyW;
-        drawText(renderer, fonts.small, it->first, x, y, kYellow);
+        drawText(renderer, fonts.small, it->first, x, y, accent());
         x -= gap;
     }
 }
@@ -281,7 +281,7 @@ void Ui::notice(const std::string& text) {
     const int w = std::min(kScreenW - 2 * kMargin, textWidth(fonts.desc, text) + 2 * padX);
     SDL_Rect r{(kScreenW - w) / 2, kScreenH - kFooterH - h - 10, w, h};
     fill({12, 12, 14, 240}, r);
-    frame(kYellow, r, 2);
+    frame(accent(), r, 2);
     drawText(renderer, fonts.desc, text, r.x + padX, r.y + 7, kWhite, w - 2 * padX);
 }
 
@@ -399,8 +399,8 @@ int Ui::drawWrappedClipped(TTF_Font* font, const std::string& text, int x, int y
 
     // Arrows just right of the text when there's more above / below (callers leave room for them)
     const int ax = x + width + 8;
-    if (scroll > 0) triangle(ax, y + 5, 5, true, kYellow);
-    if (scroll < maxScroll) triangle(ax, y + h - 5, 5, false, kYellow);
+    if (scroll > 0) triangle(ax, y + 5, 5, true, accent());
+    if (scroll < maxScroll) triangle(ax, y + h - 5, 5, false, accent());
     return maxScroll;
 }
 
