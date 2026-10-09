@@ -289,7 +289,7 @@ Copy them into `HOME -> media -> music` and `HOME -> media -> videos`. The Music
 
 Controls: A or START pause, B quit, D-pad left/right seek 10 s, up/down 1 min, L1/R1 previous/next, X the playlist, Y repeat on/off, L2/R2 the audio/subtitle track.
 
-The A33 decodes video in software: up to 640x480 H.264 plays smoothly, 1080p and H.265 don't. Convert bigger videos on your PC first, e.g. `ffmpeg -i in.mp4 -vf scale=640:480:force_original_aspect_ratio=decrease:force_divisible_by=2 -c:v libx264 -tune fastdecode -crf 23 -c:a aac -ac 2 out.mkv`.
+The A33 decodes video in software: up to 640x480 H.264 plays smoothly, 1080p and H.265 don't. Convert bigger videos on your PC first, e.g. `ffmpeg -i in.mp4 -vf scale=640:480:force_original_aspect_ratio=decrease:force_divisible_by=2 -c:v libx264 -tune fastdecode -crf 23 -c:a aac -ac 2 out.mkv`. On Windows, [convert-videos](convert-videos/README.md) does this for a whole folder, turns portrait videos to fill the screen and saves a frame of each one as its art.
 
 ## Does goodluckOS come with any games?
 Only Doom, through Chocolate Doom.
