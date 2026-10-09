@@ -13,8 +13,6 @@ Please visit [The Firmware Builder](https://codezombie.github.io/goodluckOS/down
 
 Please Note: At the time of writing, Allwinner-A23 based GA36-MB devices (which seem to be what most people have) are _not_ supported.
 
-Not sure which chip your console has? See [Which chip does my console have?](#which-chip-does-my-console-have)
-
 ## Features
 - Mainline Linux 7.2
 - Everything compiled from scratch with the best optimization flags for the hardware
@@ -254,12 +252,7 @@ Stock firmware:
 - The MBR (at least on the GA36-MB) is broken by default. You can't add games unless you manually fix it with my [guide](https://gist.github.com/CodeZombie/83be58b000ee6a14c7b91a6027a8eedf)
 
 ## Which chip does my console have?
-GA36-MB consoles (sold as R36S) come with an Allwinner A23 or A33, and goodluckOS builds for one don't boot on the other. The stock menu reports a 64-bit CPU and 1 GB of RAM on both, and the marking on the chip can't be trusted either. The microSD card that came with the console can tell them apart, since its boot data is made for its chip. [chip-version](chip-version/README.md) reads it on a Windows PC:
-1. Take the stock microSD card out of the console (slot TF1-OS) and put it in a USB card reader.
-2. Download [chip-version.bat](https://github.com/alvesmaicon/goodluckOS/raw/develop/chip-version/chip-version.bat), double-click it and allow it to run as administrator. If Windows offers to format the card, click Cancel.
-3. A few seconds later it shows `CHIP A23` or `CHIP A33`, and the board name when it knows it.
-
-It only reads the card. [chip-version](chip-version/README.md) explains what it checks and how to do the same without Windows.
+GA36-MB consoles (sold as R36S) come with an Allwinner A23 or A33, and goodluckOS builds for one don't boot on the other. The stock menu reports a 64-bit CPU and 1 GB of RAM on both, and the marking on the chip can't be trusted either. On Windows, [chip-version](chip-version/README.md) reads the microSD card that came with the console and tells which chip it has.
 
 ## How Do I Install goodluckOS?
 1. Make an image of the microSD card that came with your device (at least its first 128mb), e.g. with Win32 Disk Imager or `dd if=/dev/sdx of=stock_sdcard.img bs=1M count=128`. It holds your board's boot data, which goodluckOS needs. Keep it: it's also your way back to the stock firmware.
