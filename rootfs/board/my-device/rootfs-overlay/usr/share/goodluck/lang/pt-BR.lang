@@ -29,8 +29,7 @@ player = jogador
 players = jogadores
 
 # --- Launcher: bottom bar hints
-Prev = Ant.
-Next = Próx.
+Tab = Aba
 Launch = Abrir
 Remove = Remover
 Search = Buscar

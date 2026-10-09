@@ -220,7 +220,7 @@ Header LauncherScreen::header() const {
 
 Hints LauncherScreen::hints() const {
     const Entry* sel = model.selected();
-    Hints hints = {{"L1", tr("Prev")}, {"R1", tr("Next")}, {"A", tr("Launch")},
+    Hints hints = {{"L1/R1", tr("Tab")}, {"A", tr("Launch")},
                    {"Y", tr(sel && model.isFavorite(*sel) ? "Remove" : "My List")}};
     // while searching, clearing the search is more useful than starting a new one
     if (model.query.empty()) hints.push_back({"X", tr("Search")});
