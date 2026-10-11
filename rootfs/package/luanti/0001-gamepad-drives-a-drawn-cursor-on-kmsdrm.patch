@@ -1,0 +1,411 @@
+Subject: [PATCH] SDL: on KMSDRM, the gamepad drives a drawn cursor in menus
+
+Under KMSDRM there is no window system, and on displays without a cursor
+plane (e.g. sun4i-drm on the Allwinner A33) SDL can't show a cursor at
+all. 5.17 plays well with a gamepad, but menus and the inventory still
+need a mouse.
+
+So when SDL's video driver is kmsdrm, while the cursor is visible (a
+menu or formspec is open):
+- either stick moves the cursor, the D-pad nudges it;
+- A is a left click, X a right click (take half a stack);
+- B, Y and START are Escape (close the menu, the inventory, the pause
+  menu);
+- L1/R1 are the mouse wheel.
+The GUI environment then draws an arrow at the cursor at the end of
+drawAll(). Buttons pressed as the mouse are released as the mouse too,
+so the game never sees half a press. In game (cursor hidden) nothing
+changes, and other video drivers are untouched.
+
+Upstream: not sent; luanti-org/luanti#17341 (WIP) moves the focus with
+the D-pad instead, with no answer for inventory lists yet.
+---
+diff -ruN a/irr/include/IGUIEnvironment.h b/irr/include/IGUIEnvironment.h
+--- a/irr/include/IGUIEnvironment.h	2026-10-11 01:28:36
++++ b/irr/include/IGUIEnvironment.h	2026-10-11 01:28:52
+@@ -42,6 +42,7 @@
+ class IGUITab;
+ class IGUIComboBox;
+ class IGUIButton;
++class ICursorControl;
+ 
+ //! GUI Environment. Used as factory and manager of all other GUI elements.
+ /** \par This element can create the following events of type EGUI_EVENT_TYPE (which are passed on to focused sub-elements):
+@@ -57,6 +58,9 @@
+ 	/** \param  When true ensure the GuiEnvironment (aka the RootGUIElement) has the same size as the current driver screensize.
+ 				Can be set to false to control that size yourself, p.E when not the full size should be used for UI. */
+ 	virtual void drawAll(bool useScreenSize = true) = 0;
++
++	//! drawAll() ends with an arrow at this cursor while it is visible (no system cursor, e.g. KMSDRM)
++	virtual void setSoftwareCursor(ICursorControl *cursor) {}
+ 
+ 	//! Sets the focus to an element.
+ 	/** Causes a EGET_ELEMENT_FOCUS_LOST event followed by a
+diff -ruN a/irr/src/CGUIEnvironment.cpp b/irr/src/CGUIEnvironment.cpp
+--- a/irr/src/CGUIEnvironment.cpp	2026-10-11 01:28:36
++++ b/irr/src/CGUIEnvironment.cpp	2026-10-11 01:29:53
+@@ -24,6 +24,7 @@
+ 
+ #include "IWriteFile.h"
+ #include "BuiltInFont.h"
++#include "ICursorControl.h"
+ #include "os.h"
+ 
+ namespace gui
+@@ -111,6 +112,11 @@
+ 		Operator = 0;
+ 	}
+ 
++	if (SoftwareCursor) {
++		SoftwareCursor->drop();
++		SoftwareCursor = nullptr;
++	}
++
+ 	if (FileSystem) {
+ 		FileSystem->drop();
+ 		FileSystem = 0;
+@@ -163,7 +169,71 @@
+ 	draw();
+ 	OnPostRender(os::Timer::getTime());
+ 
++	if (SoftwareCursor && SoftwareCursor->isVisible())
++		drawSoftwareCursor();
++
+ 	clearDeletionQueue();
++}
++
++void CGUIEnvironment::setSoftwareCursor(ICursorControl *cursor)
++{
++	if (cursor)
++		cursor->grab();
++	if (SoftwareCursor)
++		SoftwareCursor->drop();
++	SoftwareCursor = cursor;
++}
++
++//! a 12x19 arrow, tip at (0, 0): '#' outline, '.' fill
++void CGUIEnvironment::drawSoftwareCursor()
++{
++	static const char *const arrow[] = {
++		"#           ",
++		"##          ",
++		"#.#         ",
++		"#..#        ",
++		"#...#       ",
++		"#....#      ",
++		"#.....#     ",
++		"#......#    ",
++		"#.......#   ",
++		"#........#  ",
++		"#.........# ",
++		"#..........#",
++		"#......#####",
++		"#...#..#    ",
++		"#..# #..#   ",
++		"#.#  #..#   ",
++		"##    #..#  ",
++		"      #..#  ",
++		"       ##   ",
++	};
++	const s32 w = 12, h = 19;
++	if (!Driver)
++		return;
++	if (!SoftwareCursorTexture) {
++		video::IImage *img = Driver->createImage(video::ECF_A8R8G8B8, core::dimension2du(16, 32));
++		if (!img)
++			return;
++		img->fill(video::SColor(0, 0, 0, 0));
++		for (s32 y = 0; y < h; ++y)
++			for (s32 x = 0; x < w; ++x) {
++				if (arrow[y][x] == '#')
++					img->setPixel(x, y, video::SColor(255, 0, 0, 0));
++				else if (arrow[y][x] == '.')
++					img->setPixel(x, y, video::SColor(255, 255, 255, 255));
++			}
++		SoftwareCursorTexture = Driver->addTexture("<software cursor>", img);
++		img->drop();
++		if (!SoftwareCursorTexture)
++			return;
++	}
++	// twice as big from 960 pixels high, so it stays visible on bigger screens
++	const s32 scale = core::max_(1, (s32)Driver->getScreenSize().Height / 960 + 1);
++	const core::position2di pos = SoftwareCursor->getPosition();
++	Driver->draw2DImage(SoftwareCursorTexture,
++			core::recti(pos.X, pos.Y, pos.X + w * scale, pos.Y + h * scale),
++			core::recti(0, 0, w, h), nullptr, nullptr, true);
+ }
+ 
+ //! sets the focus to an element
+diff -ruN a/irr/src/CGUIEnvironment.h b/irr/src/CGUIEnvironment.h
+--- a/irr/src/CGUIEnvironment.h	2026-10-11 01:28:36
++++ b/irr/src/CGUIEnvironment.h	2026-10-11 01:29:04
+@@ -25,6 +25,8 @@
+ 	//! draws all gui elements
+ 	void drawAll(bool useScreenSize) override;
+ 
++	void setSoftwareCursor(ICursorControl *cursor) override;
++
+ 	//! returns the current video driver
+ 	video::IVideoDriver *getVideoDriver() const override;
+ 
+@@ -169,6 +171,8 @@
+ 
+ 	void loadBuiltInFont();
+ 
++	void drawSoftwareCursor();
++
+ 	struct SFont
+ 	{
+ 		io::SNamedPath NamedPath;
+@@ -213,6 +217,8 @@
+ 	io::IFileSystem *FileSystem;
+ 	IEventReceiver *UserReceiver;
+ 	IOSOperator *Operator;
++	ICursorControl *SoftwareCursor = nullptr;
++	video::ITexture *SoftwareCursorTexture = nullptr;
+ 	u32 FocusFlags;
+ 	core::array<IGUIElement *> DeletionQueue;
+ 
+diff -ruN a/irr/src/CIrrDeviceSDL.cpp b/irr/src/CIrrDeviceSDL.cpp
+--- a/irr/src/CIrrDeviceSDL.cpp	2026-10-11 01:28:36
++++ b/irr/src/CIrrDeviceSDL.cpp	2026-10-11 01:32:08
+@@ -508,6 +508,15 @@
+ 		createGUIAndScene();
+ 		VideoDriver->OnResize(core::dimension2d<u32>(Width, Height));
+ 	}
++
++#if defined(_IRR_COMPILE_WITH_JOYSTICK_EVENTS_)
++	const char *video_driver = SDL_GetCurrentVideoDriver();
++	GamepadMouse = video_driver && SDL_strcmp(video_driver, "kmsdrm") == 0;
++	if (GamepadMouse && GUIEnvironment) {
++		os::Printer::log("No system cursor (KMSDRM): the gamepad drives a drawn one in menus", ELL_INFORMATION);
++		GUIEnvironment->setSoftwareCursor(CursorControl);
++	}
++#endif
+ }
+ 
+ //! destructor
+@@ -1191,6 +1200,9 @@
+ 			irrevent.GamepadButtonEvent.ID = id;
+ 			irrevent.GamepadButtonEvent.PressedDown = (SDL_event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN);
+ 			recentGamepadID = id;
++			if (GamepadMouse && gamepadButtonAsMouse(irrevent.GamepadButtonEvent.Button,
++					irrevent.GamepadButtonEvent.PressedDown))
++				break;
+ 			postEventFromUser(irrevent);
+ 			break;
+ 		}
+@@ -1208,6 +1220,8 @@
+ #endif
+ 			irrevent.GamepadAxisEvent.ID = id;
+ 			recentGamepadID = id;
++			if (irrevent.GamepadAxisEvent.Axis < GamepadAxis::COUNT)
++				GamepadAxes[static_cast<int>(irrevent.GamepadAxisEvent.Axis)] = irrevent.GamepadAxisEvent.Value;
+ 			postEventFromUser(irrevent);
+ 			break;
+ 		}
+@@ -1219,8 +1233,180 @@
+ 		resetReceiveTextInputEvents();
+ 	} // end while
+ 
++#if defined(_IRR_COMPILE_WITH_JOYSTICK_EVENTS_)
++	if (GamepadMouse && !Close)
++		moveCursorWithGamepad();
++#endif
++
+ 	return !Close;
+ }
++
++#if defined(_IRR_COMPILE_WITH_JOYSTICK_EVENTS_)
++//! A, X, B/Y/START, L1/R1 and the D-pad act as the mouse while the cursor is visible
++bool CIrrDeviceSDL::gamepadButtonAsMouse(GamepadButton button, bool down)
++{
++	switch (button) {
++	case GamepadButton::SOUTH:
++	case GamepadButton::WEST:
++	case GamepadButton::EAST:
++	case GamepadButton::NORTH:
++	case GamepadButton::START:
++	case GamepadButton::LEFT_SHOULDER:
++	case GamepadButton::RIGHT_SHOULDER:
++	case GamepadButton::DPAD_UP:
++	case GamepadButton::DPAD_DOWN:
++	case GamepadButton::DPAD_LEFT:
++	case GamepadButton::DPAD_RIGHT:
++		break;
++	default:
++		return false;
++	}
++
++	const u32 bit = 1u << static_cast<u32>(button);
++	if (down) {
++		if (!CursorControl->isVisible())
++			return false;
++		GamepadMouseButtons |= bit;
++	} else {
++		if (!(GamepadMouseButtons & bit))
++			return false;
++		GamepadMouseButtons &= ~bit;
++	}
++
++	switch (button) {
++	case GamepadButton::SOUTH:
++		postGamepadClick(SDL_BUTTON_LEFT, down);
++		break;
++	case GamepadButton::WEST:
++		postGamepadClick(SDL_BUTTON_RIGHT, down);
++		break;
++	case GamepadButton::EAST:
++	case GamepadButton::NORTH:
++	case GamepadButton::START:
++		postGamepadEscape(down);
++		break;
++	case GamepadButton::LEFT_SHOULDER:
++	case GamepadButton::RIGHT_SHOULDER:
++		if (down)
++			postGamepadMouse(EMIE_MOUSE_WHEEL, button == GamepadButton::LEFT_SHOULDER ? 1.0f : -1.0f);
++		break;
++	default: // D-pad: moveCursorWithGamepad() reads it from GamepadMouseButtons
++		break;
++	}
++	return true;
++}
++
++//! Either stick moves the cursor (slowly near the center, a screen height per second at full tilt);
++//! the D-pad nudges it
++void CIrrDeviceSDL::moveCursorWithGamepad()
++{
++	const u32 now = os::Timer::getRealTime();
++	const f32 dt = core::clamp((now - GamepadCursorTime) / 1000.0f, 0.0f, 0.1f);
++	GamepadCursorTime = now;
++
++	if (!CursorControl->isVisible()) {
++		GamepadCursorShown = false;
++		return;
++	}
++	if (!GamepadCursorShown) {
++		// a menu just opened: start in the middle
++		GamepadCursorShown = true;
++		MouseX = Width / 2;
++		MouseY = Height / 2;
++		GamepadCursorX = MouseX;
++		GamepadCursorY = MouseY;
++		postGamepadMouse(EMIE_MOUSE_MOVED);
++		return;
++	}
++
++	f32 vx = 0.0f, vy = 0.0f;
++	for (int axis : {static_cast<int>(GamepadAxis::LEFTX), static_cast<int>(GamepadAxis::RIGHTX)}) {
++		const f32 x = GamepadAxes[axis] / 32767.0f, y = GamepadAxes[axis + 1] / 32767.0f;
++		const f32 len = core::squareroot(x * x + y * y);
++		if (len < 0.25f)
++			continue;
++		f32 speed = core::min_((len - 0.25f) / 0.75f, 1.0f);
++		speed *= speed;
++		vx += x / len * speed;
++		vy += y / len * speed;
++	}
++	const auto held = [this](GamepadButton b) {
++		return static_cast<f32>((GamepadMouseButtons >> static_cast<u32>(b)) & 1);
++	};
++	vx += 0.15f * (held(GamepadButton::DPAD_RIGHT) - held(GamepadButton::DPAD_LEFT));
++	vy += 0.15f * (held(GamepadButton::DPAD_DOWN) - held(GamepadButton::DPAD_UP));
++	if (vx == 0.0f && vy == 0.0f)
++		return;
++
++	// a real mouse may have moved it meanwhile
++	if (static_cast<s32>(GamepadCursorX) != MouseX || static_cast<s32>(GamepadCursorY) != MouseY) {
++		GamepadCursorX = MouseX;
++		GamepadCursorY = MouseY;
++	}
++	const f32 step = Height * dt;
++	GamepadCursorX = core::clamp(GamepadCursorX + vx * step, 0.0f, Width - 1.0f);
++	GamepadCursorY = core::clamp(GamepadCursorY + vy * step, 0.0f, Height - 1.0f);
++	const s32 x = static_cast<s32>(GamepadCursorX), y = static_cast<s32>(GamepadCursorY);
++	if (x == MouseX && y == MouseY)
++		return;
++	MouseX = x;
++	MouseY = y;
++	postGamepadMouse(EMIE_MOUSE_MOVED);
++}
++
++//! A click at the cursor, as SDL_EVENT_MOUSE_BUTTON_DOWN/UP would post it
++void CIrrDeviceSDL::postGamepadClick(u32 button, bool down)
++{
++	if (down)
++		MouseButtonStates |= SDL_BUTTON_MASK(button);
++	else
++		MouseButtonStates &= ~SDL_BUTTON_MASK(button);
++
++	SEvent irrevent{};
++	irrevent.EventType = EET_MOUSE_INPUT_EVENT;
++	if (button == SDL_BUTTON_LEFT)
++		irrevent.MouseInput.Event = down ? EMIE_LMOUSE_PRESSED_DOWN : EMIE_LMOUSE_LEFT_UP;
++	else
++		irrevent.MouseInput.Event = down ? EMIE_RMOUSE_PRESSED_DOWN : EMIE_RMOUSE_LEFT_UP;
++	irrevent.MouseInput.Button = button;
++	irrevent.MouseInput.ButtonStates = MouseButtonStates;
++	irrevent.MouseInput.X = MouseX;
++	irrevent.MouseInput.Y = MouseY;
++	postEventFromUser(irrevent);
++
++	if (down) {
++		u32 clicks = checkSuccessiveClicks(MouseX, MouseY, irrevent.MouseInput.Event);
++		if (clicks == 2 || clicks == 3) {
++			const EMOUSE_INPUT_EVENT first = clicks == 2 ? EMIE_LMOUSE_DOUBLE_CLICK : EMIE_LMOUSE_TRIPLE_CLICK;
++			irrevent.MouseInput.Event = (EMOUSE_INPUT_EVENT)(first + irrevent.MouseInput.Event - EMIE_LMOUSE_PRESSED_DOWN);
++			postEventFromUser(irrevent);
++		}
++	}
++}
++
++void CIrrDeviceSDL::postGamepadMouse(EMOUSE_INPUT_EVENT event, f32 wheel)
++{
++	SEvent irrevent{};
++	irrevent.EventType = EET_MOUSE_INPUT_EVENT;
++	irrevent.MouseInput.Event = event;
++	irrevent.MouseInput.Wheel = wheel;
++	irrevent.MouseInput.ButtonStates = MouseButtonStates;
++	irrevent.MouseInput.X = MouseX;
++	irrevent.MouseInput.Y = MouseY;
++	postEventFromUser(irrevent);
++}
++
++//! B, Y and START close menus, as Escape does
++void CIrrDeviceSDL::postGamepadEscape(bool down)
++{
++	SEvent irrevent{};
++	irrevent.EventType = EET_KEY_INPUT_EVENT;
++	irrevent.KeyInput.Key = KEY_ESCAPE;
++	irrevent.KeyInput.SystemKeyCode = SDL_SCANCODE_ESCAPE;
++	irrevent.KeyInput.PressedDown = down;
++	postEventFromUser(irrevent);
++}
++#endif // _IRR_COMPILE_WITH_JOYSTICK_EVENTS_
+ 
+ void CIrrDeviceSDL::updateSizeAndScale()
+ {
+diff -ruN a/irr/src/CIrrDeviceSDL.h b/irr/src/CIrrDeviceSDL.h
+--- a/irr/src/CIrrDeviceSDL.h	2026-10-11 01:28:36
++++ b/irr/src/CIrrDeviceSDL.h	2026-10-11 01:31:30
+@@ -330,6 +330,20 @@
+ 	SDL_JoystickID recentGamepadID = 0;
+ #endif // _IRR_USE_SDL3_
+ 	SDL_Gamepad *getRecentGamepad() const;
++
++	// KMSDRM has no system cursor: while the cursor is visible (menus, inventory)
++	// the gamepad drives it and the GUI draws it
++	bool GamepadMouse = false;
++	bool GamepadCursorShown = false;
++	s16 GamepadAxes[static_cast<int>(GamepadAxis::COUNT)] = {};
++	u32 GamepadMouseButtons = 0; // pressed as the mouse, so their release goes the same way
++	u32 GamepadCursorTime = 0;
++	f32 GamepadCursorX = 0.0f, GamepadCursorY = 0.0f;
++	bool gamepadButtonAsMouse(GamepadButton button, bool down);
++	void moveCursorWithGamepad();
++	void postGamepadClick(u32 button, bool down);
++	void postGamepadMouse(EMOUSE_INPUT_EVENT event, f32 wheel = 0.0f);
++	void postGamepadEscape(bool down);
+ #endif // _IRR_COMPILE_WITH_JOYSTICK_EVENTS_
+ 
+ 	s32 MouseX, MouseY;
