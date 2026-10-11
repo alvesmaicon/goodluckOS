@@ -58,13 +58,15 @@ else
 LUANTI_CONF_OPTS += -DENABLE_GETTEXT=OFF
 endif
 
-# desktop files are of no use on the console; the launcher wants its icon in /usr/share/icons
+# desktop files are of no use on the console; the launcher wants its icon in /usr/share/icons.
+# LICENSE.txt (credits of the CC BY-SA media) would go to /usr/share/doc, which Buildroot drops
 define LUANTI_INSTALL_LAUNCHER_ICON
 	rm -f $(TARGET_DIR)/usr/share/applications/org.luanti.luanti.desktop \
 		$(TARGET_DIR)/usr/share/metainfo/org.luanti.luanti.metainfo.xml \
 		$(TARGET_DIR)/usr/share/icons/hicolor/*/apps/luanti.*
 	$(INSTALL) -D -m 0644 $(@D)/misc/luanti-xorg-icon-128.png \
 		$(TARGET_DIR)/usr/share/icons/luanti.png
+	$(INSTALL) -D -m 0644 $(@D)/LICENSE.txt $(TARGET_DIR)/usr/share/luanti/LICENSE.txt
 endef
 LUANTI_POST_INSTALL_TARGET_HOOKS += LUANTI_INSTALL_LAUNCHER_ICON
 
