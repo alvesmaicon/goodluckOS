@@ -90,14 +90,14 @@ private:
     TrashStats trash;
     Resize resize;
     SystemInfo info;
-    std::vector<std::pair<std::string, std::string>> credits;   // System shows its row only when there are some
+    std::vector<std::pair<std::string, std::string>> credits;   // the Credits section only shows when there are some
     std::string startLanguage;
     Uint32 saveAt = 0;              // the brightness or volume changed: saved then (0: nothing to save)
     Uint32 watchUntil = 0, nextWatch = 0;   // a card is being detected or ejected: re-read it until then
     Uint32 clockDrawn = 0;          // the Date & Time page ticks every second
     Row::Kind shownKind = Row::Kind::Info;  // of the row selected in the last frame, for the hints
 
-    static const std::vector<std::pair<Page, const char*>>& sections();
+    const std::vector<std::pair<Page, const char*>>& sections() const;
     Page page() const;
     Cursor& cursor();
     std::string title(Page p) const;

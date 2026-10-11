@@ -195,11 +195,11 @@ System Settings
 ├── System
 │   ├── Power mode: Battery saver / Balanced / Performance
 │   ├── System Info
-│   ├── Credits
 │   └── Restore default settings
-└── Input Settings
-    ├── Shortcuts ─ every shortcut
-    └── Button Tester
+├── Input Settings
+│   ├── Shortcuts ─ every shortcut
+│   └── Button Tester
+└── Credits ─ the people who made goodluckOS
 ```
 
 - **Launcher tabs**: hidden tabs' games still appear in All Games and My List.
@@ -212,8 +212,8 @@ System Settings
 - **Resize Home**: expands HOME to fill the rest of the card, at the next boot (it asks first, then restarts). HOME is backed up to RAM while it's resized, so do it right after flashing, before copying your games.
 - **Empty trash**: deletes for good the games moved to the trash in the launcher.
 - **Power mode**: Balanced (the default) speeds the CPU and GPU up only when a game needs it; Battery saver caps the CPU at 816 MHz and the GPU at 240 MHz, for a longer battery life (heavy PS1 games may slow down); Performance keeps both at full speed. The choice is kept across reboots.
-- **Credits**: the people who made goodluckOS, from the list of upstream's credits app (`/usr/share/credits/credits.ini`).
 - **Restore default settings**: puts Overlay, Date & Time, the launcher's view, tabs, font and accent color, and the power mode back to the defaults in `/usr/share/goodluck/defaults`, keeping the language, the time zone and the clock.
+- **Credits**: the people who made goodluckOS, from the list of upstream's credits app (`/usr/share/credits/credits.ini`).
 
 UP / DOWN pick a section and A or RIGHT opens its page; there, LEFT / RIGHT change the selected setting (A opens the list of choices, or turns a switch on or off), B goes back, and L1 / R1 go to the previous / next section from anywhere. START closes System Settings, and POWER opens the power options here too. A change applies and is saved right away, the language and the font included. A page scrolls with the d-pad when it doesn't fit the screen.
 
