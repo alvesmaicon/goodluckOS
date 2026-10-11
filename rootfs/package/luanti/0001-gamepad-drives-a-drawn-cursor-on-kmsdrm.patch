@@ -168,7 +168,7 @@ diff -ruN a/irr/src/CGUIEnvironment.h b/irr/src/CGUIEnvironment.h
  
 diff -ruN a/irr/src/CIrrDeviceSDL.cpp b/irr/src/CIrrDeviceSDL.cpp
 --- a/irr/src/CIrrDeviceSDL.cpp	2026-10-11 01:28:36
-+++ b/irr/src/CIrrDeviceSDL.cpp	2026-10-11 01:32:08
++++ b/irr/src/CIrrDeviceSDL.cpp	2026-10-11 03:54:29
 @@ -508,6 +508,15 @@
  		createGUIAndScene();
  		VideoDriver->OnResize(core::dimension2d<u32>(Width, Height));
@@ -176,7 +176,7 @@ diff -ruN a/irr/src/CIrrDeviceSDL.cpp b/irr/src/CIrrDeviceSDL.cpp
 +
 +#if defined(_IRR_COMPILE_WITH_JOYSTICK_EVENTS_)
 +	const char *video_driver = SDL_GetCurrentVideoDriver();
-+	GamepadMouse = video_driver && SDL_strcmp(video_driver, "kmsdrm") == 0;
++	GamepadMouse = video_driver && SDL_strcasecmp(video_driver, "kmsdrm") == 0; // SDL2 says KMSDRM
 +	if (GamepadMouse && GUIEnvironment) {
 +		os::Printer::log("No system cursor (KMSDRM): the gamepad drives a drawn one in menus", ELL_INFORMATION);
 +		GUIEnvironment->setSoftwareCursor(CursorControl);

@@ -1,0 +1,23 @@
+Subject: [PATCH] OpenGL: draw indexed 2D batches with glDrawElements
+
+drawElements() used glDrawRangeElements, which OpenGL ES 2.0 doesn't
+have (it came with ES 3.0). On a real ES 2.0 context (Mesa lima on a
+Mali-400, or llvmpipe with MESA_GLES_VERSION_OVERRIDE=2.0) the call
+fails with GL_INVALID_OPERATION and draws nothing. That is every
+draw2DImageBatch(), so all text: menus come up with no labels at all.
+glDrawElements draws the same thing; the range is only a hint.
+
+Upstream: not sent yet; master still calls glDrawRangeElements there.
+---
+diff -ruN a/irr/src/OpenGL/Driver.cpp b/irr/src/OpenGL/Driver.cpp
+--- a/irr/src/OpenGL/Driver.cpp	2026-10-11 03:54:21
++++ b/irr/src/OpenGL/Driver.cpp	2026-10-11 03:54:31
+@@ -996,7 +996,7 @@
+ void COpenGL3DriverBase::drawElements(GLenum primitiveType, const VertexType &vertexType, const void *vertices, int vertexCount, const u16 *indices, int indexCount)
+ {
+ 	beginDraw(vertexType, reinterpret_cast<uintptr_t>(vertices));
+-	GL.DrawRangeElements(primitiveType, 0, vertexCount - 1, indexCount, GL_UNSIGNED_SHORT, indices);
++	GL.DrawElements(primitiveType, indexCount, GL_UNSIGNED_SHORT, indices);
+ 	endDraw(vertexType);
+ }
+ 
