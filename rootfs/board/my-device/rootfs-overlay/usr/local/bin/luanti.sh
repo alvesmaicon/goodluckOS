@@ -3,8 +3,14 @@
 #   ~/.minetest/minetest.conf starts as /usr/share/goodluck/defaults/luanti.conf
 dir=$HOME/.minetest
 conf=$dir/minetest.conf
+defaults=/usr/share/goodluck/defaults/luanti.conf
 mkdir -p "$dir"
-[ -f "$conf" ] || cp /usr/share/goodluck/defaults/luanti.conf "$conf"
+[ -f "$conf" ] || cp "$defaults" "$conf"
+
+# defaults added in a later image reach an existing minetest.conf too; set ones stay as they are
+grep -E '^[a-z0-9_]+ *=' "$defaults" | while IFS= read -r line; do
+    grep -q "^${line%%[ =]*} *=" "$conf" || echo "$line" >> "$conf"
+done
 
 set_conf() {
     if grep -q "^$1 *=" "$conf"; then sed -i "s|^$1 *=.*|$1 = $2|" "$conf"; else echo "$1 = $2" >> "$conf"; fi

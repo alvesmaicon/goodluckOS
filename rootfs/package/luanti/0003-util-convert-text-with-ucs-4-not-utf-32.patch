@@ -1,0 +1,27 @@
+Subject: [PATCH] util: convert text with UCS-4, not UTF-32
+
+utf8_to_wide() and wide_to_utf8() open iconv with "UTF-32LE" (or BE)
+for a 4-byte wchar_t. glibc only builds UCS-4, UCS-2, UTF-8 and ASCII
+in; UTF-16 and UTF-32 live in gconv modules (/usr/lib/gconv), which
+small systems such as Buildroot images leave out by default. There
+iconv_open() fails and every string shows as "<invalid UTF-8 string>".
+UCS-4LE/BE is the same encoding for a 32-bit wchar_t and is built in.
+
+Checked on the console: iconv_open(to, "UTF-8") fails for UTF-32LE and
+works for UCS-4LE and WCHAR_T.
+
+Upstream: not sent yet.
+---
+diff -ruN a/src/util/string.cpp b/src/util/string.cpp
+--- a/src/util/string.cpp	2026-10-11 04:17:10
++++ b/src/util/string.cpp	2026-10-11 04:17:14
+@@ -80,7 +80,8 @@
+ 	if constexpr (sz == 2) {
+ 		return (BYTE_ORDER == BIG_ENDIAN) ? "UTF-16BE" : "UTF-16LE";
+ 	} else {
+-		return (BYTE_ORDER == BIG_ENDIAN) ? "UTF-32BE" : "UTF-32LE";
++		// UCS-4 is built into glibc; UTF-32 needs a gconv module that small systems leave out
++		return (BYTE_ORDER == BIG_ENDIAN) ? "UCS-4BE" : "UCS-4LE";
+ 	}
+ })();
+ 
