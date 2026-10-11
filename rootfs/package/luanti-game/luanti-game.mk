@@ -16,21 +16,22 @@ LUANTI_GAME_EXTRA_DOWNLOADS = \
 	https://codeberg.org/tenplus1/mobs_redo/archive/$(LUANTI_GAME_MOBS_REDO_VERSION).tar.gz \
 	https://codeberg.org/tenplus1/mobs_animal/archive/$(LUANTI_GAME_MOBS_ANIMAL_VERSION).tar.gz
 
-LUANTI_GAME_DIR = $(TARGET_DIR)/usr/share/luanti/games/minetest_game
+# not LUANTI_GAME_DIR: Buildroot owns <pkg>_DIR (the build directory)
+LUANTI_GAME_DEST = $(TARGET_DIR)/usr/share/luanti/games/minetest_game
 
 # mods inside the game's mods/ are on in every world, with no world.mt to edit
 define LUANTI_GAME_INSTALL_TARGET_CMDS
-	rm -rf $(LUANTI_GAME_DIR)
-	mkdir -p $(LUANTI_GAME_DIR)
+	rm -rf $(LUANTI_GAME_DEST)
+	mkdir -p $(LUANTI_GAME_DEST)
 	cp -a $(@D)/game.conf $(@D)/minetest.conf $(@D)/settingtypes.txt $(@D)/LICENSE.txt \
-		$(@D)/menu $(@D)/mods $(LUANTI_GAME_DIR)/
-	mkdir -p $(LUANTI_GAME_DIR)/mods/mobs $(LUANTI_GAME_DIR)/mods/mobs_animal
+		$(@D)/menu $(@D)/mods $(LUANTI_GAME_DEST)/
+	mkdir -p $(LUANTI_GAME_DEST)/mods/mobs $(LUANTI_GAME_DEST)/mods/mobs_animal
 	$(call suitable-extractor,$(LUANTI_GAME_MOBS_REDO_VERSION).tar.gz) \
 		$(LUANTI_GAME_DL_DIR)/$(LUANTI_GAME_MOBS_REDO_VERSION).tar.gz | \
-		$(TAR) --strip-components=1 -C $(LUANTI_GAME_DIR)/mods/mobs $(TAR_OPTIONS) -
+		$(TAR) --strip-components=1 -C $(LUANTI_GAME_DEST)/mods/mobs $(TAR_OPTIONS) -
 	$(call suitable-extractor,$(LUANTI_GAME_MOBS_ANIMAL_VERSION).tar.gz) \
 		$(LUANTI_GAME_DL_DIR)/$(LUANTI_GAME_MOBS_ANIMAL_VERSION).tar.gz | \
-		$(TAR) --strip-components=1 -C $(LUANTI_GAME_DIR)/mods/mobs_animal $(TAR_OPTIONS) -
+		$(TAR) --strip-components=1 -C $(LUANTI_GAME_DEST)/mods/mobs_animal $(TAR_OPTIONS) -
 endef
 
 $(eval $(generic-package))
