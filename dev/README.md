@@ -40,7 +40,7 @@ dev/gl scenes-diff dev/out/scenes-before dev/out/scenes-after
 dev/gl rootfs                           # first time: full Buildroot (1-2 h on an M1)
 dev/gl rootfs puppy-rebuild             # then: one package, seconds; output in the work volume
 dev/gl ext4                             # dev/out/rootfs.ext4 from dev/out/rootfs.tar
-dev/gl kernel                           # dev/out/android_boot_a33.img
+dev/gl kernel                           # dev/out/android_boot_a33.img (panel 1; GL_PANEL=2 dev/gl kernel for panel 2)
 dev/gl shell                            # a shell in the container (/repo, /work)
 ```
 

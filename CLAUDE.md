@@ -44,7 +44,7 @@ Card layout (A33):
 ## Branches and remotes
 
 - `origin` is upstream CodeZombie; `fork` is alvesmaicon. `develop` is the fork's main branch: start new work from it on `feat/*`, `fix/*` or `debug/*`, then merge back. `pr/*` branches start from `origin/main`.
-- Upstream PRs merged: #48 (Jeferson's A/B fix), #52 (MTP HOME), #55 (boot: appctl path, no power-manager respawn), #56 (headphones + FN+DOWN), #60 (idempotent `post-build.sh`). Open: #59 (TF-2 slot, draft). `pr/external-mtp` waits on #59 (rebase, then open).
+- Upstream PRs merged: #48 (Jeferson's A/B fix), #52 (MTP HOME), #55 (boot: appctl path, no power-manager respawn), #56 (headphones + FN+DOWN), #59 (TF-2 slot), #60 (idempotent `post-build.sh`), #64 (D-pad hold-to-repeat), #66 (TF-2 card over MTP).
 - Upstream issues that the fork's code already answers: #23 (Gallium HUD options, branch `feat/overlay` ready), #24 (Mesa overlay), #5 (System Settings), #13/#14 (LED, partly). #46 is the owner's "features from my fork" list.
 - Fork issues: #1 screen artifacts (thermal suspected, `debug/thermal-log` logs to `HOME/logs/templog.csv`); #2 Wi-Fi dongle on OTG (no VBUS: DTS lacks `x-powers,drive-vbus-en` and `usb0_vbus-supply`).
 
