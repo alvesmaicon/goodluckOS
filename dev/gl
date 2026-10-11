@@ -77,6 +77,7 @@ fake_device() {
     cp -r "$OVERLAY/usr/share/goodluck/." /usr/share/goodluck/
     cp "$OVERLAY"/usr/share/icons/*.png /usr/share/icons/ 2>/dev/null || true
     for s in nes snes gba gb gbc genesis psx; do mkdir -p /home/player/roms/$s/icons; done
+    mkdir -p /usr/share/credits; cp "$OVERLAY/usr/share/credits/credits.ini" /usr/share/credits/
 }
 
 shot() {

@@ -57,8 +57,9 @@ settings-timezone grid on    en        F5 Down Down Down Down Return Down Down D
 settings-storage grid  on    en        F5 Down Down Down Down Down Return
 settings-resize  grid  on    en        F5 Down Down Down Down Down Return Return
 settings-system  grid  on    en        F5 Down Down Down Down Down Down Return
+settings-credits grid  on    en        F5 Down Down Down Down Down Down Return Down Down Return
 settings-info    grid  on    en        F5 Down Down Down Down Down Down Return Down Return
-settings-restore grid  on    en        F5 Down Down Down Down Down Down Return Down Down Return
+settings-restore grid  on    en        F5 Down Down Down Down Down Down Return Down Down Down Return
 settings-input   grid  on    en        F5 Down Down Down Down Down Down Down Return
 settings-shortcuts grid on   en        F5 Down Down Down Down Down Down Down Return Return
 settings-tester  grid  on    en        F5 Down Down Down Down Down Down Down Return Down Return

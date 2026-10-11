@@ -65,7 +65,7 @@ public:
 
 private:
     enum class Page { Display, Launcher, Interface, Overlay, DateTime, Storage, System, Input,
-                      Tabs, Shortcuts, Info, Resize };
+                      Tabs, Shortcuts, Info, Resize, Credits };
     struct Cursor {
         int sel = -1;       // the selected row, -1 for none (a page with nothing to change scrolls)
         int scroll = 0;     // the first row on screen
@@ -90,6 +90,7 @@ private:
     TrashStats trash;
     Resize resize;
     SystemInfo info;
+    std::vector<std::pair<std::string, std::string>> credits;   // System shows its row only when there are some
     std::string startLanguage;
     Uint32 saveAt = 0;              // the brightness or volume changed: saved then (0: nothing to save)
     Uint32 watchUntil = 0, nextWatch = 0;   // a card is being detected or ejected: re-read it until then
@@ -133,4 +134,5 @@ private:
     std::vector<Row> inputPage();
     std::vector<Row> shortcutsPage();
     std::vector<Row> resizePage();
+    std::vector<Row> creditsPage();
 };
