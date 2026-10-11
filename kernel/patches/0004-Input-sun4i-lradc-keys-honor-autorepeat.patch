@@ -1,0 +1,28 @@
+From: alvesmaicon <alvesmaiconn@gmail.com>
+Subject: [PATCH] Input: sun4i-lradc-keys - honor the autorepeat property
+
+The GA36-MB device trees set "autorepeat" on the lradc node, the way
+adc-keys and gpio-keys read it, but this driver never looked at it:
+EV_REP was never set and a held key sent a single press. Set EV_REP when
+the node has the property, as adc-keys does.
+
+The input core's default when EV_REP is set is a 250 ms delay, then a
+repeat every 33 ms. On volume keys that takes the level from 0 to 100%
+in under a second, so use 400 ms and 120 ms.
+
+diff --git a/drivers/input/keyboard/sun4i-lradc-keys.c b/drivers/input/keyboard/sun4i-lradc-keys.c
+--- a/drivers/input/keyboard/sun4i-lradc-keys.c
++++ b/drivers/input/keyboard/sun4i-lradc-keys.c
+@@ -301,6 +301,12 @@
+ 	__set_bit(EV_KEY, lradc->input->evbit);
+ 	for (i = 0; i < lradc->chan0_map_count; i++)
+ 		__set_bit(lradc->chan0_map[i].keycode, lradc->input->keybit);
++
++	if (device_property_read_bool(dev, "autorepeat")) {
++		__set_bit(EV_REP, lradc->input->evbit);
++		/* the 250/33 ms default is too fast for volume keys */
++		input_enable_softrepeat(lradc->input, 400, 120);
++	}
+ 
+ 	input_set_drvdata(lradc->input, lradc);
+ 
