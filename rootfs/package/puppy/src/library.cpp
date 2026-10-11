@@ -117,27 +117,31 @@ void loadFavorites(Model& m) {
     }
 }
 
-static void saveFavorites(const Model& m) {
+template <class Keys>
+static void saveKeys(const std::string& file, const Keys& keys) {
     std::error_code ec;
     fs::create_directories(cfg.configDir, ec);
-    const std::string tmp = cfg.favoritesFile() + ".tmp";
+    const std::string tmp = file + ".tmp";
     {
         std::ofstream out(tmp);
         if (!out) return;
-        for (const auto& key : m.favorites) out << key << "\n";
+        for (const auto& key : keys) out << key << "\n";
     }
-    fs::rename(tmp, cfg.favoritesFile(), ec);
+    fs::rename(tmp, file, ec);
 }
 
-static int myListTab(const Model& m) {
+static void saveFavorites(const Model& m) { saveKeys(cfg.favoritesFile(), m.favorites); }
+static void saveRecents(const Model& m)   { saveKeys(cfg.recentsFile(), m.recents); }
+
+static int tabIndex(const Model& m, const std::string& name) {
     for (size_t t = 0; t < m.categories.size(); ++t)
-        if (m.categories[t].name == kMyListName) return (int)t;
+        if (m.categories[t].name == name) return (int)t;
     return -1;
 }
 
 // Fills My List with the favourite entries of every tab (except the mixed ones), sorted by name.
 static void rebuildMyList(Model& m) {
-    int t = myListTab(m);
+    int t = tabIndex(m, kMyListName);
     if (t < 0) return;
     std::vector<Entry> list;
     for (const auto& c : m.categories) {
@@ -175,7 +179,7 @@ void addExternalTab(Model& m) {
     std::stable_sort(ext.entries.begin(), ext.entries.end(), [](const Entry& l, const Entry& r) {
         return l.searchKey < r.searchKey;
     });
-    int t = myListTab(m);
+    int t = tabIndex(m, kMyListName);
     m.categories.insert(m.categories.begin() + (t < 0 ? 0 : t + 1), std::move(ext));
 }
 
@@ -189,6 +193,64 @@ void addMyListTab(Model& m) {
     bool hasAll = !m.categories.empty() && m.categories[0].name == "All Games";
     m.categories.insert(m.categories.begin() + (hasAll ? 1 : 0), std::move(list));
     rebuildMyList(m);
+}
+
+void loadRecents(Model& m) {
+    std::ifstream in(cfg.recentsFile());
+    for (std::string line; std::getline(in, line) && (int)m.recents.size() < kMaxRecents;) {
+        if (line.find('\t') != std::string::npos) m.recents.push_back(line);
+    }
+}
+
+// The Recent tab: the recent entries that still exist, most recent first, right after My List. It
+// only shows up once a game has been played.
+void addRecentTab(Model& m) {
+    std::vector<Entry> list;
+    for (const auto& key : m.recents) {
+        const size_t tab = key.find('\t');
+        const std::string category = key.substr(0, tab), id = key.substr(tab + 1);
+        for (const auto& c : m.categories) {
+            if (c.mixed || c.name != category) continue;
+            auto e = std::find_if(c.entries.begin(), c.entries.end(), [&](const Entry& x) { return x.id == id; });
+            if (e == c.entries.end()) break;
+            list.push_back(*e);
+            list.back().tag = c.label;
+            break;
+        }
+    }
+    int t = tabIndex(m, kRecentName);
+    if (t < 0) {
+        if (list.empty()) return;
+        Category recent;
+        recent.name = kRecentName;
+        recent.label = kRecentName;
+        recent.isArchive = true;
+        recent.mixed = true;
+        const int my = tabIndex(m, kMyListName);
+        t = my < 0 ? 0 : my + 1;
+        m.categories.insert(m.categories.begin() + t, std::move(recent));
+        if (m.tab >= t) ++m.tab;
+    }
+    m.categories[t].entries = std::move(list);
+    m.categories[t].tagColumn = -1;
+}
+
+// Puts a game first in Recent, before it's launched (appd stops Puppy right after). Music, videos
+// and terminal apps aren't games.
+void addRecent(Model& m, const Entry& e) {
+    auto c = std::find_if(m.categories.begin(), m.categories.end(),
+                          [&](const Category& x) { return !x.mixed && x.name == e.category; });
+    if (c == m.categories.end() || c->media || e.terminal) return;
+    const std::string key = Model::favoriteKey(e);
+    m.recents.erase(std::remove(m.recents.begin(), m.recents.end(), key), m.recents.end());
+    m.recents.insert(m.recents.begin(), key);
+    if ((int)m.recents.size() > kMaxRecents) m.recents.resize(kMaxRecents);
+    saveRecents(m);
+
+    const bool inRecent = m.cur().name == kRecentName;
+    addRecentTab(m);
+    m.applyFilter();
+    if (inRecent) m.select(m.tab, 0);
 }
 
 void toggleFavorite(Model& m) {
@@ -331,6 +393,7 @@ std::string renameEntry(Model& m, const Entry& e, const std::string& newName) {
     renameInGamelists(from.parent_path(), from.filename().string(), to.filename().string(), newName);
 
     const bool fav = m.favorites.erase(Model::favoriteKey(e)) > 0;
+    const auto recent = std::find(m.recents.begin(), m.recents.end(), Model::favoriteKey(e));
     const bool autostart = m.isAutoStart(e);
     const Entry* renamed = nullptr;
     for (auto& c : m.categories) {
@@ -349,6 +412,7 @@ std::string renameEntry(Model& m, const Entry& e, const std::string& newName) {
         }
     }
     if (renamed && fav) { m.favorites.insert(Model::favoriteKey(*renamed)); saveFavorites(m); }
+    if (renamed && recent != m.recents.end()) { *recent = Model::favoriteKey(*renamed); saveRecents(m); }
     if (renamed && autostart) { writeAutoStart(*renamed); m.autoName = renamed->id; }
     return tr("Renamed");
 }
@@ -409,6 +473,8 @@ std::string deleteEntry(Model& m, const Entry& e) {
     for (const auto& p : parts) moveToTrash(p, systemDir);
 
     if (m.favorites.erase(Model::favoriteKey(e))) saveFavorites(m);
+    const auto recent = std::find(m.recents.begin(), m.recents.end(), Model::favoriteKey(e));
+    if (recent != m.recents.end()) { m.recents.erase(recent); saveRecents(m); }
     if (m.isAutoStart(e)) {
         clearAutoStart();
         m.autoCategory.clear();
@@ -494,6 +560,8 @@ bool loadModel(Model& m) {
     loadFavorites(m);
     addMyListTab(m);
     addExternalTab(m);
+    loadRecents(m);
+    addRecentTab(m);
     if (m.categories.empty()) {
         std::cerr << "Nothing to show\n";
         return false;

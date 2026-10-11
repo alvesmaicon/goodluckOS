@@ -58,7 +58,9 @@ void LauncherScreen::onAction(Action a) {
         case Action::ScrollDown: model.descScroll = std::min(descMax, model.descScroll + 1); break;
         case Action::Launch:
             if (const Entry* e = model.selected()) {
-                if (!launch(model, *e)) app.quit();
+                const Entry entry = *e;   // addRecent rebuilds the Recent tab
+                addRecent(model, entry);
+                if (!launch(model, entry)) app.quit();
             }
             break;
         default: break;
