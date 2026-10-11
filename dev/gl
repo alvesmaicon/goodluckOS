@@ -21,7 +21,7 @@ usage: dev/gl <command> [args]
   scenes-diff <dir> <dir>   the scenes whose screenshots differ between two runs, pixel by pixel
   rootfs [make targets]     Buildroot, incremental (e.g. mesa3d-rebuild, puppy-rebuild)
   ext4                      dev/out/rootfs.ext4 from the last rootfs.tar (partition 1, 384 MiB)
-  kernel                    dev/out/android_boot_a33.img (+a23), like kernel/Dockerfile
+  kernel                    dev/out/android_boot_a33.img (+a23) with panel 1 (GL_PANEL=2), like kernel/Dockerfile
 EOF
     exit 1
 }
@@ -220,10 +220,12 @@ ext4() {
 kernel() {
     local k=$REPO/kernel src=$WORK/linux
     export ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf-
-    local branch; branch=$(sed -n 's/.* -b \(linux-[^ ]*\) https.*/\1/p' "$k/Dockerfile")
-    [ -d "$src" ] || git clone -q --depth=1 -b "$branch" https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git "$src"
+    local ref panel=${GL_PANEL:-1}; ref=$(sed -n 's/.* -b \([^ ]*\) https.*/\1/p' "$k/Dockerfile")
+    [ -d "$src" ] || git clone -q --depth=1 -b "$ref" https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git "$src"
     cd "$src"
     git checkout -q -- . && git clean -qfd   # undo the previous run's patches and drivers
+    git rev-parse -q --verify "$ref^{commit}" >/dev/null || git fetch -q --depth=1 origin tag "$ref"
+    git checkout -q "$ref"
     make sunxi_defconfig >/dev/null
     grep -v '^ *#' "$k/Dockerfile" | grep -o '\./scripts/config [^&]*' | sed 's/ *$//' | sh
     make olddefconfig >/dev/null
@@ -234,14 +236,14 @@ kernel() {
     cp "$k/drivers/ga36mb-gamepad.c" drivers/input/joystick/
     echo 'obj-$(CONFIG_GA36MB_GAMEPAD) += ga36mb-gamepad.o' >> drivers/input/joystick/Makefile
     sed -i '/^endif/i config GA36MB_GAMEPAD\n\ttristate "GA36MB GAMEPAD"\n\tdepends on SERIAL_DEV_BUS\n' drivers/input/joystick/Kconfig
-    cp "$k/dts/sun8i-a33-ga36mb.dts" "$k/dts/sun8i-a23-ga36mb.dts" arch/arm/boot/dts/allwinner/
-    printf 'dtb-$(CONFIG_MACH_SUN8I) += sun8i-a33-ga36mb.dtb sun8i-a23-ga36mb.dtb\n' >> arch/arm/boot/dts/allwinner/Makefile
+    cp "$k"/dts/* arch/arm/boot/dts/allwinner/
+    printf 'dtb-$(CONFIG_MACH_SUN8I) += ga36mb-a33-panel%s.dtb ga36mb-a23-panel%s.dtb\n' "$panel" "$panel" >> arch/arm/boot/dts/allwinner/Makefile
     ./scripts/config --enable CONFIG_DRM_PANEL_JD9366 --enable CONFIG_GA36MB_GAMEPAD
     make olddefconfig >/dev/null
     make -j"$JOBS" zImage dtbs
     : > /tmp/empty_ramdisk
     for soc in a33 a23; do
-        cat arch/arm/boot/zImage arch/arm/boot/dts/allwinner/sun8i-$soc-ga36mb.dtb > /tmp/zImage_$soc
+        cat arch/arm/boot/zImage arch/arm/boot/dts/allwinner/ga36mb-$soc-panel$panel.dtb > /tmp/zImage_$soc
         mkbootimg --kernel /tmp/zImage_$soc --ramdisk /tmp/empty_ramdisk --base 0x40000000 \
             --board sun8i --pagesize 2048 -o "$OUT/android_boot_$soc.img"
     done
