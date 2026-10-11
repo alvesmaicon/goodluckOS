@@ -39,11 +39,14 @@ struct Config {
 
     std::string settingsFile() const  { return configDir + "/settings"; }
     std::string favoritesFile() const { return configDir + "/favorites"; }   // "category<TAB>id" lines
+    std::string recentsFile() const   { return configDir + "/recents"; }     // the same, most recent first
     std::string thumbDir() const      { return cacheDir + "/thumbs"; }
 };
 extern Config cfg;
 
 constexpr const char* kMyListName    = "My List";
+constexpr const char* kRecentName    = "Recent";
+constexpr int kMaxRecents            = 30;
 constexpr const char* kMenuCategory  = "System";   // apps.puppy category taken out of the tabs
 constexpr const char* kSettingsName  = "System Settings";   // entry of that category opened by START
 

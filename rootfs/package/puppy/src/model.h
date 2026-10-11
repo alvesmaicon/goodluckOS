@@ -27,6 +27,7 @@ struct Model {
     std::string query;
     std::string autoCategory, autoName;   // the autolaunch entry
     std::set<std::string> favorites;      // "category<TAB>name" of the entries in My List
+    std::vector<std::string> recents;     // the same for the Recent tab, most recent first
 
     static std::string favoriteKey(const Entry& e) { return e.category + "\t" + e.id; }
     bool isFavorite(const Entry& e) const { return favorites.count(favoriteKey(e)) > 0; }

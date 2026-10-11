@@ -4,6 +4,7 @@
 # keys: F1/F2 = L1/R1, F3 = SELECT, F4 = X (search), F5 = START, F6 = POWER, F7 = L2 + R2, space = Y,
 # Return = A, Escape = B.
 # Tabs from the boot one (All Games): F2 My List, F2 F2 Terminal...; F1 Genesis, F1 F1 NES.
+# Return launches nothing here, but the game goes into Recent, a tab after My List from then on.
 #
 # name           view  tabs  language  keys
 grid             grid  on    en
@@ -17,6 +18,9 @@ list-long-name   list  on    en        F1 F1 Down Down Down Down Down Down Down 
 apps-tab         list  on    en        F2 F2 F2
 my-list-empty    grid  on    en        F2
 favorites        list  on    en        F1 F1 Down space Down space F2 F2 F2
+recent           list  on    en        Down Return Down Return F2 F2
+recent-again     list  on    en        Down Return Down Return F2 F2 Down Return
+pt-recent        grid  on    pt-BR     Return Right Return F2 F2
 autolaunch       grid  on    en        Right F3
 search           grid  on    en        F4 c r a
 search-done      grid  on    en        F4 c r a F5
