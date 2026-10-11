@@ -36,6 +36,7 @@ Please Note: At the time of writing, Allwinner-A23 based GA36-MB devices (which 
 - FN+DPAD_DOWN switches the sound between the speaker and the headphones only (the console can't detect the headphone jack)
 - If the screen is on, the LEDs are off. Nothing blinding you while you're playing in the dark
 - Comes stock with Chocolate Doom, ready to play
+- Comes with Luanti, a block-building game in the style of Minecraft, with Minetest Game and farm animals, played with the console's buttons (see [Luanti](#luanti))
 - Second SD card (TF-2 slot) for more games, with its own launcher tab
 - Music and video player (mpv): Music and Videos tabs in the launcher, played full screen with the console's buttons
 - Comes stock with Retroarch and several optimized cores (PCSX-ReArmed, Snes9x, QuickNES, DOSbox, Genesis Plus GX, mGBA, etc)
@@ -147,6 +148,22 @@ FN is the hotkey:
 | FN + START | Quit the game |
 
 The same list is in System Settings -> Input Settings, next to a button tester.
+
+### Luanti
+Luanti opens on its main menu: create a world (the name can stay empty) and tick Creative mode or Enable damage. The console has no mouse cursor, so whenever a menu or the inventory is open, Luanti draws one that the sticks move.
+
+| Buttons | In game | In menus and the inventory |
+|---|---|---|
+| Left stick | Walk | Move the cursor |
+| Right stick | Look around | Move the cursor |
+| A | Jump | Click |
+| X | Aux1 (run, in fast mode) | Right click (half a stack) |
+| B | Sneak | Back |
+| Y | Inventory | Close |
+| R2 / L2 | Dig / place | |
+| R1 / L1 | Next / previous item | Scroll |
+| D-pad | Up: zoom, down: drop the item, left: fly, right: screenshot | Move the cursor slowly |
+| START | Pause menu (Exit to OS goes back to the launcher) | Close |
 
 ## System Settings
 Opened with START from the launcher, which it is part of: there's no loading screen on the way in or out, and the launcher comes back as you left it. The sections are on the left, and the page of the selected one on the right:
@@ -295,7 +312,7 @@ Controls: A or START pause, B quit, D-pad left/right seek 10 s, up/down 1 min, L
 The A33 decodes video in software: up to 640x480 H.264 plays smoothly, 1080p and H.265 don't. Convert bigger videos on your PC first, e.g. `ffmpeg -i in.mp4 -vf scale=640:480:force_original_aspect_ratio=decrease:force_divisible_by=2 -c:v libx264 -tune fastdecode -crf 23 -c:a aac -ac 2 out.mkv`. On Windows, [convert-videos](convert-videos/README.md) does this for a whole folder, turns portrait videos to fill the screen and saves a frame of each one as its art.
 
 ## Does goodluckOS come with any games?
-Only Doom, through Chocolate Doom.
+Doom, through Chocolate Doom, and Luanti with Minetest Game (both free software).
 
 goodluckOS will never be distributed with unauthorized copyright protected materials. If you own the copyright to any games or demos (or know of any permissively-licensed/CC games) that you think might make a good fit, please open an Issue! I'd love to include some high quality games with the OS by default.
 
