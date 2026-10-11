@@ -1,0 +1,53 @@
+Subject: [PATCH] shaders: fog distance without overflow on mediump-only GPUs
+
+The fog in the node, object and cloud fragment shaders used
+length(eyeVec) / fogDistance. Where the fragment shader has no highp
+(GLES 2.0 without GL_FRAGMENT_PRECISION_HIGH, e.g. Mali-400 with Mesa
+lima, which is fp16), Luanti declares mediump and defines highp away, so
+length() squares eye-space coordinates in fp16. Beyond ~256 units
+(sqrt(65504), 25.6 nodes) the sum overflows to infinity, the clarity
+drops to 0 and every pixel farther than that is painted with the fog
+color: a sphere of ~25 nodes around the camera, whatever viewing_range
+is. By day it melts into the sky; at night distant terrain shows as
+flat silhouettes.
+
+length(eyeVec / fogDistance) is the same value and stays near 1.
+
+Upstream: not sent yet.
+---
+diff -ruN a/client/shaders/cloud_shader/opengl_fragment.glsl b/client/shaders/cloud_shader/opengl_fragment.glsl
+--- a/client/shaders/cloud_shader/opengl_fragment.glsl
++++ b/client/shaders/cloud_shader/opengl_fragment.glsl
+@@ -10,7 +10,7 @@
+ 	vec4 col = varColor;
+ 
+ 	float clarity = clamp(fogShadingParameter
+-		- fogShadingParameter * length(eyeVec) / fogDistance, 0.0, 1.0);
++		- fogShadingParameter * length(eyeVec / fogDistance), 0.0, 1.0);
+ 	col.rgb = mix(fogColor.rgb, col.rgb, clarity);
+ 
+ 	gl_FragColor = col;
+diff -ruN a/client/shaders/nodes_shader/opengl_fragment.glsl b/client/shaders/nodes_shader/opengl_fragment.glsl
+--- a/client/shaders/nodes_shader/opengl_fragment.glsl
++++ b/client/shaders/nodes_shader/opengl_fragment.glsl
+@@ -597,7 +597,7 @@
+ 	// should be more efficient as well.
+ 	// Note: clarity = (1 - fogginess)
+ 	float clarity = clamp(fogShadingParameter
+-		- fogShadingParameter * length(eyeVec) / fogDistance, 0.0, 1.0);
++		- fogShadingParameter * length(eyeVec / fogDistance), 0.0, 1.0);
+ 	float fogColorMax = max(max(fogColor.r, fogColor.g), fogColor.b);
+ 	// Prevent zero division.
+ 	if (fogColorMax < 0.0000001) fogColorMax = 1.0;
+diff -ruN a/client/shaders/object_shader/opengl_fragment.glsl b/client/shaders/object_shader/opengl_fragment.glsl
+--- a/client/shaders/object_shader/opengl_fragment.glsl
++++ b/client/shaders/object_shader/opengl_fragment.glsl
+@@ -454,7 +454,7 @@
+ 	// should be more efficient as well.
+ 	// Note: clarity = (1 - fogginess)
+ 	float clarity = clamp(fogShadingParameter
+-		- fogShadingParameter * length(eyeVec) / fogDistance, 0.0, 1.0);
++		- fogShadingParameter * length(eyeVec / fogDistance), 0.0, 1.0);
+ 	float fogColorMax = max(max(fogColor.r, fogColor.g), fogColor.b);
+ 	// Prevent zero division.
+ 	if (fogColorMax < 0.0000001) fogColorMax = 1.0;
