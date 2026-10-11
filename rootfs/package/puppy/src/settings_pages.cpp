@@ -80,6 +80,7 @@ std::string SettingsScreen::title(Page p) const {
         case Page::Shortcuts: return tr("Shortcuts");
         case Page::Info:      return tr("System Info");
         case Page::Resize:    return tr("Resize Home");
+        case Page::Credits:   return tr("Credits");
         default:
             for (const auto& s : sections())
                 if (s.first == p) return tr(s.second);
@@ -116,6 +117,7 @@ std::vector<Row> SettingsScreen::rows(Page p) {
         case Page::Shortcuts: return shortcutsPage();
         case Page::Info:      return infoPage();
         case Page::Resize:    return resizePage();
+        case Page::Credits:   return creditsPage();
     }
     return {};
 }
@@ -437,6 +439,7 @@ std::vector<Row> SettingsScreen::systemPage() {
         resize = Resize::read();
         open(Page::Info);
     }));
+    if (!credits.empty()) rows.push_back(Row::link("Credits", [this] { open(Page::Credits); }));
     // Overlay, Date & Time, the launcher's view, tabs, font and accent, and the power mode; the language,
     // the time zone and the clock stay
     rows.push_back(Row::action("Restore default settings", [this] {
@@ -503,6 +506,24 @@ std::vector<Row> SettingsScreen::shortcutsPage() {
     for (const auto& s : kShortcuts) {
         if (!s[1]) rows.push_back(Row::section(s[0]));
         else rows.push_back(Row::info(s[0], tr(s[1])));
+    }
+    return rows;
+}
+
+// One role per row, under the name: "PROJECT LEAD/ENGINEERING/DEVELOPMENT" doesn't fit next to it
+std::vector<Row> SettingsScreen::creditsPage() {
+    std::vector<Row> rows;
+    for (const auto& c : credits) {
+        std::string name = c.first;
+        size_t from = 0;
+        do {
+            const size_t slash = c.second.find('/', from);
+            Row r = Row::info(name, trim(c.second.substr(from, slash == std::string::npos ? slash : slash - from)));
+            r.rawLabel = true;
+            rows.push_back(r);
+            name.clear();
+            from = slash == std::string::npos ? slash : slash + 1;
+        } while (from != std::string::npos);
     }
     return rows;
 }
