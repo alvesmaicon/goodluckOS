@@ -509,21 +509,33 @@ std::vector<Row> SettingsScreen::shortcutsPage() {
     return rows;
 }
 
-// One role per row, under the name: "PROJECT LEAD/ENGINEERING/DEVELOPMENT" doesn't fit next to it
+// Grouped by role, in the order the roles first come, each name under every role it has ("A/B" is two).
+// The first line opens the list as it is (goodluckOS, is brought to you by...); lines without a role close it.
 std::vector<Row> SettingsScreen::creditsPage() {
-    std::vector<Row> rows;
-    for (const auto& c : credits) {
-        std::string name = c.first;
-        size_t from = 0;
-        do {
-            const size_t slash = c.second.find('/', from);
-            Row r = Row::info(name, trim(c.second.substr(from, slash == std::string::npos ? slash : slash - from)));
-            r.rawLabel = true;
-            rows.push_back(r);
-            name.clear();
+    std::vector<std::pair<std::string, std::vector<std::string>>> roles;
+    std::vector<std::string> closing;
+    for (size_t i = 1; i < credits.size(); ++i) {
+        const auto& [name, role] = credits[i];
+        if (role.empty()) closing.push_back(name);
+        for (size_t from = 0; !role.empty() && from != std::string::npos;) {
+            const size_t slash = role.find('/', from);
+            const std::string r = trim(role.substr(from, slash == std::string::npos ? slash : slash - from));
             from = slash == std::string::npos ? slash : slash + 1;
-        } while (from != std::string::npos);
+            if (r.empty()) continue;
+            auto g = std::find_if(roles.begin(), roles.end(), [&r](const auto& x) { return x.first == r; });
+            if (g == roles.end()) g = roles.insert(roles.end(), {r, {}});
+            g->second.push_back(name);
+        }
     }
+    std::vector<Row> rows;
+    auto add = [&rows](Row r) { r.rawLabel = true; rows.push_back(r); };
+    if (!credits.empty()) add(Row::info(credits[0].first, credits[0].second));
+    for (const auto& [role, names] : roles) {
+        add(Row::section(role));
+        for (const std::string& n : names) add(Row::info(n, ""));
+    }
+    if (!closing.empty()) add(Row::section(""));
+    for (const std::string& n : closing) add(Row::info(n, ""));
     return rows;
 }
 
