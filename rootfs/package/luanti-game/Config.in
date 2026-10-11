@@ -1,0 +1,9 @@
+config BR2_PACKAGE_LUANTI_GAME
+	bool "luanti-game"
+	depends on BR2_PACKAGE_LUANTI
+	help
+	  Minetest Game for Luanti, with Mobs Redo and its farm animals
+	  (cows, sheep, chickens...) built into the game.
+
+	  https://github.com/luanti-org/minetest_game
+	  https://codeberg.org/tenplus1/mobs_animal
