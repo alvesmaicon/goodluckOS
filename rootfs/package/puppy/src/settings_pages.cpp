@@ -65,13 +65,14 @@ static const char* const kShortcuts[][2] = {
     {"FN + START", "Quit the game"},
 };
 
-const std::vector<std::pair<SettingsScreen::Page, const char*>>& SettingsScreen::sections() {
+const std::vector<std::pair<SettingsScreen::Page, const char*>>& SettingsScreen::sections() const {
     static const std::vector<std::pair<Page, const char*>> list = {
         {Page::Display, "Display & Audio"}, {Page::Launcher, "Launcher"}, {Page::Interface, "Interface"},
         {Page::Overlay, "Overlay"}, {Page::DateTime, "Date & Time"}, {Page::Storage, "Storage"},
-        {Page::System, "System"}, {Page::Input, "Input Settings"},
+        {Page::System, "System"}, {Page::Input, "Input Settings"}, {Page::Credits, "Credits"},
     };
-    return list;
+    static const std::vector<std::pair<Page, const char*>> noCredits(list.begin(), list.end() - 1);
+    return credits.empty() ? noCredits : list;
 }
 
 std::string SettingsScreen::title(Page p) const {
@@ -80,7 +81,6 @@ std::string SettingsScreen::title(Page p) const {
         case Page::Shortcuts: return tr("Shortcuts");
         case Page::Info:      return tr("System Info");
         case Page::Resize:    return tr("Resize Home");
-        case Page::Credits:   return tr("Credits");
         default:
             for (const auto& s : sections())
                 if (s.first == p) return tr(s.second);
@@ -439,7 +439,6 @@ std::vector<Row> SettingsScreen::systemPage() {
         resize = Resize::read();
         open(Page::Info);
     }));
-    if (!credits.empty()) rows.push_back(Row::link("Credits", [this] { open(Page::Credits); }));
     // Overlay, Date & Time, the launcher's view, tabs, font and accent, and the power mode; the language,
     // the time zone and the clock stay
     rows.push_back(Row::action("Restore default settings", [this] {
