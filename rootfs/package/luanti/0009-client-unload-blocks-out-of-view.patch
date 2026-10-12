@@ -1,0 +1,124 @@
+From: Maicon Alves <maicon.alves@posthaus.com.br>
+Subject: [PATCH] client: optionally unload blocks out of view, and touch blocks below 5 FPS
+
+touchMapBlocks() keeps every block within the viewing range alive, all
+around the player, and with a long range Client::step() raises
+client_mapblock_limit to a sphere of 200 nodes (9202 blocks), so nothing
+bounds the client's memory while moving. Walking 95 s through a forest at
+range 320 on a 512 MB handheld, the client went from 306 to 1514 blocks,
+~120 KB of RAM plus ~85 KB of GPU memory each, and free RAM from 432 to
+36 MB.
+
+client_unload_out_of_view (default false): touchMapBlocks() only keeps
+alive the blocks within 3 mapblocks of the camera or inside the view cone
+widened by 40 degrees; the rest expire after
+client_unload_unused_data_timeout like blocks out of range, and the server
+sends them again when they come back into view.
+
+Also, game.cpp calls touchMapBlocks() only on a frame where the draw list
+is not rebuilt, and the draw list is rebuilt whenever 0.2 s passed: below
+5 FPS touchMapBlocks() never ran and every block, visible ones included,
+expired after the timeout and was sent and meshed again. It now runs when
+it is 8 s overdue.
+
+---
+--- a/builtin/settingtypes.txt
++++ b/builtin/settingtypes.txt
+@@ -2246,6 +2246,11 @@
+ #    Timeout for client to remove unused map data from memory, in seconds.
+ client_unload_unused_data_timeout (Mapblock unload timeout) [client] float 600.0 0.0
+ 
++#    Also unload, after the timeout above, blocks in range that are out of view:
++#    far behind or beside the camera. Saves memory while moving; turning back
++#    shows those blocks loading again.
++client_unload_out_of_view (Unload blocks out of view) [client] bool false
++
+ #    Maximum number of mapblocks for client to be kept in memory.
+ #    Note that there is an internal dynamic minimum number of blocks that
+ #    won't be deleted, depending on the current view range.
+--- a/src/client/clientmap.cpp
++++ b/src/client/clientmap.cpp
+@@ -154,6 +154,7 @@
+ 	"transparency_sorting_distance",
+ 	"occlusion_culler",
+ 	"enable_raytraced_culling",
++	"client_unload_out_of_view",
+ };
+ 
+ ClientMap::ClientMap(
+@@ -201,6 +202,8 @@
+ 		m_loops_occlusion_culler = g_settings->get("occlusion_culler") == "loops";
+ 	if (all || name == "enable_raytraced_culling")
+ 		m_enable_raytraced_culling = g_settings->getBool("enable_raytraced_culling");
++	if (all || name == "client_unload_out_of_view")
++		m_cache_unload_out_of_view = g_settings->getBool("client_unload_out_of_view");
+ }
+ 
+ ClientMap::~ClientMap()
+@@ -752,6 +755,10 @@
+ 	// Number of blocks in rendering range
+ 	u32 blocks_in_range = 0;
+ 
++	// client_unload_out_of_view: what is near or within the view cone plus a margin
++	const f32 keep_near = 3 * MAP_BLOCKSIZE * BS;
++	const f32 keep_half_angle = m_camera_fov / 2 + 40.0f * core::DEGTORAD;
++
+ 	for (const auto &sector_it : m_sectors) {
+ 		const MapSector *sector = sector_it.second;
+ 		v2s16 sp = sector->getPos();
+@@ -792,9 +799,21 @@
+ 					m_control.wanted_range * BS + mesh_sphere_radius)
+ 				continue; // Out of range, skip.
+ 
++			blocks_in_range++;
++
++			if (m_cache_unload_out_of_view) {
++				// Out of view: let it expire like a block out of range
++				v3f to_block = mesh_sphere_center - m_camera_position;
++				f32 dist = to_block.getLength();
++				f32 angle = keep_half_angle + std::asin(std::min(1.0f,
++						mesh_sphere_radius / std::max(dist, 1.0f)));
++				if (dist > keep_near && angle < core::PI &&
++						to_block.dotProduct(m_camera_direction) < dist * std::cos(angle))
++					continue;
++			}
++
+ 			// Keep the block alive as long as it is in range.
+ 			block->resetUsageTimer();
+-			blocks_in_range++;
+ 		}
+ 	}
+ 
+--- a/src/client/clientmap.h
++++ b/src/client/clientmap.h
+@@ -186,4 +186,5 @@
+ 
+ 	bool m_loops_occlusion_culler;
+ 	bool m_enable_raytraced_culling;
++	bool m_cache_unload_out_of_view;
+ };
+--- a/src/client/game.cpp
++++ b/src/client/game.cpp
+@@ -3528,7 +3528,11 @@
+ 
+ 	// call only one of updateDrawList, touchMapBlocks, or updateShadow per frame
+ 	// (the else-ifs below are intentional)
+-	if (runData.update_draw_list_timer >= update_draw_list_delta
++	if (runData.touch_blocks_timer > 2 * touch_mapblock_delta) {
++		// Overdue: below 5 FPS the draw list is rebuilt every frame
++		client->getEnv().getClientMap().touchMapBlocks();
++		runData.touch_blocks_timer = 0;
++	} else if (runData.update_draw_list_timer >= update_draw_list_delta
+ 			|| runData.update_draw_list_last_cam_dir.getDistanceFrom(camera_direction) > 0.2
+ 			|| m_camera_offset_changed
+ 			|| client->getEnv().getClientMap().needsUpdateDrawList()) {
+--- a/src/defaultsettings.cpp
++++ b/src/defaultsettings.cpp
+@@ -113,6 +113,7 @@
+ 	settings->setDefault("screenshot_format", "png");
+ 	settings->setDefault("screenshot_quality", "0");
+ 	settings->setDefault("client_unload_unused_data_timeout", "600");
++	settings->setDefault("client_unload_out_of_view", "false");
+ 	settings->setDefault("client_mapblock_limit", "7500"); // about 120 MB
+ 	settings->setDefault("enable_build_where_you_stand", "false");
+ 	settings->setDefault("curl_timeout", "20000");
