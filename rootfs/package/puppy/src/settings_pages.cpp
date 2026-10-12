@@ -32,7 +32,7 @@ static std::string twoDigits(int v) {
     return s;
 }
 
-// From /etc/triggerhappy/triggers.d, the launcher and the RetroArch config (hotkey = FN)
+// From /etc/triggerhappy/triggers.d, the launcher, the RetroArch config (hotkey = FN) and /etc/mpv/input.conf
 static const char* const kShortcuts[][2] = {
     {"Any app", nullptr},
     {"VOL+ / VOL-", "Volume"},
@@ -63,6 +63,19 @@ static const char* const kShortcuts[][2] = {
     {"FN + R2", "Fast forward"},
     {"FN + L2", "Screenshot"},
     {"FN + START", "Quit the game"},
+    {"Videos", nullptr},
+    {"A / START", "Pause"},
+    {"B", "Close the video"},
+    {"LEFT / RIGHT", "Back / forward 10 s"},
+    {"DOWN / UP", "Back / forward 1 min"},
+    {"L1 / R1", "Previous / next video"},
+    {"X", "Playlist"},
+    {"Y", "Repeat on / off"},
+    {"L2 / R2", "Audio / subtitle track"},
+    {"Left stick up/down", "Faster / slower"},
+    {"R3 / L3", "Zoom in / out"},
+    {"Right stick", "Move the zoomed picture"},
+    {"SELECT", "Normal speed and zoom"},
 };
 
 const std::vector<std::pair<SettingsScreen::Page, const char*>>& SettingsScreen::sections() const {
