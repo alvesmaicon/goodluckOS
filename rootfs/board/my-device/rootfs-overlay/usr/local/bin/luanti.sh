@@ -25,4 +25,10 @@ else
     set_conf language en
 fi
 
+# test runs: ~/.minetest/perf.env exports its variables (LIMA_DEBUG...) and starts the logger
+if [ -f "$dir/perf.env" ]; then
+    set -a; . "$dir/perf.env"; set +a
+    luanti-perflog.sh $$ "${PERFLOG_INTERVAL:-5}" &
+fi
+
 exec luanti
