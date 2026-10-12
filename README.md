@@ -37,7 +37,7 @@ Please Note: At the time of writing, Allwinner-A23 based GA36-MB devices (which 
 - If the screen is on, the LEDs are off. Nothing blinding you while you're playing in the dark
 - Comes stock with Chocolate Doom, ready to play
 - Second SD card (TF-2 slot) for more games, with its own launcher tab
-- Music and video player (mpv): Music and Videos tabs in the launcher, played full screen with the console's buttons
+- Music and video player (mpv): Music and Videos tabs in the launcher, played full screen with the console's buttons, with speed (0.25x to 2x) and zoom (up to 4x, moved with the right stick) for videos
 - Comes stock with Retroarch and several optimized cores (PCSX-ReArmed, Snes9x, QuickNES, DOSbox, Genesis Plus GX, mGBA, etc)
 - Games perform very well. Metal Gear Solid 1 is completely playable at reasonable framerates
 - Comes with a custom, optimized launcher application, with tabs per system, search, favourites and game artwork/descriptions from `gamelist.xml`
@@ -293,7 +293,22 @@ Then modify `HOME -> apps.puppy` with a new `[ARCHIVE]` entry, pointing the COMM
 ## How do I add music and videos?
 Copy them into `HOME -> media -> music` and `HOME -> media -> videos`. The Music and Videos tabs show up in the launcher once there's something in them. A folder (an album, a series) is one entry that plays whole, with its `cover.jpg` or `folder.jpg` as the art; a single file plays along with the rest of its folder. Other art goes in the `icons` folder, named like the file or folder.
 
-Controls: A or START pause, B quit, D-pad left/right seek 10 s, up/down 1 min, L1/R1 previous/next, X the playlist, Y repeat on/off, L2/R2 the audio/subtitle track.
+Controls (also in System Settings -> Input Settings -> Shortcuts):
+
+| Button | Action |
+|---|---|
+| A / START | Pause |
+| B | Quit |
+| D-pad left / right, left stick left / right | Back / forward 10 s |
+| D-pad down / up | Back / forward 1 min |
+| L1 / R1 | Previous / next file |
+| X | Show the playlist |
+| Y | Repeat on / off |
+| L2 / R2 | Audio / subtitle track |
+| Left stick up / down | Faster / slower: 0.25x, 0.5x, 1x, 1.5x, 2x. The speed stays for the next files of the playlist |
+| R3 / L3 (press the stick) | Zoom in / out: 1x, 1.5x, 2x, 3x, 4x |
+| Right stick | Move the zoomed picture, up to its edges |
+| SELECT | Back to normal speed and zoom |
 
 The A33 decodes video in software: up to 640x480 H.264 plays smoothly, 1080p and H.265 don't. Convert bigger videos on your PC first, e.g. `ffmpeg -i in.mp4 -vf scale=640:480:force_original_aspect_ratio=decrease:force_divisible_by=2 -c:v libx264 -tune fastdecode -crf 23 -c:a aac -ac 2 out.mkv`. On Windows, [convert-videos](convert-videos/README.md) does this for a whole folder, turns portrait videos to fill the screen and saves a frame of each one as its art.
 

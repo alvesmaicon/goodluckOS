@@ -192,6 +192,21 @@ Pause = Pausa
 Fast forward = Avanço rápido
 Screenshot = Captura de tela
 Quit the game = Sai do jogo
+Close the video = Fecha o vídeo
+LEFT / RIGHT = ESQ. / DIR.
+Back / forward 10 s = Volta / avança 10 s
+DOWN / UP = BAIXO / CIMA
+Back / forward 1 min = Volta / avança 1 min
+Previous / next video = Vídeo anterior / próximo
+Playlist = Lista de reprodução
+Repeat on / off = Repetir liga / desliga
+Audio / subtitle track = Faixa de áudio / legenda
+Left stick up/down = Analógico esq. cima/baixo
+Faster / slower = Mais rápido / mais lento
+Zoom in / out = Aumenta / diminui o zoom
+Right stick = Analógico dir.
+Move the zoomed picture = Move a imagem com zoom
+Normal speed and zoom = Velocidade e zoom normais
 
 # --- Button tester
 No gamepad found. = Nenhum controle encontrado.
