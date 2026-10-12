@@ -11,7 +11,7 @@ range 320 on a 512 MB handheld, the client went from 306 to 1514 blocks,
 
 client_unload_out_of_view (default false): touchMapBlocks() only keeps
 alive the blocks within 3 mapblocks of the camera or inside the view cone
-widened by 40 degrees; the rest expire after
+widened by 20 degrees; the rest expire after
 client_unload_unused_data_timeout like blocks out of range, and the server
 sends them again when they come back into view.
 
@@ -61,7 +61,7 @@ it is 8 s overdue.
  
 +	// client_unload_out_of_view: what is near or within the view cone plus a margin
 +	const f32 keep_near = 3 * MAP_BLOCKSIZE * BS;
-+	const f32 keep_half_angle = m_camera_fov / 2 + 40.0f * core::DEGTORAD;
++	const f32 keep_half_angle = m_camera_fov / 2 + 20.0f * core::DEGTORAD;
 +
  	for (const auto &sector_it : m_sectors) {
  		const MapSector *sector = sector_it.second;
