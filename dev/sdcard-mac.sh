@@ -8,6 +8,7 @@
 #
 # diskN comes from `diskutil list external`. Refuses internal disks, disks over 70 GB and the
 # daily card (HOME/.card-name = extreme-daily) unless --daily-card is given too.
+# SDCARD_BACKUP=<file> skips the backup read when the caller already holds a copy of the region.
 set -euo pipefail
 
 [ $# -ge 3 ] || { sed -n '2,11p' "$0"; exit 1; }
@@ -39,14 +40,21 @@ fi
 read -r -p "write $FILE ($SIZE bytes) to $DISK at $MIB MiB? [y/N] " ok
 [ "$ok" = y ] || exit 1
 
-backup="dev/out/backup-$WHAT-$name-$(date +%Y%m%d-%H%M%S).img"
+MIBS=$(( (SIZE + 1048575) / 1048576 ))
 diskutil unmountDisk "$DISK" >/dev/null
-sudo dd if=/dev/r"$DISK" of="$backup" bs=1m skip=$MIB count=$(( (SIZE + 1048575) / 1048576 )) 2>/dev/null
+if [ -n "${SDCARD_BACKUP:-}" ]; then
+    [ "$(stat -f %z "$SDCARD_BACKUP")" -ge "$SIZE" ] || { echo "$SDCARD_BACKUP is smaller than the write"; exit 1; }
+    backup=$SDCARD_BACKUP
+else
+    backup="dev/out/backup-$WHAT-$name-$(date +%Y%m%d-%H%M%S).img"
+    sudo dd if=/dev/r"$DISK" of="$backup" bs=1m skip=$MIB count=$MIBS 2>/dev/null
+fi
 echo "backup of the region: $backup (restore: same command with that file)"
 sudo dd if="$FILE" of=/dev/r"$DISK" bs=1m seek=$MIB conv=notrunc
 sync
 want=$(shasum -a 256 "$FILE" | cut -d' ' -f1)
-have=$(sudo dd if=/dev/r"$DISK" bs=512 skip=$((MIB * 2048)) count=$((SIZE / 512)) 2>/dev/null | shasum -a 256 | cut -d' ' -f1)
+# 512-byte reads take minutes: read whole MiB and keep SIZE bytes
+have=$( { sudo dd if=/dev/r"$DISK" bs=1m skip=$MIB count=$MIBS 2>/dev/null || true; } | head -c "$SIZE" | shasum -a 256 | cut -d' ' -f1)
 echo "file: $want"; echo "card: $have"
 [ "$want" = "$have" ] && echo MATCH || { echo MISMATCH; exit 1; }
 diskutil eject "$DISK" >/dev/null && echo "ejected"
