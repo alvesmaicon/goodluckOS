@@ -8,8 +8,8 @@ need a mouse.
 So when SDL's video driver is kmsdrm, while the cursor is visible (a
 menu or formspec is open):
 - either stick moves the cursor, the D-pad nudges it;
-- A is a left click, X a right click (take half a stack);
-- B, Y and START are Escape (close the menu, the inventory, the pause
+- A and Y are a left click, X a right click (take half a stack);
+- B and START are Escape (close the menu, the inventory, the pause
   menu);
 - L1/R1 are the mouse wheel.
 The GUI environment then draws an arrow at the cursor at the end of
@@ -217,7 +217,7 @@ diff -ruN a/irr/src/CIrrDeviceSDL.cpp b/irr/src/CIrrDeviceSDL.cpp
  }
 +
 +#if defined(_IRR_COMPILE_WITH_JOYSTICK_EVENTS_)
-+//! A, X, B/Y/START, L1/R1 and the D-pad act as the mouse while the cursor is visible
++//! A/Y, X, B/START, L1/R1 and the D-pad act as the mouse while the cursor is visible
 +bool CIrrDeviceSDL::gamepadButtonAsMouse(GamepadButton button, bool down)
 +{
 +	switch (button) {
@@ -250,13 +250,13 @@ diff -ruN a/irr/src/CIrrDeviceSDL.cpp b/irr/src/CIrrDeviceSDL.cpp
 +
 +	switch (button) {
 +	case GamepadButton::SOUTH:
++	case GamepadButton::NORTH:
 +		postGamepadClick(SDL_BUTTON_LEFT, down);
 +		break;
 +	case GamepadButton::WEST:
 +		postGamepadClick(SDL_BUTTON_RIGHT, down);
 +		break;
 +	case GamepadButton::EAST:
-+	case GamepadButton::NORTH:
 +	case GamepadButton::START:
 +		postGamepadEscape(down);
 +		break;
