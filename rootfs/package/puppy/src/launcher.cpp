@@ -269,14 +269,12 @@ void LauncherScreen::renderGrid(Ui& ui) {
         ui.drawIcon(ui.gridIcons(), c.entries[c.visible[k]].iconPath, cell);
         if (k == c.sel) ui.frame(accent(), cell, kBorder);
         const Entry& entry = c.entries[c.visible[k]];
-        if (model.isAutoStart(entry)) ui.pill(tr("autolaunch"), cell.x, cell.y, accent(), kBlack);
+        int pillX = cell.x;    // the system tag top left, clear of the cover's title art at the bottom
+        if (c.mixed) pillX += ui.pill(entry.tag, cell.x, cell.y, kBar, kGrey);
+        if (model.isAutoStart(entry)) ui.pill(tr("autolaunch"), pillX, cell.y, accent(), kBlack);
         if (model.isFavorite(entry)) {
             ui.fill(kBar, {cell.x + cell.w - 26, cell.y + 2, 24, 24});
             ui.star(cell.x + cell.w - 14, cell.y + 14, 9, accent());
-        }
-        if (c.mixed) {
-            int w = textWidth(fonts.small, entry.tag) + 12;
-            ui.pill(entry.tag, cell.x + cell.w - w, cell.y + cell.h - TTF_FontHeight(fonts.small) - 4, kBar, kGrey);
         }
     }
 
