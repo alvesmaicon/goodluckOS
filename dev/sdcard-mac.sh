@@ -9,9 +9,10 @@
 # diskN comes from `diskutil list external`. Refuses internal disks, disks over 70 GB and the
 # daily card (HOME/.card-name = extreme-daily) unless --daily-card is given too.
 # SDCARD_BACKUP=<file> skips the backup read when the caller already holds a copy of the region.
+# SDCARD_KEEP=1 leaves the card attached, for a second write (the kernel, then the rootfs).
 set -euo pipefail
 
-[ $# -ge 3 ] || { sed -n '2,11p' "$0"; exit 1; }
+[ $# -ge 3 ] || { sed -n '2,12p' "$0"; exit 1; }
 DISK=${1#/dev/}; WHAT=$2; FILE=$3; DAILY=${4:-}
 case $WHAT in
     boot) MIB=84; MAX=$((88 * 1024 * 1024)) ;;
@@ -57,4 +58,4 @@ want=$(shasum -a 256 "$FILE" | cut -d' ' -f1)
 have=$( { sudo dd if=/dev/r"$DISK" bs=1m skip=$MIB count=$MIBS 2>/dev/null || true; } | head -c "$SIZE" | shasum -a 256 | cut -d' ' -f1)
 echo "file: $want"; echo "card: $have"
 [ "$want" = "$have" ] && echo MATCH || { echo MISMATCH; exit 1; }
-diskutil eject "$DISK" >/dev/null && echo "ejected"
+[ -n "${SDCARD_KEEP:-}" ] || { diskutil eject "$DISK" >/dev/null && echo "ejected"; }
