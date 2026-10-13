@@ -1,0 +1,72 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Tue, 13 Oct 2026 02:50:43 -0300
+Subject: [PATCH 13/13] Settings: simplified far meshes and out-of-view
+ unloading on by default
+
+This branch exists for weak hardware, so what it adds is on unless
+turned off: regions past 160 nodes are drawn from simplified meshes,
+and map blocks out of view are unloaded after 120 s (upstream keeps all
+blocks in range for 600 s).
+
+On a GA36-MB handheld (Allwinner A33, Mali-400, 512 MB) at range 320,
+with leaves drawn as opaque cubes, the lake view drew 1.52 M vertices at
+3.4 FPS at 320x240; with these defaults it draws 0.38 M at 10.5-11 FPS
+at the full 640x480, with 167 MB of RAM left. On a desktop the band
+beyond 160 nodes gets blockier; client_lod_distance = 0 and
+client_unload_out_of_view = false give back upstream's behaviour.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/builtin/settingtypes.txt b/builtin/settingtypes.txt
+index 3452a46f4..22aa75f96 100644
+--- a/builtin/settingtypes.txt
++++ b/builtin/settingtypes.txt
+@@ -2122,7 +2122,7 @@ client_mesh_chunk (Client Mesh Chunksize) int 1 1 16
+ #    Distance in nodes beyond which regions of 2x2x2 map blocks are drawn from a
+ #    simplified mesh, with one cube per 2x2x2 nodes. Saves vertices and memory
+ #    in long views. Needs a mesh chunksize of 1 or 2. 0 disables it.
+-client_lod_distance (Simplified mesh distance) [client] int 0 0 1000
++client_lod_distance (Simplified mesh distance) [client] int 160 0 1000
+ 
+ #    Decide the color depth of the texture used for the post-processing pipeline.
+ #    Reducing this can improve performance, but some effects (e.g. debanding)
+@@ -2249,12 +2249,12 @@ prometheus_listener_address (Prometheus listener address) [server] string 127.0.
+ max_out_chat_queue_size (Maximum size of the client's outgoing chat queue) [client] int 20 -1 32767
+ 
+ #    Timeout for client to remove unused map data from memory, in seconds.
+-client_unload_unused_data_timeout (Mapblock unload timeout) [client] float 600.0 0.0
++client_unload_unused_data_timeout (Mapblock unload timeout) [client] float 120.0 0.0
+ 
+ #    Also unload, after the timeout above, blocks in range that are out of view:
+ #    far behind or beside the camera. Saves memory while moving; turning back
+ #    shows those blocks loading again.
+-client_unload_out_of_view (Unload blocks out of view) [client] bool false
++client_unload_out_of_view (Unload blocks out of view) [client] bool true
+ 
+ #    Maximum number of mapblocks for client to be kept in memory.
+ #    Note that there is an internal dynamic minimum number of blocks that
+diff --git a/src/defaultsettings.cpp b/src/defaultsettings.cpp
+index 3db998df8..5e740a5d8 100644
+--- a/src/defaultsettings.cpp
++++ b/src/defaultsettings.cpp
+@@ -112,8 +112,8 @@ void set_default_settings()
+ 	settings->setDefault("screenshot_path", "screenshots");
+ 	settings->setDefault("screenshot_format", "png");
+ 	settings->setDefault("screenshot_quality", "0");
+-	settings->setDefault("client_unload_unused_data_timeout", "600");
+-	settings->setDefault("client_unload_out_of_view", "false");
++	settings->setDefault("client_unload_unused_data_timeout", "120");
++	settings->setDefault("client_unload_out_of_view", "true");
+ 	settings->setDefault("client_mapblock_limit", "7500"); // about 120 MB
+ 	settings->setDefault("enable_build_where_you_stand", "false");
+ 	settings->setDefault("curl_timeout", "20000");
+@@ -255,7 +255,7 @@ void set_default_settings()
+ 	settings->setDefault("fps_max_unfocused", "10");
+ 	settings->setDefault("viewing_range", "190");
+ 	settings->setDefault("client_mesh_chunk", "1");
+-	settings->setDefault("client_lod_distance", "0");
++	settings->setDefault("client_lod_distance", "160");
+ 	settings->setDefault("screen_w", "1024");
+ 	settings->setDefault("screen_h", "600");
+ 	settings->setDefault("window_maximized", "false");

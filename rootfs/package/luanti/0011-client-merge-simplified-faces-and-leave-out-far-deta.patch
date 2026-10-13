@@ -1,5 +1,8 @@
-From: Maicon Alves <maicon.alves@posthaus.com.br>
-Subject: [PATCH] client: merge simplified faces, and leave out far detail meshes
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Tue, 13 Oct 2026 02:49:43 -0300
+Subject: [PATCH 11/13] client: merge simplified faces, and leave out far
+ detail meshes
 
 Equal faces next to each other in a simplified mesh (same node, param2
 and light) become one quad when the texture tiles, and an opaque liquid
@@ -17,9 +20,10 @@ which don't draw simplified meshes, every block is meshed again.
 Flying over the lake and back (300 nodes at 6 nodes/s), the client's
 RSS on llvmpipe peaked at 571 MB instead of 708 MB.
 
----
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
 diff --git a/src/client/client.cpp b/src/client/client.cpp
-index 8bdaf8a..0b5c2c7 100644
+index 8bdaf8ac0..0b5c2c766 100644
 --- a/src/client/client.cpp
 +++ b/src/client/client.cpp
 @@ -692,6 +692,12 @@ void Client::step(float dtime)
@@ -50,10 +54,10 @@ index 8bdaf8a..0b5c2c7 100644
  }
  
 diff --git a/src/client/client.h b/src/client/client.h
-index 240990e..a9c33f8 100644
+index 240990e3d..a9c33f890 100644
 --- a/src/client/client.h
 +++ b/src/client/client.h
-@@ -508,6 +508,8 @@ private:
+@@ -508,6 +508,8 @@ class Client : public con::PeerHandler, public InventoryManager, public IGameDef
  
  
  	std::unique_ptr<MeshUpdateManager> m_mesh_update_manager;
@@ -63,7 +67,7 @@ index 240990e..a9c33f8 100644
  	std::unique_ptr<ParticleManager> m_particle_manager;
  	std::unique_ptr<con::IConnection> m_con;
 diff --git a/src/client/clientmap.cpp b/src/client/clientmap.cpp
-index f7d8093..76b5cca 100644
+index f7d809395..76b5ccae5 100644
 --- a/src/client/clientmap.cpp
 +++ b/src/client/clientmap.cpp
 @@ -388,17 +388,24 @@ void ClientMap::clearDrawList()
@@ -168,10 +172,10 @@ index f7d8093..76b5cca 100644
  			// Decide which sides to traverse next or to block away
  
 diff --git a/src/client/clientmap.h b/src/client/clientmap.h
-index f12828a..dabe074 100644
+index f12828a34..dabe074a0 100644
 --- a/src/client/clientmap.h
 +++ b/src/client/clientmap.h
-@@ -125,6 +125,8 @@ public:
+@@ -125,6 +125,8 @@ class ClientMap : public Map, public scene::ISceneNode
  			std::unique_ptr<MapBlockMesh> (&skirts)[6]);
  	// The block's data changed: regions that use it need a new simplified mesh
  	void markLodDirty(v3s16 blockpos);
@@ -180,7 +184,7 @@ index f12828a..dabe074 100644
  
  	// For debug printing
  	void PrintInfo(std::ostream &out) override;
-@@ -159,9 +161,12 @@ private:
+@@ -159,9 +161,12 @@ class ClientMap : public Map, public scene::ISceneNode
  		u64 used_ms = 0;
  	};
  
@@ -196,7 +200,7 @@ index f12828a..dabe074 100644
  	// update the vertex order in transparent mesh buffers
  	void updateTransparentMeshBuffers();
 diff --git a/src/client/mesh_generator_thread.cpp b/src/client/mesh_generator_thread.cpp
-index 252f75f..a7617df 100644
+index 252f75f51..a7617df0f 100644
 --- a/src/client/mesh_generator_thread.cpp
 +++ b/src/client/mesh_generator_thread.cpp
 @@ -6,6 +6,7 @@
@@ -220,7 +224,7 @@ index 252f75f..a7617df 100644
  
  	/*
 diff --git a/src/client/meshgen/lod.cpp b/src/client/meshgen/lod.cpp
-index 2d7ff5a..61bf047 100644
+index 2d7ff5add..61bf047cb 100644
 --- a/src/client/meshgen/lod.cpp
 +++ b/src/client/meshgen/lod.cpp
 @@ -141,6 +141,7 @@ LodMeshGenerator::Cell LodMeshGenerator::classify(v3s16 c)
@@ -383,7 +387,7 @@ index 2d7ff5a..61bf047 100644
  	}
  }
 diff --git a/src/client/meshgen/lod.h b/src/client/meshgen/lod.h
-index 3430b86..1d31ce9 100644
+index 3430b8681..1d31ce995 100644
 --- a/src/client/meshgen/lod.h
 +++ b/src/client/meshgen/lod.h
 @@ -15,7 +15,8 @@ class NodeDefManager;
@@ -396,7 +400,7 @@ index 3430b86..1d31ce9 100644
  */
  class LodMeshGenerator
  {
-@@ -37,14 +38,34 @@ private:
+@@ -37,14 +38,34 @@ class LodMeshGenerator
  
  	struct Cell {
  		Kind kind = UNKNOWN;
@@ -433,10 +437,10 @@ index 3430b86..1d31ce9 100644
  	MeshMakeData *m_data;
  	const NodeDefManager *m_ndef;
 diff --git a/src/mapblock.h b/src/mapblock.h
-index 6a6dd6b..17366f0 100644
+index 6a6dd6b46..17366f08d 100644
 --- a/src/mapblock.h
 +++ b/src/mapblock.h
-@@ -460,6 +460,9 @@ public:
+@@ -460,6 +460,9 @@ class MapBlock
  
  	// marks the sides which are opaque: 00+Z-Z+Y-Y+X-X
  	u8 solid_sides = 0;

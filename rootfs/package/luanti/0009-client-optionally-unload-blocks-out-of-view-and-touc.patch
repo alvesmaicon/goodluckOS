@@ -1,5 +1,8 @@
-From: Maicon Alves <maicon.alves@posthaus.com.br>
-Subject: [PATCH] client: optionally unload blocks out of view, and touch blocks below 5 FPS
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Tue, 13 Oct 2026 02:49:43 -0300
+Subject: [PATCH 09/13] client: optionally unload blocks out of view, and touch
+ blocks below 5 FPS
 
 touchMapBlocks() keeps every block within the viewing range alive, all
 around the player, and with a long range Client::step() raises
@@ -21,10 +24,13 @@ is not rebuilt, and the draw list is rebuilt whenever 0.2 s passed: below
 expired after the timeout and was sent and meshed again. It now runs when
 it is 8 s overdue.
 
----
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/builtin/settingtypes.txt b/builtin/settingtypes.txt
+index 477e44ad5..91b752d49 100644
 --- a/builtin/settingtypes.txt
 +++ b/builtin/settingtypes.txt
-@@ -2246,6 +2246,11 @@
+@@ -2246,6 +2246,11 @@ max_out_chat_queue_size (Maximum size of the client's outgoing chat queue) [clie
  #    Timeout for client to remove unused map data from memory, in seconds.
  client_unload_unused_data_timeout (Mapblock unload timeout) [client] float 600.0 0.0
  
@@ -36,9 +42,11 @@ it is 8 s overdue.
  #    Maximum number of mapblocks for client to be kept in memory.
  #    Note that there is an internal dynamic minimum number of blocks that
  #    won't be deleted, depending on the current view range.
+diff --git a/src/client/clientmap.cpp b/src/client/clientmap.cpp
+index 6309fe994..48b38f737 100644
 --- a/src/client/clientmap.cpp
 +++ b/src/client/clientmap.cpp
-@@ -154,6 +154,7 @@
+@@ -154,6 +154,7 @@ static const std::string ClientMap_settings[] = {
  	"transparency_sorting_distance",
  	"occlusion_culler",
  	"enable_raytraced_culling",
@@ -46,7 +54,7 @@ it is 8 s overdue.
  };
  
  ClientMap::ClientMap(
-@@ -201,6 +202,8 @@
+@@ -201,6 +202,8 @@ void ClientMap::onSettingChanged(std::string_view name, bool all)
  		m_loops_occlusion_culler = g_settings->get("occlusion_culler") == "loops";
  	if (all || name == "enable_raytraced_culling")
  		m_enable_raytraced_culling = g_settings->getBool("enable_raytraced_culling");
@@ -55,7 +63,7 @@ it is 8 s overdue.
  }
  
  ClientMap::~ClientMap()
-@@ -752,6 +755,10 @@
+@@ -752,6 +755,10 @@ void ClientMap::touchMapBlocks()
  	// Number of blocks in rendering range
  	u32 blocks_in_range = 0;
  
@@ -66,7 +74,7 @@ it is 8 s overdue.
  	for (const auto &sector_it : m_sectors) {
  		const MapSector *sector = sector_it.second;
  		v2s16 sp = sector->getPos();
-@@ -792,9 +799,21 @@
+@@ -792,9 +799,21 @@ void ClientMap::touchMapBlocks()
  					m_control.wanted_range * BS + mesh_sphere_radius)
  				continue; // Out of range, skip.
  
@@ -89,17 +97,21 @@ it is 8 s overdue.
  		}
  	}
  
+diff --git a/src/client/clientmap.h b/src/client/clientmap.h
+index 5078670e7..9ccaf967b 100644
 --- a/src/client/clientmap.h
 +++ b/src/client/clientmap.h
-@@ -186,4 +186,5 @@
+@@ -186,4 +186,5 @@ class ClientMap : public Map, public scene::ISceneNode
  
  	bool m_loops_occlusion_culler;
  	bool m_enable_raytraced_culling;
 +	bool m_cache_unload_out_of_view;
  };
+diff --git a/src/client/game.cpp b/src/client/game.cpp
+index 8c5cc3581..b271b758b 100644
 --- a/src/client/game.cpp
 +++ b/src/client/game.cpp
-@@ -3528,7 +3528,11 @@
+@@ -3528,7 +3528,11 @@ void Game::updateFrame(ProfilerGraph *graph, RunStats *stats, f32 dtime,
  
  	// call only one of updateDrawList, touchMapBlocks, or updateShadow per frame
  	// (the else-ifs below are intentional)
@@ -112,9 +124,11 @@ it is 8 s overdue.
  			|| runData.update_draw_list_last_cam_dir.getDistanceFrom(camera_direction) > 0.2
  			|| m_camera_offset_changed
  			|| client->getEnv().getClientMap().needsUpdateDrawList()) {
+diff --git a/src/defaultsettings.cpp b/src/defaultsettings.cpp
+index 57fab162e..072614b29 100644
 --- a/src/defaultsettings.cpp
 +++ b/src/defaultsettings.cpp
-@@ -113,6 +113,7 @@
+@@ -113,6 +113,7 @@ void set_default_settings()
  	settings->setDefault("screenshot_format", "png");
  	settings->setDefault("screenshot_quality", "0");
  	settings->setDefault("client_unload_unused_data_timeout", "600");

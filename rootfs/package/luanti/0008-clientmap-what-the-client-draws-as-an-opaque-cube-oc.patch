@@ -1,5 +1,8 @@
-From: Maicon Alves <maicon.alves@posthaus.com.br>
-Subject: [PATCH] clientmap: what the client draws as an opaque cube occludes
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Tue, 13 Oct 2026 02:49:43 -0300
+Subject: [PATCH 08/13] clientmap: what the client draws as an opaque cube
+ occludes
 
 The occlusion culler stops a ray only at nodes that don't let light through.
 Leaves have paramtype "light", so they never occlude, even with
@@ -13,10 +16,13 @@ longer counts CONTENT_IGNORE (the blank blocks that hold chunk meshes are
 full of it), so leaves plus a blank block can't hide a visible block.
 Fancy and simple leaves, glass and liquids still don't occlude.
 
----
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/src/client/clientmap.cpp b/src/client/clientmap.cpp
+index 8f9ce086d..6309fe994 100644
 --- a/src/client/clientmap.cpp
 +++ b/src/client/clientmap.cpp
-@@ -1600,6 +1600,16 @@
+@@ -1600,6 +1600,16 @@ void ClientMap::reportMetrics(u64 save_time_us, u32 saved_blocks, u32 all_blocks
  	g_profiler->avg("CM::reportMetrics loaded blocks [#]", all_blocks);
  }
  
@@ -33,9 +39,11 @@ Fancy and simple leaves, glass and liquids still don't occlude.
  void ClientMap::updateTransparentMeshBuffers()
  {
  	ScopeProfiler sp(g_profiler, "CM::updateTransparentMeshBuffers", SPT_AVG);
+diff --git a/src/client/clientmap.h b/src/client/clientmap.h
+index bd10ff779..5078670e7 100644
 --- a/src/client/clientmap.h
 +++ b/src/client/clientmap.h
-@@ -131,6 +131,7 @@
+@@ -131,6 +131,7 @@ class ClientMap : public Map, public scene::ISceneNode
  	virtual ~ClientMap();
  
  	void reportMetrics(u64 save_time_us, u32 saved_blocks, u32 all_blocks) override;
@@ -43,9 +51,11 @@ Fancy and simple leaves, glass and liquids still don't occlude.
  private:
  	bool isMeshOccluded(MapBlock *mesh_block, u16 mesh_size, v3s16 cam_pos_nodes);
  
+diff --git a/src/map.cpp b/src/map.cpp
+index 9e0f74a72..53279b25a 100644
 --- a/src/map.cpp
 +++ b/src/map.cpp
-@@ -710,7 +710,7 @@
+@@ -710,7 +710,7 @@ bool Map::isOccluded(const v3s16 pos_camera, const v3s16 pos_target,
  
  		// treat unloaded blocks as transparent
  		// Cannot see through light-blocking nodes --> occluded
@@ -54,7 +64,7 @@ Fancy and simple leaves, glass and liquids still don't occlude.
  			if (++count >= needed_count)
  				return true;
  		}
-@@ -729,7 +729,7 @@
+@@ -729,7 +729,7 @@ bool Map::isOccluded(const v3s16 pos_camera, const v3s16 pos_target,
  
  			// treat unloaded blocks as opaque
  			// Cannot see through non-existent blocks or light-blocking nodes --> occluded
@@ -63,21 +73,23 @@ Fancy and simple leaves, glass and liquids still don't occlude.
  				// Note: ignoring needed_count should be fine here since the preliminary search is already done
  				return true;
  			}
-@@ -737,6 +737,11 @@
- 		}
- 	}
+@@ -739,6 +739,11 @@ bool Map::isOccluded(const v3s16 pos_camera, const v3s16 pos_target,
  	return false;
-+}
-+
+ }
+ 
 +bool Map::isOccluder(const MapNode &n) const
 +{
 +	return !m_nodedef->getLightingFlags(n).light_propagates;
- }
- 
++}
++
  bool Map::isBlockOccluded(v3s16 pos_relative, v3s16 cam_pos_nodes, bool dense)
+ {
+ 	// Check occlusion for center and all 8 corners of the mapblock
+diff --git a/src/map.h b/src/map.h
+index 9c150954b..4acf20da3 100644
 --- a/src/map.h
 +++ b/src/map.h
-@@ -298,6 +298,9 @@
+@@ -298,6 +298,9 @@ class Map /*: public NodeContainer*/
  	// Can be implemented by child class
  	virtual void reportMetrics(u64 save_time_us, u32 saved_blocks, u32 all_blocks) {}
  

@@ -1,5 +1,8 @@
-From: Maicon Alves <maicon.alves@posthaus.com.br>
-Subject: [PATCH] client: simplified regions show detail again with hysteresis
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Tue, 13 Oct 2026 02:49:43 -0300
+Subject: [PATCH 12/13] client: simplified regions show detail again with
+ hysteresis
 
 A region drawn simplified switched back to detail meshes as soon as its
 center came within client_lod_distance, so a camera moving around that
@@ -11,9 +14,10 @@ Now it shows detail again 8 nodes closer, and only once the detail
 meshes of its blocks are made, or after 3 s: each block remembers
 whether its detail mesh was left out, asked for again, or made.
 
----
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
 diff --git a/src/client/client.cpp b/src/client/client.cpp
-index 0b5c2c7..fa3b2ba 100644
+index 0b5c2c766..fa3b2bad2 100644
 --- a/src/client/client.cpp
 +++ b/src/client/client.cpp
 @@ -651,6 +651,7 @@ void Client::step(float dtime)
@@ -33,7 +37,7 @@ index 0b5c2c7..fa3b2ba 100644
  }
  
 diff --git a/src/client/clientmap.cpp b/src/client/clientmap.cpp
-index 76b5cca..2e69efa 100644
+index 76b5ccae5..2e69efa54 100644
 --- a/src/client/clientmap.cpp
 +++ b/src/client/clientmap.cpp
 @@ -390,6 +390,8 @@ void ClientMap::clearDrawList()
@@ -144,10 +148,10 @@ index 76b5cca..2e69efa 100644
  				if (lod && mesh && !detail_wanted)
  					dropDetailMesh(block);
 diff --git a/src/client/clientmap.h b/src/client/clientmap.h
-index dabe074..7015a4b 100644
+index dabe074a0..7015a4bcc 100644
 --- a/src/client/clientmap.h
 +++ b/src/client/clientmap.h
-@@ -159,12 +159,15 @@ private:
+@@ -159,12 +159,15 @@ class ClientMap : public Map, public scene::ISceneNode
  		u32 drawlist_id = 0;
  		u64 queued_ms = 0;
  		u64 used_ms = 0;
@@ -166,10 +170,10 @@ index dabe074..7015a4b 100644
  	void dropDetailMesh(MapBlock *block);
  
 diff --git a/src/mapblock.h b/src/mapblock.h
-index 17366f0..77f29fe 100644
+index 17366f08d..77f29fe04 100644
 --- a/src/mapblock.h
 +++ b/src/mapblock.h
-@@ -461,8 +461,9 @@ public:
+@@ -461,8 +461,9 @@ class MapBlock
  	// marks the sides which are opaque: 00+Z-Z+Y-Y+X-X
  	u8 solid_sides = 0;
  

@@ -1,4 +1,7 @@
-Subject: [PATCH] formspec: fit fixed-size forms to screens under 800x600
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Tue, 13 Oct 2026 02:49:42 -0300
+Subject: [PATCH 04/13] formspec: fit fixed-size forms to screens under 800x600
 
 size[w,h,true] locks a form to a base screen of 800x600: it is laid
 out and centered as if the screen were that big, shifted by half the
@@ -12,11 +15,14 @@ sized to fit the screen and centered on it, as a form without the
 fixed flag is (and as touch_gui already makes them all).
 
 Upstream: not sent yet.
----
-diff -ruN a/src/gui/guiFormSpecMenu.cpp b/src/gui/guiFormSpecMenu.cpp
---- a/src/gui/guiFormSpecMenu.cpp	2026-10-11 04:19:38
-+++ b/src/gui/guiFormSpecMenu.cpp	2026-10-11 04:19:44
-@@ -337,7 +337,10 @@
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/src/gui/guiFormSpecMenu.cpp b/src/gui/guiFormSpecMenu.cpp
+index 04a2a7089..6064f294c 100644
+--- a/src/gui/guiFormSpecMenu.cpp
++++ b/src/gui/guiFormSpecMenu.cpp
+@@ -337,7 +337,10 @@ void GUIFormSpecMenu::parseSize(parserData* data, const std::string &element)
  
  		lockSize(false);
  		if (!g_settings->getBool("touch_gui") && parts.size() == 3) {
