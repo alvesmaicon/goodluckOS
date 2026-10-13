@@ -453,11 +453,11 @@ std::vector<Row> SettingsScreen::systemPage() {
         open(Page::Info);
     }));
     // Overlay, Date & Time, the launcher's view, tabs, font and accent, and the power mode; the language,
-    // the time zone and the clock stay
+    // the confirm button, the time zone and the clock stay
     rows.push_back(Row::action("Restore default settings", [this] {
         Dialog d;
         d.title = "Restore default settings";
-        d.message = "Restore the Overlay, Date & Time, launcher and power mode settings? The language and the time zone stay.";
+        d.message = "Restore the Overlay, Date & Time, launcher and power mode settings? The language, the confirm button and the time zone stay.";
         d.choices = {"Cancel", "Restore"};
         app.push(std::make_unique<DialogScreen>(app, d, [this](int choice) {
             if (choice == 1) restoreDefaults();
@@ -471,6 +471,7 @@ void SettingsScreen::restoreDefaults() {
     hud = HudSettings::load();
     Prefs fresh;
     fresh.language = prefs.language;
+    fresh.confirmBottom = prefs.confirmBottom;
     prefs = fresh;
     prefs.save();
     accents::choose(prefs.accent);
@@ -508,6 +509,13 @@ std::vector<Row> SettingsScreen::infoPage() {
 
 std::vector<Row> SettingsScreen::inputPage() {
     std::vector<Row> rows;
+    Row confirm = Row::choice("Confirm button", {"A (right)", "B (bottom)"}, prefs.confirmBottom ? 1 : 0, [this](int i) {
+        prefs.confirmBottom = i == 1;
+        prefs.save();
+        setConfirmBottom(app.gamepad(), prefs.confirmBottom);
+    });
+    confirm.hint = "The other one goes back. Apps follow it from the next one you open; RetroArch keeps its own.";
+    rows.push_back(confirm);
     rows.push_back(Row::link("Shortcuts", [this] { open(Page::Shortcuts); }));
     rows.push_back(Row::link("Button Tester", [this] { app.push(std::make_unique<TesterScreen>(app)); }));
     return rows;
@@ -517,7 +525,7 @@ std::vector<Row> SettingsScreen::shortcutsPage() {
     std::vector<Row> rows;
     for (const auto& s : kShortcuts) {
         if (!s[1]) rows.push_back(Row::section(s[0]));
-        else rows.push_back(Row::info(s[0], tr(s[1])));
+        else rows.push_back(Row::info(buttonLabel(s[0]), tr(s[1])));
     }
     return rows;
 }

@@ -74,6 +74,38 @@ Action actionFromButton(Uint8 b) {
     }
 }
 
+static bool confirmBottom = false;
+
+void setConfirmBottom(SDL_GameController* pad, bool bottom) {
+    if (bottom == confirmBottom) return;
+    confirmBottom = bottom;
+    char* mapping = pad ? SDL_GameControllerMapping(pad) : nullptr;
+    if (!mapping) return;
+    std::string fields = std::string(",") + mapping + ",", a, b;
+    SDL_free(mapping);
+    auto take = [&fields](const char* key, std::string& value) {
+        const size_t at = fields.find(std::string(",") + key + ":");
+        if (at == std::string::npos) return false;
+        const size_t from = at + 3, to = fields.find(',', from);
+        value = fields.substr(from, to - from);
+        fields.erase(at, to - at);
+        return true;
+    };
+    if (!take("a", a) || !take("b", b)) return;
+    fields.pop_back();
+    SDL_GameControllerAddMapping((fields.substr(1) + ",a:" + b + ",b:" + a).c_str());
+}
+
+std::string buttonLabel(std::string label) {
+    if (!confirmBottom) return label;
+    for (size_t i = 0; i < label.size(); ++i) {
+        const bool alone = (i == 0 || label[i - 1] == ' ' || label[i - 1] == '/') &&
+                           (i + 1 == label.size() || label[i + 1] == ' ' || label[i + 1] == '/');
+        if (alone && (label[i] == 'A' || label[i] == 'B')) label[i] = label[i] == 'A' ? 'B' : 'A';
+    }
+    return label;
+}
+
 Input::Result Input::translate(const SDL_Event& ev, bool typing) {
     Result r;
     switch (ev.type) {

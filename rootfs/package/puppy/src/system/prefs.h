@@ -1,6 +1,7 @@
 #pragma once
 // The launcher options in ~/.config/puppy/settings, with puppy.conf's view and tabs as the defaults.
-// Outside Puppy, appctl reads loading= from the same file for its loading screen and gl-tr language=.
+// Outside Puppy, appctl reads loading= from the same file for its loading screen, gl-tr language= and
+// sdl_controller.sh confirm=.
 #include <string>
 #include <vector>
 
@@ -12,6 +13,7 @@ struct Prefs {
     std::string font;                       // a fonts.h key ("": not chosen)
     std::string accent;                     // an accents.h key ("": not chosen)
     bool loadingText = false;               // "Loading..." instead of the ASCII-art dog while an app starts
+    bool confirmBottom = false;             // B (bottom) confirms and A (right) goes back
 
     static Prefs load();
     void save() const;                      // keeps the lines it doesn't know

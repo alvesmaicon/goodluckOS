@@ -12,6 +12,11 @@ Action stickDirection(int x, int y, Action current);
 Action actionFromKey(SDL_Keycode k);
 Action actionFromButton(Uint8 b);
 
+// SDL's A confirms and its B goes back. Which printed buttons they are is the confirm=b setting (Prefs),
+// which sdl_controller.sh applies to every app it starts: A (right) and B (bottom), or the other way round.
+void setConfirmBottom(SDL_GameController* pad, bool bottom);    // swaps a: and b: in pad's mapping
+std::string buttonLabel(std::string label);    // "A" and "B" as printed on the buttons ("A / START" too)
+
 // Turns SDL events into actions: buttons and keys, the left stick as a d-pad and the right one for
 // scrolling, L2 + R2 together, SELECT released on its own (SELECT + START is the close-app shortcut),
 // and the repeat of a held direction. FN + UP/DOWN are left to the hotkey daemon.

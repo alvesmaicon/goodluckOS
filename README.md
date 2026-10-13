@@ -121,6 +121,8 @@ Each system and app category gets its own tab, plus an "All Games" tab with ever
 | START | System Settings |
 | POWER | Power options: display off, restart, shut down (these two ask first) |
 
+With System Settings -> Input Settings -> Confirm button on B, A and B swap.
+
 Grid or list view, whether the tabs are shown and which ones are set in System Settings. In list view, a selected name that doesn't fit scrolls to show the rest.
 
 ### Shortcuts that work everywhere
@@ -197,6 +199,7 @@ System Settings
 │   ├── System Info
 │   └── Restore default settings
 ├── Input Settings
+│   ├── Confirm button: A (right) / B (bottom)
 │   ├── Shortcuts ─ every shortcut
 │   └── Button Tester
 └── Credits ─ the people who made goodluckOS
@@ -212,7 +215,8 @@ System Settings
 - **Resize Home**: expands HOME to fill the rest of the card, at the next boot (it asks first, then restarts). HOME is backed up to RAM while it's resized, so do it right after flashing, before copying your games.
 - **Empty trash**: deletes for good the games moved to the trash in the launcher.
 - **Power mode**: Balanced (the default) speeds the CPU and GPU up only when a game needs it; Battery saver caps the CPU at 816 MHz and the GPU at 240 MHz, for a longer battery life (heavy PS1 games may slow down); Performance keeps both at full speed. The choice is kept across reboots.
-- **Restore default settings**: puts Overlay, Date & Time, the launcher's view, tabs, font and accent color, and the power mode back to the defaults in `/usr/share/goodluck/defaults`, keeping the language, the time zone and the clock.
+- **Restore default settings**: puts Overlay, Date & Time, the launcher's view, tabs, font and accent color, and the power mode back to the defaults in `/usr/share/goodluck/defaults`, keeping the language, the confirm button, the time zone and the clock.
+- **Confirm button**: A (right, the default, as on a Nintendo pad) or B (bottom, as on an Xbox pad) launches and selects, and the other one goes back. The launcher, its hints and the shortcut list change right away. Every app that reads the pad through SDL (the video player, ports, Luanti) gets the chosen button as its south one, the button these apps confirm and jump with, from the next one you open. RetroArch reads the pad on its own and keeps the buttons as printed, for the games; its menu has its own swap option.
 - **Credits**: the people who made goodluckOS, grouped by role (someone with several roles shows under each), from the list of upstream's credits app (`/usr/share/credits/credits.ini`).
 
 UP / DOWN pick a section and A or RIGHT opens its page; there, LEFT / RIGHT change the selected setting (A opens the list of choices, or turns a switch on or off), B goes back, and L1 / R1 go to the previous / next section from anywhere. START closes System Settings, and POWER opens the power options here too. A change applies and is saved right away, the language and the font included. A page scrolls with the d-pad when it doesn't fit the screen.
@@ -309,6 +313,8 @@ Controls (also in System Settings -> Input Settings -> Shortcuts):
 | R3 / L3 (press the stick) | Zoom in / out: 1x, 1.5x, 2x, 3x, 4x |
 | Right stick | Move the zoomed picture, up to its edges |
 | SELECT | Back to normal speed and zoom |
+
+With the confirm button on B, A and B swap here too.
 
 The A33 decodes video in software: up to 640x480 H.264 plays smoothly, 1080p and H.265 don't. Convert bigger videos on your PC first, e.g. `ffmpeg -i in.mp4 -vf scale=640:480:force_original_aspect_ratio=decrease:force_divisible_by=2 -c:v libx264 -tune fastdecode -crf 23 -c:a aac -ac 2 out.mkv`. On Windows, [convert-videos](convert-videos/README.md) does this for a whole folder, turns portrait videos to fill the screen and saves a frame of each one as its art.
 

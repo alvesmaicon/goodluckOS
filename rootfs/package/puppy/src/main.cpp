@@ -13,6 +13,7 @@
 #include "config.h"
 #include "fonts.h"
 #include "i18n.h"
+#include "input.h"
 #include "launcher.h"
 #include "library.h"
 #include "model.h"
@@ -37,6 +38,7 @@ int main(int argc, char** argv) {
     float fontScale;
     fonts::choose(prefs.font, font, fontScale);
     accents::choose(prefs.accent);
+    setConfirmBottom(nullptr, prefs.confirmBottom);    // sdl_controller.sh already mapped the pad
     Ui ui(font, fontScale);
     if (!ui.ok()) return 1;
 

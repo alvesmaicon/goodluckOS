@@ -9,6 +9,7 @@
 #include <iostream>
 
 #include "config.h"
+#include "input.h"
 #include "layout.h"
 #include "util.h"
 
@@ -261,16 +262,16 @@ void Ui::footer(const Hints& hints) {
     const int y = top + (kFooterH - TTF_FontHeight(fonts.small)) / 2;
     const int keyGap = 6;
     int textW = 0;
-    for (const auto& h : hints) textW += textWidth(fonts.small, h.first) + keyGap + textWidth(fonts.small, h.second);
+    for (const auto& h : hints) textW += textWidth(fonts.small, buttonLabel(h.first)) + keyGap + textWidth(fonts.small, h.second);
     const int slots = std::max(1, (int)hints.size() - 1);
     const int gap = std::clamp((kScreenW - 2 * kMargin - textW) / slots, 4, 16);
     int x = kScreenW - kMargin;
     for (auto it = hints.rbegin(); it != hints.rend(); ++it) {
         x -= textWidth(fonts.small, it->second);
         drawText(renderer, fonts.small, it->second, x, y, kGrey);
-        int keyW = textWidth(fonts.small, it->first);
-        x -= keyGap + keyW;
-        drawText(renderer, fonts.small, it->first, x, y, accent());
+        const std::string key = buttonLabel(it->first);
+        x -= keyGap + textWidth(fonts.small, key);
+        drawText(renderer, fonts.small, key, x, y, accent());
         x -= gap;
     }
 }
