@@ -153,7 +153,7 @@ FN is the hotkey:
 The same list is in System Settings -> Input Settings, next to a button tester.
 
 ### Luanti
-Luanti opens on its main menu: create a world (the name can stay empty) and tick Creative mode or Enable damage. The console has no mouse cursor, so whenever a menu or the inventory is open, Luanti draws one that the sticks move.
+Luanti opens on its main menu: create a world (the name can stay empty) and tick Creative mode or Enable damage. As in Minecraft, Creative mode lets you fly and has no damage, hunger or monster attacks, even with Enable damage ticked. The console has no mouse cursor, so whenever a menu or the inventory is open, Luanti draws one that the sticks move.
 
 | Buttons | In game | In menus and the inventory |
 |---|---|---|
@@ -165,7 +165,7 @@ Luanti opens on its main menu: create a world (the name can stay empty) and tick
 | Y | Inventory | Close |
 | R2 / L2 | Dig / place | |
 | R1 / L1 | Next / previous item | Scroll |
-| D-pad | Up: zoom, down: drop the item, left: fly, right: screenshot | Move the cursor slowly |
+| D-pad | Up: zoom, down: drop the item, left: fly (Creative mode), right: screenshot | Move the cursor slowly |
 | START | Pause menu (Exit to OS goes back to the launcher) | Close |
 
 ## System Settings

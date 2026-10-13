@@ -1,6 +1,6 @@
 -- Aux1 while moving forward runs at goodluck_sprint_speed times the walk; less than half forward ends it
 local speed = tonumber(core.settings:get("goodluck_sprint_speed") or "") or 1.5
--- with stamina on, running drains hunger as stamina's own sprint does and needs more than 6 points
+-- with stamina on, running drains hunger as stamina's own sprint does and needs more than 6 points (not in creative)
 local hunger = core.get_modpath("stamina") and stamina
 -- 3d_armor sets the walk speed (heavy armor is slower) each time the armor changes
 local armor_mod = core.get_modpath("3d_armor") and armor
@@ -8,8 +8,12 @@ local DRAIN_TICK = 0.5
 local running, held = {}, {}
 local drain_timer = 0
 
+local function hungry(name)
+	return hunger and hunger.players[name] and not core.is_creative_enabled(name)
+end
+
 local function fed(player, name)
-	return not hunger or not hunger.players[name] or hunger.get_saturation(player) > 6
+	return not hungry(name) or hunger.get_saturation(player) > 6
 end
 
 local function walk_speed(name)
@@ -45,7 +49,7 @@ core.register_globalstep(function(dtime)
 			set_running(player, name, true)
 		end
 		held[name] = ctrl.aux1
-		if drain and running[name] and hunger and hunger.players[name] then
+		if drain and running[name] and hungry(name) then
 			hunger.change_saturation(player, -hunger.SPRINT_DRAIN * DRAIN_TICK)
 		end
 	end

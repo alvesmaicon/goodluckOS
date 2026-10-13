@@ -41,13 +41,17 @@ end
 
 core.register_on_joinplayer(function(player)
 	local name = player:get_player_name()
-	-- empty drumsticks behind the full ones, as stamina draws only the full ones
+	-- creative has no hunger or armor bar, as in Minecraft (goodluck_creative hides the hearts and breath)
+	local creative = core.is_creative_enabled(name)
 	local data = hunger and hunger.players[name]
-	if data then
+	if data and creative then
+		player:hud_change(data.hud_id, "number", 0)
+	elseif data then
+		-- empty drumsticks behind the full ones, as stamina draws only the full ones
 		player:hud_change(data.hud_id, "text2", "stamina_hud_bg.png")
 		player:hud_change(data.hud_id, "item", hunger.VISUAL_MAX)
 	end
-	if armor_mod then
+	if armor_mod and not creative then
 		armor_hud[name] = player:hud_add({
 			type = "statbar",
 			position = {x = 0.5, y = 1},
