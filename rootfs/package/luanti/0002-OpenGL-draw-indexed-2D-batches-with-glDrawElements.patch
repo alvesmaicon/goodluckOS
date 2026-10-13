@@ -1,4 +1,7 @@
-Subject: [PATCH] OpenGL: draw indexed 2D batches with glDrawElements
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Tue, 13 Oct 2026 02:49:42 -0300
+Subject: [PATCH 02/13] OpenGL: draw indexed 2D batches with glDrawElements
 
 drawElements() used glDrawRangeElements, which OpenGL ES 2.0 doesn't
 have (it came with ES 3.0). On a real ES 2.0 context (Mesa lima on a
@@ -8,11 +11,14 @@ draw2DImageBatch(), so all text: menus come up with no labels at all.
 glDrawElements draws the same thing; the range is only a hint.
 
 Upstream: not sent yet; master still calls glDrawRangeElements there.
----
-diff -ruN a/irr/src/OpenGL/Driver.cpp b/irr/src/OpenGL/Driver.cpp
---- a/irr/src/OpenGL/Driver.cpp	2026-10-11 03:54:21
-+++ b/irr/src/OpenGL/Driver.cpp	2026-10-11 03:54:31
-@@ -996,7 +996,7 @@
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/irr/src/OpenGL/Driver.cpp b/irr/src/OpenGL/Driver.cpp
+index b2d3e067d..12179df56 100644
+--- a/irr/src/OpenGL/Driver.cpp
++++ b/irr/src/OpenGL/Driver.cpp
+@@ -996,7 +996,7 @@ void COpenGL3DriverBase::drawArrays(GLenum primitiveType, const VertexType &vert
  void COpenGL3DriverBase::drawElements(GLenum primitiveType, const VertexType &vertexType, const void *vertices, int vertexCount, const u16 *indices, int indexCount)
  {
  	beginDraw(vertexType, reinterpret_cast<uintptr_t>(vertices));

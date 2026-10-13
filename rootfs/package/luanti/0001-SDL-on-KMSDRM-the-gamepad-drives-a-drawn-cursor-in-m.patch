@@ -1,4 +1,8 @@
-Subject: [PATCH] SDL: on KMSDRM, the gamepad drives a drawn cursor in menus
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Tue, 13 Oct 2026 02:49:42 -0300
+Subject: [PATCH 01/13] SDL: on KMSDRM, the gamepad drives a drawn cursor in
+ menus
 
 Under KMSDRM there is no window system, and on displays without a cursor
 plane (e.g. sun4i-drm on the Allwinner A33) SDL can't show a cursor at
@@ -8,8 +12,8 @@ need a mouse.
 So when SDL's video driver is kmsdrm, while the cursor is visible (a
 menu or formspec is open):
 - either stick moves the cursor, the D-pad nudges it;
-- A is a left click, X a right click (take half a stack);
-- B, Y and START are Escape (close the menu, the inventory, the pause
+- A and Y are a left click, X a right click (take half a stack);
+- B and START are Escape (close the menu, the inventory, the pause
   menu);
 - L1/R1 are the mouse wheel.
 The GUI environment then draws an arrow at the cursor at the end of
@@ -17,13 +21,16 @@ drawAll(). Buttons pressed as the mouse are released as the mouse too,
 so the game never sees half a press. In game (cursor hidden) nothing
 changes, and other video drivers are untouched.
 
-Upstream: not sent; luanti-org/luanti#17341 (WIP) moves the focus with
+Upstream: not sent; luanti-org/luanti PR 17341 (WIP) moves the focus with
 the D-pad instead, with no answer for inventory lists yet.
----
-diff -ruN a/irr/include/IGUIEnvironment.h b/irr/include/IGUIEnvironment.h
---- a/irr/include/IGUIEnvironment.h	2026-10-11 01:28:36
-+++ b/irr/include/IGUIEnvironment.h	2026-10-11 01:28:52
-@@ -42,6 +42,7 @@
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/irr/include/IGUIEnvironment.h b/irr/include/IGUIEnvironment.h
+index d4e6b1b75..c8136bb0d 100644
+--- a/irr/include/IGUIEnvironment.h
++++ b/irr/include/IGUIEnvironment.h
+@@ -42,6 +42,7 @@ class IGUITabControl;
  class IGUITab;
  class IGUIComboBox;
  class IGUIButton;
@@ -31,19 +38,20 @@ diff -ruN a/irr/include/IGUIEnvironment.h b/irr/include/IGUIEnvironment.h
  
  //! GUI Environment. Used as factory and manager of all other GUI elements.
  /** \par This element can create the following events of type EGUI_EVENT_TYPE (which are passed on to focused sub-elements):
-@@ -57,6 +58,9 @@
- 	/** \param  When true ensure the GuiEnvironment (aka the RootGUIElement) has the same size as the current driver screensize.
+@@ -58,6 +59,9 @@ class IGUIEnvironment : public virtual IReferenceCounted
  				Can be set to false to control that size yourself, p.E when not the full size should be used for UI. */
  	virtual void drawAll(bool useScreenSize = true) = 0;
-+
+ 
 +	//! drawAll() ends with an arrow at this cursor while it is visible (no system cursor, e.g. KMSDRM)
 +	virtual void setSoftwareCursor(ICursorControl *cursor) {}
- 
++
  	//! Sets the focus to an element.
  	/** Causes a EGET_ELEMENT_FOCUS_LOST event followed by a
-diff -ruN a/irr/src/CGUIEnvironment.cpp b/irr/src/CGUIEnvironment.cpp
---- a/irr/src/CGUIEnvironment.cpp	2026-10-11 01:28:36
-+++ b/irr/src/CGUIEnvironment.cpp	2026-10-11 01:29:53
+ 	EGET_ELEMENT_FOCUSED event. If someone absorbed either of the events,
+diff --git a/irr/src/CGUIEnvironment.cpp b/irr/src/CGUIEnvironment.cpp
+index 4d8a18bca..b66f206c5 100644
+--- a/irr/src/CGUIEnvironment.cpp
++++ b/irr/src/CGUIEnvironment.cpp
 @@ -24,6 +24,7 @@
  
  #include "IWriteFile.h"
@@ -52,7 +60,7 @@ diff -ruN a/irr/src/CGUIEnvironment.cpp b/irr/src/CGUIEnvironment.cpp
  #include "os.h"
  
  namespace gui
-@@ -111,6 +112,11 @@
+@@ -111,6 +112,11 @@ CGUIEnvironment::~CGUIEnvironment()
  		Operator = 0;
  	}
  
@@ -64,7 +72,7 @@ diff -ruN a/irr/src/CGUIEnvironment.cpp b/irr/src/CGUIEnvironment.cpp
  	if (FileSystem) {
  		FileSystem->drop();
  		FileSystem = 0;
-@@ -163,7 +169,71 @@
+@@ -163,9 +169,73 @@ void CGUIEnvironment::drawAll(bool useScreenSize)
  	draw();
  	OnPostRender(os::Timer::getTime());
  
@@ -72,8 +80,8 @@ diff -ruN a/irr/src/CGUIEnvironment.cpp b/irr/src/CGUIEnvironment.cpp
 +		drawSoftwareCursor();
 +
  	clearDeletionQueue();
-+}
-+
+ }
+ 
 +void CGUIEnvironment::setSoftwareCursor(ICursorControl *cursor)
 +{
 +	if (cursor)
@@ -133,13 +141,16 @@ diff -ruN a/irr/src/CGUIEnvironment.cpp b/irr/src/CGUIEnvironment.cpp
 +	Driver->draw2DImage(SoftwareCursorTexture,
 +			core::recti(pos.X, pos.Y, pos.X + w * scale, pos.Y + h * scale),
 +			core::recti(0, 0, w, h), nullptr, nullptr, true);
- }
- 
++}
++
  //! sets the focus to an element
-diff -ruN a/irr/src/CGUIEnvironment.h b/irr/src/CGUIEnvironment.h
---- a/irr/src/CGUIEnvironment.h	2026-10-11 01:28:36
-+++ b/irr/src/CGUIEnvironment.h	2026-10-11 01:29:04
-@@ -25,6 +25,8 @@
+ bool CGUIEnvironment::setFocus(IGUIElement *element)
+ {
+diff --git a/irr/src/CGUIEnvironment.h b/irr/src/CGUIEnvironment.h
+index 8d315aef7..a92bb22de 100644
+--- a/irr/src/CGUIEnvironment.h
++++ b/irr/src/CGUIEnvironment.h
+@@ -25,6 +25,8 @@ class CGUIEnvironment : public IGUIEnvironment, public IGUIElement
  	//! draws all gui elements
  	void drawAll(bool useScreenSize) override;
  
@@ -148,7 +159,7 @@ diff -ruN a/irr/src/CGUIEnvironment.h b/irr/src/CGUIEnvironment.h
  	//! returns the current video driver
  	video::IVideoDriver *getVideoDriver() const override;
  
-@@ -169,6 +171,8 @@
+@@ -169,6 +171,8 @@ class CGUIEnvironment : public IGUIEnvironment, public IGUIElement
  
  	void loadBuiltInFont();
  
@@ -157,7 +168,7 @@ diff -ruN a/irr/src/CGUIEnvironment.h b/irr/src/CGUIEnvironment.h
  	struct SFont
  	{
  		io::SNamedPath NamedPath;
-@@ -213,6 +217,8 @@
+@@ -213,6 +217,8 @@ class CGUIEnvironment : public IGUIEnvironment, public IGUIElement
  	io::IFileSystem *FileSystem;
  	IEventReceiver *UserReceiver;
  	IOSOperator *Operator;
@@ -166,10 +177,11 @@ diff -ruN a/irr/src/CGUIEnvironment.h b/irr/src/CGUIEnvironment.h
  	u32 FocusFlags;
  	core::array<IGUIElement *> DeletionQueue;
  
-diff -ruN a/irr/src/CIrrDeviceSDL.cpp b/irr/src/CIrrDeviceSDL.cpp
---- a/irr/src/CIrrDeviceSDL.cpp	2026-10-11 01:28:36
-+++ b/irr/src/CIrrDeviceSDL.cpp	2026-10-11 03:54:29
-@@ -508,6 +508,15 @@
+diff --git a/irr/src/CIrrDeviceSDL.cpp b/irr/src/CIrrDeviceSDL.cpp
+index fef8b1bf1..9b30cce64 100644
+--- a/irr/src/CIrrDeviceSDL.cpp
++++ b/irr/src/CIrrDeviceSDL.cpp
+@@ -508,6 +508,15 @@ CIrrDeviceSDL::CIrrDeviceSDL(const SIrrlichtCreationParameters &param) :
  		createGUIAndScene();
  		VideoDriver->OnResize(core::dimension2d<u32>(Width, Height));
  	}
@@ -185,7 +197,7 @@ diff -ruN a/irr/src/CIrrDeviceSDL.cpp b/irr/src/CIrrDeviceSDL.cpp
  }
  
  //! destructor
-@@ -1191,6 +1200,9 @@
+@@ -1191,6 +1200,9 @@ bool CIrrDeviceSDL::run()
  			irrevent.GamepadButtonEvent.ID = id;
  			irrevent.GamepadButtonEvent.PressedDown = (SDL_event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN);
  			recentGamepadID = id;
@@ -195,7 +207,7 @@ diff -ruN a/irr/src/CIrrDeviceSDL.cpp b/irr/src/CIrrDeviceSDL.cpp
  			postEventFromUser(irrevent);
  			break;
  		}
-@@ -1208,6 +1220,8 @@
+@@ -1208,6 +1220,8 @@ bool CIrrDeviceSDL::run()
  #endif
  			irrevent.GamepadAxisEvent.ID = id;
  			recentGamepadID = id;
@@ -204,7 +216,7 @@ diff -ruN a/irr/src/CIrrDeviceSDL.cpp b/irr/src/CIrrDeviceSDL.cpp
  			postEventFromUser(irrevent);
  			break;
  		}
-@@ -1219,8 +1233,180 @@
+@@ -1219,9 +1233,181 @@ bool CIrrDeviceSDL::run()
  		resetReceiveTextInputEvents();
  	} // end while
  
@@ -215,9 +227,9 @@ diff -ruN a/irr/src/CIrrDeviceSDL.cpp b/irr/src/CIrrDeviceSDL.cpp
 +
  	return !Close;
  }
-+
+ 
 +#if defined(_IRR_COMPILE_WITH_JOYSTICK_EVENTS_)
-+//! A, X, B/Y/START, L1/R1 and the D-pad act as the mouse while the cursor is visible
++//! A/Y, X, B/START, L1/R1 and the D-pad act as the mouse while the cursor is visible
 +bool CIrrDeviceSDL::gamepadButtonAsMouse(GamepadButton button, bool down)
 +{
 +	switch (button) {
@@ -250,13 +262,13 @@ diff -ruN a/irr/src/CIrrDeviceSDL.cpp b/irr/src/CIrrDeviceSDL.cpp
 +
 +	switch (button) {
 +	case GamepadButton::SOUTH:
++	case GamepadButton::NORTH:
 +		postGamepadClick(SDL_BUTTON_LEFT, down);
 +		break;
 +	case GamepadButton::WEST:
 +		postGamepadClick(SDL_BUTTON_RIGHT, down);
 +		break;
 +	case GamepadButton::EAST:
-+	case GamepadButton::NORTH:
 +	case GamepadButton::START:
 +		postGamepadEscape(down);
 +		break;
@@ -382,13 +394,15 @@ diff -ruN a/irr/src/CIrrDeviceSDL.cpp b/irr/src/CIrrDeviceSDL.cpp
 +	postEventFromUser(irrevent);
 +}
 +#endif // _IRR_COMPILE_WITH_JOYSTICK_EVENTS_
- 
++
  void CIrrDeviceSDL::updateSizeAndScale()
  {
-diff -ruN a/irr/src/CIrrDeviceSDL.h b/irr/src/CIrrDeviceSDL.h
---- a/irr/src/CIrrDeviceSDL.h	2026-10-11 01:28:36
-+++ b/irr/src/CIrrDeviceSDL.h	2026-10-11 01:31:30
-@@ -330,6 +330,20 @@
+ 	int window_w, window_h;
+diff --git a/irr/src/CIrrDeviceSDL.h b/irr/src/CIrrDeviceSDL.h
+index 69bc5bed1..c0ac2a087 100644
+--- a/irr/src/CIrrDeviceSDL.h
++++ b/irr/src/CIrrDeviceSDL.h
+@@ -330,6 +330,20 @@ class CIrrDeviceSDL : public CIrrDeviceStub
  	SDL_JoystickID recentGamepadID = 0;
  #endif // _IRR_USE_SDL3_
  	SDL_Gamepad *getRecentGamepad() const;
