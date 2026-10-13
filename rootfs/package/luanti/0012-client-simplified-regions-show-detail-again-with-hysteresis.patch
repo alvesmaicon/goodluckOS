@@ -1,0 +1,183 @@
+From: Maicon Alves <maicon.alves@posthaus.com.br>
+Subject: [PATCH] client: simplified regions show detail again with hysteresis
+
+A region drawn simplified switched back to detail meshes as soon as its
+center came within client_lod_distance, so a camera moving around that
+distance flipped it back and forth, and after a fast approach or a
+teleport its blocks could still be waiting for the detail meshes left
+out far away.
+
+Now it shows detail again 8 nodes closer, and only once the detail
+meshes of its blocks are made, or after 3 s: each block remembers
+whether its detail mesh was left out, asked for again, or made.
+
+---
+diff --git a/src/client/client.cpp b/src/client/client.cpp
+index 0b5c2c7..fa3b2ba 100644
+--- a/src/client/client.cpp
++++ b/src/client/client.cpp
+@@ -651,6 +651,7 @@ void Client::step(float dtime)
+ 				delete block->mesh;
+ 				block->mesh = nullptr;
+ 				block->solid_sides = r.solid_sides;
++				block->detail_mesh = MapBlock::DetailMesh::Made;
+ 
+ 				if (r.mesh) {
+ 					minimap_mapblocks = r.mesh->moveMinimapMapblocks();
+@@ -1808,7 +1809,6 @@ void Client::addUpdateMeshTask(v3s16 p, bool ack_to_server, bool urgent)
+ 	if (b == NULL)
+ 		return;
+ 
+-	m_env.getClientMap().markLodDirty(p);
+ 	m_mesh_update_manager->updateBlock(&m_env.getMap(), p, ack_to_server, urgent);
+ }
+ 
+diff --git a/src/client/clientmap.cpp b/src/client/clientmap.cpp
+index 76b5cca..2e69efa 100644
+--- a/src/client/clientmap.cpp
++++ b/src/client/clientmap.cpp
+@@ -390,6 +390,8 @@ void ClientMap::clearDrawList()
+ 
+ // Detail meshes are made this many nodes before they are drawn
+ static constexpr f32 LOD_DETAIL_MARGIN = 2 * MAP_BLOCKSIZE;
++// A region drawn simplified shows detail again this many nodes closer
++static constexpr f32 LOD_HYSTERESIS = 8;
+ 
+ static const v3s16 lod_face_dirs[6] = {
+ 	v3s16(0, 1, 0), v3s16(0, -1, 0), v3s16(1, 0, 0),
+@@ -404,20 +406,50 @@ f32 ClientMap::lodDistance(v3s16 region_pos) const
+ 	return center.getDistanceFrom(m_camera_position);
+ }
+ 
+-bool ClientMap::useLod(v3s16 region_pos, bool far, u64 now_ms)
++bool ClientMap::detailMeshesMade(v3s16 region_pos)
++{
++	constexpr s16 R = LodMeshGenerator::REGION;
++	const s16 step = m_client->getMeshGrid().cell_size;
++	v3s16 p;
++	for (p.Z = 0; p.Z < R; p.Z += step)
++	for (p.Y = 0; p.Y < R; p.Y += step)
++	for (p.X = 0; p.X < R; p.X += step) {
++		MapBlock *block = getBlockNoCreateNoEx(region_pos + p);
++		if (block && block->detail_mesh != MapBlock::DetailMesh::Made)
++			return false;
++	}
++	return true;
++}
++
++bool ClientMap::useLod(v3s16 region_pos, f32 d, u64 now_ms)
+ {
+ 	auto it = m_lod_regions.find(region_pos);
++	if (it != m_lod_regions.end() && it->second.drawlist_id == m_drawlist_id)
++		return it->second.lod;
++
++	const f32 switch_d = m_cache_lod_distance * BS;
++	bool far = d > switch_d;
++	if (!far && it != m_lod_regions.end() && it->second.lod) {
++		// Shown simplified, it shows detail again a bit closer, once its detail meshes are made
++		LodRegion &region = it->second;
++		if (d > switch_d - LOD_HYSTERESIS * BS) {
++			far = true;
++		} else {
++			if (!region.near_ms)
++				region.near_ms = now_ms;
++			far = now_ms < region.near_ms + 3000 && !detailMeshesMade(region_pos);
++		}
++	}
+ 	if (!far) {
+ 		if (it != m_lod_regions.end()) {
+ 			it->second.lod = false;
++			it->second.near_ms = 0;
+ 			it->second.drawlist_id = m_drawlist_id;
+ 		}
+ 		return false;
+ 	}
+ 
+ 	LodRegion &region = it != m_lod_regions.end() ? it->second : m_lod_regions[region_pos];
+-	if (region.drawlist_id == m_drawlist_id)
+-		return region.lod;
+ 	region.drawlist_id = m_drawlist_id;
+ 	region.used_ms = now_ms;
+ 
+@@ -453,7 +485,7 @@ void ClientMap::dropDetailMesh(MapBlock *block)
+ 	invalidateMapBlockMesh(block->mesh);
+ 	delete block->mesh;
+ 	block->mesh = nullptr;
+-	block->lod_no_mesh = true;
++	block->detail_mesh = MapBlock::DetailMesh::LeftOut;
+ }
+ 
+ bool ClientMap::skipDetailMesh(v3s16 mesh_pos)
+@@ -471,7 +503,7 @@ bool ClientMap::skipDetailMesh(v3s16 mesh_pos)
+ 		return false;
+ 	if (block->mesh)
+ 		dropDetailMesh(block);
+-	block->lod_no_mesh = true;
++	block->detail_mesh = MapBlock::DetailMesh::LeftOut;
+ 	return true;
+ }
+ 
+@@ -601,8 +633,8 @@ void ClientMap::updateDrawList()
+ 				v3s16 block_pos_nodes = block->getPosRelative();
+ 
+ 				// Left without a detail mesh while the BFS culler drew it simplified
+-				if (block->lod_no_mesh) {
+-					block->lod_no_mesh = false;
++				if (block->detail_mesh == MapBlock::DetailMesh::LeftOut) {
++					block->detail_mesh = MapBlock::DetailMesh::Asked;
+ 					m_client->addUpdateMeshTask(block_pos);
+ 				}
+ 
+@@ -760,11 +792,11 @@ void ClientMap::updateDrawList()
+ 			if (lod_enabled && block) {
+ 				const f32 d = lodDistance(region_pos);
+ 				const bool detail_wanted = d <= (m_cache_lod_distance + LOD_DETAIL_MARGIN) * BS;
+-				if (block->lod_no_mesh && detail_wanted) {
+-					block->lod_no_mesh = false;
++				if (block->detail_mesh == MapBlock::DetailMesh::LeftOut && detail_wanted) {
++					block->detail_mesh = MapBlock::DetailMesh::Asked;
+ 					m_client->addUpdateMeshTask(block_coord);
+ 				}
+-				lod = useLod(region_pos, d > m_cache_lod_distance * BS, now_ms);
++				lod = useLod(region_pos, d, now_ms);
+ 				// Far enough not to need its detail mesh soon
+ 				if (lod && mesh && !detail_wanted)
+ 					dropDetailMesh(block);
+diff --git a/src/client/clientmap.h b/src/client/clientmap.h
+index dabe074..7015a4b 100644
+--- a/src/client/clientmap.h
++++ b/src/client/clientmap.h
+@@ -159,12 +159,15 @@ private:
+ 		u32 drawlist_id = 0;
+ 		u64 queued_ms = 0;
+ 		u64 used_ms = 0;
++		// when it came close enough to show detail again
++		u64 near_ms = 0;
+ 	};
+ 
+ 	// Distance from the camera to a region's center, in BS
+ 	f32 lodDistance(v3s16 region_pos) const;
+-	// Whether a region is drawn from its simplified mesh
+-	bool useLod(v3s16 region_pos, bool far, u64 now_ms);
++	// Whether a region at distance d is drawn from its simplified mesh
++	bool useLod(v3s16 region_pos, f32 d, u64 now_ms);
++	bool detailMeshesMade(v3s16 region_pos);
+ 	void dropLodMeshes(LodRegion &region);
+ 	void dropDetailMesh(MapBlock *block);
+ 
+diff --git a/src/mapblock.h b/src/mapblock.h
+index 17366f0..77f29fe 100644
+--- a/src/mapblock.h
++++ b/src/mapblock.h
+@@ -461,8 +461,9 @@ public:
+ 	// marks the sides which are opaque: 00+Z-Z+Y-Y+X-X
+ 	u8 solid_sides = 0;
+ 
+-	// no detail mesh: far away, drawn from the simplified mesh of its region
+-	bool lod_no_mesh = false;
++	// detail mesh left out far away, where the region is drawn simplified
++	enum class DetailMesh : u8 { Made, LeftOut, Asked };
++	DetailMesh detail_mesh = DetailMesh::Made;
+ #endif
+ 
+ private:
