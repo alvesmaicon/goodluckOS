@@ -34,24 +34,33 @@ local function update_armor(player)
 	if not id then
 		return
 	end
-	local points = armor_points(name)
+	local points = core.is_creative_enabled(name) and 0 or armor_points(name)
 	player:hud_change(id, "number", points)
 	player:hud_change(id, "item", points > 0 and 20 or 0)
 end
 
-core.register_on_joinplayer(function(player)
+-- creative has no hunger or armor bar, as in Minecraft (goodluck_creative hides the hearts and breath)
+local function update_bars(player)
 	local name = player:get_player_name()
-	-- creative has no hunger or armor bar, as in Minecraft (goodluck_creative hides the hearts and breath)
 	local creative = core.is_creative_enabled(name)
 	local data = hunger and hunger.players[name]
-	if data and creative then
-		player:hud_change(data.hud_id, "number", 0)
-	elseif data then
-		-- empty drumsticks behind the full ones, as stamina draws only the full ones
-		player:hud_change(data.hud_id, "text2", "stamina_hud_bg.png")
-		player:hud_change(data.hud_id, "item", hunger.VISUAL_MAX)
+	if data then
+		player:hud_change(data.hud_id, "number", creative and 0 or hunger.get_saturation(player))
+		player:hud_change(data.hud_id, "item", creative and 0 or hunger.VISUAL_MAX)
 	end
-	if armor_mod and not creative then
+	if armor_mod then
+		update_armor(player)
+	end
+end
+
+core.register_on_joinplayer(function(player)
+	local name = player:get_player_name()
+	-- empty drumsticks behind the full ones, as stamina draws only the full ones
+	local data = hunger and hunger.players[name]
+	if data then
+		player:hud_change(data.hud_id, "text2", "stamina_hud_bg.png")
+	end
+	if armor_mod then
 		armor_hud[name] = player:hud_add({
 			type = "statbar",
 			position = {x = 0.5, y = 1},
@@ -63,8 +72,8 @@ core.register_on_joinplayer(function(player)
 			size = {x = 24, y = 24},
 			offset = {x = -265, y = HEARTS_Y - ROW},
 		})
-		update_armor(player)
 	end
+	update_bars(player)
 end)
 
 core.register_on_leaveplayer(function(player)
@@ -73,4 +82,8 @@ end)
 
 if armor_mod then
 	armor:register_on_update(update_armor)
+end
+
+if core.get_modpath("goodluck_creative") then
+	goodluck_creative.register_on_change(update_bars)
 end

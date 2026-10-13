@@ -4,6 +4,7 @@ local S = core.get_translator("goodluck_craft")
 local TABLE = "goodluck_craft:crafting_table"
 local at_table = {}
 local has_armor = core.get_modpath("3d_armor") and armor
+local mode = core.get_modpath("goodluck_creative") and goodluck_creative
 -- one fixed slot per piece, in this order (3d_armor alone takes any free slot)
 local SLOTS = {"head", "torso", "legs", "feet", "shield"}
 local SLOT_OF = {}
@@ -131,6 +132,17 @@ local function armor_formspec(player)
 	return table.concat(fs)
 end
 
+-- below the grid, when the world was made with "Allow changing the game mode": it shows the mode and switches it,
+-- as Minecraft's game mode button does
+local function mode_button(player)
+	if not mode or not mode.can_switch() then
+		return ""
+	end
+	local label = core.is_creative_enabled(player:get_player_name()) and S("Game mode: Creative") or
+		S("Game mode: Survival")
+	return "button[4.05,2.9;3.95,0.8;goodluck_mode;" .. core.formspec_escape(label) .. "]"
+end
+
 local function crafting_formspec(player)
 	if at_table[player:get_player_name()] then
 		return "label[0,0;" .. core.formspec_escape(S("Crafting Table")) .. "]" ..
@@ -144,7 +156,8 @@ local function crafting_formspec(player)
 		"list[current_player;craft;4.2,0.6;2,2;]" ..
 		"image[6.2,1.1;1,1;sfinv_crafting_arrow.png]" ..
 		"list[current_player;craftpreview;7,1.1;1,1;]" ..
-		"listring[current_player;main]listring[current_player;craft]"
+		"listring[current_player;main]listring[current_player;craft]" ..
+		mode_button(player)
 end
 
 local function leave_table(player)
@@ -248,6 +261,12 @@ sfinv.override_page("sfinv:crafting", {
 	title = S("Inventory"),
 	get = function(self, player, context)
 		return sfinv.make_formspec(player, context, inventory(4.15) .. crafting_formspec(player), false, "size[8.5,8.2]")
+	end,
+	on_player_receive_fields = function(self, player, context, fields)
+		if fields.goodluck_mode and mode and mode.can_switch() then
+			mode.switch(player)
+			return true
+		end
 	end,
 })
 

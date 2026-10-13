@@ -41,6 +41,9 @@ define LUANTI_GAME_INSTALL_TARGET_CMDS
 	mkdir -p $(LUANTI_GAME_DEST)
 	cp -a $(@D)/game.conf $(@D)/minetest.conf $(@D)/settingtypes.txt $(@D)/LICENSE.txt \
 		$(@D)/menu $(@D)/mods $(LUANTI_GAME_DEST)/
+	# Survival or Creative is asked when the world is made (goodluck_creative): the engine always runs in survival,
+	# the menu shows no Creative/Damage checkboxes, and no Host Server (the console has no network)
+	echo 'disabled_settings = creative_mode, !enable_damage, enable_server' >> $(LUANTI_GAME_DEST)/game.conf
 	$(call LUANTI_GAME_EXTRACT_MOD,mobs,$(LUANTI_GAME_MOBS_REDO_VERSION))
 	$(call LUANTI_GAME_EXTRACT_MOD,mobs_animal,$(LUANTI_GAME_MOBS_ANIMAL_VERSION))
 	$(call LUANTI_GAME_EXTRACT_MOD,mobs_monster,$(LUANTI_GAME_MOBS_MONSTER_VERSION))
