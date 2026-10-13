@@ -128,7 +128,7 @@ Show date = Mostrar data
 Show time = Mostrar hora
 24-hour clock = Relógio de 24 horas
 Restore default settings = Restaurar configurações padrão
-Restore the Overlay, Date & Time, launcher and power mode settings? The language and the time zone stay. = Restaurar as configurações de Overlay, Data e hora, do launcher e o modo de energia? O idioma e o fuso horário ficam.
+Restore the Overlay, Date & Time, launcher and power mode settings? The language, the confirm button and the time zone stay. = Restaurar as configurações de Overlay, Data e hora, do launcher e o modo de energia? O idioma, o botão de confirmar e o fuso horário ficam.
 Restore = Restaurar
 Year = Ano
 Month = Mês
@@ -164,6 +164,10 @@ Not charging = Sem carregar
 Unknown = Desconhecido
 
 # --- Input Settings: shortcut list
+Confirm button = Botão de confirmar
+A (right) = A (direita)
+B (bottom) = B (baixo)
+The other one goes back. Apps follow it from the next one you open; RetroArch keeps its own. = O outro volta. Os apps seguem a partir do próximo que você abrir; o RetroArch tem a opção dele.
 Button Tester = Testar botões
 Any app = Em qualquer app
 Screen off / on = Desliga / liga a tela
@@ -213,7 +217,7 @@ No gamepad found. = Nenhum controle encontrado.
 Last pressed: %s (button %d) = Último apertado: %s (botão %d)
 Press any button = Aperte qualquer botão
 Sticks:  L %+4d %+4d   R %+4d %+4d = Analógicos:  E %+4d %+4d   D %+4d %+4d
-Hold B to go back = Segure B para voltar
+Hold %s to go back = Segure %s para voltar
 
 # --- Resize Home
 This utility resizes your HOME partition to fill the remaining space on your microSD card. = Este utilitário expande a partição HOME para ocupar todo o espaço livre do cartão microSD.
