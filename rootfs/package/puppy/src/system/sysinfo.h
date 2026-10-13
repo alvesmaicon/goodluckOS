@@ -1,6 +1,8 @@
 #pragma once
 // System Info: what the console is and how it's doing.
 #include <string>
+#include <utility>
+#include <vector>
 
 struct SystemInfo {
     std::string model, os, kernel;
@@ -11,3 +13,6 @@ struct SystemInfo {
 
     static SystemInfo read();
 };
+
+// The [credits] section of upstream's credits app (/usr/share/credits/credits.ini): name and role
+std::vector<std::pair<std::string, std::string>> readCredits();

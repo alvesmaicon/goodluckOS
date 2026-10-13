@@ -44,7 +44,7 @@ Card layout (A33):
 ## Branches and remotes
 
 - `origin` is upstream CodeZombie; `fork` is alvesmaicon. `develop` is the fork's main branch: start new work from it on `feat/*`, `fix/*` or `debug/*`, then merge back. `pr/*` branches start from `origin/main`.
-- Upstream PRs merged: #48 (Jeferson's A/B fix), #52 (MTP HOME), #55 (boot: appctl path, no power-manager respawn), #56 (headphones + FN+DOWN), #60 (idempotent `post-build.sh`). Open: #59 (TF-2 slot, draft). `pr/external-mtp` waits on #59 (rebase, then open).
+- Upstream PRs merged: #48 (Jeferson's A/B fix), #52 (MTP HOME), #55 (boot: appctl path, no power-manager respawn), #56 (headphones + FN+DOWN), #59 (TF-2 slot), #60 (idempotent `post-build.sh`), #64 (D-pad hold-to-repeat), #66 (TF-2 card over MTP), #70 (A23 audio), #77 (MTP cancel/rename). #69 (A23 TF-2 power) is obsolete: upstream's DTS split gives both SoCs the supply.
 - Upstream issues that the fork's code already answers: #23 (Gallium HUD options, branch `feat/overlay` ready), #24 (Mesa overlay), #5 (System Settings), #13/#14 (LED, partly). #46 is the owner's "features from my fork" list.
 - Fork issues: #1 screen artifacts (thermal suspected, `debug/thermal-log` logs to `HOME/logs/templog.csv`); #2 Wi-Fi dongle on OTG (no VBUS: DTS lacks `x-powers,drive-vbus-en` and `usb0_vbus-supply`).
 
@@ -52,6 +52,7 @@ Card layout (A33):
 
 - The CPU is an A33 (4x Cortex-A7, armv7 hard-float), with a Mali-400 GPU (lima, GLES2 only, GLES1 for some ports) and 512 MB of RAM. Mainline Linux 7.2.
 - Display: MIPI DSI JD9366 panel, 640x480 (`kernel/drivers/jd9366-ga36mbv1-2.c`). On the A33, card1 is the panel and card0 is lima.
+- DTS: `ga36mb.dtsi` (common) + `ga36mb-<soc>.dtsi` + `panel-<n>.dtsi`, one `ga36mb-<soc>-panel<n>.dts` each. The owner's console is panel 1 (`dev/gl kernel` builds it; `GL_PANEL=2` for the other).
 - PMIC: AXP223 over RSB. Battery: `/sys/class/power_supply/axp20x-battery`. Its internal temperature is an IIO device with no `name` file, so find it by its path (`*axp*`). The SoC temperature is `thermal_zone0`. Trip points: passive at 75 °C, hot at 90 °C, critical at 110 °C.
 - Audio: ALSA card `GA36mbAudio`, used as `hw:GA36mbAudio`. There is no headphone jack detection in the hardware. Headphones need the HPCOM route, and the speaker has a manual Speaker Switch. FN+DOWN toggles the output (`audio-output.sh`).
 - USB-C data port: a configfs gadget with ACM serial (`ttyGS0`, root/root) and MTP (umtprd, HOME plus the TF-2 card). USB id 1d6b:0104. Without VBUS, `S30usb-gadget` falls back to serial only and won't recover by itself (`S30usb-gadget stop; sleep 1; S30usb-gadget start`). Its stop/start can hang the gadget or the reboot.

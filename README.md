@@ -38,7 +38,7 @@ Please Note: At the time of writing, Allwinner-A23 based GA36-MB devices (which 
 - Comes stock with Chocolate Doom, ready to play
 - Comes with Luanti, a block-building game in the style of Minecraft, with Minetest Game and farm animals, played with the console's buttons (see [Luanti](#luanti))
 - Second SD card (TF-2 slot) for more games, with its own launcher tab
-- Music and video player (mpv): Music and Videos tabs in the launcher, played full screen with the console's buttons
+- Music and video player (mpv): Music and Videos tabs in the launcher, played full screen with the console's buttons, with speed (0.25x to 2x) and zoom (up to 4x, moved with the right stick) for videos
 - Comes stock with Retroarch and several optimized cores (PCSX-ReArmed, Snes9x, QuickNES, DOSbox, Genesis Plus GX, mGBA, etc)
 - Games perform very well. Metal Gear Solid 1 is completely playable at reasonable framerates
 - Comes with a custom, optimized launcher application, with tabs per system, search, favourites and game artwork/descriptions from `gamelist.xml`
@@ -122,6 +122,8 @@ Each system and app category gets its own tab, plus an "All Games" tab with ever
 | START | System Settings |
 | POWER | Power options: display off, restart, shut down (these two ask first) |
 
+With System Settings -> Input Settings -> Confirm button on B, A and B swap.
+
 Grid or list view, whether the tabs are shown and which ones are set in System Settings. In list view, a selected name that doesn't fit scrolls to show the rest.
 
 ### Shortcuts that work everywhere
@@ -145,6 +147,7 @@ FN is the hotkey:
 | FN + LEFT / RIGHT | Previous / next state slot |
 | FN + Y | Pause |
 | FN + R2 | Fast forward |
+| FN + L2 | Screenshot, saved in `HOME/.config/retroarch/screenshots` |
 | FN + START | Quit the game |
 
 The same list is in System Settings -> Input Settings, next to a button tester.
@@ -212,9 +215,11 @@ System Settings
 │   ├── Power mode: Battery saver / Balanced / Performance
 │   ├── System Info
 │   └── Restore default settings
-└── Input Settings
-    ├── Shortcuts ─ every shortcut
-    └── Button Tester
+├── Input Settings
+│   ├── Confirm button: A (right) / B (bottom)
+│   ├── Shortcuts ─ every shortcut
+│   └── Button Tester
+└── Credits ─ the people who made goodluckOS
 ```
 
 - **Launcher tabs**: hidden tabs' games still appear in All Games and My List.
@@ -227,7 +232,9 @@ System Settings
 - **Resize Home**: expands HOME to fill the rest of the card, at the next boot (it asks first, then restarts). HOME is backed up to RAM while it's resized, so do it right after flashing, before copying your games.
 - **Empty trash**: deletes for good the games moved to the trash in the launcher.
 - **Power mode**: Balanced (the default) speeds the CPU and GPU up only when a game needs it; Battery saver caps the CPU at 816 MHz and the GPU at 240 MHz, for a longer battery life (heavy PS1 games may slow down); Performance keeps both at full speed. The choice is kept across reboots.
-- **Restore default settings**: puts Overlay, Date & Time, the launcher's view, tabs, font and accent color, and the power mode back to the defaults in `/usr/share/goodluck/defaults`, keeping the language, the time zone and the clock.
+- **Restore default settings**: puts Overlay, Date & Time, the launcher's view, tabs, font and accent color, and the power mode back to the defaults in `/usr/share/goodluck/defaults`, keeping the language, the confirm button, the time zone and the clock.
+- **Confirm button**: A (right, the default, as on a Nintendo pad) or B (bottom, as on an Xbox pad) launches and selects, and the other one goes back. The launcher, its hints and the shortcut list change right away. Every app that reads the pad through SDL (the video player, ports, Luanti) gets the chosen button as its south one, the button these apps confirm and jump with, from the next one you open. RetroArch reads the pad on its own and keeps the buttons as printed, for the games; its menu has its own swap option.
+- **Credits**: the people who made goodluckOS, grouped by role (someone with several roles shows under each), from the list of upstream's credits app (`/usr/share/credits/credits.ini`).
 
 UP / DOWN pick a section and A or RIGHT opens its page; there, LEFT / RIGHT change the selected setting (A opens the list of choices, or turns a switch on or off), B goes back, and L1 / R1 go to the previous / next section from anywhere. START closes System Settings, and POWER opens the power options here too. A change applies and is saved right away, the language and the font included. A page scrolls with the d-pad when it doesn't fit the screen.
 
@@ -307,7 +314,24 @@ Then modify `HOME -> apps.puppy` with a new `[ARCHIVE]` entry, pointing the COMM
 ## How do I add music and videos?
 Copy them into `HOME -> media -> music` and `HOME -> media -> videos`. The Music and Videos tabs show up in the launcher once there's something in them. A folder (an album, a series) is one entry that plays whole, with its `cover.jpg` or `folder.jpg` as the art; a single file plays along with the rest of its folder. Other art goes in the `icons` folder, named like the file or folder.
 
-Controls: A or START pause, B quit, D-pad left/right seek 10 s, up/down 1 min, L1/R1 previous/next, X the playlist, Y repeat on/off, L2/R2 the audio/subtitle track.
+Controls (also in System Settings -> Input Settings -> Shortcuts):
+
+| Button | Action |
+|---|---|
+| A / START | Pause |
+| B | Quit |
+| D-pad left / right, left stick left / right | Back / forward 10 s |
+| D-pad down / up | Back / forward 1 min |
+| L1 / R1 | Previous / next file |
+| X | Show the playlist |
+| Y | Repeat on / off |
+| L2 / R2 | Audio / subtitle track |
+| Left stick up / down | Faster / slower: 0.25x, 0.5x, 1x, 1.5x, 2x. The speed stays for the next files of the playlist |
+| R3 / L3 (press the stick) | Zoom in / out: 1x, 1.5x, 2x, 3x, 4x |
+| Right stick | Move the zoomed picture, up to its edges |
+| SELECT | Back to normal speed and zoom |
+
+With the confirm button on B, A and B swap here too.
 
 The A33 decodes video in software: up to 640x480 H.264 plays smoothly, 1080p and H.265 don't. Convert bigger videos on your PC first, e.g. `ffmpeg -i in.mp4 -vf scale=640:480:force_original_aspect_ratio=decrease:force_divisible_by=2 -c:v libx264 -tune fastdecode -crf 23 -c:a aac -ac 2 out.mkv`. On Windows, [convert-videos](convert-videos/README.md) does this for a whole folder, turns portrait videos to fill the screen and saves a frame of each one as its art.
 
@@ -321,6 +345,7 @@ Some subset of portmaster games could theoretically work, however I want to tamp
 The Allwinner A23/A33 is a 32-bit SoC. This means that 64-bit software simply _cannot_ run on it. There are a number of popular android ports that exist only as aarch64 (64-bit) distributions. Those will never work. Additionally, even with ZRAM there, the device is still heavily RAM-limited, so unoptimized games (I'm looking at you, Balatro) will struggle to run without patching.
 
 With that said, most of the games people actually care about (Stardew Valley, Half-Life 1, n64 re-comps, Android GameMaker games, OpenMW, OpenRCT2, + more) are 32-bit games, and therefore should theoretically work if anyone cares to create 32-bit ports.
+
 ## How Do I Build It?
 GoodluckOS uses a novel four-step containerized build system featuring Buildroot. This means the OS can be configured and built extremely easily and portably with no extra dependencies at all besides Docker and Docker Compose (or Podman).
 

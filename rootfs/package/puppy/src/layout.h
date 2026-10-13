@@ -14,7 +14,7 @@ constexpr int kMargin               = 16;
 constexpr int kBorder               = 3;
 
 // Grid view: tiles in columns, the selected entry's name over a gradient at the bottom.
-constexpr int kCellWidth            = 192;
+constexpr int kCellWidth            = 171;  // 4:3 like the 320x240 covers, so none is cut
 constexpr int kCellHeight           = 128;
 constexpr int kGridCols             = 3;
 constexpr int kGridGap              = 16;

@@ -120,6 +120,7 @@ static int firstFocusable(const std::vector<Row>& rows) {
 SettingsScreen::SettingsScreen(App& app, Model& launcher, Hooks hooks)
     : Screen(app), launcher(launcher), hooks(std::move(hooks)), cursors(1) {
     startLanguage = i18n::current();
+    credits = readCredits();
     reload();
 }
 

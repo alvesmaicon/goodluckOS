@@ -13,14 +13,13 @@ Switch" control. Wire the same thing up for the A23 card.
 Not yet tested on real A23 hardware.
 
 diff --git a/sound/soc/sunxi/sun4i-codec.c b/sound/soc/sunxi/sun4i-codec.c
-index 1a2b3c4d5..6e7f8a9b0 100644
+index 93f511fb6..1c7d1b8f5 100644
 --- a/sound/soc/sunxi/sun4i-codec.c
 +++ b/sound/soc/sunxi/sun4i-codec.c
-@@ -1763,9 +1763,13 @@ static const struct snd_soc_dapm_route sun8i_codec_card_routes[] = {
- 	{ "Left DAC", NULL, "Codec Playback" },
+@@ -1764,6 +1764,10 @@ static const struct snd_soc_dapm_route sun8i_codec_card_routes[] = {
  	{ "Right DAC", NULL, "Codec Playback" },
  };
-
+ 
 +static const struct snd_kcontrol_new sun8i_a23_card_controls[] = {
 +	SOC_DAPM_PIN_SWITCH("Speaker"),
 +};
@@ -28,9 +27,7 @@ index 1a2b3c4d5..6e7f8a9b0 100644
  static struct snd_soc_aux_dev aux_dev = {
  	.dlc = COMP_EMPTY(),
  };
-
- static struct snd_soc_card *sun8i_a23_codec_create_card(struct device *dev)
-@@ -1792,10 +1796,12 @@ static struct snd_soc_card *sun8i_a23_codec_create_card(struct device *dev)
+@@ -1792,6 +1796,8 @@ static struct snd_soc_card *sun8i_a23_codec_create_card(struct device *dev)
  	card->dev		= dev;
  	card->owner		= THIS_MODULE;
  	card->name		= "A23 Audio Codec";
@@ -39,7 +36,3 @@ index 1a2b3c4d5..6e7f8a9b0 100644
  	card->dapm_widgets	= sun6i_codec_card_dapm_widgets;
  	card->num_dapm_widgets	= ARRAY_SIZE(sun6i_codec_card_dapm_widgets);
  	card->dapm_routes	= sun8i_codec_card_routes;
- 	card->num_dapm_routes	= ARRAY_SIZE(sun8i_codec_card_routes);
- 	card->aux_dev		= &aux_dev;
- 	card->num_aux_devs	= 1;
- 	card->fully_routed	= true;

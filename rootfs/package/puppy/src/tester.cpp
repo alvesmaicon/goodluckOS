@@ -12,7 +12,6 @@
 static const char* kButtons[] = {"B", "A", "X", "Y", "L1", "R1", "L2", "R2", "SELECT", "START",
                                  "FN", "L3", "R3", "UP", "DOWN", "LEFT", "RIGHT"};
 constexpr int kButtonCount = sizeof(kButtons) / sizeof(kButtons[0]);
-constexpr int kButtonB = 0;
 constexpr Uint32 kExitHoldMs = 1000;
 constexpr Uint32 kFrameMs = 33;
 
@@ -25,7 +24,8 @@ bool TesterScreen::pressed(int button) const {
 }
 
 bool TesterScreen::backHeld() const {
-    return pressed(kButtonB) || SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_ESCAPE];
+    return (app.gamepad() && SDL_GameControllerGetButton(app.gamepad(), SDL_CONTROLLER_BUTTON_B)) ||
+           SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_ESCAPE];
 }
 
 void TesterScreen::tick(Uint32 now) {
@@ -89,11 +89,11 @@ void TesterScreen::render(Ui& ui) {
         drawText(renderer, fonts.desc, text, x0, y, kGrey);
     }
 
-    // holding B fills the bar; full, it goes back
+    // holding the back button fills the bar; full, it goes back
     const Uint32 held = holdStart ? std::min<Uint32>(SDL_GetTicks() - holdStart, kExitHoldMs) : 0;
     SDL_Rect bar{x0, kScreenH - kFooterH - 14 - h, 5 * w + 4 * gap, h};
     ui.fill(kTile, bar);
-    const char* label = tr("Hold B to go back");
+    const std::string label = trf("Hold %s to go back", buttonLabel("B"));
     const int labelX = bar.x + (bar.w - textWidth(fonts.small, label)) / 2;
     const int labelY = bar.y + (bar.h - TTF_FontHeight(fonts.small)) / 2;
     drawText(renderer, fonts.small, label, labelX, labelY, kWhite);

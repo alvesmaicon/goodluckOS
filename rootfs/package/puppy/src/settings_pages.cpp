@@ -32,7 +32,7 @@ static std::string twoDigits(int v) {
     return s;
 }
 
-// From /etc/triggerhappy/triggers.d, the launcher and the RetroArch config (hotkey = FN)
+// From /etc/triggerhappy/triggers.d, the launcher, the RetroArch config (hotkey = FN) and /etc/mpv/input.conf
 static const char* const kShortcuts[][2] = {
     {"Any app", nullptr},
     {"VOL+ / VOL-", "Volume"},
@@ -61,16 +61,31 @@ static const char* const kShortcuts[][2] = {
     {"FN + LEFT / RIGHT", "State slot"},
     {"FN + Y", "Pause"},
     {"FN + R2", "Fast forward"},
+    {"FN + L2", "Screenshot"},
     {"FN + START", "Quit the game"},
+    {"Videos", nullptr},
+    {"A / START", "Pause"},
+    {"B", "Close the video"},
+    {"LEFT / RIGHT", "Back / forward 10 s"},
+    {"DOWN / UP", "Back / forward 1 min"},
+    {"L1 / R1", "Previous / next video"},
+    {"X", "Playlist"},
+    {"Y", "Repeat on / off"},
+    {"L2 / R2", "Audio / subtitle track"},
+    {"Left stick up/down", "Faster / slower"},
+    {"R3 / L3", "Zoom in / out"},
+    {"Right stick", "Move the zoomed picture"},
+    {"SELECT", "Normal speed and zoom"},
 };
 
-const std::vector<std::pair<SettingsScreen::Page, const char*>>& SettingsScreen::sections() {
+const std::vector<std::pair<SettingsScreen::Page, const char*>>& SettingsScreen::sections() const {
     static const std::vector<std::pair<Page, const char*>> list = {
         {Page::Display, "Display & Audio"}, {Page::Launcher, "Launcher"}, {Page::Interface, "Interface"},
         {Page::Overlay, "Overlay"}, {Page::DateTime, "Date & Time"}, {Page::Storage, "Storage"},
-        {Page::System, "System"}, {Page::Input, "Input Settings"},
+        {Page::System, "System"}, {Page::Input, "Input Settings"}, {Page::Credits, "Credits"},
     };
-    return list;
+    static const std::vector<std::pair<Page, const char*>> noCredits(list.begin(), list.end() - 1);
+    return credits.empty() ? noCredits : list;
 }
 
 std::string SettingsScreen::title(Page p) const {
@@ -115,6 +130,7 @@ std::vector<Row> SettingsScreen::rows(Page p) {
         case Page::Shortcuts: return shortcutsPage();
         case Page::Info:      return infoPage();
         case Page::Resize:    return resizePage();
+        case Page::Credits:   return creditsPage();
     }
     return {};
 }
@@ -437,11 +453,11 @@ std::vector<Row> SettingsScreen::systemPage() {
         open(Page::Info);
     }));
     // Overlay, Date & Time, the launcher's view, tabs, font and accent, and the power mode; the language,
-    // the time zone and the clock stay
+    // the confirm button, the time zone and the clock stay
     rows.push_back(Row::action("Restore default settings", [this] {
         Dialog d;
         d.title = "Restore default settings";
-        d.message = "Restore the Overlay, Date & Time, launcher and power mode settings? The language and the time zone stay.";
+        d.message = "Restore the Overlay, Date & Time, launcher and power mode settings? The language, the confirm button and the time zone stay.";
         d.choices = {"Cancel", "Restore"};
         app.push(std::make_unique<DialogScreen>(app, d, [this](int choice) {
             if (choice == 1) restoreDefaults();
@@ -455,6 +471,7 @@ void SettingsScreen::restoreDefaults() {
     hud = HudSettings::load();
     Prefs fresh;
     fresh.language = prefs.language;
+    fresh.confirmBottom = prefs.confirmBottom;
     prefs = fresh;
     prefs.save();
     accents::choose(prefs.accent);
@@ -492,6 +509,13 @@ std::vector<Row> SettingsScreen::infoPage() {
 
 std::vector<Row> SettingsScreen::inputPage() {
     std::vector<Row> rows;
+    Row confirm = Row::choice("Confirm button", {"A (right)", "B (bottom)"}, prefs.confirmBottom ? 1 : 0, [this](int i) {
+        prefs.confirmBottom = i == 1;
+        prefs.save();
+        setConfirmBottom(app.gamepad(), prefs.confirmBottom);
+    });
+    confirm.hint = "The other one goes back. Apps follow it from the next one you open; RetroArch keeps its own.";
+    rows.push_back(confirm);
     rows.push_back(Row::link("Shortcuts", [this] { open(Page::Shortcuts); }));
     rows.push_back(Row::link("Button Tester", [this] { app.push(std::make_unique<TesterScreen>(app)); }));
     return rows;
@@ -501,8 +525,38 @@ std::vector<Row> SettingsScreen::shortcutsPage() {
     std::vector<Row> rows;
     for (const auto& s : kShortcuts) {
         if (!s[1]) rows.push_back(Row::section(s[0]));
-        else rows.push_back(Row::info(s[0], tr(s[1])));
+        else rows.push_back(Row::info(buttonLabel(s[0]), tr(s[1])));
     }
+    return rows;
+}
+
+// Grouped by role, in the order the roles first come, each name under every role it has ("A/B" is two).
+// The first line opens the list as it is (goodluckOS, is brought to you by...); lines without a role close it.
+std::vector<Row> SettingsScreen::creditsPage() {
+    std::vector<std::pair<std::string, std::vector<std::string>>> roles;
+    std::vector<std::string> closing;
+    for (size_t i = 1; i < credits.size(); ++i) {
+        const auto& [name, role] = credits[i];
+        if (role.empty()) closing.push_back(name);
+        for (size_t from = 0; !role.empty() && from != std::string::npos;) {
+            const size_t slash = role.find('/', from);
+            const std::string r = trim(role.substr(from, slash == std::string::npos ? slash : slash - from));
+            from = slash == std::string::npos ? slash : slash + 1;
+            if (r.empty()) continue;
+            auto g = std::find_if(roles.begin(), roles.end(), [&r](const auto& x) { return x.first == r; });
+            if (g == roles.end()) g = roles.insert(roles.end(), {r, {}});
+            g->second.push_back(name);
+        }
+    }
+    std::vector<Row> rows;
+    auto add = [&rows](Row r) { r.rawLabel = true; rows.push_back(r); };
+    if (!credits.empty()) add(Row::info(credits[0].first, credits[0].second));
+    for (const auto& [role, names] : roles) {
+        add(Row::section(role));
+        for (const std::string& n : names) add(Row::info(n, ""));
+    }
+    if (!closing.empty()) add(Row::section(""));
+    for (const std::string& n : closing) add(Row::info(n, ""));
     return rows;
 }
 

@@ -62,3 +62,19 @@ SystemInfo SystemInfo::read() {
     }
     return s;
 }
+
+std::vector<std::pair<std::string, std::string>> readCredits() {
+    std::vector<std::pair<std::string, std::string>> list;
+    std::ifstream in("/usr/share/credits/credits.ini");
+    bool inCredits = false;
+    for (std::string line; std::getline(in, line);) {
+        line = trim(line);
+        if (line.empty() || line[0] == ';') continue;
+        if (line[0] == '[') { inCredits = line == "[credits]"; continue; }
+        if (!inCredits) continue;
+        const size_t eq = line.find('=');
+        if (eq == std::string::npos) list.emplace_back(line, "");
+        else list.emplace_back(trim(line.substr(0, eq)), trim(line.substr(eq + 1)));
+    }
+    return list;
+}
