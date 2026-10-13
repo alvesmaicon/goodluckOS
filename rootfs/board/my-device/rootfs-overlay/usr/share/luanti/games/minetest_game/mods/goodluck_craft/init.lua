@@ -108,23 +108,25 @@ local function armor_formspec(player)
 	if not inv or not tex then
 		return ""
 	end
+	-- the box (in slot spacings) covers two columns by four rows; the model (in slot sizes) is fitted to a view 1.2
+	-- times that, a little right of centre as its bounding box is not symmetric, and leaves the mouse to the slots below
 	local fs = {
-		"box[1,0.3;1.9,3.85;#000000]",
-		"model[1,0.3;2,3.85;goodluck_player;3d_armor_character.b3d;" ..
+		"box[1,0;1.8,3.867;#000000]",
+		"model[0.97,-0.387;2.7,5.354;goodluck_player;3d_armor_character.b3d;" ..
 			core.formspec_escape(tex.skin) .. "," .. core.formspec_escape(tex.armor) ..
-			",blank.png;0,180;false;true;0,79;30]",
+			",blank.png;0,180;false;false;0,79;30]",
 	}
 	for i, element in ipairs(SLOTS) do
 		if inv:get_stack("armor", i):is_empty() then
-			local x, y = 0, 0.3 + i - 1
+			local x, y = 0, i - 1
 			if element == "shield" then
-				x, y = 3.1, 3.3
+				x, y = 3, 3
 			end
 			fs[#fs + 1] = ("image[%g,%g;1,1;goodluck_craft_slot_%s.png]"):format(x, y, element)
 		end
 	end
-	fs[#fs + 1] = ("list[detached:%s_armor;armor;0,0.3;1,4;0]"):format(name)
-	fs[#fs + 1] = ("list[detached:%s_armor;armor;3.1,3.3;1,1;4]"):format(name)
+	fs[#fs + 1] = ("list[detached:%s_armor;armor;0,0;1,4;0]"):format(name)
+	fs[#fs + 1] = ("list[detached:%s_armor;armor;3,3;1,1;4]"):format(name)
 	fs[#fs + 1] = ("listring[detached:%s_armor;armor]listring[current_player;main]"):format(name)
 	return table.concat(fs)
 end
@@ -138,10 +140,10 @@ local function crafting_formspec(player)
 			"listring[current_player;main]listring[current_player;craft]"
 	end
 	return (has_armor and armor_formspec(player) or "") ..
-		"label[4.2,0.1;" .. core.formspec_escape(S("Crafting")) .. "]" ..
-		"list[current_player;craft;4.2,0.7;2,2;]" ..
-		"image[6.2,1.2;1,1;sfinv_crafting_arrow.png]" ..
-		"list[current_player;craftpreview;7,1.2;1,1;]" ..
+		"label[4.2,0;" .. core.formspec_escape(S("Crafting")) .. "]" ..
+		"list[current_player;craft;4.2,0.6;2,2;]" ..
+		"image[6.2,1.1;1,1;sfinv_crafting_arrow.png]" ..
+		"list[current_player;craftpreview;7,1.1;1,1;]" ..
 		"listring[current_player;main]listring[current_player;craft]"
 end
 
@@ -224,23 +226,28 @@ core.register_on_leaveplayer(function(player)
 end)
 core.register_on_dieplayer(leave_table)
 
--- rows first and the hotbar at the bottom, on every page that shows the inventory
-local inventory = default.get_hotbar_bg(0, 8.1) ..
-	"list[current_player;main;0,4.95;8,3;8]" ..
-	"list[current_player;main;0,8.1;8,1;]"
+-- rows first and the hotbar at the bottom; at 8.2 high the forms are wider than the HUD hotbar behind them, and they
+-- sit a bit low so the tabs above stay on the screen (creative pages keep the old height: their search bar is at 4.1)
+local function inventory(y)
+	return ("list[current_player;main;0,%g;8,3;8]"):format(y) .. default.get_hotbar_bg(0, y + 3.15) ..
+		("list[current_player;main;0,%g;8,1;]"):format(y + 3.15)
+end
 function sfinv.make_formspec(player, context, content, show_inv, size)
 	return table.concat({
-		size or "size[8,9.1]",
+		size or (show_inv and "size[8.5,9.1]" or "size[8.5,8.2]"),
+		"position[0.5,0.545]",
 		sfinv.get_nav_fs(player, context, context.nav_titles, context.nav_idx),
-		show_inv and inventory or "",
-		content,
+		"container[0.25,0]",
+		show_inv and inventory(5) or "",
+		context.page == "mtg_craftguide:craftguide" and content:gsub("container%[0,5%.6%]", "container[0,5.2]") or content,
+		"container_end[]",
 	})
 end
 
 sfinv.override_page("sfinv:crafting", {
 	title = S("Inventory"),
 	get = function(self, player, context)
-		return sfinv.make_formspec(player, context, crafting_formspec(player), true)
+		return sfinv.make_formspec(player, context, inventory(4.15) .. crafting_formspec(player), false, "size[8.5,8.2]")
 	end,
 })
 
