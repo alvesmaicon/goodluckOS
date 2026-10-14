@@ -3,10 +3,9 @@
 # stardew.sh [test]: "test" runs HelloMG instead of the game. Log: HOME/logs/stardew[-test].log.
 # Overrides (LIBGL_*, MONO_*...) go in <port>/env, one VAR=value per line.
 dir=$(cd "$(dirname "$0")" && pwd)
-mono=/tmp/stardew-mono
+mono=$dir/mono
 log=/home/player/logs/stardew${1:+-$1}.log
-mkdir -p "$mono" /home/player/logs
-grep -q " $mono " /proc/mounts || mount -t squashfs -o loop,ro "$dir/mono.squashfs" "$mono" || exit 1
+mkdir -p /home/player/logs
 
 export PATH=$mono/bin:$PATH
 export LD_LIBRARY_PATH=$dir/lib:$mono/lib
@@ -27,4 +26,3 @@ export LIBGL_ES=2 LIBGL_GL=21
     fi
     echo "exit $?"
 } > "$log" 2>&1
-umount "$mono" 2>/dev/null

@@ -2,6 +2,6 @@
 FROM goodluck-dev
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    cmake ninja-build squashfs-tools mono-mcs mono-runtime qemu-user \
+    cmake ninja-build mono-mcs mono-runtime qemu-user \
     libegl-dev:armhf libgles-dev:armhf libgbm-dev:armhf \
     && rm -rf /var/lib/apt/lists/*

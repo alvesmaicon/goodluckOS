@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# The Stardew Valley port for HOME/ports/stardewvalley, without the game: Mono armhf in a squashfs,
+# The Stardew Valley port for HOME/ports/stardewvalley, without the game: Mono armhf (plain files: apps run
+# as player, which cannot mount, and HOME is FAT, which has no symlinks),
 # gl4es, OpenAL Soft, the lz4 shim, PortMaster's managed MonoGame and patches, the HelloMG test.
 #   dev/stardew/build.sh          build into dev/out/stardew/stardewvalley
 #   dev/stardew/build.sh smoke    run Mono armhf under qemu-arm (no display): assemblies and native libs load
@@ -112,7 +113,7 @@ build_mono() {
     cp -a "$r/etc/mono" "$m/etc/"
     arm-linux-gnueabihf-gcc $ARMFLAGS -shared -fPIC -Wl,-soname,libgssapi_krb5.so.2 \
         -Wl,--version-script=<(echo 'gssapi_krb5_2_MIT { global: *; };') "$HERE/gssstub.c" -o "$m/lib/libgssapi_krb5.so.2"
-    mksquashfs "$m" "$P/mono.squashfs" -comp zstd -noappend -all-root -quiet
+    cp -rL "$m" "$P/mono"
 }
 
 fetch_portmaster() {
@@ -142,13 +143,11 @@ build() {
         printf '%-22s %s\n' "$(basename "$f")" \
             "$(arm-linux-gnueabihf-objdump -T "$f" | grep -oE 'GLIBC_[0-9.]+' | sort -Vu | tail -1)"
     done
-    du -sh "$P" "$P/mono.squashfs"
+    du -sh "$P" "$P/mono"
 }
 
 smoke() {
-    local m=/tmp/stardew-mono
-    rm -rf $m
-    cp -a "$BLD/mono" $m
+    local m=$P/mono
     cat > /tmp/hello.cs <<'EOF'
 class H { static void Main() {
     System.Console.WriteLine("mono ok: " + System.Environment.Version + ", corlib " + typeof(object).Assembly.Location);
