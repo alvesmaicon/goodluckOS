@@ -4,17 +4,21 @@
 # gl4es, OpenAL Soft, the lz4 shim, PortMaster's managed MonoGame and patches, the HelloMG test.
 #   dev/stardew/build.sh          build into dev/out/stardew/stardewvalley
 #   (dev/out/stardew/altone: a 1 s OpenAL tone, for the console's /tmp)
+#   dev/stardew/build.sh game     dev/out/stardew/gamedata from your own game (SDV_GAME, default: Steam on macOS)
 #   dev/stardew/build.sh smoke    run Mono armhf under qemu-arm (no display): assemblies and native libs load
+# StardewPatches.dll and SVLoader.exe are compiled against your StardewValley.exe when SDV_GAME exists.
 # Runs in the goodluck-stardew image (dev/stardew/Dockerfile, on top of goodluck-dev).
 set -euo pipefail
 
 HERE=$(cd "$(dirname "$0")" && pwd)
 REPO=$(dirname "$(dirname "$HERE")")
 IMAGE=goodluck-stardew
+SDV_GAME=${SDV_GAME:-$HOME/Library/Application Support/Steam/steamapps/common/Stardew Valley}
 
 if [ ! -f /.dockerenv ]; then
     docker image inspect $IMAGE >/dev/null 2>&1 || docker build -t $IMAGE "$HERE"
-    exec docker run --rm -i -v "$REPO:/repo" -v goodluck-work:/work $IMAGE /repo/dev/stardew/build.sh "$@"
+    game=(); [ -d "$SDV_GAME" ] && game=(-v "$SDV_GAME:/game:ro")
+    exec docker run --rm -i -v "$REPO:/repo" -v goodluck-work:/work "${game[@]}" $IMAGE /repo/dev/stardew/build.sh "$@"
 fi
 
 W=/work/stardew
@@ -117,6 +121,43 @@ build_mono() {
     cp -rL "$m" "$P/mono"
 }
 
+# The game's managed code and Content, macOS (Contents/MacOS + Contents/Resources) or Linux/Windows layout
+game_dirs() {
+    BIN=$(dirname "$(find /game -maxdepth 3 \( -name StardewValley.exe -o -name "Stardew Valley.exe" \) | head -1)")
+    CONTENT=$BIN/Content
+    [ -d "$CONTENT" ] || CONTENT=$(dirname "$BIN")/Resources/Content
+    [ -f "$BIN/StardewValley.exe" ] && [ -d "$CONTENT" ]
+}
+
+build_patches() {
+    mcs -nologo -optimize+ -out:"$P/SVLoader.exe" "$HERE/patches/SVLoader.cs"
+    if ! game_dirs 2>/dev/null; then
+        echo "no game in SDV_GAME: PortMaster's StardewPatches.dll (built for 1.6.12) stays"
+        return
+    fi
+    mcs -nologo -target:library -optimize+ -lib:"$BIN" -lib:"$P/dlls" -r:"$BIN/StardewValley.exe" -r:xTile.dll \
+        -r:MonoGame.Framework.dll -r:0Harmony.dll -out:"$P/dlls/StardewPatches.dll" "$HERE/patches/StardewPatches.cs"
+    echo "StardewPatches.dll built against $(strings "$BIN/StardewValley.exe" | grep -m1 -oE '^1\.[0-9]+\.[0-9]+' || echo '?')"
+}
+
+# The game minus what Mono armhf and the port provide (the macOS build bundles its own Mono and natives)
+build_game() {
+    local g=/repo/dev/out/stardew/gamedata f
+    game_dirs || { echo "no StardewValley.exe under SDV_GAME"; exit 1; }
+    rm -rf "$g"
+    mkdir -p "$g"
+    for f in "$BIN"/*.exe "$BIN"/*.dll "$BIN"/*.dll.config; do
+        case $(basename "$f") in
+            System.Data.HashFunction.*) ;;
+            MonoGame.Framework.*|mscorlib.dll|Mono.*|System*|WindowsBase.dll|lib*) continue ;;
+        esac
+        cp "$f" "$g/"
+    done
+    cp -r "$CONTENT" "$g/Content"
+    ls "$g"
+    du -sh "$g"
+}
+
 fetch_portmaster() {
     local f
     for f in $PM_FILES; do
@@ -135,6 +176,7 @@ build() {
     echo "== gl4es $GL4ES_REV";  build_gl4es
     echo "== OpenAL Soft $OPENAL"; build_openal
     echo "== lz4 shim $LZ4";     build_lz4
+    echo "== StardewPatches, SVLoader"; build_patches
     echo "== HelloMG"
     mcs -nologo -out:"$P/test/HelloMG.exe" -r:System.Core -r:"$P/dlls/MonoGame.Framework.dll" "$HERE/HelloMG.cs"
     arm-linux-gnueabihf-gcc $ARMFLAGS -I"$SRC/openal-soft/include" "$HERE/altone.c" -o "$(dirname "$P")/altone" \
@@ -170,6 +212,7 @@ EOF
 
 case ${1:-build} in
     build) build ;;
+    game) build_game ;;
     smoke) smoke ;;
     *) echo "usage: dev/stardew/build.sh [build|smoke]"; exit 1 ;;
 esac
