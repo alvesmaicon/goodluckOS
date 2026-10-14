@@ -25,7 +25,9 @@ public static class StardewPatches
 	public static void Main()
 	{
 		Console.Out.WriteLine("Found StardewPatches, running...");
-		new Harmony("com.github.johnnyonflame.StardewPatches").PatchAll(Assembly.GetExecutingAssembly());
+		Harmony harmony = new Harmony("com.github.johnnyonflame.StardewPatches");
+		harmony.PatchAll(Assembly.GetExecutingAssembly());
+		Probe.Install(harmony);
 	}
 
 	private static float getScreenRatio()
@@ -384,10 +386,12 @@ public static class StardewPatches
 	}
 
 	// SDV_STATS=<seconds>: frames, updates, their average ms, the rest of the time (mostly Present), nursery/major
-	// collections and managed heap, to stdout
+	// collections and managed heap, to stdout, followed by the probes
 	private static class Stats
 	{
 		public static readonly double Period;
+		public static readonly bool On;
+		public static bool Paused;
 		static int frames, updates, gc0, gc1;
 		static long drawTicks, updateTicks;
 		static DateTime t0 = DateTime.Now;
@@ -395,34 +399,46 @@ public static class StardewPatches
 		static Stats()
 		{
 			double.TryParse(Environment.GetEnvironmentVariable("SDV_STATS") ?? "0", out Period);
-			gc0 = GC.CollectionCount(0);
-			gc1 = GC.CollectionCount(1);
+			On = Period > 0 || Bench.Slot != null;
+			Reset();
 		}
 
 		public static void Frame(long ticks)
 		{
 			frames++;
 			drawTicks += ticks;
-			double dt = (DateTime.Now - t0).TotalSeconds;
-			if (dt < Period)
-				return;
-			int c0 = GC.CollectionCount(0), c1 = GC.CollectionCount(1);
-			double ms = 1000.0 / Stopwatch.Frequency, draw = drawTicks * ms, update = updateTicks * ms;
-			Console.WriteLine("stats {0:HH:mm:ss} fps {1:F1} ups {2:F1} draw {3:F1} ms update {4:F1} ms rest {5:F0}% gc0 {6} gc1 {7} " +
-				"heap {8} KB at {9}", DateTime.Now, frames / dt, updates / dt, draw / frames, update / Math.Max(updates, 1),
-				100 - (draw + update) / (dt * 10), c0 - gc0, c1 - gc1, GC.GetTotalMemory(false) / 1024,
-				Game1.currentLocation == null ? "-" : Game1.currentLocation.NameOrUniqueName);
-			frames = updates = 0;
-			drawTicks = updateTicks = 0;
-			gc0 = c0;
-			gc1 = c1;
-			t0 = DateTime.Now;
+			if (Period > 0 && !Paused && (DateTime.Now - t0).TotalSeconds >= Period) {
+				Report("stats");
+				Reset();
+			}
 		}
 
 		public static void Update(long ticks)
 		{
 			updates++;
 			updateTicks += ticks;
+		}
+
+		public static void Reset()
+		{
+			frames = updates = 0;
+			drawTicks = updateTicks = 0;
+			gc0 = GC.CollectionCount(0);
+			gc1 = GC.CollectionCount(1);
+			t0 = DateTime.Now;
+			Probe.Reset();
+		}
+
+		public static void Report(string tag)
+		{
+			double dt = (DateTime.Now - t0).TotalSeconds;
+			double ms = 1000.0 / Stopwatch.Frequency, draw = drawTicks * ms, update = updateTicks * ms;
+			Console.WriteLine("{0} {1:HH:mm:ss} fps {2:F1} ups {3:F1} draw {4:F1} ms update {5:F1} ms rest {6:F0}% gc0 {7} gc1 {8} " +
+				"heap {9} KB at {10}", tag, DateTime.Now, frames / dt, updates / dt, draw / Math.Max(frames, 1),
+				update / Math.Max(updates, 1), 100 - (draw + update) / (dt * 10), GC.CollectionCount(0) - gc0,
+				GC.CollectionCount(1) - gc1, GC.GetTotalMemory(false) / 1024,
+				Game1.currentLocation == null ? "-" : Game1.currentLocation.NameOrUniqueName);
+			Probe.Report(dt, frames, updates);
 		}
 	}
 
@@ -432,12 +448,14 @@ public static class StardewPatches
 	{
 		private static void Prefix(out long __state)
 		{
+			Probe.Drawing = true;
 			__state = Stopwatch.GetTimestamp();
 		}
 
 		private static void Postfix(long __state)
 		{
-			if (Stats.Period > 0)
+			Probe.Drawing = false;
+			if (Stats.On)
 				Stats.Frame(Stopwatch.GetTimestamp() - __state);
 		}
 	}
@@ -453,8 +471,217 @@ public static class StardewPatches
 
 		private static void Postfix(long __state)
 		{
-			if (Stats.Period > 0)
-				Stats.Update(Stopwatch.GetTimestamp() - __state);
+			if (!Stats.On)
+				return;
+			Stats.Update(Stopwatch.GetTimestamp() - __state);
+			Bench.Tick();
+		}
+	}
+
+	// SDV_PROBE=default|<Type.Method>,...: inclusive time in those methods (all overloads), as ms per second of
+	// wall time and per update or frame (up to 40 entries); on by default with SDV_BENCH
+	private static class Probe
+	{
+		const string Default = "Game1.Update,InputState.UpdateStates,Game1.UpdateControlInput,Game1.UpdateGameClock," +
+			"Game1.UpdateCharacters,Farmer.Update,Game1.UpdateLocations,Game1._UpdateLocation," +
+			"GameLocation.UpdateWhenCurrentLocation,GameLocation.updateEvenIfFarmerIsntHere,NPC.update," +
+			"Game1.UpdateViewPort,Game1.UpdateOther,Game1.updateWeather,Game1.updateMusic,Game1.updateRaindropPosition," +
+			"Microsoft.Xna.Framework.Audio.AudioEngine.Update,GameStateQuery.Update," +
+			"Game1._draw,Game1.DrawWorld,Game1.DrawLighting,GameLocation.draw,Layer.Draw,Game1.drawWeather," +
+			"Game1.DrawLightmapOnScreen,Game1.drawHUD,Game1.DrawOverlays,Game1.renderScreenBuffer,SpriteBatch.End";
+		public static bool Drawing;
+		static readonly List<string> names = new List<string>();
+		static long[] ticks = new long[0];
+		static int[] calls = new int[0];
+		static bool[] inDraw = new bool[0];
+
+		public static void Install(Harmony harmony)
+		{
+			string spec = Environment.GetEnvironmentVariable("SDV_PROBE") ?? (Bench.Slot != null ? "default" : "none");
+			if (spec == "none")
+				return;
+			foreach (string item in (spec == "default" ? Default : spec).Split(',')) {
+				int dot = item.LastIndexOf('.'), n = 0;
+				Type type = dot > 0 ? FindType(item.Substring(0, dot)) : null;
+				Type slot = typeof(Probe).GetNestedType("P" + names.Count, BindingFlags.NonPublic);
+				if (type != null && slot != null)
+					foreach (MethodInfo m in type.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public |
+							BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+						if (m.Name == item.Substring(dot + 1) && !m.IsAbstract && !m.ContainsGenericParameters) {
+							harmony.Patch(m, new HarmonyMethod(slot.GetMethod("Before", BindingFlags.Static | BindingFlags.NonPublic)),
+								new HarmonyMethod(slot.GetMethod("After", BindingFlags.Static | BindingFlags.NonPublic)));
+							n++;
+						}
+				if (n > 0)
+					names.Add(item);
+				else
+					Console.WriteLine("probe: no method {0}", item);
+			}
+			ticks = new long[names.Count];
+			calls = new int[names.Count];
+			inDraw = new bool[names.Count];
+			Console.WriteLine("probe: {0} methods", names.Count);
+		}
+
+		static Type FindType(string name)
+		{
+			foreach (Assembly a in new[] { typeof(Game1).Assembly, typeof(Game).Assembly, typeof(xTile.Layers.Layer).Assembly })
+				foreach (Type t in a.GetTypes())
+					if (t.FullName == name || t.Name == name)
+						return t;
+			return null;
+		}
+
+		// One class per probe (Harmony shares __state within a class): a constant index costs far less than
+		// __originalMethod, which resolves the method from its handle on every call
+		class P0 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(0, __state); } }
+		class P1 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(1, __state); } }
+		class P2 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(2, __state); } }
+		class P3 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(3, __state); } }
+		class P4 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(4, __state); } }
+		class P5 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(5, __state); } }
+		class P6 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(6, __state); } }
+		class P7 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(7, __state); } }
+		class P8 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(8, __state); } }
+		class P9 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(9, __state); } }
+		class P10 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(10, __state); } }
+		class P11 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(11, __state); } }
+		class P12 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(12, __state); } }
+		class P13 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(13, __state); } }
+		class P14 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(14, __state); } }
+		class P15 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(15, __state); } }
+		class P16 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(16, __state); } }
+		class P17 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(17, __state); } }
+		class P18 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(18, __state); } }
+		class P19 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(19, __state); } }
+		class P20 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(20, __state); } }
+		class P21 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(21, __state); } }
+		class P22 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(22, __state); } }
+		class P23 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(23, __state); } }
+		class P24 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(24, __state); } }
+		class P25 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(25, __state); } }
+		class P26 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(26, __state); } }
+		class P27 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(27, __state); } }
+		class P28 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(28, __state); } }
+		class P29 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(29, __state); } }
+		class P30 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(30, __state); } }
+		class P31 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(31, __state); } }
+		class P32 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(32, __state); } }
+		class P33 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(33, __state); } }
+		class P34 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(34, __state); } }
+		class P35 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(35, __state); } }
+		class P36 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(36, __state); } }
+		class P37 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(37, __state); } }
+		class P38 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(38, __state); } }
+		class P39 { static void Before(out long __state) { __state = Stopwatch.GetTimestamp(); } static void After(long __state) { Add(39, __state); } }
+
+		static void Add(int i, long t0)
+		{
+			ticks[i] += Stopwatch.GetTimestamp() - t0;
+			calls[i]++;
+			inDraw[i] |= Drawing;
+		}
+
+		public static void Reset()
+		{
+			Array.Clear(ticks, 0, ticks.Length);
+			Array.Clear(calls, 0, calls.Length);
+		}
+
+		public static void Report(double seconds, int frames, int updates)
+		{
+			double ms = 1000.0 / Stopwatch.Frequency;
+			for (int i = 0; i < names.Count; i++) {
+				int per = Math.Max(inDraw[i] ? frames : updates, 1);
+				Console.WriteLine("probe {0} {1:F1} ms/s {2:F2} ms/{3} {4:F1} calls", names[i], ticks[i] * ms / seconds,
+					ticks[i] * ms / per, inDraw[i] ? "frame" : "update", (double)calls[i] / per);
+			}
+		}
+	}
+
+	// SDV_BENCH=<save folder>[,<warm-up s>,<measured s>]: from the title, load that save, warp to the farmhouse
+	// porch and stand still, then print one "bench" line (stats columns), the probes and the peak RSS, and exit
+	private static class Bench
+	{
+		public static readonly string Slot;
+		static readonly double warmup = 20, measure = 60;
+		static int step;
+		static DateTime t = DateTime.Now, shown;
+
+		static Bench()
+		{
+			string[] v = (Environment.GetEnvironmentVariable("SDV_BENCH") ?? "").Split(',');
+			if (v[0] == "")
+				return;
+			Slot = v[0];
+			if (v.Length == 3) {
+				double.TryParse(v[1], out warmup);
+				double.TryParse(v[2], out measure);
+			}
+		}
+
+		static void Log(string what)
+		{
+			Console.WriteLine("bench {0:HH:mm:ss} {1}", DateTime.Now, what);
+		}
+
+		public static void Tick()
+		{
+			if (Slot == null)
+				return;
+			double s = (DateTime.Now - t).TotalSeconds;
+			bool settled = !Game1.globalFade && Game1.locationRequest == null;
+			if ((step == 1 || step == 2) && (DateTime.Now - shown).TotalSeconds >= 10) {
+				shown = DateTime.Now;
+				Log(string.Format("waiting: step {0} mode {1} loader {2} at {3} fade {4} request {5} menu {6}", step,
+					Game1.gameMode, Game1.currentLoader != null, Game1.currentLocation?.NameOrUniqueName, Game1.globalFade,
+					Game1.locationRequest != null, Game1.activeClickableMenu?.GetType().Name));
+			}
+			switch (step) {
+			case 0:
+				if (Game1.gameMode != Game1.titleScreenGameMode || !(Game1.activeClickableMenu is TitleMenu))
+					t = DateTime.Now;
+				else if (s > 3) {
+					Log("loading " + Slot);
+					Stats.Paused = true;
+					SaveGame.Load(Slot);
+					Game1.exitActiveMenu();
+					step = 1;
+				}
+				break;
+			case 1:
+				if (Game1.gameMode == Game1.playingGameMode && Game1.currentLocation != null && settled) {
+					Point door = Game1.getFarm().GetMainFarmHouseEntry();
+					Log(string.Format("warp to Farm {0},{1}", door.X, door.Y));
+					Game1.warpFarmer("Farm", door.X, door.Y, 2);
+					step = 2;
+				}
+				break;
+			case 2:
+				if (Game1.currentLocation is Farm && settled) {
+					t = DateTime.Now;
+					step = 3;
+				}
+				break;
+			case 3:
+				if (s >= warmup) {
+					Log(string.Format("measuring {0} s", measure));
+					Stats.Reset();
+					t = DateTime.Now;
+					step = 4;
+				}
+				break;
+			case 4:
+				if (s >= measure) {
+					Stats.Report("bench");
+					foreach (string line in System.IO.File.ReadAllLines("/proc/self/status"))
+						if (line.StartsWith("VmHWM") || line.StartsWith("VmRSS"))
+							Console.WriteLine("bench {0}", line.Replace("\t", " "));
+					Console.Out.Flush();
+					Environment.Exit(0);
+				}
+				break;
+			}
 		}
 	}
 }

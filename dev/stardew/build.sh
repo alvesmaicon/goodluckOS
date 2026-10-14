@@ -6,6 +6,7 @@
 #   (dev/out/stardew/altone: a 1 s OpenAL tone, for the console's /tmp)
 #   dev/stardew/build.sh game     dev/out/stardew/gamedata from your own game (SDV_GAME, default: Steam on macOS)
 #   dev/stardew/build.sh smoke    run Mono armhf under qemu-arm (no display): assemblies and native libs load
+#   dev/stardew/build.sh patches  rebuild only StardewPatches.dll, SVLoader.exe and SdvIcon.exe
 # StardewPatches.dll is compiled against your StardewValley.exe and icon.png made from its title logo, when
 # SDV_GAME exists.
 # Runs in the goodluck-stardew image (dev/stardew/Dockerfile, on top of goodluck-dev).
@@ -217,5 +218,6 @@ case ${1:-build} in
     build) build ;;
     game) build_game ;;
     smoke) smoke ;;
-    *) echo "usage: dev/stardew/build.sh [build|smoke]"; exit 1 ;;
+    patches) build_patches ;;
+    *) echo "usage: dev/stardew/build.sh [build|game|smoke|patches]"; exit 1 ;;
 esac
