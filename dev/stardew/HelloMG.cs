@@ -1,5 +1,6 @@
 // F0 check of the runtime: Mono + MonoGame + SDL/KMSDRM + gl4es + OpenAL + gamepad, without the game.
-// D-pad/stick moves the square, A beeps, START or BACK quits; FPS and memory go to stdout every 5 s.
+// It beeps once after 1 s; D-pad/stick moves the square, A beeps, START or BACK quits; FPS and memory go to stdout every 5 s.
+// The beep is its own instance: the port's MonoGame crashes when its pool stops a memory-resident sound.
 using System;
 using System.IO;
 using System.Linq;
@@ -14,6 +15,9 @@ class HelloMG : Game
     SpriteBatch batch;
     Texture2D pixel;
     SoundEffect beep;
+    SoundEffectInstance beepInstance;
+    SoundState lastBeepState;
+    bool startBeep;
     Vector2 pos = new Vector2(300, 220);
     GamePadState prev;
     int frames;
@@ -34,13 +38,14 @@ class HelloMG : Game
         batch = new SpriteBatch(GraphicsDevice);
         pixel = new Texture2D(GraphicsDevice, 1, 1);
         pixel.SetData(new[] { Color.White });
-        var pcm = new byte[22050 / 5 * 2];
+        var pcm = new byte[22050 * 2 / 2];
         for (int i = 0; i < pcm.Length / 2; i++) {
-            var s = (short)(Math.Sin(2 * Math.PI * 440 * i / 22050.0) * 8000);
+            var s = (short)(Math.Sin(2 * Math.PI * 440 * i / 22050.0) * 16000);
             pcm[2 * i] = (byte)s;
             pcm[2 * i + 1] = (byte)(s >> 8);
         }
         beep = new SoundEffect(pcm, 22050, AudioChannels.Mono);
+        beepInstance = beep.CreateInstance();
         var pp = GraphicsDevice.PresentationParameters;
         Console.WriteLine("backbuffer {0}x{1}, pad: {2}", pp.BackBufferWidth, pp.BackBufferHeight,
                           GamePad.GetCapabilities(PlayerIndex.One).IsConnected);
@@ -58,10 +63,21 @@ class HelloMG : Game
         if (p.DPad.Right == ButtonState.Pressed) pos.X += 4;
         if (p.DPad.Up == ButtonState.Pressed) pos.Y -= 4;
         if (p.DPad.Down == ButtonState.Pressed) pos.Y += 4;
-        if (p.Buttons.A == ButtonState.Pressed && prev.Buttons.A == ButtonState.Released)
-            beep.Play();
+        var beepNow = !startBeep && (DateTime.Now - start).TotalSeconds > 1 ||
+                      p.Buttons.A == ButtonState.Pressed && prev.Buttons.A == ButtonState.Released;
+        startBeep |= beepNow;
+        if (beepNow && beepInstance.State != SoundState.Playing)
+            beepInstance.Play();
+        if (beepInstance.State != lastBeepState)
+            Console.WriteLine("beep: {0}", lastBeepState = beepInstance.State);
         if (p.Buttons != prev.Buttons)
-            Console.WriteLine("buttons: {0}", p.Buttons);
+            Console.WriteLine("buttons: {0}", string.Join(" ", new[] {
+                p.Buttons.A == ButtonState.Pressed ? "A" : "", p.Buttons.B == ButtonState.Pressed ? "B" : "",
+                p.Buttons.X == ButtonState.Pressed ? "X" : "", p.Buttons.Y == ButtonState.Pressed ? "Y" : "",
+                p.Buttons.LeftShoulder == ButtonState.Pressed ? "L1" : "", p.Buttons.RightShoulder == ButtonState.Pressed ? "R1" : "",
+                p.Triggers.Left > 0.5f ? "L2" : "", p.Triggers.Right > 0.5f ? "R2" : "",
+                p.Buttons.LeftStick == ButtonState.Pressed ? "L3" : "", p.Buttons.RightStick == ButtonState.Pressed ? "R3" : "",
+                p.Buttons.Back == ButtonState.Pressed ? "SELECT" : ""}.Where(b => b != "")));
         prev = p;
         base.Update(gameTime);
     }
