@@ -3,6 +3,7 @@
 # as player, which cannot mount, and HOME is FAT, which has no symlinks),
 # gl4es, OpenAL Soft, the lz4 shim, PortMaster's managed MonoGame and patches, the HelloMG test.
 #   dev/stardew/build.sh          build into dev/out/stardew/stardewvalley
+#   (dev/out/stardew/altone: a 1 s OpenAL tone, for the console's /tmp)
 #   dev/stardew/build.sh smoke    run Mono armhf under qemu-arm (no display): assemblies and native libs load
 # Runs in the goodluck-stardew image (dev/stardew/Dockerfile, on top of goodluck-dev).
 set -euo pipefail
@@ -136,6 +137,8 @@ build() {
     echo "== lz4 shim $LZ4";     build_lz4
     echo "== HelloMG"
     mcs -nologo -out:"$P/test/HelloMG.exe" -r:System.Core -r:"$P/dlls/MonoGame.Framework.dll" "$HERE/HelloMG.cs"
+    arm-linux-gnueabihf-gcc $ARMFLAGS -I"$SRC/openal-soft/include" "$HERE/altone.c" -o "$(dirname "$P")/altone" \
+        -L"$P/lib" -l:libopenal.so.1 -lm
     cp "$HERE/stardew.sh" "$P/"
     cp "$HERE/apps.puppy-entry" "$(dirname "$P")/"
     echo "== native libraries (armhf, newest glibc symbol)"

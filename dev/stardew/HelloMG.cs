@@ -1,6 +1,7 @@
 // F0 check of the runtime: Mono + MonoGame + SDL/KMSDRM + gl4es + OpenAL + gamepad, without the game.
-// It beeps once after 1 s; D-pad/stick moves the square, A beeps, START or BACK quits; FPS and memory go to stdout every 5 s.
-// The beep is its own instance: the port's MonoGame crashes when its pool stops a memory-resident sound.
+// D-pad/stick moves the square, START or BACK quits, FPS and memory go to stdout every 5 s.
+// HELLO_BEEP=1 beeps after 1 s and on A: the port's MonoGame crashes when it stops a memory-resident
+// sound (null streaming buffers in PlatformStop), so it is off by default; dev/stardew/altone tests OpenAL.
 using System;
 using System.IO;
 using System.Linq;
@@ -17,7 +18,7 @@ class HelloMG : Game
     SoundEffect beep;
     SoundEffectInstance beepInstance;
     SoundState lastBeepState;
-    bool startBeep;
+    bool startBeep = Environment.GetEnvironmentVariable("HELLO_BEEP") != "1";
     Vector2 pos = new Vector2(300, 220);
     GamePadState prev;
     int frames;
@@ -63,8 +64,7 @@ class HelloMG : Game
         if (p.DPad.Right == ButtonState.Pressed) pos.X += 4;
         if (p.DPad.Up == ButtonState.Pressed) pos.Y -= 4;
         if (p.DPad.Down == ButtonState.Pressed) pos.Y += 4;
-        var beepNow = !startBeep && (DateTime.Now - start).TotalSeconds > 1 ||
-                      p.Buttons.A == ButtonState.Pressed && prev.Buttons.A == ButtonState.Released;
+        var beepNow = !startBeep && (DateTime.Now - start).TotalSeconds > 1;
         startBeep |= beepNow;
         if (beepNow && beepInstance.State != SoundState.Playing)
             beepInstance.Play();
