@@ -15,7 +15,10 @@ LUANTI_DEPENDENCIES = freetype jpeg jsoncpp libgles libpng libvorbis openal \
 
 # the Mali-400 only does GLES2; no server, curl (ContentDB) or databases besides sqlite, and no OpenSSL:
 # Luanti hashes with its own code otherwise, and libcrypto took ~4 MB of the process
+# 5.17.0 with the handheld patches of github.com/alvesmaicon/luanti (tag 5.17.0-handheld.N): the number stays
+# 5.17.0 for games' min_minetest_version, the suffix goes up with each binary
 LUANTI_CONF_OPTS = \
+	-DVERSION_EXTRA=handheld.1 \
 	-DBUILD_CLIENT=ON \
 	-DBUILD_SERVER=OFF \
 	-DBUILD_UNITTESTS=OFF \
