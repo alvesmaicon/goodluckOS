@@ -1,0 +1,202 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Tue, 13 Oct 2026 21:15:33 -0300
+Subject: [PATCH 15/15] mainmenu: a handheld layout without network or keyboard
+ (menu_handheld)
+
+A handheld with no network and no on-screen keyboard shows a main menu
+where most of what it offers can't be used: Join Game, Content and the
+game bar's ContentDB button need the network, the About tab's buttons a
+browser or a file manager, and the create-world dialog's name and seed
+fields a keyboard. Select Mods has nothing to offer when mods only come
+from ContentDB.
+
+menu_handheld (off by default) leaves them out: the tabs are Start Game
+and About, the game bar shows only when there is another game to pick,
+the world buttons are Delete, New and Play Game, and About shows the
+version, renderer and credits. A new world asks only for its game mode
+and whether it may change: it takes the next free name (world<n>) and
+the game's mapgen with the default flags, as the full dialog would with
+nothing typed. Turning the setting off brings everything back as it was.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/builtin/mainmenu/dlg_create_world.lua b/builtin/mainmenu/dlg_create_world.lua
+index a39c3457d..9c5d43b0a 100644
+--- a/builtin/mainmenu/dlg_create_world.lua
++++ b/builtin/mainmenu/dlg_create_world.lua
+@@ -152,6 +152,23 @@ local function create_world_formspec(dialogdata)
+ 		mglist = mglist:sub(1, -2)
+ 	end
+ 
++	-- one button that shows the mode and switches it, as in Minecraft
++	local game_mode = function(x, y, w)
++		return ("button[%g,%g;%g,0.5;btn_game_mode;%s]"):format(x, y, w,
++				fgettext("Game mode: $1", fgettext_ne(dialogdata.creative and "Creative" or "Survival"))) ..
++			("checkbox[%g,%g;cb_mode_change;%s;%s]"):format(x, y + 0.7,
++				fgettext("Allow changing the game mode"), tostring(dialogdata.mode_change))
++	end
++
++	-- a handheld can't type: the world takes the next free name and the game's mapgen
++	if core.settings:get_bool("menu_handheld") then
++		dialogdata.mg = current_mg
++		return "size[7,3.2,true]" ..
++			game_mode(0.5, 0.4, 6) ..
++			"button[0.5,2.5;3,0.5;world_create_confirm;" .. fgettext("Create") .. "]" ..
++			"button[3.5,2.5;3,0.5;world_create_cancel;" .. fgettext("Cancel") .. "]"
++	end
++
+ 	-- The logic of the flag element IDs is as follows:
+ 	-- "flag_main_foo-bar-baz" controls dialogdata.flags["main"]["foo_bar_baz"]
+ 	-- see the buttonhandler for the implementation of this
+@@ -293,11 +310,7 @@ local function create_world_formspec(dialogdata)
+ 	retval = retval ..
+ 		"label[0,2;" .. fgettext("Mapgen") .. "]"..
+ 		"dropdown[0,2.5;6.3;dd_mapgen;" .. mglist .. ";" .. selindex .. "]" ..
+-		-- one button that shows the mode and switches it, as in Minecraft
+-		"button[0,3.4;6,0.5;btn_game_mode;" ..
+-			fgettext("Game mode: $1", fgettext_ne(dialogdata.creative and "Creative" or "Survival")) .. "]" ..
+-		"checkbox[0,4.1;cb_mode_change;" .. fgettext("Allow changing the game mode") .. ";" ..
+-			tostring(dialogdata.mode_change) .. "]"
++		game_mode(0, 3.4, 6)
+ 
+ 	-- Warning when making a devtest world
+ 	if game.id == "devtest" then
+@@ -349,7 +362,7 @@ local function create_world_buttonhandler(this, fields)
+ 			this.parent.dlg_create_world_closed_at = core.get_us_time()
+ 		end
+ 
+-		local worldname = fields["te_world_name"]
++		local worldname = fields["te_world_name"] or ""
+ 		local game, _ = pkgmgr.find_by_gameid(core.settings:get("menu_last_game"))
+ 
+ 		local message
+@@ -379,7 +392,7 @@ local function create_world_buttonhandler(this, fields)
+ 
+ 		if message == nil then
+ 			this.data.seed = fields["te_seed"] or ""
+-			this.data.mg = fields["dd_mapgen"]
++			this.data.mg = fields["dd_mapgen"] or this.data.mg
+ 
+ 			-- actual names as used by engine
+ 			local settings = {
+@@ -418,7 +431,7 @@ local function create_world_buttonhandler(this, fields)
+ 		return true
+ 	end
+ 
+-	this.data.worldname = fields["te_world_name"]
++	this.data.worldname = fields["te_world_name"] or ""
+ 	this.data.seed = fields["te_seed"] or ""
+ 
+ 	if fields["btn_game_mode"] then
+diff --git a/builtin/mainmenu/init.lua b/builtin/mainmenu/init.lua
+index eca3c4058..fe1ef26fa 100644
+--- a/builtin/mainmenu/init.lua
++++ b/builtin/mainmenu/init.lua
+@@ -111,8 +111,11 @@ local function init_globals()
+ 
+ 	tv_main:set_autosave_tab(true)
+ 	tv_main:add(tabs.local_game)
+-	tv_main:add(tabs.play_online)
+-	tv_main:add(tabs.content)
++	-- both need the network
++	if not core.settings:get_bool("menu_handheld") then
++		tv_main:add(tabs.play_online)
++		tv_main:add(tabs.content)
++	end
+ 	tv_main:add(tabs.about)
+ 
+ 	tv_main:set_global_event_handler(main_event_handler)
+diff --git a/builtin/mainmenu/tab_about.lua b/builtin/mainmenu/tab_about.lua
+index b0b10f534..9fad59b88 100644
+--- a/builtin/mainmenu/tab_about.lua
++++ b/builtin/mainmenu/tab_about.lua
+@@ -85,16 +85,19 @@ return {
+ 		local fs = "image[1.5,0.6;2.5,2.5;" .. core.formspec_escape(logofile) .. "]" ..
+ 			"style_type[label;valign=center;halign=center]" ..
+ 			"label[0.1,3.4;5.3,0.5;" ..
+-			core.formspec_escape(version.project .. " " .. version.string) .. "]" ..
+-			"button_url[1.5,4.1;2.5,0.8;homepage;luanti.org;https://www.luanti.org/]"
+-
+-		if PLATFORM == "Android" then
+-			fs = fs .. "button[0.5,5.1;4.5,0.8;share_debug;" .. fgettext("Share debug log") .. "]"
+-		else
+-			fs = fs .. "tooltip[userdata;" ..
+-					fgettext("Opens the directory that contains user-provided worlds, games, mods,\n" ..
+-							"and texture packs in a file manager / explorer.") .. "]"
+-			fs = fs .. "button[0.5,5.1;4.5,0.8;userdata;" .. fgettext("Open User Data Directory") .. "]"
++			core.formspec_escape(version.project .. " " .. version.string) .. "]"
++
++		-- a handheld has no browser, no network and no file manager
++		if not core.settings:get_bool("menu_handheld") then
++			fs = fs .. "button_url[1.5,4.1;2.5,0.8;homepage;luanti.org;https://www.luanti.org/]"
++			if PLATFORM == "Android" then
++				fs = fs .. "button[0.5,5.1;4.5,0.8;share_debug;" .. fgettext("Share debug log") .. "]"
++			else
++				fs = fs .. "tooltip[userdata;" ..
++						fgettext("Opens the directory that contains user-provided worlds, games, mods,\n" ..
++								"and texture packs in a file manager / explorer.") .. "]"
++				fs = fs .. "button[0.5,5.1;4.5,0.8;userdata;" .. fgettext("Open User Data Directory") .. "]"
++			end
+ 		end
+ 
+ 		local active_renderer_info = fgettext("Active renderer:") .. "\n" ..
+diff --git a/builtin/mainmenu/tab_local.lua b/builtin/mainmenu/tab_local.lua
+index 1c318fd04..635cee577 100644
+--- a/builtin/mainmenu/tab_local.lua
++++ b/builtin/mainmenu/tab_local.lua
+@@ -65,8 +65,10 @@ function singleplayer_refresh_gamebar()
+ 		old_bar:delete()
+ 	end
+ 
+-	-- Hide gamebar if no games are installed
+-	if #pkgmgr.games == 0 then
++	local handheld = core.settings:get_bool("menu_handheld")
++
++	-- Hide gamebar if no games are installed, and on a handheld when there is no other to pick
++	if #pkgmgr.games == 0 or handheld and #pkgmgr.games == 1 then
+ 		return false
+ 	end
+ 
+@@ -114,8 +116,10 @@ function singleplayer_refresh_gamebar()
+ 		btnbar:add_button(btn_name, text, image, tooltip)
+ 	end
+ 
+-	local plus_image = core.formspec_escape(defaulttexturedir .. "plus.png")
+-	btnbar:add_button("game_open_cdb", "", plus_image, fgettext("Install games from ContentDB"))
++	if not handheld then
++		local plus_image = core.formspec_escape(defaulttexturedir .. "plus.png")
++		btnbar:add_button("game_open_cdb", "", plus_image, fgettext("Install games from ContentDB"))
++	end
+ 	return true
+ end
+ 
+@@ -206,7 +210,11 @@ local function get_formspec(tabview, name, tabdata)
+ 	end
+ 
+ 	retval = retval .. "container[5.25,4.875]"
+-	if world then
++	-- a handheld only gets mods from ContentDB, which needs the network
++	if world and core.settings:get_bool("menu_handheld") then
++		retval = retval ..
++				"button[3.325,0;3.225,0.8;world_delete;".. fgettext("Delete") .. "]"
++	elseif world then
+ 		retval = retval ..
+ 				"button[0,0;3.225,0.8;world_delete;".. fgettext("Delete") .. "]" ..
+ 				"button[3.325,0;3.225,0.8;world_configure;".. fgettext("Select Mods") .. "]"
+diff --git a/builtin/settingtypes.txt b/builtin/settingtypes.txt
+index 22aa75f96..0dd39f434 100644
+--- a/builtin/settingtypes.txt
++++ b/builtin/settingtypes.txt
+@@ -921,6 +921,11 @@ menu_clouds (Clouds in menu) bool true
+ #    Choose theme colors for the main menu background.
+ menu_theme (Menu theme) enum light dark,light
+ 
++#    A main menu for a handheld with no network and no keyboard: no Join Game or Content tabs,
++#    nothing from ContentDB, no Select Mods, and a new world asks only for its game mode
++#    (it takes the next free name and the game's mapgen).
++menu_handheld (Handheld main menu) bool false
++
+ [**HUD]
+ 
+ #    Modifies the size of the HUD elements.

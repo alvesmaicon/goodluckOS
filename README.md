@@ -153,7 +153,7 @@ FN is the hotkey:
 The same list is in System Settings -> Input Settings, next to a button tester.
 
 ### Luanti
-Luanti opens on its main menu: create a world (the name can stay empty) and pick its game mode, Survival or Creative. As in Minecraft, Creative mode lets you fly, breaks blocks at once and has no damage, hunger or monster attacks. With "Allow changing the game mode" ticked, a button in the inventory switches between the two. The console has no mouse cursor, so whenever a menu or the inventory is open, Luanti draws one that the sticks move.
+Luanti opens on its main menu, trimmed to what works without network or keyboard: New asks only for the game mode, Survival or Creative, and the world gets the next free name. As in Minecraft, Creative mode lets you fly, breaks blocks at once and has no damage, hunger or monster attacks. With "Allow changing the game mode" ticked, a button in the inventory switches between the two. The console has no mouse cursor, so whenever a menu or the inventory is open, Luanti draws one that the sticks move.
 
 | Buttons | In game | In menus and the inventory |
 |---|---|---|
