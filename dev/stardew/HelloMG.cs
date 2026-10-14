@@ -89,5 +89,7 @@ class HelloMG : Game
     {
         using (var game = new HelloMG())
             game.Run();
+        // The port's MonoGame keeps a foreground audio thread (FrameworkDispatcher.UpdateWork) alive
+        Environment.Exit(0);
     }
 }
