@@ -1,0 +1,53 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Tue, 13 Oct 2026 22:40:53 -0300
+Subject: [PATCH 17/17] mainmenu: the handheld's new world gets a name again
+
+With the gamepad's on-screen keyboard, menu_handheld's create-world
+dialog can ask for the world's name again: a field above the game mode,
+clicked to type. Left empty, the world still takes the next free name.
+The seed and the mapgen stay out: a random seed and the game's mapgen.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/builtin/mainmenu/dlg_create_world.lua b/builtin/mainmenu/dlg_create_world.lua
+index 9c5d43b0a..98ef4d8a6 100644
+--- a/builtin/mainmenu/dlg_create_world.lua
++++ b/builtin/mainmenu/dlg_create_world.lua
+@@ -160,13 +160,16 @@ local function create_world_formspec(dialogdata)
+ 				fgettext("Allow changing the game mode"), tostring(dialogdata.mode_change))
+ 	end
+ 
+-	-- a handheld can't type: the world takes the next free name and the game's mapgen
++	-- a handheld types the name with the gamepad's keyboard (left empty, the next free one), and keeps the
++	-- game's mapgen
+ 	if core.settings:get_bool("menu_handheld") then
+ 		dialogdata.mg = current_mg
+-		return "size[7,3.2,true]" ..
+-			game_mode(0.5, 0.4, 6) ..
+-			"button[0.5,2.5;3,0.5;world_create_confirm;" .. fgettext("Create") .. "]" ..
+-			"button[3.5,2.5;3,0.5;world_create_cancel;" .. fgettext("Cancel") .. "]"
++		return "size[7,4.2,true]" ..
++			"field[0.8,0.7;6,0.5;te_world_name;" .. fgettext("World name") .. ";" ..
++				core.formspec_escape(dialogdata.worldname) .. "]" ..
++			game_mode(0.5, 1.4, 6) ..
++			"button[0.5,3.5;3,0.5;world_create_confirm;" .. fgettext("Create") .. "]" ..
++			"button[3.5,3.5;3,0.5;world_create_cancel;" .. fgettext("Cancel") .. "]"
+ 	end
+ 
+ 	-- The logic of the flag element IDs is as follows:
+diff --git a/builtin/settingtypes.txt b/builtin/settingtypes.txt
+index 0dd39f434..7d840f5e2 100644
+--- a/builtin/settingtypes.txt
++++ b/builtin/settingtypes.txt
+@@ -922,8 +922,8 @@ menu_clouds (Clouds in menu) bool true
+ menu_theme (Menu theme) enum light dark,light
+ 
+ #    A main menu for a handheld with no network and no keyboard: no Join Game or Content tabs,
+-#    nothing from ContentDB, no Select Mods, and a new world asks only for its game mode
+-#    (it takes the next free name and the game's mapgen).
++#    nothing from ContentDB, no Select Mods, and a new world asks only for its name and game mode
++#    (it keeps the game's mapgen and a random seed).
+ menu_handheld (Handheld main menu) bool false
+ 
+ [**HUD]

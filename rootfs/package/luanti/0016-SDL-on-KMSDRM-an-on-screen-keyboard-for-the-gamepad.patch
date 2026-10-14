@@ -1,0 +1,635 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Tue, 13 Oct 2026 22:36:15 -0300
+Subject: [PATCH 16/17] SDL: on KMSDRM, an on-screen keyboard for the gamepad
+
+A handheld without a keyboard could not type anywhere: world names,
+settings, a sign, a book, the creative inventory's search. With the
+gamepad driving the drawn cursor (KMSDRM), a click (A/Y) that lands on
+an edit box that takes text now opens a keyboard over the screen, the
+goodluckOS launcher's: a staggered QWERTY of five rows (digits, letters,
+- ' ( ) . space), the D-pad moving between keys with the launcher's
+repeat (350 ms, then every 60 ms).
+
+While it is open the gamepad drives it instead of the cursor: the
+button that clicks in menus types the key, the one that goes back
+deletes (and closes the keyboard when nothing is left), START closes
+it, SELECT closes it and gives the box back the text it had, L1/R1 move
+the cursor in the text. Aa switches to capitals. What is typed reaches
+the box as SDL's text input and keys do, through the user receiver and
+then the focus, so every edit box works unchanged. It closes when the
+box loses the focus or goes away (a formspec closing), and sits at the
+top when it would cover the box.
+
+The labels of space, delete and ok and the line of hints come from the
+client in the user's language (pt_BR included). The hints name the
+buttons by position as goodluckOS maps them: B (bottom) types, A
+(right) deletes.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/irr/include/IGUIEnvironment.h b/irr/include/IGUIEnvironment.h
+index c8136bb0d..fa4bfc35a 100644
+--- a/irr/include/IGUIEnvironment.h
++++ b/irr/include/IGUIEnvironment.h
+@@ -62,6 +62,16 @@ class IGUIEnvironment : public virtual IReferenceCounted
+ 	//! drawAll() ends with an arrow at this cursor while it is visible (no system cursor, e.g. KMSDRM)
+ 	virtual void setSoftwareCursor(ICursorControl *cursor) {}
+ 
++	//! A keyboard on the screen for the gamepad that drives the software cursor: it types into the focused
++	//! edit box through the user receiver, as a keyboard would. Opens if the focus takes text under the cursor.
++	virtual bool openOnScreenKeyboard() { return false; }
++	virtual bool isOnScreenKeyboardOpen() const { return false; }
++	//! a gamepad button pressed while it is open (a held D-pad direction again as it repeats)
++	virtual void onScreenKeyboardButton(GamepadButton button) {}
++	//! the labels of its space, delete and ok keys and its line of hints, in the user's language
++	virtual void setOnScreenKeyboardTexts(const core::stringw &space, const core::stringw &del,
++			const core::stringw &ok, const core::stringw &hints) {}
++
+ 	//! Sets the focus to an element.
+ 	/** Causes a EGET_ELEMENT_FOCUS_LOST event followed by a
+ 	EGET_ELEMENT_FOCUSED event. If someone absorbed either of the events,
+diff --git a/irr/src/CGUIEnvironment.cpp b/irr/src/CGUIEnvironment.cpp
+index b66f206c5..5b1de7419 100644
+--- a/irr/src/CGUIEnvironment.cpp
++++ b/irr/src/CGUIEnvironment.cpp
+@@ -112,6 +112,8 @@ CGUIEnvironment::~CGUIEnvironment()
+ 		Operator = 0;
+ 	}
+ 
++	OnScreenKeyboard.close(true);
++
+ 	if (SoftwareCursor) {
+ 		SoftwareCursor->drop();
+ 		SoftwareCursor = nullptr;
+@@ -169,7 +171,13 @@ void CGUIEnvironment::drawAll(bool useScreenSize)
+ 	draw();
+ 	OnPostRender(os::Timer::getTime());
+ 
+-	if (SoftwareCursor && SoftwareCursor->isVisible())
++	// the keyboard goes with the edit box it types into; while it is open, the gamepad drives it, not the cursor
++	IGUIElement *box = OnScreenKeyboard.getBox();
++	if (box && (box != Focus || !box->isTrulyVisible()))
++		OnScreenKeyboard.close(true);
++	if (OnScreenKeyboard.isOpen())
++		OnScreenKeyboard.draw(Driver, getSkin() ? getSkin()->getFont() : getBuiltInFont());
++	else if (SoftwareCursor && SoftwareCursor->isVisible())
+ 		drawSoftwareCursor();
+ 
+ 	clearDeletionQueue();
+@@ -184,6 +192,30 @@ void CGUIEnvironment::setSoftwareCursor(ICursorControl *cursor)
+ 	SoftwareCursor = cursor;
+ }
+ 
++bool CGUIEnvironment::openOnScreenKeyboard()
++{
++	if (!SoftwareCursor || !Focus || !Focus->acceptsIME() ||
++			!Focus->getAbsoluteClippingRect().isPointInside(SoftwareCursor->getPosition()))
++		return false;
++	OnScreenKeyboard.open(Focus);
++	return true;
++}
++
++void CGUIEnvironment::onScreenKeyboardButton(GamepadButton button)
++{
++	// as the device posts what a keyboard types: to the user receiver, then to the focus
++	OnScreenKeyboard.button(button, [this](const SEvent &event) {
++		if (!UserReceiver || !UserReceiver->OnEvent(event))
++			postEventFromUser(event);
++	});
++}
++
++void CGUIEnvironment::setOnScreenKeyboardTexts(const core::stringw &space, const core::stringw &del,
++		const core::stringw &ok, const core::stringw &hints)
++{
++	OnScreenKeyboard.setTexts(space, del, ok, hints);
++}
++
+ //! a 12x19 arrow, tip at (0, 0): '#' outline, '.' fill
+ void CGUIEnvironment::drawSoftwareCursor()
+ {
+diff --git a/irr/src/CGUIEnvironment.h b/irr/src/CGUIEnvironment.h
+index a92bb22de..a7bacc51b 100644
+--- a/irr/src/CGUIEnvironment.h
++++ b/irr/src/CGUIEnvironment.h
+@@ -9,6 +9,7 @@
+ #include "irrArray.h"
+ #include "IFileSystem.h"
+ #include "IOSOperator.h"
++#include "CGUIOnScreenKeyboard.h"
+ 
+ namespace gui
+ {
+@@ -27,6 +28,12 @@ class CGUIEnvironment : public IGUIEnvironment, public IGUIElement
+ 
+ 	void setSoftwareCursor(ICursorControl *cursor) override;
+ 
++	bool openOnScreenKeyboard() override;
++	bool isOnScreenKeyboardOpen() const override { return OnScreenKeyboard.isOpen(); }
++	void onScreenKeyboardButton(GamepadButton button) override;
++	void setOnScreenKeyboardTexts(const core::stringw &space, const core::stringw &del,
++			const core::stringw &ok, const core::stringw &hints) override;
++
+ 	//! returns the current video driver
+ 	video::IVideoDriver *getVideoDriver() const override;
+ 
+@@ -219,6 +226,7 @@ class CGUIEnvironment : public IGUIEnvironment, public IGUIElement
+ 	IOSOperator *Operator;
+ 	ICursorControl *SoftwareCursor = nullptr;
+ 	video::ITexture *SoftwareCursorTexture = nullptr;
++	CGUIOnScreenKeyboard OnScreenKeyboard;
+ 	u32 FocusFlags;
+ 	core::array<IGUIElement *> DeletionQueue;
+ 
+diff --git a/irr/src/CGUIOnScreenKeyboard.cpp b/irr/src/CGUIOnScreenKeyboard.cpp
+new file mode 100644
+index 000000000..8303f00ed
+--- /dev/null
++++ b/irr/src/CGUIOnScreenKeyboard.cpp
+@@ -0,0 +1,258 @@
++// This file is part of the "Irrlicht Engine".
++// For conditions of distribution and use, see copyright notice in irrlicht.h
++
++#include "CGUIOnScreenKeyboard.h"
++
++#include "IGUIEditBox.h"
++#include "IGUIElement.h"
++#include "IGUIFont.h"
++#include "IVideoDriver.h"
++
++namespace gui
++{
++
++static const video::SColor PANEL(240, 12, 12, 14), TILE(255, 40, 40, 44), ACCENT(255, 255, 205, 60),
++		WHITE(255, 255, 255, 255), GREY(255, 170, 170, 170), BLACK(255, 0, 0, 0);
++
++CGUIOnScreenKeyboard::~CGUIOnScreenKeyboard()
++{
++	close(true);
++}
++
++const std::vector<CGUIOnScreenKeyboard::SKey> &CGUIOnScreenKeyboard::row(s32 r)
++{
++	static const std::vector<std::vector<SKey>> layout = [] {
++		const auto keys = [](const wchar_t *chars, f32 x) {
++			std::vector<SKey> row;
++			for (const wchar_t *c = chars; *c; ++c)
++				row.push_back({TYPE_CHAR, *c, x++, 1.0f});
++			return row;
++		};
++		std::vector<std::vector<SKey>> rows;
++		rows.push_back(keys(L"1234567890", 0.0f));
++		rows.push_back(keys(L"qwertyuiop", 0.0f));
++		rows.push_back(keys(L"asdfghjkl", 0.5f));
++		std::vector<SKey> r3 = {{TYPE_CHAR, L'-', 0.0f, 1.5f}};
++		for (const SKey &k : keys(L"zxcvbnm", 1.5f))
++			r3.push_back(k);
++		r3.push_back({TYPE_DEL, 0, 8.5f, 1.5f});
++		rows.push_back(r3);
++		rows.push_back({{TYPE_SHIFT, 0, 0.0f, 1.5f}, {TYPE_CHAR, L'\'', 1.5f, 1.0f}, {TYPE_CHAR, L'(', 2.5f, 1.0f},
++				{TYPE_CHAR, L')', 3.5f, 1.0f}, {TYPE_SPACE, 0, 4.5f, 3.0f}, {TYPE_CHAR, L'.', 7.5f, 1.0f}, {TYPE_OK, 0, 8.5f, 1.5f}});
++		return rows;
++	}();
++	return layout[r];
++}
++
++void CGUIOnScreenKeyboard::open(IGUIElement *box)
++{
++	close(true);
++	box->grab();
++	Box = box;
++	Original = box->getText();
++}
++
++void CGUIOnScreenKeyboard::close(bool accept)
++{
++	if (!Box)
++		return;
++	if (!accept)
++		Box->setText(Original.c_str());
++	Box->drop();
++	Box = nullptr;
++}
++
++void CGUIOnScreenKeyboard::setTexts(const core::stringw &space, const core::stringw &del,
++		const core::stringw &ok, const core::stringw &hints)
++{
++	Space = space;
++	Del = del;
++	Ok = ok;
++	Hints = hints;
++}
++
++// across the staggered rows, to the key closest to the centre of the current one
++void CGUIOnScreenKeyboard::move(s32 dx, s32 dy)
++{
++	if (dx) {
++		const s32 n = (s32)row(Row).size();
++		Col = (Col + dx + n) % n;
++	}
++	if (dy) {
++		const SKey &from = row(Row)[Col];
++		const f32 centre = from.X + from.W / 2;
++		Row = (Row + dy + ROWS) % ROWS;
++		const auto &to = row(Row);
++		Col = 0;
++		for (s32 i = 1; i < (s32)to.size(); ++i)
++			if (core::abs_(to[i].X + to[i].W / 2 - centre) < core::abs_(to[Col].X + to[Col].W / 2 - centre))
++				Col = i;
++	}
++}
++
++static void postKey(EKEY_CODE key, const CGUIOnScreenKeyboard::Post &post)
++{
++	SEvent event{};
++	event.EventType = EET_KEY_INPUT_EVENT;
++	event.KeyInput.Key = key;
++	event.KeyInput.PressedDown = true;
++	post(event);
++	event.KeyInput.PressedDown = false;
++	post(event);
++}
++
++void CGUIOnScreenKeyboard::press(const SKey &key, const Post &post)
++{
++	switch (key.Type) {
++	case TYPE_SHIFT:
++		Caps = !Caps;
++		break;
++	case TYPE_OK:
++		close(true);
++		break;
++	case TYPE_DEL:
++		postKey(KEY_BACK, post);
++		break;
++	case TYPE_SPACE:
++	case TYPE_CHAR: {
++		wchar_t c = key.Type == TYPE_SPACE ? L' ' : key.Char;
++		if (Caps && c >= L'a' && c <= L'z')
++			c -= L'a' - L'A';
++		const wchar_t typed[] = {c, 0};
++		core::stringw text(typed);
++		SEvent event{};
++		event.EventType = EET_STRING_INPUT_EVENT;
++		event.StringInput.Str = &text;
++		post(event);
++	} break;
++	}
++}
++
++void CGUIOnScreenKeyboard::button(GamepadButton button, const Post &post)
++{
++	if (!Box)
++		return;
++	switch (button) {
++	case GamepadButton::DPAD_UP:
++		move(0, -1);
++		break;
++	case GamepadButton::DPAD_DOWN:
++		move(0, 1);
++		break;
++	case GamepadButton::DPAD_LEFT:
++		move(-1, 0);
++		break;
++	case GamepadButton::DPAD_RIGHT:
++		move(1, 0);
++		break;
++	// the button that clicks in menus types, the one that goes back deletes (and closes when nothing is left)
++	case GamepadButton::SOUTH:
++		press(row(Row)[Col], post);
++		break;
++	case GamepadButton::EAST:
++		if (!Box->getText()[0])
++			close(true);
++		else
++			postKey(KEY_BACK, post);
++		break;
++	case GamepadButton::START:
++		close(true);
++		break;
++	case GamepadButton::BACK:
++		close(false);
++		break;
++	// L1/R1 move the cursor in the text
++	case GamepadButton::LEFT_SHOULDER:
++		postKey(KEY_LEFT, post);
++		break;
++	case GamepadButton::RIGHT_SHOULDER:
++		postKey(KEY_RIGHT, post);
++		break;
++	default:
++		break;
++	}
++}
++
++core::stringw CGUIOnScreenKeyboard::label(const SKey &key) const
++{
++	switch (key.Type) {
++	case TYPE_SHIFT:
++		return Caps ? L"aA" : L"Aa";
++	case TYPE_SPACE:
++		return Space;
++	case TYPE_DEL:
++		return Del;
++	case TYPE_OK:
++		return Ok;
++	default: {
++		wchar_t c = key.Char;
++		if (Caps && c >= L'a' && c <= L'z')
++			c -= L'a' - L'A';
++		const wchar_t shown[] = {c, 0};
++		return shown;
++	}
++	}
++}
++
++static void frame(video::IVideoDriver *driver, const core::recti &r, video::SColor color, s32 t)
++{
++	driver->draw2DRectangle(color, core::recti(r.UpperLeftCorner.X, r.UpperLeftCorner.Y, r.LowerRightCorner.X, r.UpperLeftCorner.Y + t));
++	driver->draw2DRectangle(color, core::recti(r.UpperLeftCorner.X, r.LowerRightCorner.Y - t, r.LowerRightCorner.X, r.LowerRightCorner.Y));
++	driver->draw2DRectangle(color, core::recti(r.UpperLeftCorner.X, r.UpperLeftCorner.Y, r.UpperLeftCorner.X + t, r.LowerRightCorner.Y));
++	driver->draw2DRectangle(color, core::recti(r.LowerRightCorner.X - t, r.UpperLeftCorner.Y, r.LowerRightCorner.X, r.LowerRightCorner.Y));
++}
++
++void CGUIOnScreenKeyboard::draw(video::IVideoDriver *driver, IGUIFont *font)
++{
++	if (!Box || !driver || !font)
++		return;
++
++	// the launcher's sizes at 640x480, in proportion on other screens
++	const core::dimension2du screen = driver->getScreenSize();
++	const f32 s = screen.Height / 480.0f;
++	const s32 pad = 12 * s, gap = 4 * s, keyH = 36 * s, line = font->getDimension(L"Ag").Height;
++	const f32 unit = core::min_(58 * s, (screen.Width - 2.0f * pad + gap) / 10);
++	const s32 textH = line + 12 * s, hintsH = line + 8 * s;
++	const s32 w = (s32)(10 * unit) - gap + 2 * pad;
++	const s32 h = textH + ROWS * keyH + (ROWS - 1) * gap + 2 * pad + hintsH;
++	const s32 x = ((s32)screen.Width - w) / 2;
++	// at the bottom, or at the top when the box would be under it
++	s32 y = (s32)screen.Height - h - (s32)(6 * s);
++	if (Box->getAbsolutePosition().LowerRightCorner.Y > y)
++		y = 6 * s;
++	const core::recti panel(x, y, x + w, y + h);
++	driver->draw2DRectangle(PANEL, panel);
++	frame(driver, panel, TILE, 2);
++
++	// what is typed (its last line), ending at a cursor; a long text shows its end
++	core::stringw text = Box->getText();
++	const s32 nl = text.findLast(L'\n');
++	if (nl >= 0)
++		text = text.subString(nl + 1, text.size() - nl - 1);
++	if (Box->getType() == EGUIET_EDIT_BOX && static_cast<IGUIEditBox *>(Box)->isPasswordBox())
++		for (u32 i = 0; i < text.size(); ++i)
++			text[i] = L'*';
++	text += L"_";
++	while (text.size() > 1 && (s32)font->getDimension(text.c_str()).Width > w - 2 * pad)
++		text.erase(0);
++	font->draw(text, core::recti(x + pad, y + pad, x + w - pad, y + pad + line), WHITE);
++
++	for (s32 r = 0; r < ROWS; ++r) {
++		const auto &keys = row(r);
++		for (s32 c = 0; c < (s32)keys.size(); ++c) {
++			const SKey &key = keys[c];
++			const s32 kx = x + pad + (s32)(key.X * unit), ky = y + pad + textH + r * (keyH + gap);
++			const core::recti rect(kx, ky, kx + (s32)(key.W * unit) - gap, ky + keyH);
++			const bool selected = r == Row && c == Col;
++			driver->draw2DRectangle(selected ? ACCENT : TILE, rect);
++			if (key.Type == TYPE_SHIFT && Caps) // upper case on
++				frame(driver, rect, selected ? BLACK : ACCENT, 2);
++			font->draw(label(key), rect, selected ? BLACK : WHITE, true, true);
++		}
++	}
++
++	const s32 hy = y + h - pad - hintsH;
++	font->draw(Hints, core::recti(x + pad, hy, x + w - pad, hy + hintsH), GREY, true, true);
++}
++
++} // end namespace gui
+diff --git a/irr/src/CGUIOnScreenKeyboard.h b/irr/src/CGUIOnScreenKeyboard.h
+new file mode 100644
+index 000000000..d5a82745b
+--- /dev/null
++++ b/irr/src/CGUIOnScreenKeyboard.h
+@@ -0,0 +1,66 @@
++// This file is part of the "Irrlicht Engine".
++// For conditions of distribution and use, see copyright notice in irrlicht.h
++
++#pragma once
++
++#include "IEventReceiver.h"
++#include "irrString.h"
++#include "rect.h"
++#include <functional>
++#include <vector>
++
++namespace video
++{
++class IVideoDriver;
++}
++
++namespace gui
++{
++class IGUIElement;
++class IGUIFont;
++
++//! A keyboard on the screen for a gamepad, typing into an edit box as a keyboard would.
++//! A staggered QWERTY of five rows (Android's, and the goodluckOS launcher's): the D-pad moves between keys.
++class CGUIOnScreenKeyboard
++{
++public:
++	//! sends an event the way the device sends keyboard input
++	using Post = std::function<void(const SEvent &)>;
++
++	~CGUIOnScreenKeyboard();
++
++	void open(IGUIElement *box);
++	//! closes it; without accept, the box gets back the text it had
++	void close(bool accept);
++	bool isOpen() const { return Box != nullptr; }
++	IGUIElement *getBox() const { return Box; }
++
++	void button(GamepadButton button, const Post &post);
++	void draw(video::IVideoDriver *driver, IGUIFont *font);
++	void setTexts(const core::stringw &space, const core::stringw &del, const core::stringw &ok,
++			const core::stringw &hints);
++
++private:
++	enum EKeyType { TYPE_CHAR, TYPE_SHIFT, TYPE_DEL, TYPE_SPACE, TYPE_OK };
++	struct SKey
++	{
++		EKeyType Type;
++		wchar_t Char;
++		f32 X, W; // in key units, ten to a row
++	};
++	static constexpr s32 ROWS = 5;
++	static const std::vector<SKey> &row(s32 r);
++
++	void move(s32 dx, s32 dy);
++	void press(const SKey &key, const Post &post);
++	core::stringw label(const SKey &key) const;
++
++	IGUIElement *Box = nullptr;
++	core::stringw Original;
++	s32 Row = 1, Col = 0; // on Q
++	bool Caps = false;
++	core::stringw Space = L"space", Del = L"del", Ok = L"ok",
++		Hints = L"B: type   A: delete   START: done   SELECT: cancel   L1/R1: cursor";
++};
++
++} // end namespace gui
+diff --git a/irr/src/CIrrDeviceSDL.cpp b/irr/src/CIrrDeviceSDL.cpp
+index 9b30cce64..a6016ff55 100644
+--- a/irr/src/CIrrDeviceSDL.cpp
++++ b/irr/src/CIrrDeviceSDL.cpp
+@@ -1245,6 +1245,13 @@ bool CIrrDeviceSDL::run()
+ //! A/Y, X, B/START, L1/R1 and the D-pad act as the mouse while the cursor is visible
+ bool CIrrDeviceSDL::gamepadButtonAsMouse(GamepadButton button, bool down)
+ {
++	const u32 bit = 1u << static_cast<u32>(button);
++	// the on-screen keyboard takes the buttons pressed while it is open
++	if (GUIEnvironment && GUIEnvironment->isOnScreenKeyboardOpen() && !(GamepadMouseButtons & bit)) {
++		gamepadButtonToKeyboard(button, down);
++		return true;
++	}
++
+ 	switch (button) {
+ 	case GamepadButton::SOUTH:
+ 	case GamepadButton::WEST:
+@@ -1262,7 +1269,6 @@ bool CIrrDeviceSDL::gamepadButtonAsMouse(GamepadButton button, bool down)
+ 		return false;
+ 	}
+ 
+-	const u32 bit = 1u << static_cast<u32>(button);
+ 	if (down) {
+ 		if (!CursorControl->isVisible())
+ 			return false;
+@@ -1277,6 +1283,9 @@ bool CIrrDeviceSDL::gamepadButtonAsMouse(GamepadButton button, bool down)
+ 	case GamepadButton::SOUTH:
+ 	case GamepadButton::NORTH:
+ 		postGamepadClick(SDL_BUTTON_LEFT, down);
++		// a click on a text field opens the on-screen keyboard
++		if (!down && GUIEnvironment)
++			GUIEnvironment->openOnScreenKeyboard();
+ 		break;
+ 	case GamepadButton::WEST:
+ 		postGamepadClick(SDL_BUTTON_RIGHT, down);
+@@ -1296,6 +1305,24 @@ bool CIrrDeviceSDL::gamepadButtonAsMouse(GamepadButton button, bool down)
+ 	return true;
+ }
+ 
++//! While the on-screen keyboard is open: a held D-pad direction moves again after 350 ms, then every 60 ms,
++//! as on the launcher
++void CIrrDeviceSDL::gamepadButtonToKeyboard(GamepadButton button, bool down)
++{
++	const bool dpad = button == GamepadButton::DPAD_UP || button == GamepadButton::DPAD_DOWN ||
++			button == GamepadButton::DPAD_LEFT || button == GamepadButton::DPAD_RIGHT;
++	if (!down) {
++		if (button == KeyboardRepeatButton)
++			KeyboardRepeatButton = GamepadButton::COUNT;
++		return;
++	}
++	GUIEnvironment->onScreenKeyboardButton(button);
++	if (dpad) {
++		KeyboardRepeatButton = button;
++		KeyboardRepeatTime = os::Timer::getRealTime() + 350;
++	}
++}
++
+ //! Either stick moves the cursor (slowly near the center, a screen height per second at full tilt);
+ //! the D-pad nudges it
+ void CIrrDeviceSDL::moveCursorWithGamepad()
+@@ -1304,6 +1331,15 @@ void CIrrDeviceSDL::moveCursorWithGamepad()
+ 	const f32 dt = core::clamp((now - GamepadCursorTime) / 1000.0f, 0.0f, 0.1f);
+ 	GamepadCursorTime = now;
+ 
++	if (GUIEnvironment && GUIEnvironment->isOnScreenKeyboardOpen()) {
++		if (KeyboardRepeatButton != GamepadButton::COUNT && (s32)(now - KeyboardRepeatTime) >= 0) {
++			GUIEnvironment->onScreenKeyboardButton(KeyboardRepeatButton);
++			KeyboardRepeatTime = now + 60;
++		}
++		return;
++	}
++	KeyboardRepeatButton = GamepadButton::COUNT;
++
+ 	if (!CursorControl->isVisible()) {
+ 		GamepadCursorShown = false;
+ 		return;
+diff --git a/irr/src/CIrrDeviceSDL.h b/irr/src/CIrrDeviceSDL.h
+index c0ac2a087..ac4c36a70 100644
+--- a/irr/src/CIrrDeviceSDL.h
++++ b/irr/src/CIrrDeviceSDL.h
+@@ -339,7 +339,11 @@ class CIrrDeviceSDL : public CIrrDeviceStub
+ 	u32 GamepadMouseButtons = 0; // pressed as the mouse, so their release goes the same way
+ 	u32 GamepadCursorTime = 0;
+ 	f32 GamepadCursorX = 0.0f, GamepadCursorY = 0.0f;
++	// the on-screen keyboard: a held D-pad direction repeats
++	GamepadButton KeyboardRepeatButton = GamepadButton::COUNT;
++	u32 KeyboardRepeatTime = 0;
+ 	bool gamepadButtonAsMouse(GamepadButton button, bool down);
++	void gamepadButtonToKeyboard(GamepadButton button, bool down);
+ 	void moveCursorWithGamepad();
+ 	void postGamepadClick(u32 button, bool down);
+ 	void postGamepadMouse(EMOUSE_INPUT_EVENT event, f32 wheel = 0.0f);
+diff --git a/irr/src/CMakeLists.txt b/irr/src/CMakeLists.txt
+index e1759e30f..a11d3d43d 100644
+--- a/irr/src/CMakeLists.txt
++++ b/irr/src/CMakeLists.txt
+@@ -427,6 +427,7 @@ add_library(IRRGUIOBJ OBJECT
+ 	CGUITabControl.h
+ 	CGUISpriteBank.h
+ 	CGUIImageList.h
++	CGUIOnScreenKeyboard.h
+ 
+ 	CGUIButton.cpp
+ 	CGUICheckBox.cpp
+@@ -443,6 +444,7 @@ add_library(IRRGUIOBJ OBJECT
+ 	CGUITabControl.cpp
+ 	CGUISpriteBank.cpp
+ 	CGUIImageList.cpp
++	CGUIOnScreenKeyboard.cpp
+ )
+ 
+ # Library
+diff --git a/po/pt_BR/luanti.po b/po/pt_BR/luanti.po
+index d0483347a..402bb9c7c 100644
+--- a/po/pt_BR/luanti.po
++++ b/po/pt_BR/luanti.po
+@@ -1060,6 +1060,22 @@ msgstr "Criativo"
+ msgid "Allow changing the game mode"
+ msgstr "Permitir trocar de modo"
+ 
++#: src/client/clientlauncher.cpp
++msgid "space"
++msgstr "espaço"
++
++#: src/client/clientlauncher.cpp
++msgid "delete"
++msgstr "apagar"
++
++#: src/client/clientlauncher.cpp
++msgid "ok"
++msgstr "ok"
++
++#: src/client/clientlauncher.cpp
++msgid "B: type   A: delete   START: done   SELECT: cancel   L1/R1: cursor"
++msgstr "B: digitar   A: apagar   START: pronto   SELECT: cancelar   L1/R1: cursor"
++
+ #: builtin/mainmenu/dlg_create_world.lua src/settings_translation_file.cpp
+ msgid "Mapgen flags"
+ msgstr "Opções de geração de mundo"
+diff --git a/src/client/clientlauncher.cpp b/src/client/clientlauncher.cpp
+index 8d0eaf7bd..6cfe2411a 100644
+--- a/src/client/clientlauncher.cpp
++++ b/src/client/clientlauncher.cpp
+@@ -368,6 +368,11 @@ void ClientLauncher::config_guienv()
+ 	skin->setBehavior(gui::EGDB_SMOOTH_SCROLL, g_settings->getBool("smooth_scrolling"));
+ 	skin->setBehavior(gui::EGDB_SCOLLBAR_JUMP_TO_CLICKED, true);
+ 
++	// the gamepad's on-screen keyboard (KMSDRM): B and A by position, as goodluckOS maps them
++	guienv->setOnScreenKeyboardTexts(wstrgettext("space").c_str(), wstrgettext("delete").c_str(),
++			wstrgettext("ok").c_str(),
++			wstrgettext("B: type   A: delete   START: done   SELECT: cancel   L1/R1: cursor").c_str());
++
+ 	static u32 orig_sprite_id = skin->getIcon(gui::EGDI_CHECK_BOX_CHECKED);
+ 	static std::unordered_map<std::string, u32> sprite_ids;
+ 
