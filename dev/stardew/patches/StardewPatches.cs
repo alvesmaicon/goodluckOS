@@ -4,6 +4,7 @@
 using System;
 using System.Reflection;
 using System.Collections.Generic;
+using System.Diagnostics;
 using HarmonyLib;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -382,11 +383,13 @@ public static class StardewPatches
 			s.ThumbSticks.Left != Vector2.Zero || s.ThumbSticks.Right != Vector2.Zero || s.Triggers.Left > 0 || s.Triggers.Right > 0);
 	}
 
-	// SDV_STATS=<seconds>: frames, updates, nursery/major collections and managed heap, to stdout
+	// SDV_STATS=<seconds>: frames, updates, their average ms, the rest of the time (mostly Present), nursery/major
+	// collections and managed heap, to stdout
 	private static class Stats
 	{
 		public static readonly double Period;
 		static int frames, updates, gc0, gc1;
+		static long drawTicks, updateTicks;
 		static DateTime t0 = DateTime.Now;
 
 		static Stats()
@@ -396,25 +399,30 @@ public static class StardewPatches
 			gc1 = GC.CollectionCount(1);
 		}
 
-		public static void Frame()
+		public static void Frame(long ticks)
 		{
 			frames++;
+			drawTicks += ticks;
 			double dt = (DateTime.Now - t0).TotalSeconds;
 			if (dt < Period)
 				return;
 			int c0 = GC.CollectionCount(0), c1 = GC.CollectionCount(1);
-			Console.WriteLine("stats {0:HH:mm:ss} fps {1:F1} ups {2:F1} gc0 {3} gc1 {4} heap {5} KB at {6}", DateTime.Now,
-				frames / dt, updates / dt, c0 - gc0, c1 - gc1, GC.GetTotalMemory(false) / 1024,
+			double ms = 1000.0 / Stopwatch.Frequency, draw = drawTicks * ms, update = updateTicks * ms;
+			Console.WriteLine("stats {0:HH:mm:ss} fps {1:F1} ups {2:F1} draw {3:F1} ms update {4:F1} ms rest {5:F0}% gc0 {6} gc1 {7} " +
+				"heap {8} KB at {9}", DateTime.Now, frames / dt, updates / dt, draw / frames, update / Math.Max(updates, 1),
+				100 - (draw + update) / (dt * 10), c0 - gc0, c1 - gc1, GC.GetTotalMemory(false) / 1024,
 				Game1.currentLocation == null ? "-" : Game1.currentLocation.NameOrUniqueName);
 			frames = updates = 0;
+			drawTicks = updateTicks = 0;
 			gc0 = c0;
 			gc1 = c1;
 			t0 = DateTime.Now;
 		}
 
-		public static void Update()
+		public static void Update(long ticks)
 		{
 			updates++;
+			updateTicks += ticks;
 		}
 	}
 
@@ -422,10 +430,15 @@ public static class StardewPatches
 	[HarmonyPatch("Draw")]
 	private class GameRunner__Draw
 	{
-		private static void Postfix()
+		private static void Prefix(out long __state)
+		{
+			__state = Stopwatch.GetTimestamp();
+		}
+
+		private static void Postfix(long __state)
 		{
 			if (Stats.Period > 0)
-				Stats.Frame();
+				Stats.Frame(Stopwatch.GetTimestamp() - __state);
 		}
 	}
 
@@ -433,10 +446,15 @@ public static class StardewPatches
 	[HarmonyPatch("Update")]
 	private class GameRunner__Update
 	{
-		private static void Postfix()
+		private static void Prefix(out long __state)
+		{
+			__state = Stopwatch.GetTimestamp();
+		}
+
+		private static void Postfix(long __state)
 		{
 			if (Stats.Period > 0)
-				Stats.Update();
+				Stats.Update(Stopwatch.GetTimestamp() - __state);
 		}
 	}
 }
