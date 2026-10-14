@@ -18,8 +18,9 @@ it, SELECT closes it and gives the box back the text it had, L1/R1 move
 the cursor in the text. Aa switches to capitals. What is typed reaches
 the box as SDL's text input and keys do, through the user receiver and
 then the focus, so every edit box works unchanged. It closes when the
-box loses the focus or goes away (a formspec closing), and sits at the
-top when it would cover the box.
+box loses the focus or goes away (a formspec closing). It sits at the
+bottom, as far from it as from the sides; over a box it covers, its top
+line shows the text.
 
 The labels of space, delete and ok and the line of hints come from the
 client in the user's language (pt_BR included). The hints name the
@@ -143,10 +144,10 @@ index a92bb22de..a7bacc51b 100644
  
 diff --git a/irr/src/CGUIOnScreenKeyboard.cpp b/irr/src/CGUIOnScreenKeyboard.cpp
 new file mode 100644
-index 000000000..8303f00ed
+index 000000000..19f10d35b
 --- /dev/null
 +++ b/irr/src/CGUIOnScreenKeyboard.cpp
-@@ -0,0 +1,258 @@
+@@ -0,0 +1,256 @@
 +// This file is part of the "Irrlicht Engine".
 +// For conditions of distribution and use, see copyright notice in irrlicht.h
 +
@@ -365,10 +366,8 @@ index 000000000..8303f00ed
 +	const s32 w = (s32)(10 * unit) - gap + 2 * pad;
 +	const s32 h = textH + ROWS * keyH + (ROWS - 1) * gap + 2 * pad + hintsH;
 +	const s32 x = ((s32)screen.Width - w) / 2;
-+	// at the bottom, or at the top when the box would be under it
-+	s32 y = (s32)screen.Height - h - (s32)(6 * s);
-+	if (Box->getAbsolutePosition().LowerRightCorner.Y > y)
-+		y = 6 * s;
++	// at the bottom, as far from it as from the sides (the line on top shows the text of a box it covers)
++	const s32 y = core::max_(0, (s32)screen.Height - h - core::min_(x, (s32)(20 * s)));
 +	const core::recti panel(x, y, x + w, y + h);
 +	driver->draw2DRectangle(PANEL, panel);
 +	frame(driver, panel, TILE, 2);
