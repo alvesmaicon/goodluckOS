@@ -153,19 +153,21 @@ FN is the hotkey:
 The same list is in System Settings -> Input Settings, next to a button tester.
 
 ### Luanti
-Luanti opens on its main menu, trimmed to what works without network or keyboard: New asks only for the game mode, Survival or Creative, and the world gets the next free name. As in Minecraft, Creative mode lets you fly, breaks blocks at once and has no damage, hunger or monster attacks. With "Allow changing the game mode" ticked, a button in the inventory switches between the two. The console has no mouse cursor, so whenever a menu or the inventory is open, Luanti draws one that the sticks move.
+Luanti opens on its main menu, trimmed to what works without network: New asks for the world's name (left empty, it takes the next free one) and its game mode, Survival or Creative. As in Minecraft, Creative mode lets you fly, breaks blocks at once and has no damage, hunger or monster attacks. With "Allow changing the game mode" ticked, a button in the inventory switches between the two. The console has no mouse cursor, so whenever a menu or the inventory is open, Luanti draws one that the sticks move.
+
+Clicking a text field (a world's name, a setting, a sign, a book, the creative inventory's search) opens the launcher's keyboard: the D-pad moves between keys, B types, A deletes (and closes it when nothing is left), START closes it, SELECT closes it and puts the old text back, L1/R1 move the cursor in the text.
 
 | Buttons | In game | In menus and the inventory |
 |---|---|---|
 | Left stick | Walk | Move the cursor |
 | Right stick | Look around | Move the cursor |
-| A | Jump | Click |
-| X | Aux1 (run, in fast mode) | Right click (half a stack) |
-| B | Sneak | Back |
-| Y | Inventory | Close |
-| R2 / L2 | Dig / place | |
-| R1 / L1 | Next / previous item | Scroll |
-| D-pad | Up: zoom, down: drop the item, left: fly (Creative mode), right: screenshot | Move the cursor slowly |
+| B (bottom) | Jump | Click (on a text field: the keyboard) |
+| A (right) | Sneak | Back |
+| X / Y | Inventory | X: right click (half a stack), Y: click |
+| R1 / L1 | Dig / place | Scroll |
+| R2 / L2 | Next / previous item | |
+| L3 | Run | |
+| D-pad | Up: camera view, down: drop the item, left: fly (Creative mode), right: screenshot | Move the cursor slowly |
 | START | Pause menu (Exit to OS goes back to the launcher) | Close |
 
 ## System Settings
