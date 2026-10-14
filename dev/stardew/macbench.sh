@@ -17,7 +17,7 @@ REPO=$(dirname "$(dirname "$HERE")")
 if [ ! -f /.dockerenv ]; then
     others=$(docker ps -q | wc -l | tr -d ' ')
     caps=(); [ "${1:-}" = perf ] && caps=(--cap-add PERFMON --cap-add SYS_PTRACE)
-    exec docker run --rm -i "${caps[@]}" -e BENCH_REV="$(git -C "$REPO" describe --always --dirty)" -e BENCH_OTHERS="$others" \
+    exec docker run --rm -i ${caps[@]+"${caps[@]}"} -e BENCH_REV="$(git -C "$REPO" describe --always --dirty)" -e BENCH_OTHERS="$others" \
         -v "$REPO:/repo" -v goodluck-work:/work goodluck-stardew /repo/dev/stardew/macbench.sh "$@"
 fi
 

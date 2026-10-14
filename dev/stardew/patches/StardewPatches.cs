@@ -27,7 +27,7 @@ public static class StardewPatches
 		Console.Out.WriteLine("Found StardewPatches, running...");
 		Harmony harmony = new Harmony("com.github.johnnyonflame.StardewPatches");
 		harmony.PatchAll(Assembly.GetExecutingAssembly());
-		Probe.Install(harmony);
+		Probe.Harmony = harmony;
 	}
 
 	private static float getScreenRatio()
@@ -474,12 +474,14 @@ public static class StardewPatches
 			if (!Stats.On)
 				return;
 			Stats.Update(Stopwatch.GetTimestamp() - __state);
+			Probe.Install();
 			Bench.Tick();
 		}
 	}
 
 	// SDV_PROBE=default|<Type.Method>,...: inclusive time in those methods (all overloads), as ms per second of
-	// wall time and per update or frame (up to 40 entries); on by default with SDV_BENCH
+	// wall time and per update or frame (up to 40 entries); on by default with SDV_BENCH. Installed after the first
+	// update: patching a class runs its static constructor, and Farm's needs the game's content
 	private static class Probe
 	{
 		const string Default = "Game1.Update,InputState.UpdateStates,Game1.UpdateControlInput,Game1.UpdateGameClock," +
@@ -489,14 +491,19 @@ public static class StardewPatches
 			"Microsoft.Xna.Framework.Audio.AudioEngine.Update,GameStateQuery.Update," +
 			"Game1._draw,Game1.DrawWorld,Game1.DrawLighting,GameLocation.draw,Layer.Draw,Game1.drawWeather," +
 			"Game1.DrawLightmapOnScreen,Game1.drawHUD,Game1.DrawOverlays,Game1.renderScreenBuffer,SpriteBatch.End";
+		public static Harmony Harmony;
 		public static bool Drawing;
 		static readonly List<string> names = new List<string>();
-		static long[] ticks = new long[0];
-		static int[] calls = new int[0];
-		static bool[] inDraw = new bool[0];
+		static readonly long[] ticks = new long[40];
+		static readonly int[] calls = new int[40];
+		static readonly bool[] inDraw = new bool[40];
 
-		public static void Install(Harmony harmony)
+		public static void Install()
 		{
+			if (Harmony == null)
+				return;
+			Harmony harmony = Harmony;
+			Harmony = null;
 			string spec = Environment.GetEnvironmentVariable("SDV_PROBE") ?? (Bench.Slot != null ? "default" : "none");
 			if (spec == "none")
 				return;
@@ -508,18 +515,19 @@ public static class StardewPatches
 					foreach (MethodInfo m in type.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public |
 							BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
 						if (m.Name == item.Substring(dot + 1) && !m.IsAbstract && !m.ContainsGenericParameters) {
-							harmony.Patch(m, new HarmonyMethod(slot.GetMethod("Before", BindingFlags.Static | BindingFlags.NonPublic)),
-								new HarmonyMethod(slot.GetMethod("After", BindingFlags.Static | BindingFlags.NonPublic)));
-							n++;
+							try {
+								harmony.Patch(m, new HarmonyMethod(slot.GetMethod("Before", BindingFlags.Static | BindingFlags.NonPublic)),
+									new HarmonyMethod(slot.GetMethod("After", BindingFlags.Static | BindingFlags.NonPublic)));
+								n++;
+							} catch (Exception e) {
+								Console.WriteLine("probe: {0} not patched: {1}", item, (e.InnerException ?? e).Message);
+							}
 						}
 				if (n > 0)
 					names.Add(item);
 				else
 					Console.WriteLine("probe: no method {0}", item);
 			}
-			ticks = new long[names.Count];
-			calls = new int[names.Count];
-			inDraw = new bool[names.Count];
 			Console.WriteLine("probe: {0} methods", names.Count);
 		}
 
