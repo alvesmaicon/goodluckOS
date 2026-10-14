@@ -13,7 +13,8 @@ LUANTI_SUPPORTS_IN_SOURCE_BUILD = NO
 LUANTI_DEPENDENCIES = freetype jpeg jsoncpp libgles libpng libvorbis openal \
 	sdl2 sqlite zlib zstd
 
-# the Mali-400 only does GLES2; no server, curl (ContentDB) or databases besides sqlite
+# the Mali-400 only does GLES2; no server, curl (ContentDB) or databases besides sqlite, and no OpenSSL:
+# Luanti hashes with its own code otherwise, and libcrypto took ~4 MB of the process
 LUANTI_CONF_OPTS = \
 	-DBUILD_CLIENT=ON \
 	-DBUILD_SERVER=OFF \
@@ -28,6 +29,7 @@ LUANTI_CONF_OPTS = \
 	-DENABLE_OPENGL3=OFF \
 	-DENABLE_SOUND=ON \
 	-DENABLE_CURL=OFF \
+	-DENABLE_OPENSSL=OFF \
 	-DENABLE_CURSES=OFF \
 	-DENABLE_POSTGRESQL=OFF \
 	-DENABLE_LEVELDB=OFF \
@@ -42,13 +44,6 @@ LUANTI_DEPENDENCIES += luajit
 LUANTI_CONF_OPTS += -DENABLE_LUAJIT=ON -DREQUIRE_LUAJIT=ON
 else
 LUANTI_CONF_OPTS += -DENABLE_LUAJIT=OFF
-endif
-
-ifeq ($(BR2_PACKAGE_OPENSSL),y)
-LUANTI_DEPENDENCIES += openssl
-LUANTI_CONF_OPTS += -DENABLE_OPENSSL=ON
-else
-LUANTI_CONF_OPTS += -DENABLE_OPENSSL=OFF
 endif
 
 ifeq ($(BR2_SYSTEM_ENABLE_NLS),y)
