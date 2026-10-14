@@ -6,7 +6,8 @@
 #   (dev/out/stardew/altone: a 1 s OpenAL tone, for the console's /tmp)
 #   dev/stardew/build.sh game     dev/out/stardew/gamedata from your own game (SDV_GAME, default: Steam on macOS)
 #   dev/stardew/build.sh smoke    run Mono armhf under qemu-arm (no display): assemblies and native libs load
-# StardewPatches.dll and SVLoader.exe are compiled against your StardewValley.exe when SDV_GAME exists.
+# StardewPatches.dll is compiled against your StardewValley.exe and icon.png made from its title logo, when
+# SDV_GAME exists.
 # Runs in the goodluck-stardew image (dev/stardew/Dockerfile, on top of goodluck-dev).
 set -euo pipefail
 
@@ -131,12 +132,14 @@ game_dirs() {
 
 build_patches() {
     mcs -nologo -optimize+ -out:"$P/SVLoader.exe" "$HERE/patches/SVLoader.cs"
+    mcs -nologo -optimize+ -r:"$P/dlls/MonoGame.Framework.dll" -out:"$P/SdvIcon.exe" "$HERE/patches/SdvIcon.cs"
     if ! game_dirs 2>/dev/null; then
         echo "no game in SDV_GAME: PortMaster's StardewPatches.dll (built for 1.6.12) stays"
         return
     fi
     mcs -nologo -target:library -optimize+ -lib:"$BIN" -lib:"$P/dlls" -r:"$BIN/StardewValley.exe" -r:xTile.dll \
         -r:MonoGame.Framework.dll -r:0Harmony.dll -out:"$P/dlls/StardewPatches.dll" "$HERE/patches/StardewPatches.cs"
+    MONO_PATH=$P/dlls mono "$P/SdvIcon.exe" "$CONTENT/Minigames/TitleButtons.xnb" "$P/icon.png"
     echo "StardewPatches.dll built against $(strings "$BIN/StardewValley.exe" | grep -m1 -oE '^1\.[0-9]+\.[0-9]+' || echo '?')"
 }
 
