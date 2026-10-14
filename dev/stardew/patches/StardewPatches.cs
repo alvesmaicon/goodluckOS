@@ -359,4 +359,62 @@ public static class StardewPatches
 				buffers.SetValue(new int[1]);
 		}
 	}
+
+	// SDV_STATS=<seconds>: frames, updates, nursery/major collections and managed heap, to stdout
+	private static class Stats
+	{
+		public static readonly double Period;
+		static int frames, updates, gc0, gc1;
+		static DateTime t0 = DateTime.Now;
+
+		static Stats()
+		{
+			double.TryParse(Environment.GetEnvironmentVariable("SDV_STATS") ?? "0", out Period);
+			gc0 = GC.CollectionCount(0);
+			gc1 = GC.CollectionCount(1);
+		}
+
+		public static void Frame()
+		{
+			frames++;
+			double dt = (DateTime.Now - t0).TotalSeconds;
+			if (dt < Period)
+				return;
+			int c0 = GC.CollectionCount(0), c1 = GC.CollectionCount(1);
+			Console.WriteLine("stats {0:HH:mm:ss} fps {1:F1} ups {2:F1} gc0 {3} gc1 {4} heap {5} KB at {6}", DateTime.Now,
+				frames / dt, updates / dt, c0 - gc0, c1 - gc1, GC.GetTotalMemory(false) / 1024,
+				Game1.currentLocation == null ? "-" : Game1.currentLocation.NameOrUniqueName);
+			frames = updates = 0;
+			gc0 = c0;
+			gc1 = c1;
+			t0 = DateTime.Now;
+		}
+
+		public static void Update()
+		{
+			updates++;
+		}
+	}
+
+	[HarmonyPatch(typeof(GameRunner))]
+	[HarmonyPatch("Draw")]
+	private class GameRunner__Draw
+	{
+		private static void Postfix()
+		{
+			if (Stats.Period > 0)
+				Stats.Frame();
+		}
+	}
+
+	[HarmonyPatch(typeof(GameRunner))]
+	[HarmonyPatch("Update")]
+	private class GameRunner__Update
+	{
+		private static void Postfix()
+		{
+			if (Stats.Period > 0)
+				Stats.Update();
+		}
+	}
 }
