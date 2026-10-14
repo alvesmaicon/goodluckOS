@@ -78,7 +78,7 @@ public static class StardewPatches
 			traverse4.SetValue(Keyboard.GetState());
 			if (Game1.playerOneIndex >= PlayerIndex.One)
 			{
-				traverse3.SetValue(GamePad.GetState(Game1.playerOneIndex));
+				traverse3.SetValue(PadState());
 				return false;
 			}
 			if (traverse2.GetValue() == null)
@@ -358,6 +358,28 @@ public static class StardewPatches
 			if (buffers.GetValue() == null)
 				buffers.SetValue(new int[1]);
 		}
+	}
+
+	// SDV_PAD_ANY=1 (bench): player one also takes the first other pad with input, e.g. padsim's uinput clone
+	private static readonly bool padAny = Environment.GetEnvironmentVariable("SDV_PAD_ANY") == "1";
+
+	private static GamePadState PadState()
+	{
+		GamePadState one = GamePad.GetState(Game1.playerOneIndex);
+		if (!padAny || Active(one))
+			return one;
+		for (PlayerIndex i = PlayerIndex.One; i <= PlayerIndex.Four; i++) {
+			GamePadState s = GamePad.GetState(i);
+			if (i != Game1.playerOneIndex && Active(s))
+				return s;
+		}
+		return one;
+	}
+
+	private static bool Active(GamePadState s)
+	{
+		return s.IsConnected && (s.Buttons != default(GamePadButtons) || s.DPad != default(GamePadDPad) ||
+			s.ThumbSticks.Left != Vector2.Zero || s.ThumbSticks.Right != Vector2.Zero || s.Triggers.Left > 0 || s.Triggers.Right > 0);
 	}
 
 	// SDV_STATS=<seconds>: frames, updates, nursery/major collections and managed heap, to stdout
