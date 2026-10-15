@@ -8,7 +8,7 @@
 LUANTI_GAME_VERSION = c42e4d0c0ff9d27ff7b9b308c3cfc14098dd3a0f
 LUANTI_GAME_SITE = $(call github,luanti-org,minetest_game,$(LUANTI_GAME_VERSION))
 LUANTI_GAME_LICENSE = LGPL-2.1+ (code), LGPL-2.1 (3d_armor code), MIT (mobs code), CC-BY-SA-3.0, CC-BY-SA-4.0, \
-	CC-BY-3.0, CC0-1.0, WTFPL (media), CC-BY-NC-SA-4.0 (mobs_animal sheep textures)
+	CC-BY-3.0, CC0-1.0, WTFPL (media)
 LUANTI_GAME_LICENSE_FILES = LICENSE.txt
 
 LUANTI_GAME_MOBS_REDO_VERSION = b1be18bc86dbe168dbbe0a515103db73d793e21c

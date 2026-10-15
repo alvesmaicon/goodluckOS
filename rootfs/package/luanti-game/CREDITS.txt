@@ -17,8 +17,9 @@ mobs (mobs_redo)
 mobs_animal
   https://codeberg.org/tenplus1/mobs_animal, commit @MOBS_ANIMAL_VERSION@
   Code MIT; media CC0, WTFPL, MIT, CC BY-SA 3.0: mods/mobs_animal/license.txt
-  The sheep's four textures (mobs_sheep_base, _horns, _shaved, _wool) are
-  CC BY-NC-SA 4.0: non-commercial use only.
+  Replaced: the sheep's four textures (mobs_sheep_base, _horns, _shaved,
+  _wool), CC BY-NC-SA 4.0 (non-commercial use only), and its uncredited
+  egg icon mobs_sheep_inv.png, by goodluckOS's own for the same model.
   Left out: the rat's model, textures and sounds. Its credits give the license
   only as "CCPL", with no version, so the rat is off in this game's
   minetest.conf.
@@ -46,5 +47,5 @@ stamina
 Left out of mobs, mobs_animal, mobs_monster and stamina: screenshot.jpg, made
 on textstudio.com, whose terms are unclear. The game doesn't use them.
 
-goodluck_* mods, and the stamina_hud_* textures above
+goodluck_* mods, and the stamina_hud_* and mobs_sheep_* textures above
   Code and pixel art made for goodluckOS, under goodluckOS's license, GPL-2.0.
