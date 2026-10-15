@@ -1,0 +1,42 @@
+diff --git a/mm/2s2h/BenPort.cpp b/mm/2s2h/BenPort.cpp
+index 653de66..ab57279 100644
+--- a/mm/2s2h/BenPort.cpp
++++ b/mm/2s2h/BenPort.cpp
+@@ -641,7 +641,8 @@ void OTRGlobals::Initialize() {
+                                               CVarGetInteger("gSettings.AutoCaptureMouse", 1));
+     context->GetWindow()->SetForceCursorVisibility(CVarGetInteger("gSettings.CursorVisibility", 0));
+ 
+-    context->InitAudio({ .SampleRate = 32000, .SampleLength = 1024, .DesiredBuffered = 1680 });
++    // 100 ms queued, so one slow frame (a shader compiling) doesn't empty it
++    context->InitAudio({ .SampleRate = 32000, .SampleLength = 1024, .DesiredBuffered = 3200 });
+ 
+     SPDLOG_INFO("Starting 2 Ship 2 Harkinian version {} (Branch: {} | Commit: {})", (char*)gBuildVersion,
+                 (char*)gGitBranch, (char*)gGitCommitHash);
+@@ -836,15 +837,22 @@ void OTRAudio_Thread() {
+         int samples_left = AudioPlayer_Buffered();
+         u32 num_audio_samples = samples_left < AudioPlayer_GetDesiredBuffered() ? SAMPLES_HIGH : SAMPLES_LOW;
+ 
+-        // 3 is the maximum authentic frame divisor.
+-        s16 audio_buffer[SAMPLES_HIGH * NUM_AUDIO_CHANNELS * 3];
+-        for (int i = 0; i < AUDIO_FRAMES_PER_UPDATE; i++) {
++        // A late game frame would starve the queue: make what it is missing, so the music keeps its
++        // tempo (the N64's audio had its own clock too)
++#define MAX_AUDIO_FRAMES 6
++        int frames = AUDIO_FRAMES_PER_UPDATE;
++        const int missing = AudioPlayer_GetDesiredBuffered() - samples_left;
++        if (missing > (int)(num_audio_samples * frames)) {
++            frames = std::min(MAX_AUDIO_FRAMES, (int)((missing + num_audio_samples - 1) / num_audio_samples));
++        }
++
++        s16 audio_buffer[SAMPLES_HIGH * NUM_AUDIO_CHANNELS * MAX_AUDIO_FRAMES];
++        for (int i = 0; i < frames; i++) {
+             AudioMgr_CreateNextAudioBuffer(audio_buffer + i * (num_audio_samples * NUM_AUDIO_CHANNELS),
+                                            num_audio_samples);
+         }
+ 
+-        AudioPlayer_Play((u8*)audio_buffer,
+-                         num_audio_samples * (sizeof(int16_t) * NUM_AUDIO_CHANNELS * AUDIO_FRAMES_PER_UPDATE));
++        AudioPlayer_Play((u8*)audio_buffer, num_audio_samples * (sizeof(int16_t) * NUM_AUDIO_CHANNELS * frames));
+ 
+         audio.processing = false;
+         audio.cv_from_thread.notify_one();

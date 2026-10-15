@@ -1,0 +1,14 @@
+{
+    "CVars": {
+        "gEnhancements": {
+            "Graphics": {
+                "AuthenticLogo": 1
+            }
+        },
+        "gSettings": {
+            "LowResMode": 0,
+            "TextureFilter": 1
+        }
+    },
+    "ConfigVersion": 1
+}

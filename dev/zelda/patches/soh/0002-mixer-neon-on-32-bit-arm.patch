@@ -1,0 +1,15 @@
+diff --git a/soh/soh/mixer.c b/soh/soh/mixer.c
+index 303a977d..375231c6 100644
+--- a/soh/soh/mixer.c
++++ b/soh/soh/mixer.c
+@@ -716,6 +716,10 @@ static void aMixImplSSE2(uint16_t count, int16_t gain, uint16_t in_addr, uint16_
+ #endif
+ #if defined(__ARM_NEON)
+ #include <arm_neon.h>
++#ifndef __aarch64__ // AArch64-only intrinsics, same result on 32-bit NEON
++#define vmull_high_n_s16(a, b) vmull_n_s16(vget_high_s16(a), b)
++#define vmull_high_s16(a, b) vmull_s16(vget_high_s16(a), vget_high_s16(b))
++#endif
+ static const int32_t x4000Arr[4] = { 0x4000, 0x4000, 0x4000, 0x4000 };
+ void aMixImplNEON(uint16_t count, int16_t gain, uint16_t in_addr, uint16_t out_addr) {
+     int nbytes = ROUND_UP_32(ROUND_DOWN_16(count << 4));
