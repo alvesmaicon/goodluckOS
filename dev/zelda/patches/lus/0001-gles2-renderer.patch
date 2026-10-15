@@ -498,8 +498,59 @@ diff -ruN lus-a/src/fast/backends/gfx_sdl2.cpp lus-b/src/fast/backends/gfx_sdl2.
  #ifdef _WIN32
 diff -ruN lus-a/src/fast/shaders/opengl/default.shader.glsl lus-b/src/fast/shaders/opengl/default.shader.glsl
 --- lus-a/src/fast/shaders/opengl/default.shader.glsl	2026-10-14 22:13:09
-+++ lus-b/src/fast/shaders/opengl/default.shader.glsl	2026-10-14 22:17:30
-@@ -75,12 +75,14 @@
++++ lus-b/src/fast/shaders/opengl/default.shader.glsl	2026-10-14 22:36:13
+@@ -8,16 +8,24 @@
+     @for(i in 0..2)
+         @if(o_textures[i])
+             @{attr} vec2 aTexCoord@{i};
++            @if(gles2)
++            @{out} vec4 vTexPack@{i};
++            @else
+             @{out} vec2 vTexCoord@{i};
++            @end
+             @{update_floats(2)}
+             @for(j in 0..2)
+                 @if(o_clamp[i][j])
+                     @if(j == 0)
+                         @{attr} float aTexClampS@{i};
++                        @if(!gles2)
+                         @{out} float vTexClampS@{i};
++                        @end
+                     @else
+                         @{attr} float aTexClampT@{i};
++                        @if(!gles2)
+                         @{out} float vTexClampT@{i};
++                        @end
+                     @end
+                     @{update_floats(1)}
+                 @end
+@@ -52,13 +60,25 @@
+     void main() {
+         @for(i in 0..2)
+             @if(o_textures[i])
++                @if(gles2)
++                vTexPack@{i} = vec4(aTexCoord@{i}, 0.0, 0.0);
++                @else
+                 vTexCoord@{i} = aTexCoord@{i};
++                @end
+                 @for(j in 0..2)
+                     @if(o_clamp[i][j])
+                         @if(j == 0)
++                            @if(gles2)
++                            vTexPack@{i}.z = aTexClampS@{i};
++                            @else
+                             vTexClampS@{i} = aTexClampS@{i};
++                            @end
+                         @else
++                            @if(gles2)
++                            vTexPack@{i}.w = aTexClampT@{i};
++                            @else
+                             vTexClampT@{i} = aTexClampT@{i};
++                            @end
+                         @end
+                     @end
+                 @end
+@@ -75,16 +95,25 @@
          @end
          gl_Position = aVtxPos;
          @if(opengles)
@@ -515,7 +566,26 @@ diff -ruN lus-a/src/fast/shaders/opengl/default.shader.glsl lus-b/src/fast/shade
      @end
  
      @for(i in 0..2)
-@@ -141,7 +143,11 @@
+         @if(o_textures[i])
++            @if(gles2)
++            // One varying per texture: lima has 8, and scalar ones lose the clamp
++            @{attr} vec4 vTexPack@{i};
++            #define vTexCoord@{i} vTexPack@{i}.xy
++            #define vTexClampS@{i} vTexPack@{i}.z
++            #define vTexClampT@{i} vTexPack@{i}.w
++            @else
+             @{attr} vec2 vTexCoord@{i};
+             @for(j in 0..2)
+                 @if(o_clamp[i][j])
+@@ -95,6 +124,7 @@
+                     @end
+                 @end
+             @end
++            @end
+         @end
+     @end
+ 
+@@ -141,7 +171,11 @@
          bvec3 cutoff = lessThan(linearRGB.rgb, vec3(0.0031308));
          vec3 higher = vec3(1.055)*pow(linearRGB.rgb, vec3(1.0/2.4)) - vec3(0.055);
          vec3 lower = linearRGB.rgb * vec3(12.92);
@@ -527,7 +597,7 @@ diff -ruN lus-a/src/fast/shaders/opengl/default.shader.glsl lus-b/src/fast/shade
      }
  
      vec4 filter3point(in sampler2D tex, in vec2 texCoord, in vec2 texSize) {
-@@ -187,7 +193,9 @@
+@@ -187,7 +221,9 @@
                  vec4 texVal@{i} = hookTexture2D(@{i}, uTex@{i}, vTexCoordAdj@{i}, texSize@{i});
  
                  @if(o_masks[i])
@@ -538,7 +608,7 @@ diff -ruN lus-a/src/fast/shaders/opengl/default.shader.glsl lus-b/src/fast/shade
                          vec2 maskSize@{i} = vec2(textureSize(uTexMask@{i}, 0));
                      @else 
                          vec2 maskSize@{i} = textureSize(uTexMask@{i}, 0);
-@@ -291,7 +299,9 @@
+@@ -291,7 +327,9 @@
          @end
  
          @if(o_prim_depth)
