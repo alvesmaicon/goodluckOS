@@ -1,5 +1,5 @@
-# The dev image plus what Ship of Harkinian needs: native libs for the asset tools, armhf libs for the game.
-# spdlog, tinyxml2 and libzip are left out on purpose: libultraship fetches and links them statically.
+# The dev image plus what Ship of Harkinian and 2 Ship 2 Harkinian need: native libs for the asset tools, armhf libs for the games.
+# spdlog, tinyxml2 and libzip are left out on purpose: they are fetched (Torch, 2ship-deps.cmake) or built (build.sh) and linked statically.
 FROM goodluck-dev
 
 RUN apt-get update && apt-get install -y --no-install-recommends \

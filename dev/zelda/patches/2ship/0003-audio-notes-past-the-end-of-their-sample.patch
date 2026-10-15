@@ -1,0 +1,72 @@
+diff --git a/mm/2s2h/resource/importer/AudioSampleFactory.cpp b/mm/2s2h/resource/importer/AudioSampleFactory.cpp
+index 8948a67..d245643 100644
+--- a/mm/2s2h/resource/importer/AudioSampleFactory.cpp
++++ b/mm/2s2h/resource/importer/AudioSampleFactory.cpp
+@@ -191,6 +191,21 @@ static void OggDecoderWorker(std::shared_ptr<SOH::AudioSample> audioSample, std:
+ }
+ 
+ namespace SOH {
++// MM plays a loop with count 2 on to sampleEnd once its note is released. The archive doesn't carry it, and left
++// unset it was whatever the heap held: derive it from the sample's length.
++static uint32_t SampleEnd(const SOH::Sample& sample) {
++    switch (sample.codec) {
++        case CODEC_ADPCM:
++            return sample.size / 9 * 16;
++        case CODEC_SMALL_ADPCM:
++            return sample.size / 5 * 16;
++        case CODEC_S8:
++            return sample.size;
++        default:
++            return sample.size / 2;
++    }
++}
++
+ std::shared_ptr<Ship::IResource>
+ ResourceFactoryBinaryAudioSampleV2::ReadResource(std::shared_ptr<Ship::File> file,
+                                                  std::shared_ptr<Ship::ResourceInitData> initData) {
+@@ -237,6 +252,7 @@ ResourceFactoryBinaryAudioSampleV2::ReadResource(std::shared_ptr<Ship::File> fil
+     }
+     audioSample->sample.book = &audioSample->book;
+ 
++    audioSample->loop.sampleEnd = SampleEnd(audioSample->sample);
+     return audioSample;
+ }
+ 
+@@ -288,6 +304,7 @@ ResourceFactoryXMLAudioSampleV0::ReadResource(std::shared_ptr<Ship::File> file,
+     audioSample->sample.loop = &audioSample->loop;
+     size_t size = child->Int64Attribute("Size");
+     audioSample->sample.size = size;
++    audioSample->loop.sampleEnd = SampleEnd(audioSample->sample);
+ 
+     const char* path = child->Attribute("Path");
+ 
+diff --git a/mm/2s2h/resource/type/AudioSample.h b/mm/2s2h/resource/type/AudioSample.h
+index a3b24f7..ca57006 100644
+--- a/mm/2s2h/resource/type/AudioSample.h
++++ b/mm/2s2h/resource/type/AudioSample.h
+@@ -9,7 +9,7 @@ typedef struct {
+     /* 0x00 */ u32 start;
+     /* 0x04 */ u32 end;
+     /* 0x08 */ u32 count;
+-    /* 0x0C */ char unk_0C[0x4];
++    /* 0x0C */ u32 sampleEnd;
+     /* 0x10 */ s16 state[16]; // only exists if count != 0. 8-byte aligned
+ } AdpcmLoop;                  // size = 0x30 (or 0x10)
+ 
+diff --git a/mm/src/audio/lib/synthesis.c b/mm/src/audio/lib/synthesis.c
+index c78a043..733240f 100644
+--- a/mm/src/audio/lib/synthesis.c
++++ b/mm/src/audio/lib/synthesis.c
+@@ -1047,6 +1047,12 @@ Acmd* AudioSynth_ProcessSample(s32 noteIndex, NoteSampleState* sampleState, Note
+                 loopToPoint = false;
+                 dmemUncompressedAddrOffset2 = 0;
+ 
++                // 2S2H [Port] A note can already be past the end of its sample. The negative counts that follow only
++                // made the RSP decode garbage inside DMEM; here they write past the mixer's buffer. Treat it as the end.
++                if (synthState->samplePosInt > sampleEndPos) {
++                    synthState->samplePosInt = sampleEndPos;
++                }
++
+                 numFirstFrameSamplesToIgnore = synthState->samplePosInt & 0xF;
+                 numSamplesUntilEnd = sampleEndPos - synthState->samplePosInt;
+ 
