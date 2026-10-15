@@ -1,0 +1,50 @@
+Minetest Game and the mods goodluckOS adds to it
+================================================
+
+Every mod keeps its own license file in its folder. This file says where each
+one comes from, under which licenses, and what goodluckOS leaves out or
+replaces.
+
+minetest_game: the game and every mod in mods/ not listed below
+  https://github.com/luanti-org/minetest_game, commit @LUANTI_GAME_VERSION@
+  Code LGPL-2.1+, media CC BY-SA 3.0 and others: LICENSE.txt and each mod's
+  license.txt
+
+mobs (mobs_redo)
+  https://codeberg.org/tenplus1/mobs_redo, commit @MOBS_REDO_VERSION@
+  Code MIT; media CC0 and CC BY-SA 3.0: mods/mobs/license.txt
+
+mobs_animal
+  https://codeberg.org/tenplus1/mobs_animal, commit @MOBS_ANIMAL_VERSION@
+  Code MIT; media CC0, WTFPL, MIT, CC BY-SA 3.0: mods/mobs_animal/license.txt
+  The sheep's four textures (mobs_sheep_base, _horns, _shaved, _wool) are
+  CC BY-NC-SA 4.0: non-commercial use only.
+  Left out: the rat's model, textures and sounds. Its credits give the license
+  only as "CCPL", with no version, so the rat is off in this game's
+  minetest.conf.
+
+mobs_monster
+  https://codeberg.org/tenplus1/mobs_monster, commit @MOBS_MONSTER_VERSION@
+  Code MIT; media CC0, WTFPL, MIT, CC BY-SA 3.0 and 4.0:
+  mods/mobs_monster/license.txt
+
+stamina
+  https://codeberg.org/tenplus1/stamina, commit @STAMINA_VERSION@
+  Code LGPL-2.1+; media CC BY 3.0, WTFPL, CC0: mods/stamina/license.txt
+  Left out: stamina_burp.ogg, from freesfx.co.uk, whose terms are not the
+  CC BY 3.0 its credits give. It only plays for a drunk player, and nothing in
+  this game makes one drunk.
+  Replaced: stamina_hud_fg.png, stamina_hud_bg.png and stamina_hud_poison.png,
+  by goodluckOS's own (see goodluck_* below).
+
+3d_armor
+  https://github.com/minetest-mods/3d_armor, commit @3D_ARMOR_VERSION@
+  Only these mods of the modpack, without the .blend files: @3D_ARMOR_MODS@
+  Code LGPL-2.1; armor textures CC BY-SA 3.0 (davidthecreator); sounds CC0:
+  mods/3d_armor/LICENSE.md
+
+Left out of mobs, mobs_animal, mobs_monster and stamina: screenshot.jpg, made
+on textstudio.com, whose terms are unclear. The game doesn't use them.
+
+goodluck_* mods, and the stamina_hud_* textures above
+  Code and pixel art made for goodluckOS, under goodluckOS's license, GPL-2.0.
