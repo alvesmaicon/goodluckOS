@@ -13,8 +13,8 @@
         },
         "gSettings": {
             "BootSequence": 1,
-            "LowResMode": 1,
-            "TextureFilter": 0
+            "LowResMode": 0,
+            "TextureFilter": 1
         }
     },
     "ConfigVersion": 7
