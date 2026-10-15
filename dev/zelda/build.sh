@@ -3,7 +3,7 @@
 #   dev/zelda/build.sh [oot|mm] assets    the port's o2r, and the game's from the rom in dev/out/zelda/roms/<oot|mm>
 #   dev/zelda/build.sh [oot|mm] game      the armhf binary, with the GLES2 renderer (patches/lus)
 #   dev/zelda/build.sh [oot|mm] libs      the libraries it needs that the console's rootfs lacks, into libs/
-#   dev/zelda/build.sh [oot|mm] pack      launcher + assets/ into the folder, and dev/out/zelda/<port>.tar for HOME/ports
+#   dev/zelda/build.sh [oot|mm] pack      launcher, assets/ and icon (dev/zelda/cover.py) into the folder, and <port>.tar for HOME/ports
 #   dev/zelda/build.sh [oot|mm] native    the same game for this machine (64-bit), in dev/out/zelda/native/<port>
 #   dev/zelda/build.sh [oot|mm] shot [s]  the binary under qemu-arm on Xvfb (llvmpipe, GLES2), screenshots in dev/out/zelda/shots/<port>
 #   dev/zelda/build.sh [oot|mm]           assets, game, libs and pack
@@ -176,6 +176,8 @@ pack() {
     cp "$HERE/$PORT.sh" "$OUT/"
     cp "$HERE/$PORT-defaults.json" "$OUT/defaults.json"
     port_assets "$OUT"
+    # The launcher icon from cover.py, which runs on the host (the games' own art, so it isn't in git)
+    [ ! -f /repo/dev/out/zelda/covers/$PORT.png ] || cp /repo/dev/out/zelda/covers/$PORT.png "$OUT/icon.png"
     tar -cf /repo/dev/out/zelda/$PORT.tar -C "$(dirname "$OUT")" $PORT
     ls -l /repo/dev/out/zelda/$PORT.tar
 }

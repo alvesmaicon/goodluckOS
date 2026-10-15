@@ -3,9 +3,11 @@ CATEGORY=Games
 NAME=Ocarina of Time
 DESCRIPTION=Ship of Harkinian, from your own rom
 COMMAND=sh /home/player/ports/soh/soh.sh
+ICON=/home/player/ports/soh/icon.png
 
 [ENTRY]
 CATEGORY=Games
 NAME=Majora's Mask
 DESCRIPTION=2 Ship 2 Harkinian, from your own rom
 COMMAND=sh /home/player/ports/2ship/2ship.sh
+ICON=/home/player/ports/2ship/icon.png
