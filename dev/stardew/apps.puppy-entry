@@ -1,0 +1,12 @@
+[ENTRY]
+CATEGORY=Games
+NAME=Stardew Valley
+DESCRIPTION=Your own game files, compatibility branch
+COMMAND=sh /home/player/ports/stardewvalley/stardew.sh
+ICON=/home/player/ports/stardewvalley/icon.png
+
+[ENTRY]
+CATEGORY=Games
+NAME=Stardew runtime test
+DESCRIPTION=Mono, MonoGame, gl4es and OpenAL without the game
+COMMAND=sh /home/player/ports/stardewvalley/stardew.sh test
