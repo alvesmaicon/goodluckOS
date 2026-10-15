@@ -330,7 +330,7 @@ The Allwinner A23/A33 is a 32-bit SoC. This means that 64-bit software simply _c
 With that said, most of the games people actually care about (Stardew Valley, Half-Life 1, n64 re-comps, Android GameMaker games, OpenMW, OpenRCT2, + more) are 32-bit games, and therefore should theoretically work if anyone cares to create 32-bit ports.
 
 ### Ports in this fork
-Four ports are in progress here, each on its own branch. Apart from Luanti, they need your own copy of the game, so each one is built on a PC from your files: [Ports](docs/ports/README.md) says how, and how each one runs.
+Four ports are in progress here (Luanti still on its own branch, `feat/luanti`). Apart from Luanti, they need your own copy of the game, so each one is built on a PC from your files: [Ports](docs/ports/README.md) says how, and how each one runs.
 
 | [Luanti](docs/ports/README.md#luanti) | [Stardew Valley](docs/ports/README.md#stardew-valley) | [Ocarina of Time](docs/ports/README.md#ocarina-of-time) | [Majora's Mask](docs/ports/README.md#majoras-mask) |
 | --- | --- | --- | --- |
