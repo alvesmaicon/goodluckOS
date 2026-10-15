@@ -7,6 +7,8 @@ mkdir -p /home/player/logs
 
 export LD_LIBRARY_PATH=$dir/libs
 export SHIP_HOME=$dir
+# First run: the cartridge's look (240p, three-point filtering, N64 logo only, no SoH quest types)
+[ -f "$dir/shipofharkinian.json" ] || cp "$dir/defaults.json" "$dir/shipofharkinian.json"
 [ -f "$dir/env" ] && { set -a; . "$dir/env"; set +a; }
 
 {

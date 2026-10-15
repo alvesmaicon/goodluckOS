@@ -133,7 +133,7 @@ libs() {
 # The port folder as one tar for HOME/ports. SoH refuses to start without an assets/ folder beside it,
 # even with oot.o2r ready; the full one (the extractor's 120 MB of yml) only matters for extracting on the console.
 pack() {
-    cp "$HERE/soh.sh" "$OUT/"
+    cp "$HERE/soh.sh" "$HERE/defaults.json" "$OUT/"
     mkdir -p "$OUT/assets"
     cp "$SRC/soh/assets/yml/config.yml" "$OUT/assets/"
     tar -cf /repo/dev/out/zelda/soh.tar -C "$(dirname "$OUT")" soh

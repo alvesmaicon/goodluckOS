@@ -1,0 +1,21 @@
+{
+    "CVars": {
+        "gEnhancements": {
+            "FileSelect": {
+                "HideBossRushQuest": 1,
+                "HideRandomizerQuest": 1,
+                "HideSpeedrunMasterQuest": 1,
+                "HideSpeedrunQuest": 1
+            }
+        },
+        "gOpenWindows": {
+            "Notifications": 0
+        },
+        "gSettings": {
+            "BootSequence": 1,
+            "LowResMode": 1,
+            "TextureFilter": 0
+        }
+    },
+    "ConfigVersion": 7
+}
