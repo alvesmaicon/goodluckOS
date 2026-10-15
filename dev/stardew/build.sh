@@ -6,7 +6,7 @@
 #   (dev/out/stardew/altone: a 1 s OpenAL tone, for the console's /tmp)
 #   dev/stardew/build.sh game     dev/out/stardew/gamedata from your own game (SDV_GAME, default: Steam on macOS)
 #   dev/stardew/build.sh smoke    run Mono armhf under qemu-arm (no display): assemblies and native libs load
-#   dev/stardew/build.sh patches  rebuild only StardewPatches.dll, SVLoader.exe and SdvIcon.exe
+#   dev/stardew/build.sh patches  rebuild only stardew.sh, StardewPatches.dll, SVLoader.exe and SdvIcon.exe
 #   dev/stardew/build.sh aot      AOT-compile (Mono armhf under qemu-arm) the class libraries, the port's DLLs and
 #                                 the game's assemblies in gamedata: <assembly>.so next to each one, so Mono loads
 #                                 native code instead of JIT-compiling ~15,600 methods at every start. With
@@ -137,6 +137,7 @@ game_dirs() {
 }
 
 build_patches() {
+    cp "$HERE/stardew.sh" "$P/"
     mcs -nologo -optimize+ -out:"$P/SVLoader.exe" "$HERE/patches/SVLoader.cs"
     mcs -nologo -optimize+ -r:"$P/dlls/MonoGame.Framework.dll" -out:"$P/SdvIcon.exe" "$HERE/patches/SdvIcon.cs"
     if ! game_dirs 2>/dev/null; then
