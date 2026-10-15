@@ -37,18 +37,6 @@ public static class StardewPatches
 		return (hratio < wratio) ? hratio : wratio;
 	}
 
-	[HarmonyPatch(typeof(Options))]
-	[HarmonyPatch("uiScale", MethodType.Getter)]
-	private class Options__get_desiredUIScale
-	{
-		// Fit UI to the screen.
-		private static void Postfix(ref float __result)
-		{
-
-			__result *= getScreenRatio();
-		}
-	}
-
 	[HarmonyPatch(typeof(InputState))]
 	[HarmonyPatch("SetMousePosition")]
 	private class InputState__SetMousePosition
@@ -89,22 +77,6 @@ public static class StardewPatches
 				traverse2.SetValue(default(MouseState));
 			}
 			traverse3.SetValue(default(GamePadState));
-			return false;
-		}
-	}
-
-	[HarmonyPatch(typeof(Options))]
-	[HarmonyPatch("zoomLevel", MethodType.Getter)]
-	private class Options__zoomLevel_getter
-	{
-		private static bool Prefix(ref float __result, ref Options __instance)
-		{
-			if (Game1.game1.takingMapScreenshot)
-			{
-				__result = __instance.baseZoomLevel * getScreenRatio();
-				return false;
-			}
-			__result = __instance.baseZoomLevel * getScreenRatio() * Game1.game1.zoomModifier;
 			return false;
 		}
 	}
@@ -253,13 +225,15 @@ public static class StardewPatches
 				list.Add(new Vector4(0f, 0.5f, 0.5f, 0.5f));
 				list.Add(new Vector4(0.5f, 0.5f, 0.5f, 0.5f));
 			}
+			// goodluckOS: the zoom and UI scale getters multiply by zoomModifier; scaling it here replaces JoF's
+			// patches on those getters, which AOT code inlines past (and which ran on every call)
 			if (GameRunner.instance.gameInstances.Count <= 1)
 			{
-				__instance.zoomModifier = 1f;
+				__instance.zoomModifier = getScreenRatio();
 			}
 			else
 			{
-				__instance.zoomModifier = 0.5f;
+				__instance.zoomModifier = 0.5f * getScreenRatio();
 			}
 			Vector4 vector = list[Game1.game1.instanceIndex];
 			Vector2? vector2 = null;
@@ -624,7 +598,8 @@ public static class StardewPatches
 	}
 
 	// SDV_BENCH=<save folder>[,<warm-up s>,<measured s>]: from the title, load that save, warp to the farmhouse
-	// porch and stand still, then print one "bench" line (stats columns), the probes and the peak RSS, and exit.
+	// porch and stand still, then print one "bench" line (stats columns), the probes and the peak RSS, and quit
+	// the way the game does.
 	// SDV_ZOOM=<zoom> sets the in-game zoom after loading (1 = the menu's 100%)
 	private static class Bench
 	{
@@ -713,7 +688,8 @@ public static class StardewPatches
 						if (line.StartsWith("VmHWM") || line.StartsWith("VmRSS"))
 							Console.WriteLine("bench {0}", line.Replace("\t", " "));
 					Console.Out.Flush();
-					Environment.Exit(0);
+					Game1.game1.Exit();
+					step = 5;
 				}
 				break;
 			}

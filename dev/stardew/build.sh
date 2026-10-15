@@ -7,6 +7,9 @@
 #   dev/stardew/build.sh game     dev/out/stardew/gamedata from your own game (SDV_GAME, default: Steam on macOS)
 #   dev/stardew/build.sh smoke    run Mono armhf under qemu-arm (no display): assemblies and native libs load
 #   dev/stardew/build.sh patches  rebuild only StardewPatches.dll, SVLoader.exe and SdvIcon.exe
+#   dev/stardew/build.sh aot      AOT-compile (Mono armhf under qemu-arm) the class libraries, the port's DLLs and
+#                                 the game's assemblies in gamedata: <assembly>.so next to each one, so Mono loads
+#                                 native code instead of JIT-compiling ~15,600 methods at every start
 # StardewPatches.dll is compiled against your StardewValley.exe and icon.png made from its title logo, when
 # SDV_GAME exists.
 # Runs in the goodluck-stardew image (dev/stardew/Dockerfile, on top of goodluck-dev).
@@ -162,6 +165,32 @@ build_game() {
     du -sh "$g"
 }
 
+# Only what the game loads; an image whose assembly changed is ignored by Mono (JIT again), so rerun after
+# build.sh patches or build.sh game. The game's images come from the player's files and stay in gamedata.
+AOT_BCL="mscorlib System System.Core System.Xml System.Configuration System.Numerics System.Runtime.Serialization
+    System.Security System.ServiceModel.Internals System.Drawing Mono.Security"
+AOT_PORT="0Harmony MonoGame.Framework Lidgren.Network StardewPatches"
+AOT_GAME="StardewValley.exe StardewValley.GameData.dll xTile.dll BmFont.dll GalaxyCSharp.dll SkiaSharp.dll
+    System.Data.HashFunction.Core.dll System.Data.HashFunction.Interfaces.dll System.Data.HashFunction.xxHash.dll"
+build_aot() {
+    local m=$P/mono g=/repo/dev/out/stardew/gamedata n f files=()
+    for n in $AOT_BCL; do
+        if [ $n = mscorlib ]; then files+=("$m/lib/mono/4.5/mscorlib.dll"); else files+=("$m"/lib/mono/gac/$n/*/$n.dll); fi
+    done
+    for n in $AOT_PORT; do files+=("$P/dlls/$n.dll"); done
+    for n in $AOT_GAME; do [ -f "$g/$n" ] && files+=("$g/$n"); done
+    export LD_LIBRARY_PATH=$P/lib:$m/lib MONO_PATH=$P/dlls:$P:$g
+    for f in "${files[@]}"; do
+        rm -f "$f.so"
+        if qemu-arm "$m/bin/mono" -O=all --aot=tool-prefix=arm-linux-gnueabihf- "$f" > "$BLD/aot-$(basename "$f").log" 2>&1 &&
+                arm-linux-gnueabihf-strip --strip-debug "$f.so"; then
+            printf '%-40s %6s KB\n' "$(basename "$f")" "$(( $(stat -c %s "$f.so") / 1024 ))"
+        else
+            echo "$(basename "$f"): failed, $(tail -1 "$BLD/aot-$(basename "$f").log")"
+        fi
+    done
+}
+
 fetch_portmaster() {
     local f
     for f in $PM_FILES; do
@@ -219,5 +248,6 @@ case ${1:-build} in
     game) build_game ;;
     smoke) smoke ;;
     patches) build_patches ;;
-    *) echo "usage: dev/stardew/build.sh [build|game|smoke|patches]"; exit 1 ;;
+    aot) mkdir -p "$BLD"; build_aot ;;
+    *) echo "usage: dev/stardew/build.sh [build|game|smoke|patches|aot]"; exit 1 ;;
 esac

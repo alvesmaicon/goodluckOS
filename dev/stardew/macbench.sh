@@ -4,6 +4,9 @@
 # 640x480, OpenAL Soft's null output). Update times track the console's CPU; draw times do not (llvmpipe).
 #   dev/stardew/macbench.sh setup                       arm64 Mono, OpenAL and lz4 shim into the work volume
 #   dev/stardew/macbench.sh run <name> [VAR=x...]       SDV_BENCH run, log in dev/out/stardew/results/mac-<name>.log
+#   dev/stardew/macbench.sh aot                         copy of the runtime, port and game assemblies in
+#                                                       dev/out/stardew/mac-aot, AOT-compiled (-O=all); then
+#                                                       BENCH_TREE=aot macbench.sh run|perf ... runs from it
 #   dev/stardew/macbench.sh perf <name> [VAR=x...]      the same with Linux perf on the main thread during the
 #                                                       measured window: results/mac-<name>.perf.txt (self, inclusive)
 # Needs dev/stardew/build.sh and build.sh game first. Nothing else should run on the Mac during a bench.
@@ -17,7 +20,7 @@ REPO=$(dirname "$(dirname "$HERE")")
 if [ ! -f /.dockerenv ]; then
     others=$(docker ps -q | wc -l | tr -d ' ')
     caps=(); [ "${1:-}" = perf ] && caps=(--cap-add PERFMON --cap-add SYS_PTRACE)
-    exec docker run --rm -i ${caps[@]+"${caps[@]}"} -e BENCH_REV="$(git -C "$REPO" describe --always --dirty)" -e BENCH_OTHERS="$others" \
+    exec docker run --rm -i ${caps[@]+"${caps[@]}"} -e BENCH_TREE="${BENCH_TREE:-}" -e BENCH_REV="$(git -C "$REPO" describe --always --dirty)" -e BENCH_OTHERS="$others" \
         -v "$REPO:/repo" -v goodluck-work:/work goodluck-stardew /repo/dev/stardew/macbench.sh "$@"
 fi
 
@@ -29,6 +32,10 @@ R=/repo/dev/out/stardew/results
 SLOT=ALVESFARM_451629148
 SNAP=/repo/dev/out/stardew/saves/alvesfarm-day2.tgz
 MONO=6.12.0.199+dfsg-6
+AOT=/repo/dev/out/stardew/mac-aot
+if [ "${BENCH_TREE:-}" = aot ]; then
+    M=$AOT P=$AOT/port G=$AOT/game
+fi
 
 setup() {
     local d=$W/debs-arm64 r=$W/build/mono-arm64 p
@@ -81,11 +88,13 @@ run() {
     ) &
     {
         echo "mac $name $(date '+%F %T') rev $BENCH_REV, other containers $BENCH_OTHERS, $*"
-        timeout -s QUIT -k 10 "${BENCH_TIMEOUT:-420}" "$M/mono/bin/mono" "$P/SVLoader.exe" StardewValley.exe ||
+        timeout -s QUIT -k 10 "${BENCH_TIMEOUT:-420}" "$M/mono/bin/mono" ${BENCH_LOADER:+"$P/$BENCH_LOADER"} StardewValley.exe ||
             echo "exit $?"
+        echo "ended $(date +%T)"
     } >> "$log" 2>&1
     kill %1 %2
     wait
+    cp /tmp/perf-*.map "$R/mac-$name.jitmap" 2>/dev/null || true
     grep -E '^(mac|bench|probe)|exit' "$log" || true
 }
 
@@ -104,9 +113,31 @@ perf_run() {
     echo "$(awk '{s += $NF} END {print s}' "$out.folded") main-thread samples in $out.folded"
 }
 
+# AOT images sit next to their assemblies (<name>.so), so the bench gets its own copy of every assembly
+aot() {
+    local f
+    rm -rf "$AOT"
+    mkdir -p "$AOT/port" "$AOT/game"
+    cp -r "$M/mono" "$M/lib" "$AOT/"
+    cp -r "$P/dlls" "$AOT/port/"
+    cp "$G"/*.exe "$G"/*.dll "$G"/*.config "$AOT/game/"
+    ln -s ../../gamedata/Content "$AOT/game/Content"
+    export MONO_PATH=$AOT/port/dlls:$AOT/port:$AOT/game
+    # the class libraries load from the GAC, mscorlib from 4.5
+    for f in "$AOT"/mono/lib/mono/4.5/mscorlib.dll "$AOT"/mono/lib/mono/gac/*/*/*.dll "$AOT"/port/dlls/*.dll \
+            "$AOT"/game/*.dll "$AOT"/game/*.exe; do
+        if "$AOT/mono/bin/mono" -O=all --aot "$f" > "$f.aot.log" 2>&1; then
+            printf '%-40s %6s KB\n' "$(basename "$f")" "$(( $(stat -c %s "$f.so") / 1024 ))"
+        else
+            echo "$(basename "$f"): $(tail -1 "$f.aot.log")"
+        fi
+    done
+}
+
 case ${1:-} in
     setup) setup ;;
     run) shift; run "$@" ;;
     perf) shift; perf_run "$@" ;;
+    aot) aot ;;
     *) sed -n '2,10p' "$0"; exit 1 ;;
 esac
