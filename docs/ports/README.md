@@ -61,7 +61,7 @@ The icon comes from your game's title logo, and the game follows the launcher's 
 
 ## Ocarina of Time
 
-![Ocarina of Time on the console: the title screen, with Ship of Harkinian's frame counter at 20 FPS](ocarina-of-time.png)
+![Ocarina of Time on the console: the title screen](ocarina-of-time.png)
 
 Ship of Harkinian is the PC port built from the decompiled N64 game. Its renderer needs OpenGL ES 3, which the Mali-400 lacks, so this port brings one written for OpenGL ES 2, plus a fix for 32-bit builds, where the sky, the logo and the text went missing. It runs at 480p and 20 FPS, the frame rate of the N64 cartridge, with the cartridge's look by default.
 
@@ -93,7 +93,7 @@ Saves and settings stay in `HOME/ports/soh`. Log: `HOME/logs/soh.log`.
 
 ## Majora's Mask
 
-![Majora's Mask on the console: Clock Town in the title demo](majoras-mask.png)
+![Majora's Mask on the console: Clock Town at night, in the title demo](majoras-mask.png)
 
 2 Ship 2 Harkinian is the same kind of port for Majora's Mask, on the same libraries, so it uses the same OpenGL ES 2 renderer. On the console the title demo plays through Clock Town at 480p; the frame rate isn't measured yet.
 
