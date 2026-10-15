@@ -28,6 +28,7 @@ public static class StardewPatches
 		Harmony harmony = new Harmony("com.github.johnnyonflame.StardewPatches");
 		harmony.PatchAll(Assembly.GetExecutingAssembly());
 		Probe.Harmony = harmony;
+		SpeedPatches.Harmony = harmony;
 	}
 
 	// Before Program.Main (SdvLoader.exe): SaveGame's static constructor builds five XmlSerializers by reflection and
@@ -534,6 +535,7 @@ public static class StardewPatches
 
 		private static void Postfix(long __state)
 		{
+			SpeedPatches.Install();
 			if (!Stats.On)
 				return;
 			Stats.Update(Stopwatch.GetTimestamp() - __state);

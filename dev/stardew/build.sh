@@ -150,7 +150,8 @@ build_patches() {
         return
     fi
     mcs -nologo -target:library -optimize+ -lib:"$BIN" -lib:"$P/dlls" -r:"$BIN/StardewValley.exe" -r:xTile.dll \
-        -r:MonoGame.Framework.dll -r:0Harmony.dll -out:"$P/dlls/StardewPatches.dll" "$HERE/patches/StardewPatches.cs"
+        -r:MonoGame.Framework.dll -r:0Harmony.dll -out:"$P/dlls/StardewPatches.dll" "$HERE/patches/StardewPatches.cs" \
+        "$HERE/patches/SpeedPatches.cs"
     MONO_PATH=$P/dlls mono "$P/SdvIcon.exe" "$CONTENT/Minigames/TitleButtons.xnb" "$P/icon.png"
     echo "StardewPatches.dll built against $(strings "$BIN/StardewValley.exe" | grep -m1 -oE '^1\.[0-9]+\.[0-9]+' || echo '?')"
 }
