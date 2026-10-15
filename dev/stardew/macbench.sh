@@ -22,7 +22,7 @@ REPO=$(dirname "$(dirname "$HERE")")
 if [ ! -f /.dockerenv ]; then
     others=$(docker ps -q | wc -l | tr -d ' ')
     caps=(); [ "${1:-}" = perf ] && caps=(--cap-add PERFMON --cap-add SYS_PTRACE)
-    exec docker run --rm -i ${caps[@]+"${caps[@]}"} -e BENCH_TREE="${BENCH_TREE:-}" -e AOT_PROFILE="${AOT_PROFILE:-}" -e BENCH_REV="$(git -C "$REPO" describe --always --dirty)" -e BENCH_OTHERS="$others" \
+    exec docker run --rm -i ${caps[@]+"${caps[@]}"} -e PERF_WINDOW="${PERF_WINDOW:-}" -e BENCH_TREE="${BENCH_TREE:-}" -e AOT_PROFILE="${AOT_PROFILE:-}" -e BENCH_REV="$(git -C "$REPO" describe --always --dirty)" -e BENCH_OTHERS="$others" \
         -v "$REPO:/repo" -v goodluck-work:/work goodluck-stardew /repo/dev/stardew/macbench.sh "$@"
 fi
 
@@ -84,10 +84,18 @@ run() {
     (while sleep 20; do import -window root "$R/mac-$name.png" 2>/dev/null; done) &
     cd "$G"
     : > "$log"
+    # PERF_WINDOW=load records from the title to the loaded save instead of the measured minute
     [ -z "${PERF:-}" ] || (
         sleep 5
-        until grep -q '^bench .* measuring' "$log"; do pgrep -x mono > "$PERF.pid" || exit 0; sleep 1; done
-        perf record -q -e cpu-clock -F 1000 -g -p "$(cat "$PERF.pid")" -o "$PERF.data" -- sleep "${BENCH_MEASURE:-60}"
+        from='^bench .* measuring' to=; [ "${PERF_WINDOW:-}" = load ] && from='^bench .*title after' to='loaded after'
+        until grep -q "$from" "$log"; do pgrep -x mono > "$PERF.pid" || exit 0; sleep 0.2; done
+        if [ -n "$to" ]; then
+            perf record -q -e cpu-clock -F 1000 -g -p "$(cat "$PERF.pid")" -o "$PERF.data" &
+            until grep -q "$to" "$log"; do sleep 0.2; done
+            kill -INT $!; wait $!
+        else
+            perf record -q -e cpu-clock -F 1000 -g -p "$(cat "$PERF.pid")" -o "$PERF.data" -- sleep "${BENCH_MEASURE:-60}"
+        fi
     ) &
     {
         echo "mac $name $(date '+%F %T') rev $BENCH_REV, other containers $BENCH_OTHERS, $*"

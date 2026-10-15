@@ -523,7 +523,8 @@ public static class StardewPatches
 
 		static Type FindType(string name)
 		{
-			foreach (Assembly a in new[] { typeof(Game1).Assembly, typeof(Game).Assembly, typeof(xTile.Layers.Layer).Assembly })
+			foreach (Assembly a in new[] { typeof(Game1).Assembly, typeof(Game).Assembly, typeof(xTile.Layers.Layer).Assembly,
+					typeof(System.Xml.Serialization.XmlSerializer).Assembly })
 				foreach (Type t in a.GetTypes())
 					if (t.FullName == name || t.Name == name)
 						return t;
@@ -578,6 +579,14 @@ public static class StardewPatches
 			ticks[i] += Stopwatch.GetTimestamp() - t0;
 			calls[i]++;
 			inDraw[i] |= Drawing;
+		}
+
+		// Totals since the probes went in (the first update), e.g. the whole save load
+		public static void Totals(string tag)
+		{
+			double ms = 1000.0 / Stopwatch.Frequency;
+			for (int i = 0; i < names.Count; i++)
+				Console.WriteLine("{0} {1} {2:F0} ms {3} calls", tag, names[i], ticks[i] * ms, calls[i]);
 		}
 
 		public static void Reset()
@@ -670,6 +679,7 @@ public static class StardewPatches
 							System.Globalization.CultureInfo.InvariantCulture, out zoom))
 						Game1.options.desiredBaseZoomLevel = zoom;
 					Log(string.Format("loaded after {0:F0} s ({1:F0} s CPU), warp to Farm {2},{3}", Uptime(), CpuTime(), door.X, door.Y));
+					Probe.Totals("loadprobe");
 					Game1.warpFarmer("Farm", door.X, door.Y, 2);
 					step = 2;
 				}
