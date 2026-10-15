@@ -8,8 +8,8 @@
 #   dev/stardew/build.sh smoke    run Mono armhf under qemu-arm (no display): assemblies and native libs load
 #   dev/stardew/build.sh patches  rebuild only stardew.sh, StardewPatches.dll, SVLoader.exe and SdvIcon.exe
 #   dev/stardew/build.sh aot      AOT-compile (Mono armhf under qemu-arm) the class libraries, the port's DLLs and
-#                                 the game's assemblies in gamedata: <assembly>.so next to each one, so Mono loads
-#                                 native code instead of JIT-compiling ~15,600 methods at every start. With
+#                                 the game's assemblies in gamedata: <assembly>.so next to each one. Not used: on
+#                                 the A33 it saved no startup time and cost 13% FPS (2026-10-15). With
 #                                 AOT_PROFILE=<file> (macbench.sh's --profile=aot recording, inside the container's
 #                                 /repo) the generic instances the game used are compiled in too
 # StardewPatches.dll is compiled against your StardewValley.exe and icon.png made from its title logo, when
