@@ -4,8 +4,8 @@
 # 640x480, OpenAL Soft's null output). Update times track the console's CPU; draw times do not (llvmpipe).
 #   dev/stardew/macbench.sh setup                       arm64 Mono, OpenAL and lz4 shim into the work volume
 #   dev/stardew/macbench.sh run <name> [VAR=x...]       SDV_BENCH run, log in dev/out/stardew/results/mac-<name>.log
-#   dev/stardew/macbench.sh aot                         copy of the runtime, port and game assemblies in
-#                                                       dev/out/stardew/mac-aot, AOT-compiled (-O=all); then
+#   dev/stardew/macbench.sh aot                         copy of the runtime, port and game assemblies in the
+#                                                       work volume (virtiofs page faults are slow), AOT-compiled; then
 #                                                       BENCH_TREE=aot macbench.sh run|perf ... runs from it
 #   dev/stardew/macbench.sh perf <name> [VAR=x...]      the same with Linux perf on the main thread during the
 #                                                       measured window: results/mac-<name>.perf.txt (self, inclusive)
@@ -32,7 +32,7 @@ R=/repo/dev/out/stardew/results
 SLOT=ALVESFARM_451629148
 SNAP=/repo/dev/out/stardew/saves/alvesfarm-day2.tgz
 MONO=6.12.0.199+dfsg-6
-AOT=/repo/dev/out/stardew/mac-aot
+AOT=$W/mac-aot
 if [ "${BENCH_TREE:-}" = aot ]; then
     M=$AOT P=$AOT/port G=$AOT/game
 fi
@@ -121,7 +121,7 @@ aot() {
     cp -r "$M/mono" "$M/lib" "$AOT/"
     cp -r "$P/dlls" "$AOT/port/"
     cp "$G"/*.exe "$G"/*.dll "$G"/*.config "$AOT/game/"
-    ln -s ../../gamedata/Content "$AOT/game/Content"
+    ln -s "$G/Content" "$AOT/game/Content"
     export MONO_PATH=$AOT/port/dlls:$AOT/port:$AOT/game
     # the class libraries load from the GAC, mscorlib from 4.5
     for f in "$AOT"/mono/lib/mono/4.5/mscorlib.dll "$AOT"/mono/lib/mono/gac/*/*/*.dll "$AOT"/port/dlls/*.dll \

@@ -598,8 +598,8 @@ public static class StardewPatches
 	}
 
 	// SDV_BENCH=<save folder>[,<warm-up s>,<measured s>]: from the title, load that save, warp to the farmhouse
-	// porch and stand still, then print one "bench" line (stats columns), the probes and the peak RSS, and quit
-	// the way the game does.
+	// porch and stand still, then print one "bench" line (stats columns), the probes and the peak RSS, and exit
+	// (Environment.Exit, so that mono --stats prints; the game's own exit kills the process).
 	// SDV_ZOOM=<zoom> sets the in-game zoom after loading (1 = the menu's 100%)
 	private static class Bench
 	{
@@ -618,6 +618,14 @@ public static class StardewPatches
 				double.TryParse(v[1], out warmup);
 				double.TryParse(v[2], out measure);
 			}
+		}
+
+		// The main thread's CPU seconds (the render and audio threads would hide the JIT)
+		static double CpuTime()
+		{
+			int pid = Process.GetCurrentProcess().Id;
+			string[] f = System.IO.File.ReadAllText(string.Format("/proc/{0}/task/{0}/stat", pid)).Split(')')[1].Split(' ');
+			return (long.Parse(f[12]) + long.Parse(f[13])) / 100.0;
 		}
 
 		static double Uptime()
@@ -647,7 +655,7 @@ public static class StardewPatches
 				if (Game1.gameMode != Game1.titleScreenGameMode || !(Game1.activeClickableMenu is TitleMenu))
 					t = DateTime.Now;
 				else if (s > 3) {
-					Log(string.Format("title after {0:F0} s, loading {1}", Uptime(), Slot));
+					Log(string.Format("title after {0:F0} s ({1:F0} s CPU), loading {2}", Uptime(), CpuTime(), Slot));
 					Stats.Paused = true;
 					SaveGame.Load(Slot);
 					Game1.exitActiveMenu();
@@ -661,7 +669,7 @@ public static class StardewPatches
 					if (float.TryParse(Environment.GetEnvironmentVariable("SDV_ZOOM"), System.Globalization.NumberStyles.Float,
 							System.Globalization.CultureInfo.InvariantCulture, out zoom))
 						Game1.options.desiredBaseZoomLevel = zoom;
-					Log(string.Format("loaded after {0:F0} s, warp to Farm {1},{2}", Uptime(), door.X, door.Y));
+					Log(string.Format("loaded after {0:F0} s ({1:F0} s CPU), warp to Farm {2},{3}", Uptime(), CpuTime(), door.X, door.Y));
 					Game1.warpFarmer("Farm", door.X, door.Y, 2);
 					step = 2;
 				}
@@ -688,8 +696,7 @@ public static class StardewPatches
 						if (line.StartsWith("VmHWM") || line.StartsWith("VmRSS"))
 							Console.WriteLine("bench {0}", line.Replace("\t", " "));
 					Console.Out.Flush();
-					Game1.game1.Exit();
-					step = 5;
+					Environment.Exit(0);
 				}
 				break;
 			}
