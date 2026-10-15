@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Mono thread dumps (SIGQUIT) in a log -> the main thread's stacks, folded (root;...;leaf 1), for folded.py.
-  dumpfold.py <log or log.gz> > out.folded
+"""Mono thread dumps (SIGQUIT) in a log -> one thread's stacks, folded (root;...;leaf 1), for folded.py: the thread
+with a frame matching REGEX (default the main thread, StardewValley.Program.Main).
+  dumpfold.py <log or log.gz> [REGEX] > out.folded
 A poor man's profiler for the console, where perf is not available: bench.sh sample sends one dump every 1.5 s.
 """
 import collections
@@ -9,12 +10,13 @@ import re
 import sys
 
 path = sys.argv[1]
+match = re.compile(sys.argv[2] if len(sys.argv) > 2 else r"StardewValley\.Program\.Main")
 text = (gzip.open if path.endswith(".gz") else open)(path, "rt", errors="replace").read()
 stacks = collections.Counter()
 for dump in text.split("Full thread dump:")[1:]:
     for block in re.split(r'\n(?=")', dump):
         frames = re.findall(r"^\s+at (.+)$", block, re.M)
-        if not any("StardewValley.Program.Main" in f for f in frames):
+        if not any(match.search(f) for f in frames):
             continue
         names = []
         for f in frames:

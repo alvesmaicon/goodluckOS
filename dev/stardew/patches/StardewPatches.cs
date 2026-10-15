@@ -68,7 +68,20 @@ public static class StardewPatches
 				f.SetValue(null, new System.Xml.Serialization.XmlSerializer(types[0], extra));
 			}
 		}
-		Console.WriteLine("Early: {0} pregenerated save serializers in {1} ms", n, w.ElapsedMilliseconds);
+		// SaveSerializer's one-type serializers (SerializableDictionary keys and values, Options, ...)
+		string list = System.IO.Path.ChangeExtension(path, ".txt");
+		if (EarlySerializers.Contract != null && System.IO.File.Exists(list)) {
+			var lookup = (Dictionary<Type, System.Xml.Serialization.XmlSerializer>)typeof(StardewValley.SaveSerialization.SaveSerializer)
+				.GetField("_serializerLookup", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
+			foreach (string name in System.IO.File.ReadAllLines(list)) {
+				Type t = Type.GetType(name);
+				if (t != null && EarlySerializers.Contract.CanSerialize(t) && !lookup.ContainsKey(t)) {
+					lookup[t] = EarlySerializers.Contract.GetSerializer(t);
+					n++;
+				}
+			}
+		}
+		Console.WriteLine("Early: {0} pregenerated serializers in {1} ms", n, w.ElapsedMilliseconds);
 	}
 
 	private static class EarlySerializers
@@ -666,64 +679,30 @@ public static class StardewPatches
 		}
 	}
 
-	// SDV_XMLCHECK=<StardewValley.XmlSerializers.dll> (bench): read the bench save and its SaveGameInfo with the game's
-	// own serializers and the pregenerated ones, write each result with both, and compare the bytes
-	private static class XmlCheck
+	// SDV_XMLDUMP=<dir> (bench): read the bench save and its SaveGameInfo with whatever serializers are installed and
+	// write them back to <dir>; two runs, with and without SdvLoader's pregenerated serializers, must give equal files
+	private static class XmlDump
 	{
 		public static void Run(string slot)
 		{
-			string path = Environment.GetEnvironmentVariable("SDV_XMLCHECK");
-			if (string.IsNullOrEmpty(path))
+			string dir = Environment.GetEnvironmentVariable("SDV_XMLDUMP");
+			if (string.IsNullOrEmpty(dir))
 				return;
-			var contract = (System.Xml.Serialization.XmlSerializerImplementation)Activator.CreateInstance(Assembly.LoadFrom(path)
-				.GetType("Microsoft.Xml.Serialization.GeneratedAssembly.XmlSerializerContract"));
-			string dir = System.IO.Path.Combine(Program.GetSavesFolder(), slot);
-			Compare("SaveGame", System.IO.Path.Combine(dir, slot), SaveGame.serializer, contract.GetSerializer(typeof(SaveGame)));
-			Compare("Farmer", System.IO.Path.Combine(dir, "SaveGameInfo"), SaveGame.farmerSerializer, contract.GetSerializer(typeof(Farmer)));
+			string save = System.IO.Path.Combine(Program.GetSavesFolder(), slot);
+			Dump("SaveGame", System.IO.Path.Combine(save, slot), SaveGame.serializer, dir);
+			Dump("Farmer", System.IO.Path.Combine(save, "SaveGameInfo"), SaveGame.farmerSerializer, dir);
 		}
 
-		static void Compare(string name, string file, System.Xml.Serialization.XmlSerializer game, System.Xml.Serialization.XmlSerializer generated)
+		static void Dump(string name, string file, System.Xml.Serialization.XmlSerializer s, string dir)
 		{
 			Stopwatch w = Stopwatch.StartNew();
-			object a = Read(game, file);
-			long readGame = w.ElapsedMilliseconds;
-			w.Restart();
-			object b = Read(generated, file);
-			long readGenerated = w.ElapsedMilliseconds;
-			// a fresh object for each write: writing has side effects (Quest.questTitle localizes and keeps _questTitle)
-			byte[] aa = Write(game, a), ab = Write(generated, Read(game, file)), ba = Write(game, b),
-				bb = Write(generated, Read(generated, file));
-			Console.WriteLine("xmlcheck {0}: read {1} ms (game) {2} ms (generated), {3} bytes, equal {4} {5} {6}", name, readGame,
-				readGenerated, aa.Length, Same(aa, ab), Same(aa, ba), Same(aa, bb));
-			string keep = Environment.GetEnvironmentVariable("SDV_XMLCHECK_KEEP");
-			if (!string.IsNullOrEmpty(keep)) {
-				System.IO.File.WriteAllBytes(System.IO.Path.Combine(keep, name + "-game.xml"), aa);
-				System.IO.File.WriteAllBytes(System.IO.Path.Combine(keep, name + "-generated.xml"), ab);
-			}
-		}
-
-		static object Read(System.Xml.Serialization.XmlSerializer s, string file)
-		{
+			object o;
 			using (var stream = System.IO.File.OpenRead(file))
-				return s.Deserialize(stream);
-		}
-
-		static byte[] Write(System.Xml.Serialization.XmlSerializer s, object o)
-		{
-			var stream = new System.IO.MemoryStream();
-			using (var writer = System.Xml.XmlWriter.Create(stream, new System.Xml.XmlWriterSettings { CloseOutput = false }))
+				o = s.Deserialize(stream);
+			long read = w.ElapsedMilliseconds;
+			using (var writer = System.Xml.XmlWriter.Create(System.IO.Path.Combine(dir, name + ".xml")))
 				s.Serialize(writer, o);
-			return stream.ToArray();
-		}
-
-		static bool Same(byte[] x, byte[] y)
-		{
-			if (x.Length != y.Length)
-				return false;
-			for (int i = 0; i < x.Length; i++)
-				if (x[i] != y[i])
-					return false;
-			return true;
+			Console.WriteLine("xmldump {0}: {1} read in {2} ms, written in {3} ms", name, s.GetType().Name, read, w.ElapsedMilliseconds - read);
 		}
 	}
 
@@ -801,7 +780,7 @@ public static class StardewPatches
 						Game1.options.desiredBaseZoomLevel = zoom;
 					Log(string.Format("loaded after {0:F0} s ({1:F0} s CPU), warp to Farm {2},{3}", Uptime(), CpuTime(), door.X, door.Y));
 					Probe.Totals("loadprobe");
-					XmlCheck.Run(Slot);
+					XmlDump.Run(Slot);
 					Game1.warpFarmer("Farm", door.X, door.Y, 2);
 					step = 2;
 				}
