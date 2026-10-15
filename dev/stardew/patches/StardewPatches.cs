@@ -712,6 +712,7 @@ public static class StardewPatches
 	// porch and stand still, then print one "bench" line (stats columns), the probes and the peak RSS, and exit
 	// (Environment.Exit, so that mono --stats prints; the game's own exit kills the process).
 	// SDV_ZOOM=<zoom> sets the in-game zoom after loading (1 = the menu's 100%)
+	// SDV_UI=<scale> the same for the interface size; SDV_MENU=inventory opens the game menu at the farm
 	private static class Bench
 	{
 		public static readonly string Slot;
@@ -780,6 +781,9 @@ public static class StardewPatches
 					if (float.TryParse(Environment.GetEnvironmentVariable("SDV_ZOOM"), System.Globalization.NumberStyles.Float,
 							System.Globalization.CultureInfo.InvariantCulture, out zoom))
 						Game1.options.desiredBaseZoomLevel = zoom;
+					if (float.TryParse(Environment.GetEnvironmentVariable("SDV_UI"), System.Globalization.NumberStyles.Float,
+							System.Globalization.CultureInfo.InvariantCulture, out zoom))
+						Game1.options.desiredUIScale = zoom;
 					Log(string.Format("loaded after {0:F0} s ({1:F0} s CPU), warp to Farm {2},{3}", Uptime(), CpuTime(), door.X, door.Y));
 					Probe.Totals("loadprobe");
 					XmlDump.Run(Slot);
@@ -789,6 +793,8 @@ public static class StardewPatches
 				break;
 			case 2:
 				if (Game1.currentLocation is Farm && settled) {
+					if (Environment.GetEnvironmentVariable("SDV_MENU") == "inventory")
+						Game1.activeClickableMenu = new GameMenu();
 					t = DateTime.Now;
 					step = 3;
 				}
