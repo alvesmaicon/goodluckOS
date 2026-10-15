@@ -8,4 +8,5 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zlib1g-dev:armhf libbz2-dev:armhf libpng-dev:armhf libsdl2-net-dev:armhf \
     libogg-dev:armhf libvorbis-dev:armhf libopus-dev:armhf libopusfile-dev:armhf \
     libegl-dev:armhf libgles-dev:armhf \
+    libsdl2-net-dev libogg-dev libvorbis-dev libopus-dev libopusfile-dev libzip-dev libegl-dev libgles-dev \
     && rm -rf /var/lib/apt/lists/*

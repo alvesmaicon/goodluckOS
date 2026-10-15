@@ -4,6 +4,7 @@
 #   dev/zelda/build.sh soh      soh.elf for armhf, with the GLES2 renderer (patches/lus)
 #   dev/zelda/build.sh libs     the libraries soh.elf needs that the console's rootfs lacks, into libs/
 #   dev/zelda/build.sh pack     launcher + assets/ into the folder, and dev/out/zelda/soh.tar for HOME/ports
+#   dev/zelda/build.sh native   the same game for this machine (64-bit), in dev/out/zelda/native
 #   dev/zelda/build.sh shot [s] soh.elf under qemu-arm on Xvfb (llvmpipe, GLES2), screenshots in dev/out/zelda/shots
 #   dev/zelda/build.sh          assets, soh, libs and pack
 # Output in dev/out/zelda/soh. Runs in the goodluck-zelda image (dev/zelda/Dockerfile, on top of goodluck-dev).
@@ -101,6 +102,15 @@ soh() {
     arm-linux-gnueabihf-strip "$OUT/soh.elf"
 }
 
+# The same game for the build machine (64-bit, its own GL), to tell 32-bit bugs from renderer ones
+native() {
+    cmake -S "$SRC" -B "$BLD/native" -G Ninja -DCMAKE_BUILD_TYPE=Release -DUSE_OPENGLES=ON -DUSE_GLES2=ON
+    cmake --build "$BLD/native" -j "$JOBS" --target soh -- -k 0
+    mkdir -p /repo/dev/out/zelda/native/assets
+    cp "$BLD/native/soh/soh.elf" /repo/dev/out/zelda/native/
+    cp "$SRC/soh/assets/yml/config.yml" /repo/dev/out/zelda/native/assets/
+}
+
 # Copy each NEEDED library (and its own NEEDED, recursively) that the rootfs doesn't ship
 libs() {
     local queue=("$OUT/soh.elf") seen=" " f lib path
@@ -138,8 +148,10 @@ shot() {
     cp "$OUT"/*.o2r "$run/"
     Xvfb :9 -screen 0 1280x960x24 -nolisten tcp & xvfb=$!
     sleep 1
+    local qemu=qemu-arm
+    [ "$(od -An -tx1 -j4 -N1 "$elf" | tr -d ' ')" = 02 ] && qemu=""
     (cd "$run" && SHIP_HOME=$run DISPLAY=:9 SDL_AUDIODRIVER=dummy QEMU_LD_PREFIX=/ \
-        exec qemu-arm "$elf" > "$shots/soh.log" 2>&1) & game=$!
+        exec $qemu "$elf" > "$shots/soh.log" 2>&1) & game=$!
     for ((t = 30; t <= secs; t += 30)); do
         sleep 30
         kill -0 $game 2>/dev/null || { echo "soh.elf exited before ${t}s"; break; }
@@ -156,7 +168,8 @@ case "${1:-all}" in
     soh) soh ;;
     libs) libs ;;
     pack) pack ;;
+    native) native ;;
     shot) shot "${2:-}" ;;
     all) assets; soh; libs; pack ;;
-    *) echo "usage: $0 [assets|soh|libs|pack|shot [seconds]]" >&2; exit 1 ;;
+    *) echo "usage: $0 [assets|soh|libs|pack|native|shot [seconds]]" >&2; exit 1 ;;
 esac
