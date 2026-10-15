@@ -1,0 +1,11 @@
+# The dev image plus what Ship of Harkinian needs: native libs for the asset tools, armhf libs for the game.
+# spdlog, tinyxml2 and libzip are left out on purpose: libultraship fetches and links them statically.
+FROM goodluck-dev
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    cmake ninja-build qemu-user lsb-release \
+    zlib1g-dev libbz2-dev libpng-dev nlohmann-json3-dev \
+    zlib1g-dev:armhf libbz2-dev:armhf libpng-dev:armhf libsdl2-net-dev:armhf \
+    libogg-dev:armhf libvorbis-dev:armhf libopus-dev:armhf libopusfile-dev:armhf \
+    libegl-dev:armhf libgles-dev:armhf \
+    && rm -rf /var/lib/apt/lists/*
