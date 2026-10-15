@@ -2,20 +2,20 @@
 
 Games that run natively on the console, not in an emulator: PC versions built for its 32-bit ARM CPU and its OpenGL ES 2 GPU. Apart from Luanti, none of them comes with its game: you supply your own copy (the game's files or the cartridge's ROM), and nothing from the games is in this repository.
 
-All four are work in progress, each on its own branch, and have only run on my console (GA36-MB, A33, 512 MB of RAM). The screenshots are from it.
+All four are work in progress and have only run on my console (GA36-MB, A33, 512 MB of RAM). The screenshots are from it.
 
-| Game | Built on | You supply | On the A33 | Branch |
+| Game | Built on | You supply | On the A33 | Where |
 | --- | --- | --- | --- | --- |
-| [Luanti](#luanti) | Luanti 5.17, Minetest Game | nothing | 20 FPS in a forest, 10 over a lake | `feat/luanti` |
-| [Stardew Valley](#stardew-valley) | Mono, MonoGame, gl4es | the game, from Steam | about 19 FPS on the farm | `feat/stardew` |
-| [Ocarina of Time](#ocarina-of-time) | Ship of Harkinian 9.3.0 | your ROM | 20 FPS, as on the N64 | `feat/zelda` |
-| [Majora's Mask](#majoras-mask) | 2 Ship 2 Harkinian 5.0.1 | your ROM | not measured yet | `feat/zelda` |
+| [Luanti](#luanti) | Luanti 5.17, Minetest Game | nothing | 20 FPS in a forest, 10 over a lake | branch `feat/luanti` |
+| [Stardew Valley](#stardew-valley) | Mono, MonoGame, gl4es | the game, from Steam | about 19 FPS on the farm | `dev/stardew` |
+| [Ocarina of Time](#ocarina-of-time) | Ship of Harkinian 9.3.0 | your ROM | 20 FPS, as on the N64 | `dev/zelda` |
+| [Majora's Mask](#majoras-mask) | 2 Ship 2 Harkinian 5.0.1 | your ROM | not measured yet | `dev/zelda` |
 
 ## Installing a port
 
 A port is a folder in `HOME/ports/` and an entry in `HOME/apps.puppy`, which puts it in the launcher's Games tab. The launcher reads `apps.puppy` when it starts, so restart the console after editing it.
 
-There are no downloads: the games can't be shared, and this fork has no releases. Each port is built on a PC from its branch, in the dev container of [dev/README.md](../../dev/README.md) (Docker, on Intel or Apple Silicon; `dev/gl image` once). The result holds your game's files, so it is for your own console only.
+There are no downloads: the games can't be shared, and this fork has no releases. Each port is built on a PC, in the dev container of [dev/README.md](../../dev/README.md) (Docker, on Intel or Apple Silicon; `dev/gl image` once). The result holds your game's files, so it is for your own console only.
 
 The examples copy to the card in a card reader on a Mac (`/Volumes/HOME`). MTP works too, at ~10 MB/s. Before ejecting, `dot_clean /Volumes/HOME` removes the `._` files macOS leaves on FAT.
 
@@ -38,7 +38,6 @@ The PC build from Steam's "compatibility" branch (1.6.15) is a .NET Framework pr
 **Build and install** (`SDV_GAME` is the game's folder; Steam's on a Mac is the default):
 
 ```sh
-git checkout feat/stardew
 dev/stardew/build.sh          # the port in dev/out/stardew/stardewvalley, its patches built against your game
 dev/stardew/build.sh game     # your game's files in dev/out/stardew/gamedata
 dev/stardew/build.sh xmlgen   # the save serializers, into gamedata
@@ -71,7 +70,6 @@ Ship of Harkinian is the PC port built from the decompiled N64 game. Its rendere
 **Build and install:**
 
 ```sh
-git checkout feat/zelda
 dev/gl rootfs                      # once, 1-2 h: the port brings only the libraries the console lacks
 mkdir -p dev/out/zelda/roms/oot
 cp "Legend of Zelda, The - Ocarina of Time (USA).z64" dev/out/zelda/roms/oot/
@@ -101,7 +99,7 @@ Saves and settings stay in `HOME/ports/soh`. Log: `HOME/logs/soh.log`.
 
 **You supply:** your Majora's Mask ROM as `.z64`, the N64 USA version (1.0): 2 Ship 2 Harkinian takes only the USA versions.
 
-**Build and install**, with the branch checked out and the rootfs built as for Ocarina of Time:
+**Build and install**, with the rootfs built as for Ocarina of Time:
 
 ```sh
 mkdir -p dev/out/zelda/roms/mm
