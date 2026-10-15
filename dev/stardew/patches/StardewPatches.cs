@@ -385,6 +385,22 @@ public static class StardewPatches
 			s.ThumbSticks.Left != Vector2.Zero || s.ThumbSticks.Right != Vector2.Zero || s.Triggers.Left > 0 || s.Triggers.Right > 0);
 	}
 
+	// SDV_LIGHTING=<n>: pixels per lightmap texel times two; the game fixes 8 (finest), 16 or 32 are cheaper
+	[HarmonyPatch(typeof(Options))]
+	[HarmonyPatch("lightingQuality", MethodType.Getter)]
+	private class Options__lightingQuality
+	{
+		private static readonly int quality = int.Parse(Environment.GetEnvironmentVariable("SDV_LIGHTING") ?? "0");
+
+		private static bool Prefix(ref int __result)
+		{
+			if (quality <= 0)
+				return true;
+			__result = quality;
+			return false;
+		}
+	}
+
 	// SDV_STATS=<seconds>: frames, updates, their average ms, the rest of the time (mostly Present), nursery/major
 	// collections and managed heap, to stdout, followed by the probes
 	private static class Stats
@@ -608,7 +624,8 @@ public static class StardewPatches
 	}
 
 	// SDV_BENCH=<save folder>[,<warm-up s>,<measured s>]: from the title, load that save, warp to the farmhouse
-	// porch and stand still, then print one "bench" line (stats columns), the probes and the peak RSS, and exit
+	// porch and stand still, then print one "bench" line (stats columns), the probes and the peak RSS, and exit.
+	// SDV_ZOOM=<zoom> sets the in-game zoom after loading (1 = the menu's 100%)
 	private static class Bench
 	{
 		public static readonly string Slot;
@@ -626,6 +643,11 @@ public static class StardewPatches
 				double.TryParse(v[1], out warmup);
 				double.TryParse(v[2], out measure);
 			}
+		}
+
+		static double Uptime()
+		{
+			return (DateTime.Now - Process.GetCurrentProcess().StartTime).TotalSeconds;
 		}
 
 		static void Log(string what)
@@ -650,7 +672,7 @@ public static class StardewPatches
 				if (Game1.gameMode != Game1.titleScreenGameMode || !(Game1.activeClickableMenu is TitleMenu))
 					t = DateTime.Now;
 				else if (s > 3) {
-					Log("loading " + Slot);
+					Log(string.Format("title after {0:F0} s, loading {1}", Uptime(), Slot));
 					Stats.Paused = true;
 					SaveGame.Load(Slot);
 					Game1.exitActiveMenu();
@@ -660,7 +682,11 @@ public static class StardewPatches
 			case 1:
 				if (Game1.gameMode == Game1.playingGameMode && Game1.currentLocation != null && settled) {
 					Point door = Game1.getFarm().GetMainFarmHouseEntry();
-					Log(string.Format("warp to Farm {0},{1}", door.X, door.Y));
+					float zoom;
+					if (float.TryParse(Environment.GetEnvironmentVariable("SDV_ZOOM"), System.Globalization.NumberStyles.Float,
+							System.Globalization.CultureInfo.InvariantCulture, out zoom))
+						Game1.options.desiredBaseZoomLevel = zoom;
+					Log(string.Format("loaded after {0:F0} s, warp to Farm {1},{2}", Uptime(), door.X, door.Y));
 					Game1.warpFarmer("Farm", door.X, door.Y, 2);
 					step = 2;
 				}
@@ -673,7 +699,8 @@ public static class StardewPatches
 				break;
 			case 3:
 				if (s >= warmup) {
-					Log(string.Format("measuring {0} s", measure));
+					Log(string.Format("measuring {0} s: zoom {1:F3}, viewport {2}x{3}, lightmap {4}x{5}", measure,
+						Game1.options.zoomLevel, Game1.viewport.Width, Game1.viewport.Height, Game1.lightmap?.Width, Game1.lightmap?.Height));
 					Stats.Reset();
 					t = DateTime.Now;
 					step = 4;
