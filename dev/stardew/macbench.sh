@@ -7,6 +7,8 @@
 #   dev/stardew/macbench.sh aot                         copy of the runtime, port and game assemblies in the
 #                                                       work volume (virtiofs page faults are slow), AOT-compiled; then
 #                                                       BENCH_TREE=aot macbench.sh run|perf ... runs from it
+#                                                       (AOT_PROFILE=<file>: also the generic instances
+#                                                       recorded by a run with MONO_ENV_OPTIONS=--profile=aot:...)
 #   dev/stardew/macbench.sh perf <name> [VAR=x...]      the same with Linux perf on the main thread during the
 #                                                       measured window: results/mac-<name>.perf.txt (self, inclusive)
 # Needs dev/stardew/build.sh and build.sh game first. Nothing else should run on the Mac during a bench.
@@ -20,7 +22,7 @@ REPO=$(dirname "$(dirname "$HERE")")
 if [ ! -f /.dockerenv ]; then
     others=$(docker ps -q | wc -l | tr -d ' ')
     caps=(); [ "${1:-}" = perf ] && caps=(--cap-add PERFMON --cap-add SYS_PTRACE)
-    exec docker run --rm -i ${caps[@]+"${caps[@]}"} -e BENCH_TREE="${BENCH_TREE:-}" -e BENCH_REV="$(git -C "$REPO" describe --always --dirty)" -e BENCH_OTHERS="$others" \
+    exec docker run --rm -i ${caps[@]+"${caps[@]}"} -e BENCH_TREE="${BENCH_TREE:-}" -e AOT_PROFILE="${AOT_PROFILE:-}" -e BENCH_REV="$(git -C "$REPO" describe --always --dirty)" -e BENCH_OTHERS="$others" \
         -v "$REPO:/repo" -v goodluck-work:/work goodluck-stardew /repo/dev/stardew/macbench.sh "$@"
 fi
 
@@ -42,8 +44,8 @@ setup() {
     mkdir -p "$d"
     if ! ls "$d"/mono-runtime-sgen_*.deb >/dev/null 2>&1; then
         apt-get update -qq
-        (cd "$d" && apt-get download -qq mono-runtime-sgen:arm64=$MONO mono-runtime-common:arm64=$MONO 2>&1 |
-            grep -v unsandboxed || true)
+        (cd "$d" && apt-get download -qq mono-runtime-sgen:arm64=$MONO mono-runtime-common:arm64=$MONO \
+            libmono-profiler:arm64=$MONO 2>&1 | grep -v unsandboxed || true)
     fi
     rm -rf "$r" "$M"
     mkdir -p "$r" "$M/lib"
@@ -51,7 +53,8 @@ setup() {
     cp -r "$P/mono" "$M/mono"
     rm "$M"/mono/lib/*.so*
     cp "$r/usr/bin/mono-sgen" "$M/mono/bin/mono"
-    cp -a "$r"/usr/lib/libmono-native.so* "$r/usr/lib/libMonoPosixHelper.so" "$M/mono/lib/"
+    cp -a "$r"/usr/lib/libmono-native.so* "$r/usr/lib/libMonoPosixHelper.so" "$r"/usr/lib/libmono-profiler-aot.so* \
+        "$M/mono/lib/"
     gcc -O2 -shared -fPIC -Wl,-soname,libgssapi_krb5.so.2 \
         -Wl,--version-script=<(echo 'gssapi_krb5_2_MIT { global: *; };') "$HERE/gssstub.c" -o "$M/mono/lib/libgssapi_krb5.so.2"
     cmake -S "$W/src/openal-soft" -B "$W/build/openal-arm64" -G Ninja -DCMAKE_BUILD_TYPE=Release \
@@ -126,7 +129,7 @@ aot() {
     # the class libraries load from the GAC, mscorlib from 4.5
     for f in "$AOT"/mono/lib/mono/4.5/mscorlib.dll "$AOT"/mono/lib/mono/gac/*/*/*.dll "$AOT"/port/dlls/*.dll \
             "$AOT"/game/*.dll "$AOT"/game/*.exe; do
-        if "$AOT/mono/bin/mono" -O=all --aot "$f" > "$f.aot.log" 2>&1; then
+        if "$AOT/mono/bin/mono" -O=all --aot${AOT_PROFILE:+=profile=$AOT_PROFILE} "$f" > "$f.aot.log" 2>&1; then
             printf '%-40s %6s KB\n' "$(basename "$f")" "$(( $(stat -c %s "$f.so") / 1024 ))"
         else
             echo "$(basename "$f"): $(tail -1 "$f.aot.log")"

@@ -9,7 +9,9 @@
 #   dev/stardew/build.sh patches  rebuild only StardewPatches.dll, SVLoader.exe and SdvIcon.exe
 #   dev/stardew/build.sh aot      AOT-compile (Mono armhf under qemu-arm) the class libraries, the port's DLLs and
 #                                 the game's assemblies in gamedata: <assembly>.so next to each one, so Mono loads
-#                                 native code instead of JIT-compiling ~15,600 methods at every start
+#                                 native code instead of JIT-compiling ~15,600 methods at every start. With
+#                                 AOT_PROFILE=<file> (macbench.sh's --profile=aot recording, inside the container's
+#                                 /repo) the generic instances the game used are compiled in too
 # StardewPatches.dll is compiled against your StardewValley.exe and icon.png made from its title logo, when
 # SDV_GAME exists.
 # Runs in the goodluck-stardew image (dev/stardew/Dockerfile, on top of goodluck-dev).
@@ -23,7 +25,7 @@ SDV_GAME=${SDV_GAME:-$HOME/Library/Application Support/Steam/steamapps/common/St
 if [ ! -f /.dockerenv ]; then
     docker image inspect $IMAGE >/dev/null 2>&1 || docker build -t $IMAGE "$HERE"
     game=(); [ -d "$SDV_GAME" ] && game=(-v "$SDV_GAME:/game:ro")
-    exec docker run --rm -i -v "$REPO:/repo" -v goodluck-work:/work "${game[@]}" $IMAGE /repo/dev/stardew/build.sh "$@"
+    exec docker run --rm -i -e AOT_PROFILE="${AOT_PROFILE:-}" -v "$REPO:/repo" -v goodluck-work:/work "${game[@]}" $IMAGE /repo/dev/stardew/build.sh "$@"
 fi
 
 W=/work/stardew
@@ -182,7 +184,7 @@ build_aot() {
     export LD_LIBRARY_PATH=$P/lib:$m/lib MONO_PATH=$P/dlls:$P:$g
     for f in "${files[@]}"; do
         rm -f "$f.so"
-        if qemu-arm "$m/bin/mono" -O=all --aot=tool-prefix=arm-linux-gnueabihf- "$f" > "$BLD/aot-$(basename "$f").log" 2>&1 &&
+        if qemu-arm "$m/bin/mono" -O=all --aot=tool-prefix=arm-linux-gnueabihf-${AOT_PROFILE:+,profile=$AOT_PROFILE} "$f" > "$BLD/aot-$(basename "$f").log" 2>&1 &&
                 arm-linux-gnueabihf-strip --strip-debug "$f.so"; then
             printf '%-40s %6s KB\n' "$(basename "$f")" "$(( $(stat -c %s "$f.so") / 1024 ))"
         else
