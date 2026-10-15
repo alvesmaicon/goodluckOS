@@ -16,7 +16,7 @@ IMAGE=goodluck-zelda
 
 if [ ! -f /.dockerenv ]; then
     docker image inspect $IMAGE >/dev/null 2>&1 || docker build -t $IMAGE "$HERE"
-    exec docker run --rm -i -v "$REPO:/repo" -v goodluck-work:/work -e GL_JOBS -e SOH_ELF -e SHOTS -e SOH_GLES2 $IMAGE /repo/dev/zelda/build.sh "$@"
+    exec docker run --rm -i -v "$REPO:/repo" -v goodluck-work:/work -e GL_JOBS -e SOH_ELF -e SHOTS -e SOH_GLES2 -e LUS_TEXLOG $IMAGE /repo/dev/zelda/build.sh "$@"
 fi
 
 W=/work/zelda

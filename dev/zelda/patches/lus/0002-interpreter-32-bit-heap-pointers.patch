@@ -1,0 +1,16 @@
+diff -ruN fix-a/src/fast/interpreter.cpp fix-b/src/fast/interpreter.cpp
+--- fix-a/src/fast/interpreter.cpp	2026-10-15 00:49:39
++++ fix-b/src/fast/interpreter.cpp	2026-10-15 00:49:47
+@@ -3968,6 +3968,12 @@
+         return true;
+     }
+ 
++#if UINTPTR_MAX <= 0xFFFFFFFFu
++    // A 32-bit heap lives below 0x10000000 too, so the range proves nothing there. An unresolved
++    // segmented address is still odd (SEG_ADDR sets bit 0): reject only those.
++    return addr >= 0x10000 && (addr & 1) == 0;
++#endif
++
+     // Still in the N64 segmented range, but might be a false positive (a real low pointer).
+ #ifdef _WIN32
+     // For Windows, check whether the address belongs to a dll.
