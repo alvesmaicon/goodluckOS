@@ -38,7 +38,8 @@ xnb=$dir/gamedata/Content/Minigames/TitleButtons.xnb
     if [ "$1" = test ]; then
         cd "$dir/test" && mono HelloMG.exe
     else
-        cd "$dir/gamedata" && mono StardewValley.exe
+        cmp -s "$dir/SdvLoader.exe" "$dir/gamedata/SdvLoader.exe" || cp "$dir/SdvLoader.exe" "$dir/gamedata/"
+        cd "$dir/gamedata" && mono SdvLoader.exe
     fi
     echo "exit $?"
 } > "$log" 2>&1

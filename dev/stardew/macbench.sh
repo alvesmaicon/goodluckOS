@@ -4,6 +4,7 @@
 # 640x480, OpenAL Soft's null output). Update times track the console's CPU; draw times do not (llvmpipe).
 #   dev/stardew/macbench.sh setup                       arm64 Mono, OpenAL and lz4 shim into the work volume
 #   dev/stardew/macbench.sh run <name> [VAR=x...]       SDV_BENCH run, log in dev/out/stardew/results/mac-<name>.log
+#                                                       (through SdvLoader.exe; BENCH_LOADER=StardewValley.exe skips it)
 #   dev/stardew/macbench.sh aot                         copy of the runtime, port and game assemblies in the
 #                                                       work volume (virtiofs page faults are slow), AOT-compiled; then
 #                                                       BENCH_TREE=aot macbench.sh run|perf ... runs from it
@@ -82,6 +83,7 @@ run() {
     Xvfb :9 -screen 0 640x480x24 -nolisten tcp 2>/dev/null &
     sleep 1
     (while sleep 20; do import -window root "$R/mac-$name.png" 2>/dev/null; done) &
+    cmp -s "$P/SdvLoader.exe" "$G/SdvLoader.exe" || cp "$P/SdvLoader.exe" "$G/"
     cd "$G"
     : > "$log"
     # PERF_WINDOW=load records from the title to the loaded save instead of the measured minute
@@ -99,7 +101,7 @@ run() {
     ) &
     {
         echo "mac $name $(date '+%F %T') rev $BENCH_REV, other containers $BENCH_OTHERS, $*"
-        timeout -s QUIT -k 10 "${BENCH_TIMEOUT:-420}" "$M/mono/bin/mono" ${BENCH_LOADER:+"$P/$BENCH_LOADER"} StardewValley.exe ||
+        timeout -s QUIT -k 10 "${BENCH_TIMEOUT:-420}" "$M/mono/bin/mono" ${BENCH_LOADER:-SdvLoader.exe} ||
             echo "exit $?"
         echo "ended $(date +%T)"
     } >> "$log" 2>&1

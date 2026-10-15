@@ -30,6 +30,66 @@ public static class StardewPatches
 		Probe.Harmony = harmony;
 	}
 
+	// Before Program.Main (SdvLoader.exe): SaveGame's static constructor builds five XmlSerializers by reflection and
+	// Reflection.Emit, ~60 s on the A33, and reading a save through them took ~54 s more. With the pregenerated
+	// StardewValley.XmlSerializers.dll (build.sh xmlgen, byte-identical output) next to the game, those constructors
+	// are skipped and the generated serializers take their place; on any failure the game's own are built instead.
+	public static void Early()
+	{
+		string path = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "StardewValley.XmlSerializers.dll");
+		if (!System.IO.File.Exists(path))
+			return;
+		Stopwatch w = Stopwatch.StartNew();
+		Harmony harmony = new Harmony("goodluckos.early");
+		try {
+			EarlySerializers.Contract = (System.Xml.Serialization.XmlSerializerImplementation)Activator.CreateInstance(
+				Assembly.LoadFrom(path).GetType("Microsoft.Xml.Serialization.GeneratedAssembly.XmlSerializerContract", true));
+			harmony.Patch(typeof(System.Xml.Serialization.XmlSerializer).GetConstructor(new[] { typeof(Type), typeof(Type[]) }),
+				new HarmonyMethod(typeof(EarlySerializers).GetMethod("Prefix", BindingFlags.Static | BindingFlags.NonPublic)));
+			System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(SaveGame).TypeHandle);
+		} catch (Exception e) {
+			Console.WriteLine("Early: {0}", e.Message);
+		} finally {
+			harmony.UnpatchAll("goodluckos.early");
+		}
+		int n = 0;
+		foreach (FieldInfo f in typeof(SaveGame).GetFields(BindingFlags.Public | BindingFlags.Static)) {
+			object s = f.GetValue(null);
+			Type[] types;
+			if (s == null || !EarlySerializers.Skipped.TryGetValue(s, out types))
+				continue;
+			try {
+				f.SetValue(null, EarlySerializers.Contract.GetSerializer(types[0]));
+				n++;
+			} catch (Exception e) {
+				Console.WriteLine("Early: {0} uses the game's serializer: {1}", f.Name, e.Message);
+				Type[] extra = new Type[types.Length - 1];
+				Array.Copy(types, 1, extra, 0, extra.Length);
+				f.SetValue(null, new System.Xml.Serialization.XmlSerializer(types[0], extra));
+			}
+		}
+		Console.WriteLine("Early: {0} pregenerated save serializers in {1} ms", n, w.ElapsedMilliseconds);
+	}
+
+	private static class EarlySerializers
+	{
+		public static System.Xml.Serialization.XmlSerializerImplementation Contract;
+		// skipped constructor -> its type followed by its extra types
+		public static readonly Dictionary<object, Type[]> Skipped = new Dictionary<object, Type[]>();
+
+		private static bool Prefix(object __instance, Type type, Type[] extraTypes)
+		{
+			if (!Contract.CanSerialize(type))
+				return true;
+			Type[] types = new Type[1 + (extraTypes == null ? 0 : extraTypes.Length)];
+			types[0] = type;
+			if (extraTypes != null)
+				extraTypes.CopyTo(types, 1);
+			Skipped[__instance] = types;
+			return false;
+		}
+	}
+
 	private static float getScreenRatio()
 	{
 		float hratio = (float)Game1.game1.Window.ClientBounds.Height / 768f;
@@ -606,6 +666,67 @@ public static class StardewPatches
 		}
 	}
 
+	// SDV_XMLCHECK=<StardewValley.XmlSerializers.dll> (bench): read the bench save and its SaveGameInfo with the game's
+	// own serializers and the pregenerated ones, write each result with both, and compare the bytes
+	private static class XmlCheck
+	{
+		public static void Run(string slot)
+		{
+			string path = Environment.GetEnvironmentVariable("SDV_XMLCHECK");
+			if (string.IsNullOrEmpty(path))
+				return;
+			var contract = (System.Xml.Serialization.XmlSerializerImplementation)Activator.CreateInstance(Assembly.LoadFrom(path)
+				.GetType("Microsoft.Xml.Serialization.GeneratedAssembly.XmlSerializerContract"));
+			string dir = System.IO.Path.Combine(Program.GetSavesFolder(), slot);
+			Compare("SaveGame", System.IO.Path.Combine(dir, slot), SaveGame.serializer, contract.GetSerializer(typeof(SaveGame)));
+			Compare("Farmer", System.IO.Path.Combine(dir, "SaveGameInfo"), SaveGame.farmerSerializer, contract.GetSerializer(typeof(Farmer)));
+		}
+
+		static void Compare(string name, string file, System.Xml.Serialization.XmlSerializer game, System.Xml.Serialization.XmlSerializer generated)
+		{
+			Stopwatch w = Stopwatch.StartNew();
+			object a = Read(game, file);
+			long readGame = w.ElapsedMilliseconds;
+			w.Restart();
+			object b = Read(generated, file);
+			long readGenerated = w.ElapsedMilliseconds;
+			// a fresh object for each write: writing has side effects (Quest.questTitle localizes and keeps _questTitle)
+			byte[] aa = Write(game, a), ab = Write(generated, Read(game, file)), ba = Write(game, b),
+				bb = Write(generated, Read(generated, file));
+			Console.WriteLine("xmlcheck {0}: read {1} ms (game) {2} ms (generated), {3} bytes, equal {4} {5} {6}", name, readGame,
+				readGenerated, aa.Length, Same(aa, ab), Same(aa, ba), Same(aa, bb));
+			string keep = Environment.GetEnvironmentVariable("SDV_XMLCHECK_KEEP");
+			if (!string.IsNullOrEmpty(keep)) {
+				System.IO.File.WriteAllBytes(System.IO.Path.Combine(keep, name + "-game.xml"), aa);
+				System.IO.File.WriteAllBytes(System.IO.Path.Combine(keep, name + "-generated.xml"), ab);
+			}
+		}
+
+		static object Read(System.Xml.Serialization.XmlSerializer s, string file)
+		{
+			using (var stream = System.IO.File.OpenRead(file))
+				return s.Deserialize(stream);
+		}
+
+		static byte[] Write(System.Xml.Serialization.XmlSerializer s, object o)
+		{
+			var stream = new System.IO.MemoryStream();
+			using (var writer = System.Xml.XmlWriter.Create(stream, new System.Xml.XmlWriterSettings { CloseOutput = false }))
+				s.Serialize(writer, o);
+			return stream.ToArray();
+		}
+
+		static bool Same(byte[] x, byte[] y)
+		{
+			if (x.Length != y.Length)
+				return false;
+			for (int i = 0; i < x.Length; i++)
+				if (x[i] != y[i])
+					return false;
+			return true;
+		}
+	}
+
 	// SDV_BENCH=<save folder>[,<warm-up s>,<measured s>]: from the title, load that save, warp to the farmhouse
 	// porch and stand still, then print one "bench" line (stats columns), the probes and the peak RSS, and exit
 	// (Environment.Exit, so that mono --stats prints; the game's own exit kills the process).
@@ -680,6 +801,7 @@ public static class StardewPatches
 						Game1.options.desiredBaseZoomLevel = zoom;
 					Log(string.Format("loaded after {0:F0} s ({1:F0} s CPU), warp to Farm {2},{3}", Uptime(), CpuTime(), door.X, door.Y));
 					Probe.Totals("loadprobe");
+					XmlCheck.Run(Slot);
 					Game1.warpFarmer("Farm", door.X, door.Y, 2);
 					step = 2;
 				}

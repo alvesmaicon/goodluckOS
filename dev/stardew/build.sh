@@ -7,6 +7,9 @@
 #   dev/stardew/build.sh game     dev/out/stardew/gamedata from your own game (SDV_GAME, default: Steam on macOS)
 #   dev/stardew/build.sh smoke    run Mono armhf under qemu-arm (no display): assemblies and native libs load
 #   dev/stardew/build.sh patches  rebuild only stardew.sh, StardewPatches.dll, SVLoader.exe and SdvIcon.exe
+#   dev/stardew/build.sh xmlgen   StardewValley.XmlSerializers.dll (+ its AOT image) in gamedata: the save's
+#                                 serializers pregenerated from your game, installed by SdvLoader before the game
+#                                 starts (the console builds them at run time in ~60 s and reads saves ~3x slower)
 #   dev/stardew/build.sh aot      AOT-compile (Mono armhf under qemu-arm) the class libraries, the port's DLLs and
 #                                 the game's assemblies in gamedata: <assembly>.so next to each one. Not used: on
 #                                 the A33 it saved no startup time and cost 13% FPS (2026-10-15). With
@@ -140,6 +143,8 @@ build_patches() {
     cp "$HERE/stardew.sh" "$P/"
     mcs -nologo -optimize+ -out:"$P/SVLoader.exe" "$HERE/patches/SVLoader.cs"
     mcs -nologo -optimize+ -r:"$P/dlls/MonoGame.Framework.dll" -out:"$P/SdvIcon.exe" "$HERE/patches/SdvIcon.cs"
+    mcs -nologo -optimize+ -out:"$P/SdvLoader.exe" "$HERE/patches/SdvLoader.cs"
+    mcs -nologo -optimize+ -r:System.Xml -out:"$P/SdvXmlGen.exe" "$HERE/patches/SdvXmlGen.cs"
     if ! game_dirs 2>/dev/null; then
         echo "no game in SDV_GAME: PortMaster's StardewPatches.dll (built for 1.6.12) stays"
         return
@@ -192,6 +197,18 @@ build_aot() {
             echo "$(basename "$f"): failed, $(tail -1 "$BLD/aot-$(basename "$f").log")"
         fi
     done
+}
+
+# The serializer DLL is IL; its AOT image is fine here (one-off code, where AOT's slower steady state does not count)
+build_xmlgen() {
+    local m=$P/mono g=/repo/dev/out/stardew/gamedata f
+    f=$g/StardewValley.XmlSerializers.dll
+    export LD_LIBRARY_PATH=$P/lib:$m/lib MONO_PATH=$P/dlls:$P:$g HOME=/tmp
+    rm -f "$f" "$f.so"
+    (cd "$g" && qemu-arm "$m/bin/mono" "$P/SdvXmlGen.exe" "$g")
+    qemu-arm "$m/bin/mono" -O=all --aot=tool-prefix=arm-linux-gnueabihf- "$f" > "$BLD/aot-xmlserializers.log" 2>&1
+    arm-linux-gnueabihf-strip --strip-debug "$f.so"
+    ls -la "$f" "$f.so"
 }
 
 fetch_portmaster() {
@@ -252,5 +269,6 @@ case ${1:-build} in
     smoke) smoke ;;
     patches) build_patches ;;
     aot) mkdir -p "$BLD"; build_aot ;;
-    *) echo "usage: dev/stardew/build.sh [build|game|smoke|patches|aot]"; exit 1 ;;
+    xmlgen) mkdir -p "$BLD"; build_xmlgen ;;
+    *) echo "usage: dev/stardew/build.sh [build|game|smoke|patches|aot|xmlgen]"; exit 1 ;;
 esac
