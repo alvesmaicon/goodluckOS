@@ -1,9 +1,9 @@
 #!/bin/sh
-# One sample of a running soh.elf: CPU per thread, GPU time per frequency, temperatures and memory.
-# perf.sh [seconds] > HOME/logs/soh-perf.txt (run it with setsid nohup over serial; default 10 s)
+# One sample of a running soh.elf or 2s2h.elf: CPU per thread, GPU time per frequency, temperatures and memory.
+# perf.sh [seconds] > HOME/logs/<port>-perf.txt (run it with setsid nohup over serial; default 10 s)
 s=${1:-10}
-p=$(ps | grep -v grep | grep soh.elf | awk '{print $1}' | head -1)
-[ -n "$p" ] || { echo "soh.elf is not running"; exit 1; }
+p=$(ps | grep -v grep | grep -E 'soh\.elf|2s2h\.elf' | awk '{print $1}' | head -1)
+[ -n "$p" ] || { echo "neither soh.elf nor 2s2h.elf is running"; exit 1; }
 gpu=$(ls -d /sys/class/devfreq/*gpu* 2>/dev/null | head -1)
 ticks() { for t in /proc/$p/task/*; do echo "${t##*/} $(tr ' ' _ < $t/comm) $(cut -d' ' -f14,15 $t/stat)"; done; }
 date
