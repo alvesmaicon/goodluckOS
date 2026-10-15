@@ -17,17 +17,25 @@ mobs (mobs_redo)
 mobs_animal
   https://codeberg.org/tenplus1/mobs_animal, commit @MOBS_ANIMAL_VERSION@
   Code MIT; media CC0, WTFPL, MIT, CC BY-SA 3.0: mods/mobs_animal/license.txt
-  Replaced: the sheep's four textures (mobs_sheep_base, _horns, _shaved,
-  _wool), CC BY-NC-SA 4.0 (non-commercial use only), and its uncredited
-  egg icon mobs_sheep_inv.png, by goodluckOS's own for the same model.
-  Left out: the rat's model, textures and sounds. Its credits give the license
-  only as "CCPL", with no version, so the rat is off in this game's
-  minetest.conf.
+  Replaced by goodluckOS's own (see goodluck_* below): the sheep's four
+  textures, CC BY-NC-SA 4.0 (non-commercial use only); the rat's model and
+  textures, credited only as "CCPL" with no version; and every file its
+  credits don't name: the black and killer bunnies and the black kitten
+  (recoloured from the credited grey and white bunnies, CC0, and the striped
+  kitten, WTFPL), the egg icons, the cooked rat, and the beehive, butter,
+  chicken, fried egg, feather, milk, hairball, honey and rabbit hide items.
+  Left out: mobs_chicken_white.png, which nothing uses.
 
 mobs_monster
   https://codeberg.org/tenplus1/mobs_monster, commit @MOBS_MONSTER_VERSION@
   Code MIT; media CC0, WTFPL, MIT, CC BY-SA 3.0 and 4.0:
   mods/mobs_monster/license.txt
+  Replaced by goodluckOS's own: every file its credits don't name: the
+  third dungeon master, land guards 4 to 8 and oerkki 2 and 3 (recoloured
+  from the credited dungeon master and oerkki, WTFPL, and land guard, CC0),
+  the cobweb, the lava pick, the sand particles, and the fire spirit (an
+  empty image, as it was). mobs_spider.ogg is the sound mobs_animal's
+  license.txt credits: Cyberpangolin, WTFPL.
 
 stamina
   https://codeberg.org/tenplus1/stamina, commit @STAMINA_VERSION@
@@ -47,5 +55,6 @@ stamina
 Left out of mobs, mobs_animal, mobs_monster and stamina: screenshot.jpg, made
 on textstudio.com, whose terms are unclear. The game doesn't use them.
 
-goodluck_* mods, and the stamina_hud_* and mobs_sheep_* textures above
-  Code and pixel art made for goodluckOS, under goodluckOS's license, GPL-2.0.
+goodluck_* mods, and the stamina, mobs_animal and mobs_monster media above
+  Code, pixel art and the rat's model made for goodluckOS, under goodluckOS's
+  license, GPL-2.0.
