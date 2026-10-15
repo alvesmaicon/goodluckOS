@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Ship of Harkinian (Ocarina of Time) for HOME/ports/soh, without the game.
 #   dev/zelda/build.sh assets   soh.o2r, and oot.o2r from the roms in dev/out/zelda/roms (native asset tools)
-#   dev/zelda/build.sh soh      soh.elf for armhf
+#   dev/zelda/build.sh soh      soh.elf for armhf, with the GLES2 renderer (patches/lus)
 #   dev/zelda/build.sh libs     the libraries soh.elf needs that the console's rootfs lacks, into libs/
-#   dev/zelda/build.sh          all three
+#   dev/zelda/build.sh pack     launcher + assets/ into the folder, and dev/out/zelda/soh.tar for HOME/ports
+#   dev/zelda/build.sh shot [s] soh.elf under qemu-arm on Xvfb (llvmpipe, GLES2), screenshots in dev/out/zelda/shots
+#   dev/zelda/build.sh          assets, soh, libs and pack
 # Output in dev/out/zelda/soh. Runs in the goodluck-zelda image (dev/zelda/Dockerfile, on top of goodluck-dev).
 set -euo pipefail
 
@@ -38,6 +40,9 @@ source_tree() {
     local p
     for p in "$HERE"/patches/soh/*.patch; do
         git -C "$SRC" apply --reverse --check "$p" 2>/dev/null || git -C "$SRC" apply "$p"
+    done
+    for p in "$HERE"/patches/lus/*.patch; do
+        git -C "$SRC/libultraship" apply --reverse --check "$p" 2>/dev/null || git -C "$SRC/libultraship" apply "$p"
     done
 }
 
@@ -85,7 +90,7 @@ soh() {
     toolchain
     build_libzip
     cmake -S "$SRC" -B "$BLD/armhf" -G Ninja -DCMAKE_TOOLCHAIN_FILE="$BLD/armhf.cmake" -DCMAKE_PREFIX_PATH="$PREFIX" \
-        -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="$ARMFLAGS" -DCMAKE_CXX_FLAGS="$ARMFLAGS" -DUSE_OPENGLES=ON
+        -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="$ARMFLAGS" -DCMAKE_CXX_FLAGS="$ARMFLAGS" -DUSE_OPENGLES=ON -DUSE_GLES2=ON
     cmake --build "$BLD/armhf" -j "$JOBS" --target soh -- -k 0
     cp "$BLD/armhf/soh/soh.elf" "$OUT/"
     arm-linux-gnueabihf-strip "$OUT/soh.elf"
@@ -110,11 +115,42 @@ libs() {
     ls -l "$OUT/libs"
 }
 
+# The port folder as one tar for HOME/ports. SoH refuses to start without an assets/ folder beside it,
+# even with oot.o2r ready; the full one (the extractor's 120 MB of yml) only matters for extracting on the console.
+pack() {
+    cp "$HERE/soh.sh" "$OUT/"
+    mkdir -p "$OUT/assets"
+    cp "$SRC/soh/assets/yml/config.yml" "$OUT/assets/"
+    tar -cf /repo/dev/out/zelda/soh.tar -C "$(dirname "$OUT")" soh
+    ls -l /repo/dev/out/zelda/soh.tar
+}
+
+# soh.elf under qemu-arm on Xvfb, GLES2 on Mesa's llvmpipe: a screenshot every 30 s for $1 seconds
+shot() {
+    local secs=${1:-300} run=/tmp/soh-run shots=/repo/dev/out/zelda/shots t xvfb game
+    rm -rf "$run" "$shots"; mkdir -p "$run" "$shots"
+    cp "$OUT"/*.o2r "$run/"
+    Xvfb :9 -screen 0 1280x960x24 -nolisten tcp & xvfb=$!
+    sleep 1
+    (cd "$run" && SHIP_HOME=$run DISPLAY=:9 SDL_AUDIODRIVER=dummy QEMU_LD_PREFIX=/ \
+        exec qemu-arm "$OUT/soh.elf" > "$shots/soh.log" 2>&1) & game=$!
+    for ((t = 30; t <= secs; t += 30)); do
+        sleep 30
+        kill -0 $game 2>/dev/null || { echo "soh.elf exited before ${t}s"; break; }
+        DISPLAY=:9 import -window root "$shots/t$t.png"
+    done
+    kill -9 $game 2>/dev/null || true
+    kill $xvfb
+    ls "$shots"
+}
+
 source_tree
 case "${1:-all}" in
     assets) assets ;;
     soh) soh ;;
     libs) libs ;;
-    all) assets; soh; libs ;;
-    *) echo "usage: $0 [assets|soh|libs]" >&2; exit 1 ;;
+    pack) pack ;;
+    shot) shot "${2:-}" ;;
+    all) assets; soh; libs; pack ;;
+    *) echo "usage: $0 [assets|soh|libs|pack|shot [seconds]]" >&2; exit 1 ;;
 esac

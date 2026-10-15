@@ -1,0 +1,551 @@
+diff -ruN lus-a/cmake/dependencies/linux.cmake lus-b/cmake/dependencies/linux.cmake
+--- lus-a/cmake/dependencies/linux.cmake	2026-10-14 22:13:09
++++ lus-b/cmake/dependencies/linux.cmake	2026-10-14 22:13:24
+@@ -4,7 +4,11 @@
+ 
+ if (USE_OPENGLES)
+     target_link_libraries(ImGui PUBLIC ${OPENGL_GLESv2_LIBRARY})
+-    add_compile_definitions(IMGUI_IMPL_OPENGL_ES3)
++    if (USE_GLES2)
++        add_compile_definitions(IMGUI_IMPL_OPENGL_ES2)
++    else()
++        add_compile_definitions(IMGUI_IMPL_OPENGL_ES3)
++    endif()
+ else()
+     target_link_libraries(ImGui PUBLIC ${OPENGL_opengl_LIBRARY})
+ endif()
+diff -ruN lus-a/include/fast/backends/gfx_opengl.h lus-b/include/fast/backends/gfx_opengl.h
+--- lus-a/include/fast/backends/gfx_opengl.h	2026-10-14 22:13:09
++++ lus-b/include/fast/backends/gfx_opengl.h	2026-10-14 22:15:16
+@@ -16,6 +16,10 @@
+ #elif __APPLE__
+ #include <SDL2/SDL.h>
+ #include <GL/glew.h>
++#elif defined(USE_GLES2)
++#include <SDL2/SDL.h>
++#include <GLES2/gl2.h>
++#include <GLES2/gl2ext.h>
+ #elif USE_OPENGLES
+ #include <SDL2/SDL.h>
+ #include <GLES3/gl3.h>
+@@ -109,6 +113,16 @@
+     void SetUniforms(ShaderProgram* prg) const;
+     std::string BuildFsShader(const CCFeatures& cc_features);
+     void SetPerDrawUniforms();
++#ifdef USE_GLES2
++    void DrawTextureToFramebuffer(GLuint tex, int texW, int texH, int srcX0, int srcY0, int srcX1, int srcY1,
++                                  const FramebufferOGL& dst, int dstX0, int dstY0, int dstX1, int dstY1);
++
++    GLuint mBlitProgram = 0;
++    GLint mBlitPosLocation = -1;
++    GLint mBlitUvLocation = -1;
++    GLuint mBlitTmpTexture = 0;
++    GLenum mDepthFormat = GL_DEPTH_COMPONENT16;
++#endif
+ 
+     std::vector<TextureInfo> textures;
+     GLuint mCurrentTextureIds[SHADER_MAX_TEXTURES] = {};
+diff -ruN lus-a/src/CMakeLists.txt lus-b/src/CMakeLists.txt
+--- lus-a/src/CMakeLists.txt	2026-10-14 22:13:09
++++ lus-b/src/CMakeLists.txt	2026-10-14 22:13:23
+@@ -11,6 +11,7 @@
+ 
+ set(INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../include)
+ option(USE_OPENGLES "Enable GLES3" OFF)
++option(USE_GLES2 "With USE_OPENGLES, target GLES2 instead of GLES3" OFF)
+ option(GFX_DEBUG_DISASSEMBLER "Enable libgfxd" OFF)
+ 
+ if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+@@ -208,6 +209,7 @@
+         $<$<NOT:$<CONFIG:Debug>>:NDEBUG>
+         SPDLOG_ACTIVE_LEVEL=${SPDLOG_MIN_CUTOFF}
+         $<$<BOOL:${USE_OPENGLES}>:USE_OPENGLES>
++        $<$<BOOL:${USE_GLES2}>:USE_GLES2>
+         $<$<BOOL:${GFX_DEBUG_DISASSEMBLER}>:GFX_DEBUG_DISASSEMBLER>
+     )
+ endif()
+diff -ruN lus-a/src/fast/Fast3dGui.cpp lus-b/src/fast/Fast3dGui.cpp
+--- lus-a/src/fast/Fast3dGui.cpp	2026-10-14 22:13:09
++++ lus-b/src/fast/Fast3dGui.cpp	2026-10-14 22:13:40
+@@ -146,6 +146,8 @@
+         case WindowBackend::FAST3D_SDL_OPENGL:
+ #ifdef __APPLE__
+             ImGui_ImplOpenGL3_Init("#version 410 core");
++#elif defined(USE_GLES2)
++            ImGui_ImplOpenGL3_Init("#version 100");
+ #elif USE_OPENGLES
+             ImGui_ImplOpenGL3_Init("#version 300 es");
+ #else
+diff -ruN lus-a/src/fast/backends/gfx_opengl.cpp lus-b/src/fast/backends/gfx_opengl.cpp
+--- lus-a/src/fast/backends/gfx_opengl.cpp	2026-10-14 22:13:09
++++ lus-b/src/fast/backends/gfx_opengl.cpp	2026-10-14 22:17:08
+@@ -4,6 +4,7 @@
+ #include <stdint.h>
+ #include <stdbool.h>
+ #include <stdio.h>
++#include <string.h>
+ 
+ #include <map>
+ #include <unordered_map>
+@@ -27,6 +28,12 @@
+ #include "fast/interpreter.h"
+ #include "ship/config/ConsoleVariable.h"
+ 
++#ifdef USE_GLES2
++// GLES2 takes unsized texture formats
++#define GL_RGBA8 GL_RGBA
++#define GL_RGB8 GL_RGB
++#endif
++
+ namespace Fast {
+ int GfxRenderingAPIOGL::GetMaxTextureSize() {
+     GLint max_texture_size;
+@@ -280,6 +287,11 @@
+         { "SHADER_NOISE", SHADER_NOISE },
+         { "o_three_point_filtering", mCurrentFilterMode == FILTER_THREE_POINT },
+         { "append_formula", (InvokeFunc)append_formula },
++#ifdef USE_GLES2
++        { "gles2", true },
++#else
++        { "gles2", false },
++#endif
+ #ifdef __APPLE__
+         { "GLSL_VERSION", "#version 410 core" },
+         { "attr", "in" },
+@@ -287,6 +299,13 @@
+         { "core_opengl", true },
+         { "texture", "texture" },
+         { "vOutColor", "vOutColor" },
++#elif defined(USE_GLES2)
++        { "GLSL_VERSION", "#version 100\nprecision mediump float;" },
++        { "attr", "varying" },
++        { "opengles", true },
++        { "core_opengl", false },
++        { "texture", "texture2D" },
++        { "vOutColor", "gl_FragColor" },
+ #elif defined(USE_OPENGLES)
+         { "GLSL_VERSION", "#version 300 es\nprecision mediump float;" },
+         { "attr", "in" },
+@@ -351,11 +370,21 @@
+                                      { "o_alpha", cc_features.opt_alpha },
+                                      { "o_inputs", cc_features.numInputs },
+                                      { "update_floats", (InvokeFunc)UpdateFloats },
++#ifdef USE_GLES2
++                                     { "gles2", true },
++#else
++                                     { "gles2", false },
++#endif
+ #ifdef __APPLE__
+                                      { "GLSL_VERSION", "#version 410 core" },
+                                      { "attr", "in" },
+                                      { "out", "out" },
+                                      { "opengles", false }
++#elif defined(USE_GLES2)
++                                     { "GLSL_VERSION", "#version 100" },
++                                     { "attr", "attribute" },
++                                     { "out", "varying" },
++                                     { "opengles", true }
+ #elif defined(USE_OPENGLES)
+                                      { "GLSL_VERSION", "#version 300 es" },
+                                      { "attr", "in" },
+@@ -420,9 +449,9 @@
+         GLint max_length = 0;
+         glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, &max_length);
+         char error_log[1024];
+-        // fprintf(stderr, "Vertex shader compilation failed\n");
+-        glGetShaderInfoLog(vertex_shader, max_length, &max_length, &error_log[0]);
+-        // fprintf(stderr, "%s\n", &error_log[0]);
++        fprintf(stderr, "Vertex shader compilation failed\n");
++        glGetShaderInfoLog(vertex_shader, sizeof(error_log), &max_length, &error_log[0]);
++        fprintf(stderr, "%s\n%s\n", &error_log[0], vs_buf.c_str());
+         abort();
+     }
+ 
+@@ -435,8 +464,8 @@
+         glGetShaderiv(fragment_shader, GL_INFO_LOG_LENGTH, &max_length);
+         char error_log[1024];
+         fprintf(stderr, "Fragment shader compilation failed\n");
+-        glGetShaderInfoLog(fragment_shader, max_length, &max_length, &error_log[0]);
+-        fprintf(stderr, "%s\n", &error_log[0]);
++        glGetShaderInfoLog(fragment_shader, sizeof(error_log), &max_length, &error_log[0]);
++        fprintf(stderr, "%s\n%s\n", &error_log[0], fs_buf.c_str());
+         abort();
+     }
+ 
+@@ -444,6 +473,13 @@
+     glAttachShader(shader_program, vertex_shader);
+     glAttachShader(shader_program, fragment_shader);
+     glLinkProgram(shader_program);
++    glGetProgramiv(shader_program, GL_LINK_STATUS, &success);
++    if (!success) {
++        char error_log[1024];
++        glGetProgramInfoLog(shader_program, sizeof(error_log), nullptr, &error_log[0]);
++        fprintf(stderr, "Shader program link failed\n%s\n%s\n%s\n", &error_log[0], vs_buf.c_str(), fs_buf.c_str());
++        abort();
++    }
+ 
+     size_t cnt = 0;
+ 
+@@ -583,7 +619,10 @@
+     textures[mCurrentTextureIds[mCurrentTile]].height = height;
+ }
+ 
+-#ifdef USE_OPENGLES
++#ifdef USE_GLES2
++// No mirror-once on GLES2; the shader still clamps
++#define GL_MIRROR_CLAMP_TO_EDGE GL_MIRRORED_REPEAT
++#elif defined(USE_OPENGLES)
+ #define GL_MIRROR_CLAMP_TO_EDGE 0x8743
+ #endif
+ 
+@@ -715,7 +754,7 @@
+     glGenBuffers(1, &mOpenglVbo);
+     glBindBuffer(GL_ARRAY_BUFFER, mOpenglVbo);
+ 
+-#if defined(__APPLE__) || defined(USE_OPENGLES)
++#if defined(__APPLE__) || (defined(USE_OPENGLES) && !defined(USE_GLES2))
+     glGenVertexArrays(1, &mOpenglVao);
+     glBindVertexArray(mOpenglVao);
+ #endif
+@@ -728,6 +767,18 @@
+ 
+     mFrameBuffers.resize(1); // for the default screen buffer
+ 
++#ifdef USE_GLES2
++    const char* extensions = (const char*)glGetString(GL_EXTENSIONS);
++    if (extensions != nullptr && strstr(extensions, "GL_OES_packed_depth_stencil") != nullptr) {
++        mDepthFormat = GL_DEPTH24_STENCIL8_OES;
++    } else if (extensions != nullptr && strstr(extensions, "GL_OES_depth24") != nullptr) {
++        mDepthFormat = GL_DEPTH_COMPONENT24_OES;
++    }
++    GLint maxVaryings = 0;
++    glGetIntegerv(GL_MAX_VARYING_VECTORS, &maxVaryings);
++    SPDLOG_INFO("GLES2: {}, {}, depth format 0x{:x}, {} varyings", (const char*)glGetString(GL_RENDERER),
++                (const char*)glGetString(GL_VERSION), mDepthFormat, maxVaryings);
++#else
+     glGenRenderbuffers(1, &mPixelDepthRb);
+     glBindRenderbuffer(GL_RENDERBUFFER, mPixelDepthRb);
+     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 1, 1);
+@@ -741,6 +792,7 @@
+     mPixelDepthRbSize = 1;
+ 
+     glGetIntegerv(GL_MAX_SAMPLES, &mMaxMsaaLevel);
++#endif
+ }
+ 
+ void GfxRenderingAPIOGL::OnResize() {
+@@ -764,6 +816,11 @@
+     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
++#ifdef USE_GLES2
++    // A non-power-of-two texture is incomplete with GL_REPEAT on GLES2
++    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
++    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
++#endif
+     glBindTexture(GL_TEXTURE_2D, 0);
+ 
+     GLuint clrbufMsaa;
+@@ -772,7 +829,11 @@
+     GLuint rbo;
+     glGenRenderbuffers(1, &rbo);
+     glBindRenderbuffer(GL_RENDERBUFFER, rbo);
++#ifdef USE_GLES2
++    glRenderbufferStorage(GL_RENDERBUFFER, mDepthFormat, 1, 1);
++#else
+     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 1, 1);
++#endif
+     glBindRenderbuffer(GL_RENDERBUFFER, 0);
+ 
+     GLuint fbo;
+@@ -802,6 +863,12 @@
+ 
+     if (fb_id != 0) {
+         if (fb.width != width || fb.height != height || fb.msaa_level != msaa_level) {
++#ifdef USE_GLES2
++            glBindTexture(GL_TEXTURE_2D, fb.clrbuf);
++            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
++            glBindTexture(GL_TEXTURE_2D, 0);
++            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fb.clrbuf, 0);
++#else
+             if (msaa_level <= 1) {
+                 glBindTexture(GL_TEXTURE_2D, fb.clrbuf);
+                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+@@ -813,24 +880,40 @@
+                 glBindRenderbuffer(GL_RENDERBUFFER, 0);
+                 glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, fb.clrbufMsaa);
+             }
++#endif
+         }
+ 
+         if (has_depth_buffer &&
+             (fb.width != width || fb.height != height || fb.msaa_level != msaa_level || !fb.has_depth_buffer)) {
+             glBindRenderbuffer(GL_RENDERBUFFER, fb.rbo);
++#ifdef USE_GLES2
++            glRenderbufferStorage(GL_RENDERBUFFER, mDepthFormat, width, height);
++#else
+             if (msaa_level <= 1) {
+                 glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+             } else {
+                 glRenderbufferStorageMultisample(GL_RENDERBUFFER, msaa_level, GL_DEPTH24_STENCIL8, width, height);
+             }
++#endif
+             glBindRenderbuffer(GL_RENDERBUFFER, 0);
+         }
+ 
++#ifdef USE_GLES2
++        // No GL_DEPTH_STENCIL_ATTACHMENT on GLES2: a packed buffer goes on both points
++        if (fb.has_depth_buffer != has_depth_buffer) {
++            const GLuint rb = has_depth_buffer ? fb.rbo : 0;
++            glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rb);
++            if (mDepthFormat == GL_DEPTH24_STENCIL8_OES) {
++                glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rb);
++            }
++        }
++#else
+         if (!fb.has_depth_buffer && has_depth_buffer) {
+             glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, fb.rbo);
+         } else if (fb.has_depth_buffer && !has_depth_buffer) {
+             glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, 0);
+         }
++#endif
+     }
+ 
+     fb.width = width;
+@@ -885,6 +968,10 @@
+ }
+ 
+ void GfxRenderingAPIOGL::ResolveMSAAColorBuffer(int fb_id_target, int fb_id_source) {
++#ifdef USE_GLES2
++    // No MSAA on GLES2, so nothing to resolve
++    return;
++#else
+     FramebufferOGL& fb_dst = mFrameBuffers[fb_id_target];
+     FramebufferOGL& fb_src = mFrameBuffers[fb_id_source];
+     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fb_dst.fbo);
+@@ -904,8 +991,92 @@
+         mLastScissorEnabled = 1;
+         glEnable(GL_SCISSOR_TEST);
+     }
++#endif
+ }
+ 
++#ifdef USE_GLES2
++// GLES2 has no glBlitFramebuffer: copy by drawing the source texture as a quad
++void GfxRenderingAPIOGL::DrawTextureToFramebuffer(GLuint tex, int texW, int texH, int srcX0, int srcY0, int srcX1,
++                                                  int srcY1, const FramebufferOGL& dst, int dstX0, int dstY0,
++                                                  int dstX1, int dstY1) {
++    if (mBlitProgram == 0) {
++        static const char* vs = "#version 100\n"
++                                "attribute vec2 aPos;\n"
++                                "attribute vec2 aUv;\n"
++                                "varying vec2 vUv;\n"
++                                "void main() { vUv = aUv; gl_Position = vec4(aPos, 0.0, 1.0); }\n";
++        static const char* fs = "#version 100\n"
++                                "precision mediump float;\n"
++                                "uniform sampler2D uTex;\n"
++                                "varying vec2 vUv;\n"
++                                "void main() { gl_FragColor = texture2D(uTex, vUv); }\n";
++        GLuint v = glCreateShader(GL_VERTEX_SHADER);
++        glShaderSource(v, 1, &vs, nullptr);
++        glCompileShader(v);
++        GLuint f = glCreateShader(GL_FRAGMENT_SHADER);
++        glShaderSource(f, 1, &fs, nullptr);
++        glCompileShader(f);
++        mBlitProgram = glCreateProgram();
++        glAttachShader(mBlitProgram, v);
++        glAttachShader(mBlitProgram, f);
++        glLinkProgram(mBlitProgram);
++        glDeleteShader(v);
++        glDeleteShader(f);
++        mBlitPosLocation = glGetAttribLocation(mBlitProgram, "aPos");
++        mBlitUvLocation = glGetAttribLocation(mBlitProgram, "aUv");
++    }
++
++    const float u0 = (float)srcX0 / texW, u1 = (float)srcX1 / texW;
++    const float v0 = (float)srcY0 / texH, v1 = (float)srcY1 / texH;
++    const float x0 = 2.0f * dstX0 / dst.width - 1.0f, x1 = 2.0f * dstX1 / dst.width - 1.0f;
++    const float y0 = 2.0f * dstY0 / dst.height - 1.0f, y1 = 2.0f * dstY1 / dst.height - 1.0f;
++    const float quad[] = { x0, y0, u0, v0, x1, y0, u1, v0, x0, y1, u0, v1, x1, y1, u1, v1 };
++
++    GLint viewport[4];
++    glGetIntegerv(GL_VIEWPORT, viewport);
++    const GLboolean depthTest = glIsEnabled(GL_DEPTH_TEST);
++    const GLboolean blend = glIsEnabled(GL_BLEND);
++    const GLboolean polygonOffset = glIsEnabled(GL_POLYGON_OFFSET_FILL);
++    ShaderProgram* prg = mLastLoadedShader;
++    UnloadShader(prg);
++
++    glBindFramebuffer(GL_FRAMEBUFFER, dst.fbo);
++    glViewport(0, 0, dst.width, dst.height);
++    glDisable(GL_DEPTH_TEST);
++    glDisable(GL_BLEND);
++    glDisable(GL_POLYGON_OFFSET_FILL);
++    glActiveTexture(GL_TEXTURE0);
++    glBindTexture(GL_TEXTURE_2D, tex);
++    glUseProgram(mBlitProgram);
++    glBufferData(GL_ARRAY_BUFFER, sizeof(quad), quad, GL_STREAM_DRAW);
++    glEnableVertexAttribArray(mBlitPosLocation);
++    glVertexAttribPointer(mBlitPosLocation, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
++    glEnableVertexAttribArray(mBlitUvLocation);
++    glVertexAttribPointer(mBlitUvLocation, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
++    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
++    glDisableVertexAttribArray(mBlitPosLocation);
++    glDisableVertexAttribArray(mBlitUvLocation);
++
++    glBindTexture(GL_TEXTURE_2D, mLastBoundTextures[0]);
++    mLastActiveTexture = 0;
++    glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
++    if (depthTest) {
++        glEnable(GL_DEPTH_TEST);
++    }
++    if (blend) {
++        glEnable(GL_BLEND);
++    }
++    if (polygonOffset) {
++        glEnable(GL_POLYGON_OFFSET_FILL);
++    }
++    if (prg != nullptr) {
++        LoadShader(prg);
++    } else {
++        glUseProgram(0);
++    }
++}
++#endif
++
+ void* GfxRenderingAPIOGL::GetFramebufferTextureId(int fb_id) {
+     return (void*)(uintptr_t)mFrameBuffers[fb_id].clrbuf;
+ }
+@@ -950,6 +1121,35 @@
+         glDisable(GL_SCISSOR_TEST);
+     }
+ 
++#ifdef USE_GLES2
++    GLuint tex = src.clrbuf;
++    int texW = src.width, texH = src.height;
++    if (fb_src_id == 0) {
++        // The window has no texture to draw from: copy the region into one first
++        const int x = std::min(srcX0, srcX1), y = std::min(srcY0, srcY1);
++        texW = std::abs(srcX1 - srcX0);
++        texH = std::abs(srcY1 - srcY0);
++        if (mBlitTmpTexture == 0) {
++            glGenTextures(1, &mBlitTmpTexture);
++            glBindTexture(GL_TEXTURE_2D, mBlitTmpTexture);
++            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
++            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
++            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
++            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
++        }
++        glBindFramebuffer(GL_FRAMEBUFFER, 0);
++        glActiveTexture(GL_TEXTURE0);
++        glBindTexture(GL_TEXTURE_2D, mBlitTmpTexture);
++        glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, x, y, texW, texH, 0);
++        tex = mBlitTmpTexture;
++        srcX0 -= x;
++        srcX1 -= x;
++        srcY0 -= y;
++        srcY1 -= y;
++    }
++    DrawTextureToFramebuffer(tex, texW, texH, srcX0, srcY0, srcX1, srcY1, dst, dstX0, dstY0, dstX1, dstY1);
++    glBindFramebuffer(GL_FRAMEBUFFER, mFrameBuffers[mCurrentFrameBuffer].fbo);
++#else
+     // For msaa enabled buffers we can't perform a scaled blit to a simple sample buffer
+     // First do an unscaled blit to a msaa resolved buffer
+     if (src.height != dst.height && src.width != dst.width && src.msaa_level > 1) {
+@@ -988,6 +1188,7 @@
+     glBindFramebuffer(GL_FRAMEBUFFER, mFrameBuffers[mCurrentFrameBuffer].fbo);
+ 
+     glReadBuffer(GL_BACK);
++#endif
+ 
+     if (mLastScissorEnabled != 1) {
+         mLastScissorEnabled = 1;
+@@ -1024,6 +1225,13 @@
+ GfxRenderingAPIOGL::GetPixelDepth(int fb_id, const std::set<std::pair<float, float>>& coordinates) {
+     std::unordered_map<std::pair<float, float>, uint16_t, hash_pair_ff> res;
+ 
++#ifdef USE_GLES2
++    // No depth readback on GLES2: report the cleared value, so nothing counts as hidden
++    for (const auto& coord : coordinates) {
++        res.emplace(coord, 0xFFFC);
++    }
++    return res;
++#else
+     FramebufferOGL& fb = mFrameBuffers[fb_id];
+ 
+     // When looking up one value and the framebuffer is single-sampled, we can read pixels directly
+@@ -1087,6 +1295,7 @@
+     glBindFramebuffer(GL_FRAMEBUFFER, mCurrentFrameBuffer);
+ 
+     return res;
++#endif
+ }
+ 
+ void GfxRenderingAPIOGL::SetTextureFilter(FilteringMode mode) {
+diff -ruN lus-a/src/fast/backends/gfx_sdl2.cpp lus-b/src/fast/backends/gfx_sdl2.cpp
+--- lus-a/src/fast/backends/gfx_sdl2.cpp	2026-10-14 22:13:09
++++ lus-b/src/fast/backends/gfx_sdl2.cpp	2026-10-14 22:13:26
+@@ -350,6 +350,10 @@
+     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
++#elif defined(USE_GLES2)
++    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
++    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
++    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+ #endif
+ 
+ #ifdef _WIN32
+diff -ruN lus-a/src/fast/shaders/opengl/default.shader.glsl lus-b/src/fast/shaders/opengl/default.shader.glsl
+--- lus-a/src/fast/shaders/opengl/default.shader.glsl	2026-10-14 22:13:09
++++ lus-b/src/fast/shaders/opengl/default.shader.glsl	2026-10-14 22:17:30
+@@ -75,12 +75,14 @@
+         @end
+         gl_Position = aVtxPos;
+         @if(opengles)
+-            gl_Position.z *= 0.3f;
++            gl_Position.z *= 0.3;
+         @end
+     }
+ @else
+     @if(core_opengl || opengles)
++        @if(!gles2)
+     out vec4 vOutColor;
++        @end
+     @end
+ 
+     @for(i in 0..2)
+@@ -141,7 +143,11 @@
+         bvec3 cutoff = lessThan(linearRGB.rgb, vec3(0.0031308));
+         vec3 higher = vec3(1.055)*pow(linearRGB.rgb, vec3(1.0/2.4)) - vec3(0.055);
+         vec3 lower = linearRGB.rgb * vec3(12.92);
++    @if(gles2)
++        return vec4(mix(higher, lower, vec3(cutoff)), linearRGB.a);
++    @else
+         return vec4(mix(higher, lower, cutoff), linearRGB.a);
++    @end
+     }
+ 
+     vec4 filter3point(in sampler2D tex, in vec2 texCoord, in vec2 texSize) {
+@@ -187,7 +193,9 @@
+                 vec4 texVal@{i} = hookTexture2D(@{i}, uTex@{i}, vTexCoordAdj@{i}, texSize@{i});
+ 
+                 @if(o_masks[i])
+-                    @if(opengles) 
++                    @if(gles2)
++                        vec2 maskSize@{i} = texSize@{i};
++                    @elseif(opengles)
+                         vec2 maskSize@{i} = vec2(textureSize(uTexMask@{i}, 0));
+                     @else 
+                         vec2 maskSize@{i} = textureSize(uTexMask@{i}, 0);
+@@ -291,7 +299,9 @@
+         @end
+ 
+         @if(o_prim_depth)
++            @if(!gles2)
+             gl_FragDepth = prim_depth;
++            @end
+         @end
+     }
+ @end
+\ No newline at end of file

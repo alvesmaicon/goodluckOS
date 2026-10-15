@@ -1,0 +1,5 @@
+[ENTRY]
+CATEGORY=Games
+NAME=Ocarina of Time
+DESCRIPTION=Ship of Harkinian, from your own rom
+COMMAND=sh /home/player/ports/soh/soh.sh
