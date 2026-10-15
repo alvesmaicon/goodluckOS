@@ -15,7 +15,7 @@ IMAGE=goodluck-zelda
 
 if [ ! -f /.dockerenv ]; then
     docker image inspect $IMAGE >/dev/null 2>&1 || docker build -t $IMAGE "$HERE"
-    exec docker run --rm -i -v "$REPO:/repo" -v goodluck-work:/work -e GL_JOBS $IMAGE /repo/dev/zelda/build.sh "$@"
+    exec docker run --rm -i -v "$REPO:/repo" -v goodluck-work:/work -e GL_JOBS -e SOH_ELF -e SHOTS -e SOH_GLES2 $IMAGE /repo/dev/zelda/build.sh "$@"
 fi
 
 W=/work/zelda
@@ -37,12 +37,17 @@ source_tree() {
     [ -d "$SRC" ] || git clone -q --depth 1 --branch $SOH_TAG https://github.com/HarbourMasters/Shipwright.git "$SRC"
     [ "$(git -C "$SRC" rev-parse --short=8 HEAD)" = $SOH_REV ] || { echo "SoH is not at $SOH_REV" >&2; exit 1; }
     git -C "$SRC" submodule update --init --depth 1 -q
-    local p
-    for p in "$HERE"/patches/soh/*.patch; do
-        git -C "$SRC" apply --reverse --check "$p" 2>/dev/null || git -C "$SRC" apply "$p"
-    done
-    for p in "$HERE"/patches/lus/*.patch; do
-        git -C "$SRC/libultraship" apply --reverse --check "$p" 2>/dev/null || git -C "$SRC/libultraship" apply "$p"
+    apply_patches "$SRC" "$HERE"/patches/soh/*.patch
+    apply_patches "$SRC/libultraship" "$HERE"/patches/lus/*.patch
+}
+
+# Patches $2... onto the tree $1; when one changed since it was applied, start again from a clean tree
+apply_patches() {
+    local tree=$1 p; shift
+    for p in "$@"; do
+        git -C "$tree" apply --reverse --check "$p" 2>/dev/null && continue
+        git -C "$tree" apply --check "$p" 2>/dev/null || { git -C "$tree" checkout -q -- .; apply_patches "$tree" "$@"; return; }
+        git -C "$tree" apply "$p"
     done
 }
 
@@ -90,7 +95,7 @@ soh() {
     toolchain
     build_libzip
     cmake -S "$SRC" -B "$BLD/armhf" -G Ninja -DCMAKE_TOOLCHAIN_FILE="$BLD/armhf.cmake" -DCMAKE_PREFIX_PATH="$PREFIX" \
-        -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="$ARMFLAGS" -DCMAKE_CXX_FLAGS="$ARMFLAGS" -DUSE_OPENGLES=ON -DUSE_GLES2=ON
+        -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="$ARMFLAGS" -DCMAKE_CXX_FLAGS="$ARMFLAGS" -DUSE_OPENGLES=ON -DUSE_GLES2=${SOH_GLES2:-ON}
     cmake --build "$BLD/armhf" -j "$JOBS" --target soh -- -k 0
     cp "$BLD/armhf/soh/soh.elf" "$OUT/"
     arm-linux-gnueabihf-strip "$OUT/soh.elf"
@@ -126,14 +131,15 @@ pack() {
 }
 
 # soh.elf under qemu-arm on Xvfb, GLES2 on Mesa's llvmpipe: a screenshot every 30 s for $1 seconds
+# (SOH_ELF picks another binary, SHOTS another folder)
 shot() {
-    local secs=${1:-300} run=/tmp/soh-run shots=/repo/dev/out/zelda/shots t xvfb game
+    local secs=${1:-300} run=/tmp/soh-run shots=${SHOTS:-/repo/dev/out/zelda/shots} elf=${SOH_ELF:-$OUT/soh.elf} t xvfb game
     rm -rf "$run" "$shots"; mkdir -p "$run" "$shots"
     cp "$OUT"/*.o2r "$run/"
     Xvfb :9 -screen 0 1280x960x24 -nolisten tcp & xvfb=$!
     sleep 1
     (cd "$run" && SHIP_HOME=$run DISPLAY=:9 SDL_AUDIODRIVER=dummy QEMU_LD_PREFIX=/ \
-        exec qemu-arm "$OUT/soh.elf" > "$shots/soh.log" 2>&1) & game=$!
+        exec qemu-arm "$elf" > "$shots/soh.log" 2>&1) & game=$!
     for ((t = 30; t <= secs; t += 30)); do
         sleep 30
         kill -0 $game 2>/dev/null || { echo "soh.elf exited before ${t}s"; break; }

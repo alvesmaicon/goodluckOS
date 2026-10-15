@@ -76,6 +76,25 @@ diff -ruN lus-a/src/fast/Fast3dGui.cpp lus-b/src/fast/Fast3dGui.cpp
  #elif USE_OPENGLES
              ImGui_ImplOpenGL3_Init("#version 300 es");
  #else
+diff -ruN lus-a/src/fast/Fast3dWindow.cpp lus-b/src/fast/Fast3dWindow.cpp
+--- lus-a/src/fast/Fast3dWindow.cpp	2026-10-14 22:56:59
++++ lus-b/src/fast/Fast3dWindow.cpp	2026-10-14 22:57:11
+@@ -109,8 +109,14 @@
+     mWindowManagerApi->SetKeyboardCallbacks(KeyDown, KeyUp, AllKeysUp);
+     mWindowManagerApi->SetMouseCallbacks(MouseButtonDown, MouseButtonUp);
+ 
++#ifdef USE_GLES2
++    // Three-point filtering samples every texture three times: too much for GLES2-class GPUs
++    const FilteringMode defaultFilter = FILTER_LINEAR;
++#else
++    const FilteringMode defaultFilter = FILTER_THREE_POINT;
++#endif
+     SetTextureFilter((FilteringMode)Ship::Context::GetRawInstance()->GetConsoleVariables()->GetInteger(
+-        CVAR_TEXTURE_FILTER, FILTER_THREE_POINT));
++        CVAR_TEXTURE_FILTER, defaultFilter));
+ }
+ 
+ int32_t Fast3dWindow::GetTargetFps() {
 diff -ruN lus-a/src/fast/backends/gfx_opengl.cpp lus-b/src/fast/backends/gfx_opengl.cpp
 --- lus-a/src/fast/backends/gfx_opengl.cpp	2026-10-14 22:13:09
 +++ lus-b/src/fast/backends/gfx_opengl.cpp	2026-10-14 22:17:08
