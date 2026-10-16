@@ -8,6 +8,7 @@ local looking = {}
 
 core.override_item(ITEM, {
 	description = S("Binoculars") .. "\n" .. S("Hold R1 to look through them"),
+	inventory_image = "goodluck_binoculars_item.png",
 })
 
 local function set_looking(player, name, on)
