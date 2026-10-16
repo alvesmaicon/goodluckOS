@@ -1,0 +1,44 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Fri, 16 Oct 2026 01:34:29 -0300
+Subject: [PATCH 21/21] mainmenu: the handheld's world list takes the whole
+ width
+
+With menu_handheld, a game that disables the Creative, Damage and Host
+Server checkboxes (as goodluckOS's minetest_game does, the mode being
+chosen with the world) left the left third of the Start Game tab empty.
+When none of them is shown, the world list spans the tab and is taller,
+and Delete, New and Play share one row below it.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/builtin/mainmenu/tab_local.lua b/builtin/mainmenu/tab_local.lua
+index 635cee577..315c38c9f 100644
+--- a/builtin/mainmenu/tab_local.lua
++++ b/builtin/mainmenu/tab_local.lua
+@@ -209,6 +209,25 @@ local function get_formspec(tabview, name, tabdata)
+ 		end
+ 	end
+ 
++	-- a handheld whose game shows none of these settings gives the world list the whole width, and its buttons one row
++	if core.settings:get_bool("menu_handheld") and creative .. damage .. host == "" then
++		retval = retval ..
++				"container[0.375,0.375]" ..
++				"label[0,0.2;" .. fgettext("Select World:") .. "]" ..
++				"textlist[0,0.5;" .. tabview.width - 0.75 .. ",4.95;sp_worlds;" ..
++				menu_render_worldlist() ..
++				";" .. index .. "]" ..
++				"container_end[]"
++		if world then
++			retval = retval .. "button[0.375,5.925;3.225,0.8;world_delete;" .. fgettext("Delete") .. "]"
++		end
++		retval = retval .. "button[6.8625,5.925;3.225,0.8;world_create;" .. fgettext("New") .. "]"
++		if world then
++			retval = retval .. "button[10.1875,5.925;4.9375,0.8;play;" .. fgettext("Play Game") .. "]"
++		end
++		return retval
++	end
++
+ 	retval = retval .. "container[5.25,4.875]"
+ 	-- a handheld only gets mods from ContentDB, which needs the network
+ 	if world and core.settings:get_bool("menu_handheld") then
