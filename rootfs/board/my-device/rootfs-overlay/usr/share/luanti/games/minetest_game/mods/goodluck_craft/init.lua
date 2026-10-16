@@ -275,8 +275,9 @@ function sfinv.make_formspec(player, context, content, show_inv)
 		"no_prepend[]",
 		"bgcolor[#080808BB;true]",
 		"listcolors[#00000069;#5A5A5A;#141318;#30434C;#FFF]",
-		("background9[-0.2,%g;%g,%g;gui_formbg.png;false;10]"):format(top - 0.26, w + 0.4, bottom + 0.55),
-		goodluck_craft.tabs_formspec(context, creative, top - TAB_ROW, top + bottom + 0.08, 8.65),
+		-- as much panel below the hotbar as at the sides and the top
+		("background9[-0.2,%g;%g,%g;gui_formbg.png;false;10]"):format(top - 0.26, w + 0.4, bottom + 0.66),
+		goodluck_craft.tabs_formspec(context, creative, top - TAB_ROW, top + bottom + 0.2, 8.65),
 		("container[%g,%g]"):format(creative and 0 or 0.25, top),
 		show_inv and inventory(4.15) or "",
 		context.page == "mtg_craftguide:craftguide" and content:gsub("container%[0,5%.6%]", "container[0,5.2]") or content,
