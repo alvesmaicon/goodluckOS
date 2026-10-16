@@ -190,7 +190,7 @@ core.register_on_joinplayer(function(player)
 			position = {x = 0.5, y = 1},
 			offset = {x = o[1], y = BAR_Y - 8 + o[2]},
 			alignment = {x = 0, y = 0},
-			size = {x = 2},
+			size = {x = 2, y = 0},
 			number = (o[1] == 0 and o[2] == 0) and 0x80FF20 or 0x000000,
 			text = "",
 		})
