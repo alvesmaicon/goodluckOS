@@ -8,7 +8,7 @@ mkdir -p "$dir"
 [ -f "$conf" ] || cp "$defaults" "$conf"
 
 # defaults added in a later image reach an existing minetest.conf too; set ones stay as they are
-grep -E '^[a-z0-9_]+ *=' "$defaults" | while IFS= read -r line; do
+grep -E '^[a-z0-9_.:]+ *=' "$defaults" | while IFS= read -r line; do
     grep -q "^${line%%[ =]*} *=" "$conf" || echo "$line" >> "$conf"
 done
 
