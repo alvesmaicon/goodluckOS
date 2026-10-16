@@ -1,0 +1,35 @@
+name: Kernel
+
+on:
+  push:
+    branches: [main, develop]
+    paths: ['kernel/**', '.github/workflows/kernel.yml']
+  pull_request:
+    paths: ['kernel/**', '.github/workflows/kernel.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+
+      # Same as kernel/build.sh, which would pick the runner's podman
+      - name: Build the kernel and the boot images
+        working-directory: kernel
+        run: docker buildx build --output type=local,dest=./out .
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: kernel
+          path: kernel/out/
+          if-no-files-found: error
+          retention-days: 14
