@@ -82,7 +82,7 @@ local function set_up(player, name, on)
 	end
 	up_now[name] = on or nil
 	if sprint then
-		sprint.stop(player, on)
+		sprint.stop(player, on, "shield")
 	end
 	show(player, name)
 end

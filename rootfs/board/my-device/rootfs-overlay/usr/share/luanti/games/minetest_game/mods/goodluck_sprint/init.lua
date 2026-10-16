@@ -45,10 +45,11 @@ local function set_running(player, name, on)
 	end
 end
 
--- another mod (the shield) ends the run and keeps a new one from starting until it lets go
-function goodluck_sprint.stop(player, on)
+-- another mod (the shield, the binoculars) ends the run and keeps a new one from starting until every one lets go
+function goodluck_sprint.stop(player, on, by)
 	local name = player:get_player_name()
-	stopped[name] = on or nil
+	stopped[name] = stopped[name] or {}
+	stopped[name][by or "?"] = on or nil
 	if on then
 		set_running(player, name, false)
 	end
@@ -62,7 +63,7 @@ core.register_globalstep(function(dtime)
 		local name = player:get_player_name()
 		local ctrl = player:get_player_control()
 		local forward = ctrl.movement_y or 0
-		if forward < 0.5 or stopped[name] or not fed(player, name) then
+		if forward < 0.5 or next(stopped[name] or {}) or not fed(player, name) then
 			set_running(player, name, false)
 		elseif ctrl.aux1 and not held[name] then
 			set_running(player, name, true)
