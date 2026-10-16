@@ -2,8 +2,9 @@
 Crafting Table=Bancada de Trabalho
 Crafting=Fabricação
 Inventory=Inventário
-Game mode: Survival=Modo: Sobrevivência
-Game mode: Creative=Modo: Criativo
+Game mode:=Modo de jogo:
+Survival=Sobrevivência
+Creative=Criativo
 Building Blocks=Blocos de construção
 Colored Blocks=Blocos coloridos
 Natural Blocks=Blocos naturais
@@ -16,3 +17,5 @@ Spawn Eggs=Ovos geradores
 Search Items=Pesquisar itens
 Reset=Limpar
 No items to show.=Nenhum item para mostrar.
+Click for Survival=Clique para Sobrevivência
+Click for Creative=Clique para Criativo

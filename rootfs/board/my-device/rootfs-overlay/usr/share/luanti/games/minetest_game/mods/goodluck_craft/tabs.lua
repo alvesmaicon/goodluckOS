@@ -1,6 +1,6 @@
--- sfinv's tabs as icons, as in Minecraft: on creative's compact panel, seven places above it and seven below (Java
--- Edition since 1.19.3), the last two of each row at its right edge; on the taller one (survival, the recipes, a
--- crafting table) only the pages that aren't creative's, side by side above it
+-- sfinv's tabs as icons, as in Minecraft: in creative, seven places above the panel and seven below it (Java Edition
+-- since 1.19.3), the last two of each row at its right edge; in survival only Inventory and Recipes, side by side
+-- above it
 local HEIGHT, PITCH, WIDTH = 0.92, 1.25, 1.15
 local icons = {}
 
@@ -39,11 +39,11 @@ end
 
 -- top and bottom: the rows' y, the upper one ending at the panel and the lower one starting there; right: the last
 -- place's x
-function goodluck_craft.tabs_formspec(context, compact, top, bottom, right)
+function goodluck_craft.tabs_formspec(context, creative, top, bottom, right)
 	local nav, titles = context.nav or {}, context.nav_titles or {}
 	local shown = {}
 	for i, page in ipairs(nav) do
-		if compact or page:sub(1, 9) ~= "creative:" then
+		if creative or page:sub(1, 9) ~= "creative:" then
 			shown[#shown + 1] = i
 		end
 	end
@@ -54,7 +54,7 @@ function goodluck_craft.tabs_formspec(context, compact, top, bottom, right)
 	local taken, places = {}, {}
 	for _, i in ipairs(shown) do
 		local def = icons[nav[i]]
-		if compact and def and not taken[def.row * 10 + def.col] then
+		if creative and def and not taken[def.row * 10 + def.col] then
 			places[i] = def.row * 10 + def.col
 			taken[places[i]] = true
 		end
@@ -62,7 +62,7 @@ function goodluck_craft.tabs_formspec(context, compact, top, bottom, right)
 	local fs = {}
 	for _, i in ipairs(shown) do
 		if not places[i] then
-			for p = 11, compact and 27 or 17 do
+			for p = 11, creative and 27 or 17 do
 				if p % 10 >= 1 and p % 10 <= 7 and not taken[p] then
 					places[i] = p
 					taken[p] = true
@@ -71,7 +71,7 @@ function goodluck_craft.tabs_formspec(context, compact, top, bottom, right)
 			end
 		end
 		local row, col = math.floor(places[i] / 10), places[i] % 10
-		local x = compact and (col <= 5 and (col - 1) * PITCH or right - (7 - col) * PITCH) or 0.25 + (col - 1) * PITCH
+		local x = creative and (col <= 5 and (col - 1) * PITCH or right - (7 - col) * PITCH) or 0.25 + (col - 1) * PITCH
 		local def = icons[nav[i]]
 		fs[#fs + 1] = tab(i, titles[i] or nav[i], def and def.icon, i == context.nav_idx, x, row == 1 and top or bottom,
 			row)
