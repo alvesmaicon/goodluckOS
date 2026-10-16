@@ -136,8 +136,8 @@ local function armor_formspec(player)
 end
 
 -- when the world was made with "Allow changing the game mode": a slot-sized toggle under the crafting result, with the
--- icon Minecraft's game mode switcher gives the mode (a grass block for creative, a sword for survival), and the mode
--- beside it
+-- icon Minecraft's game mode switcher gives the mode (a grass block for creative, a sword for survival); the mode and
+-- what a click does are in its tooltip
 local function mode_button(player)
 	if not mode or not mode.can_switch() then
 		return ""
@@ -147,10 +147,10 @@ local function mode_button(player)
 	return "style[goodluck_mode;border=false;bgimg=goodluck_craft_toggle.png;bgimg_middle=3;padding=3]" ..
 		"style[goodluck_mode:hovered;bgimg=goodluck_craft_toggle_hovered.png]" ..
 		"style[goodluck_mode:pressed;bgimg=goodluck_craft_toggle_pressed.png]" ..
-		("label[4.2,3.05;%s\n%s]"):format(esc(S("Game mode:")), esc(creative and S("Creative") or S("Survival"))) ..
 		("item_image_button[7,3;1,1;%s;goodluck_mode;]"):format(creative and "default:dirt_with_grass" or
 			"default:sword_steel") ..
-		("tooltip[goodluck_mode;%s]"):format(esc(creative and S("Click for Survival") or S("Click for Creative")))
+		("tooltip[goodluck_mode;%s\n%s]"):format(esc(creative and S("Game mode: Creative") or S("Game mode: Survival")),
+			esc(creative and S("Click for Survival") or S("Click for Creative")))
 end
 
 local function crafting_formspec(player)
