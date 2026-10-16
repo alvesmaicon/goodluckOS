@@ -89,7 +89,12 @@ void restoreCursor(Model& m) {
         if (m.categories[i].name == tabName) m.tab = (int)i;
 }
 
-// Prepends an "All Games" tab with the games of every system, sorted by name.
+// The tag of an entry in the mixed tabs: its system, or "Ports" for the native games.
+static std::string systemTag(const Category& c) {
+    return !c.isArchive && c.name == kGamesCategory ? "Ports" : c.label;
+}
+
+// Prepends an "All Games" tab with the games of every system and the native ones, sorted by name.
 void addAllGamesTab(Model& m) {
     Category all;
     all.name = "All Games";
@@ -97,9 +102,9 @@ void addAllGamesTab(Model& m) {
     all.isArchive = true;
     all.mixed = true;
     for (const auto& c : m.categories) {
-        if (!c.isArchive || c.media) continue;
+        if (c.media || (!c.isArchive && c.name != kGamesCategory)) continue;
         for (Entry e : c.entries) {
-            e.tag = c.label;
+            e.tag = systemTag(c);
             all.entries.push_back(std::move(e));
         }
     }
@@ -148,7 +153,7 @@ static void rebuildMyList(Model& m) {
         if (c.mixed) continue;
         for (Entry e : c.entries) {
             if (!m.isFavorite(e)) continue;
-            e.tag = c.label;
+            e.tag = systemTag(c);
             list.push_back(std::move(e));
         }
     }
@@ -171,7 +176,7 @@ void addExternalTab(Model& m) {
         if (c.mixed) continue;
         for (Entry e : c.entries) {
             if (e.file.compare(0, kRoot.size(), kRoot) != 0) continue;
-            e.tag = c.label;
+            e.tag = systemTag(c);
             ext.entries.push_back(std::move(e));
         }
     }
@@ -214,7 +219,7 @@ void addRecentTab(Model& m) {
             auto e = std::find_if(c.entries.begin(), c.entries.end(), [&](const Entry& x) { return x.id == id; });
             if (e == c.entries.end()) break;
             list.push_back(*e);
-            list.back().tag = c.label;
+            list.back().tag = systemTag(c);
             break;
         }
     }

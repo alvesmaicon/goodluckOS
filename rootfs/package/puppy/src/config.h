@@ -49,5 +49,6 @@ constexpr const char* kRecentName    = "Recent";
 constexpr int kMaxRecents            = 30;
 constexpr const char* kMenuCategory  = "System";   // apps.puppy category taken out of the tabs
 constexpr const char* kSettingsName  = "System Settings";   // entry of that category opened by START
+constexpr const char* kGamesCategory = "Games";    // apps.puppy category of native games: also in All Games, as ports
 
 bool loadConfig(int argc, char** argv);
