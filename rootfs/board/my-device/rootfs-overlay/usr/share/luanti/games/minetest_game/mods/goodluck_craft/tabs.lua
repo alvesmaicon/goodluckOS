@@ -9,29 +9,33 @@ function goodluck_craft.set_tab(page, icon, row, col)
 	icons[page] = {icon = icon, row = row, col = col}
 end
 
--- the selected tab is taller and covers the panel's edge, so it opens into the panel
-local function tab(i, title, icon, selected, x, y, row)
+-- the selected tab is an image reaching OPEN over the panel's edge (its bottom slice opens it into the panel), under
+-- a button as big as the others so the icon stays put; legacy coordinates: a w x h button = a w*5/4-1/4 x h*15/13-2/13
+-- image
+-- 4 px at 640x480: creative's smaller slots round differently, and the lower row's from its top
+local OPEN = {creative = 0.12, creative_up = 0.09, survival = 0.1}
+local function tab(i, title, icon, selected, x, y, row, creative)
 	local name = "goodluck_tab_" .. i
-	local bg = selected and "goodluck_craft_tab_selected.png" or "goodluck_craft_tab.png"
-	local h = selected and HEIGHT + 0.12 or HEIGHT
-	if row == 2 then
-		bg = bg .. "^[transformFY"
-		y = selected and y - 0.12 or y
+	local flip = row == 2 and "^[transformFY" or ""
+	local fs = {}
+	if selected then
+		local open = OPEN[creative and (row == 2 and "creative_up" or "creative") or "survival"]
+		fs[#fs + 1] = ("image[%g,%g;%g,%g;%s;4]"):format(x, row == 2 and y - open or y, WIDTH * 5 / 4 - 1 / 4,
+			(HEIGHT + open) * 15 / 13 - 2 / 13, core.formspec_escape("goodluck_craft_tab_selected.png" .. flip))
 	end
-	local fs = {
-		("style[%s;noclip=true;border=false;bgimg=%s;bgimg_middle=4;padding=2]"):format(name,
-			core.formspec_escape(bg)),
-	}
+	-- the slicing shrinks the icon's room, so the selected button gets an invisible background sliced the same way
+	fs[#fs + 1] = ("style[%s;noclip=true;border=false;bgimg=%s;bgimg_middle=4;padding=2]"):format(name,
+		core.formspec_escape("goodluck_craft_tab.png" .. flip .. (selected and "^[opacity:0" or "")))
 	if not selected then
-		fs[#fs + 1] = ("style[%s:hovered;bgimg=%s]"):format(name, core.formspec_escape(
-			"goodluck_craft_tab.png^[colorize:#ffffff:24" .. (row == 2 and "^[transformFY" or "")))
+		fs[#fs + 1] = ("style[%s:hovered;bgimg=%s]"):format(name,
+			core.formspec_escape("goodluck_craft_tab.png^[colorize:#ffffff:24" .. flip))
 	end
 	if not icon then
-		fs[#fs + 1] = ("button[%g,%g;%g,%g;%s;%s]"):format(x, y, WIDTH, h, name, core.formspec_escape(title:sub(1, 1)))
+		fs[#fs + 1] = ("button[%g,%g;%g,%g;%s;%s]"):format(x, y, WIDTH, HEIGHT, name, core.formspec_escape(title:sub(1, 1)))
 	elseif icon:sub(-4) == ".png" then
-		fs[#fs + 1] = ("image_button[%g,%g;%g,%g;%s;%s;]"):format(x, y, WIDTH, h, icon, name)
+		fs[#fs + 1] = ("image_button[%g,%g;%g,%g;%s;%s;]"):format(x, y, WIDTH, HEIGHT, icon, name)
 	else
-		fs[#fs + 1] = ("item_image_button[%g,%g;%g,%g;%s;%s;]"):format(x, y, WIDTH, h, icon, name)
+		fs[#fs + 1] = ("item_image_button[%g,%g;%g,%g;%s;%s;]"):format(x, y, WIDTH, HEIGHT, icon, name)
 	end
 	fs[#fs + 1] = ("tooltip[%s;%s]"):format(name, core.formspec_escape(title))
 	return table.concat(fs)
@@ -74,7 +78,7 @@ function goodluck_craft.tabs_formspec(context, creative, top, bottom, right)
 		local x = creative and (col <= 5 and (col - 1) * PITCH or right - (7 - col) * PITCH) or 0.25 + (col - 1) * PITCH
 		local def = icons[nav[i]]
 		fs[#fs + 1] = tab(i, titles[i] or nav[i], def and def.icon, i == context.nav_idx, x, row == 1 and top or bottom,
-			row)
+			row, creative)
 	end
 	return table.concat(fs)
 end

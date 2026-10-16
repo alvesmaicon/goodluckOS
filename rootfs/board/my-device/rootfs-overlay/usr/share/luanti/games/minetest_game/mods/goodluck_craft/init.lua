@@ -269,6 +269,8 @@ function sfinv.make_formspec(player, context, content, show_inv)
 	-- where the page ends: the hotbar's bottom
 	local bottom = show_inv and 9.02 or 8.17
 	local top = creative and goodluck_craft.CREATIVE_TOP or -0.16 + TAB_ROW
+	-- tabs that touch the panel's edge at 640x480: survival's bigger slots round its row 2 px higher
+	local tabs_top, tabs_bottom = top - TAB_ROW + (creative and 0 or 0.043), top + bottom + 0.178
 	return table.concat({
 		("size[%g,%g]"):format(w, creative and 9.6 or 9.1),
 		"padding[0.01,0.01]",
@@ -277,7 +279,7 @@ function sfinv.make_formspec(player, context, content, show_inv)
 		"listcolors[#00000069;#5A5A5A;#141318;#30434C;#FFF]",
 		-- as much panel below the hotbar as at the sides and the top
 		("background9[-0.2,%g;%g,%g;gui_formbg.png;false;10]"):format(top - 0.26, w + 0.4, bottom + 0.66),
-		goodluck_craft.tabs_formspec(context, creative, top - TAB_ROW, top + bottom + 0.2, 8.65),
+		goodluck_craft.tabs_formspec(context, creative, tabs_top, tabs_bottom, 8.65),
 		("container[%g,%g]"):format(creative and 0 or 0.25, top),
 		show_inv and inventory(4.15) or "",
 		context.page == "mtg_craftguide:craftguide" and content:gsub("container%[0,5%.6%]", "container[0,5.2]") or content,
