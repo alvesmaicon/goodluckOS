@@ -34,8 +34,9 @@ mobs_monster
   third dungeon master, land guards 4 to 8 and oerkki 2 and 3 (recoloured
   from the credited dungeon master and oerkki, WTFPL, and land guard, CC0),
   the cobweb, the lava pick, the sand particles, and the fire spirit (an
-  empty image, as it was). mobs_spider.ogg is the sound mobs_animal's
-  license.txt credits: Cyberpangolin, WTFPL.
+  empty image, as it was). Redrawn by goodluckOS: the stone monster's four
+  textures, and the dirt and sand monsters' two each. mobs_spider.ogg is the
+  sound mobs_animal's license.txt credits: Cyberpangolin, WTFPL.
 
 stamina
   https://codeberg.org/tenplus1/stamina, commit @STAMINA_VERSION@
