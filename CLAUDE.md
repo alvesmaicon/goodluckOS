@@ -23,6 +23,7 @@ On the Mac, `dev/gl` runs everything in a native arm64 Debian container (Colima)
 - When something user-visible changes or a PR changes state, give the owner the lines to update in discussion #3 (no commit for it).
 - Never bump versions or edit upstream's `CHANGELOG.md`: Jeremy does that.
 - Commits that touch a fork issue cite it as `alvesmaicon/goodluckOS#N`, so a cherry-pick upstream doesn't link to the wrong issue.
+- A fork-only commit message (CLAUDE.md, `dev/`, merges of upstream) never writes an upstream number as `#N`: GitHub resolves it to CodeZombie and puts the commit on that issue's timeline, where nobody can remove it. Write `upstream PR 70`. Only commits meant for an upstream PR cite upstream issues.
 - Upstream PRs: open an issue first, keep each PR small and on a branch from `origin/main` (cherry-picked from `develop`), test the PR's own image on the device, and say that AI was used. The owner reviews every diff before it goes out.
 - Upstream issue or PR comments never link this fork: say the feature is ready and tested on the owner's console, and offer a PR. The owner doesn't want to pull users away from upstream.
 - The owner writes in Brazilian Portuguese. Repository text (code, commits, README, PRs) is in English.
@@ -44,6 +45,7 @@ Card layout (A33):
 ## Branches and remotes
 
 - `origin` is upstream CodeZombie; `fork` is alvesmaicon. `develop` is the fork's main branch: start new work from it on `feat/*`, `fix/*` or `debug/*`, then merge back. `pr/*` branches start from `origin/main`.
+- A branch merged into `develop` is deleted in the same step: `git worktree remove` its worktree, `git branch -d` it, and `git push fork --delete` it if it is on the fork. A `pr/*` branch goes the same way once upstream merges or closes its PR. The commits stay in `develop`, and the merge commit keeps the branch's name. Before removing a worktree, check `git status` there: uncommitted work gets committed or the owner decides.
 - Upstream PRs merged: #48 (Jeferson's A/B fix), #52 (MTP HOME), #55 (boot: appctl path, no power-manager respawn), #56 (headphones + FN+DOWN), #59 (TF-2 slot), #60 (idempotent `post-build.sh`), #64 (D-pad hold-to-repeat), #66 (TF-2 card over MTP), #70 (A23 audio), #77 (MTP cancel/rename). #69 (A23 TF-2 power) is obsolete: upstream's DTS split gives both SoCs the supply.
 - Upstream issues that the fork's code already answers: #23 (Gallium HUD options, branch `feat/overlay` ready), #24 (Mesa overlay), #5 (System Settings), #13/#14 (LED, partly). #46 is the owner's "features from my fork" list.
 - Fork issues: #1 screen artifacts (thermal suspected, `debug/thermal-log` logs to `HOME/logs/templog.csv`); #2 Wi-Fi dongle on OTG (no VBUS: DTS lacks `x-powers,drive-vbus-en` and `usb0_vbus-supply`).
