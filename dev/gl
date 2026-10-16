@@ -265,6 +265,8 @@ deploy() {
     tar -C "$s" --owner=0 --group=0 -czf "$OUT/deploy.tar.gz" .
     tar -tzvf "$OUT/deploy.tar.gz" | awk '$1 !~ /^d/ {print $3, $6}'
     echo "dev/out/deploy.tar.gz: copy it to HOME, then on the console: tar -xzf /home/player/deploy.tar.gz -C /"
+    [ -f "$s/usr/local/bin/appctl" ] && echo "appctl: reboot the console, the running appd keeps the old one"
+    return 0
 }
 
 cmd=$1; shift

@@ -71,7 +71,7 @@ dev/glserial.py get /home/player/logs/templog.csv templog.csv
 dev/glserial.py get --cmd "dmesg" dmesg.txt
 ```
 
-Then reboot (`reboot`), or close and reopen the app. The rootfs is mounted read-write. The console has no `pkill`/`pgrep`: use `ps | grep`, `awk` and `kill`.
+Then reboot (`reboot`), or close and reopen the app. A new `appctl` needs the reboot: the appd daemon keeps running the copy it started with. The rootfs is mounted read-write. The console has no `pkill`/`pgrep`: use `ps | grep`, `awk` and `kill`.
 
 **The whole rootfs or the kernel with the card in the reader:** `dev/sdcard-mac.sh <diskN> boot|rootfs <file>` writes only that region. It backs the region up first and checks the write by reading it back. It refuses the daily card unless you pass `--daily-card`. Before writing a new rootfs to a card with an older HOME, check what the new rootfs expects in HOME (e.g. appd needs `HOME/.local/launcher.sh`).
 
