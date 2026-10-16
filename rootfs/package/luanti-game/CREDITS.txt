@@ -57,5 +57,5 @@ Left out of mobs, mobs_animal, mobs_monster and stamina: screenshot.jpg, made
 on textstudio.com, whose terms are unclear. The game doesn't use them.
 
 goodluck_* mods, and the stamina, mobs_animal and mobs_monster media above
-  Code, pixel art and the rat's model made for goodluckOS, under goodluckOS's
-  license, GPL-2.0.
+  Code, pixel art, the rat's model and the item pickup sound made for
+  goodluckOS, under goodluckOS's license, GPL-2.0.
