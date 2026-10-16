@@ -1,0 +1,47 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Fri, 16 Oct 2026 01:13:02 -0300
+Subject: [PATCH 20/20] HUD: not drawn under a menu
+
+A menu like the inventory covers most of the screen, and on a small one
+(640x480) the HUD hotbar, the status bars and the crosshair showed
+around and between its edges. While a menu is open the Lua HUD elements
+and the crosshair are left out; the game behind it is still drawn.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/src/client/render/plain.cpp b/src/client/render/plain.cpp
+index 6f47f5274..a36b20e41 100644
+--- a/src/client/render/plain.cpp
++++ b/src/client/render/plain.cpp
+@@ -14,6 +14,7 @@
+ #include "client/shadows/dynamicshadowsrender.h"
+ #include <IGUIEnvironment.h>
+ #include "gui/drawItemStack.h"
++#include "gui/mainmenumanager.h"
+ 
+ /// Draw3D pipeline step
+ void Draw3D::run(PipelineContext &context)
+@@ -41,17 +42,20 @@ void DrawWield::run(PipelineContext &context)
+ void DrawHUD::run(PipelineContext &context)
+ {
+ 	drawItemStackDepthReset();
++	// a menu (the inventory, a chest) covers the game: the hotbar, the bars and the crosshair would show around it
++	const bool menu = isMenuActive();
+ 	if (context.show_hud) {
+ 		if (context.shadow_renderer)
+ 			context.shadow_renderer->drawDebug();
+ 
+ 		context.hud->resizeHotbar();
+ 
+-		if (context.draw_crosshair)
++		if (context.draw_crosshair && !menu)
+ 			context.hud->drawCrosshair();
+ 	}
+ 
+-	context.hud->drawLuaElements(context.client->getCamera()->getOffset(), !context.show_hud);
++	if (!menu)
++		context.hud->drawLuaElements(context.client->getCamera()->getOffset(), !context.show_hud);
+ 
+ 	if (context.show_hud) {
+ 		context.client->getCamera()->drawNametags();

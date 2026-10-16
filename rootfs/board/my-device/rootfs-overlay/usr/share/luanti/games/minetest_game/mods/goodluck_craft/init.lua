@@ -260,8 +260,7 @@ end
 -- the panel holds a page of the old 8.2 high forms; the tabs are rows of their own above it (and below it, in creative)
 -- inside the form, so that its size fits the screen with them and leaves a margin: slots of 39 px in creative and 41
 -- in survival at 640x480; the prepend's background would fill the tab rows, so the form draws its own (creative's is
--- wider, for the 9th column, the scrollbar and the trash beside the hotbar), and a band below the panel hides the HUD
--- hotbar
+-- wider, for the 9th column, the scrollbar and the trash beside the hotbar); the engine leaves the HUD out under it
 local TAB_ROW = 1.05
 goodluck_craft.CREATIVE_TOP = -0.17 + TAB_ROW
 function sfinv.make_formspec(player, context, content, show_inv)
@@ -276,7 +275,6 @@ function sfinv.make_formspec(player, context, content, show_inv)
 		"no_prepend[]",
 		"bgcolor[#080808BB;true]",
 		"listcolors[#00000069;#5A5A5A;#141318;#30434C;#FFF]",
-		("box[-1,%g;%g,3;#080808FF]"):format(top + bottom + (creative and 0.09 or 0.12), w + 2),
 		("background9[-0.2,%g;%g,%g;gui_formbg.png;false;10]"):format(top - 0.26, w + 0.4, bottom + 0.55),
 		goodluck_craft.tabs_formspec(context, creative, top - TAB_ROW, top + bottom + 0.08, 8.65),
 		("container[%g,%g]"):format(creative and 0 or 0.25, top),
