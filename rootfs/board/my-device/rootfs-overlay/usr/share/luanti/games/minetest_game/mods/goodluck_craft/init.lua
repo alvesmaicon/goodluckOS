@@ -1,6 +1,9 @@
 -- The inventory as in Minecraft: armor and the player on the left, a 2x2 grid on the right, the hotbar at the bottom;
 -- the 3x3 grid only at a crafting table, which opens this same inventory (so the Recipes tab works there too)
 local S = core.get_translator("goodluck_craft")
+local MODPATH = core.get_modpath("goodluck_craft")
+goodluck_craft = {}
+dofile(MODPATH .. "/tabs.lua")
 local TABLE = "goodluck_craft:crafting_table"
 local at_table = {}
 local has_armor = core.get_modpath("3d_armor") and armor
@@ -239,20 +242,35 @@ core.register_on_leaveplayer(function(player)
 end)
 core.register_on_dieplayer(leave_table)
 
--- rows first and the hotbar at the bottom; at 8.2 high the forms are wider than the HUD hotbar behind them, and they
--- sit a bit low so the tabs above stay on the screen (creative pages keep the old height: their search bar is at 4.1)
+-- rows first and the hotbar at the bottom; the hotbar stays at 7.3 on every page
 local function inventory(y)
-	return ("list[current_player;main;0,%g;8,3;8]"):format(y) .. default.get_hotbar_bg(0, y + 3.15) ..
-		("list[current_player;main;0,%g;8,1;]"):format(y + 3.15)
+	return ("list[current_player;main;0,%g;8,3;8]"):format(y) .. goodluck_craft.hotbar(y + 3.15)
 end
-function sfinv.make_formspec(player, context, content, show_inv, size)
+function goodluck_craft.hotbar(y)
+	return default.get_hotbar_bg(0, y) .. ("list[current_player;main;0,%g;8,1;]"):format(y)
+end
+
+-- the panel holds a page of the old 8.2 high forms, with tabs above it (and below it, in creative) inside the form, so
+-- that its size fits the screen with them: the sizes give 41 px slots in creative and 44 in survival at 640x480; the
+-- prepend's background would fill the tab rows, so the form draws its own (creative is wider, for the scrollbar and
+-- the trash beside the hotbar), and in creative a band behind the lower tabs hides the HUD hotbar
+local TOP = 0.53
+function sfinv.make_formspec(player, context, content, show_inv)
+	local creative = core.is_creative_enabled(player:get_player_name())
+	local w = creative and 9 or 8.5
 	return table.concat({
-		size or (show_inv and "size[8.5,9.1]" or "size[8.5,8.2]"),
-		"position[0.5,0.545]",
-		sfinv.get_nav_fs(player, context, context.nav_titles, context.nav_idx),
-		"container[0.25,0]",
-		show_inv and inventory(5) or "",
+		("size[%g,%g]"):format(w, creative and 9.1 or 8.4),
+		"padding[0.01,0.01]",
+		"no_prepend[]",
+		"bgcolor[#080808BB;true]",
+		"listcolors[#00000069;#5A5A5A;#141318;#30434C;#FFF]",
+		creative and ("box[-1,%g;%g,2;#080808FF]"):format(TOP + 8.26, w + 2) or "",
+		("background9[-0.2,%g;%g,8.72;gui_formbg.png;false;10]"):format(TOP - 0.26, w + 0.4),
+		goodluck_craft.tabs_formspec(context, creative, -0.52, TOP + 8.25),
+		("container[%g,%g]"):format(creative and 0 or 0.25, TOP),
+		show_inv and inventory(4.15) or "",
 		context.page == "mtg_craftguide:craftguide" and content:gsub("container%[0,5%.6%]", "container[0,5.2]") or content,
+		creative and goodluck_craft.trash and goodluck_craft.trash(8, 7.3) or "",
 		"container_end[]",
 	})
 end
@@ -260,7 +278,7 @@ end
 sfinv.override_page("sfinv:crafting", {
 	title = S("Inventory"),
 	get = function(self, player, context)
-		return sfinv.make_formspec(player, context, inventory(4.15) .. crafting_formspec(player), false, "size[8.5,8.2]")
+		return sfinv.make_formspec(player, context, inventory(4.15) .. crafting_formspec(player), false)
 	end,
 	on_player_receive_fields = function(self, player, context, fields)
 		if fields.goodluck_mode and mode and mode.can_switch() then
@@ -281,4 +299,10 @@ if has_armor then
 			sfinv.set_player_inventory_formspec(player)
 		end
 	end)
+end
+
+goodluck_craft.set_tab("sfinv:crafting", "default:chest", 2, 7)
+goodluck_craft.set_tab("mtg_craftguide:craftguide", "default:book", 1, 6)
+if core.get_modpath("creative") then
+	dofile(MODPATH .. "/creative.lua")
 end

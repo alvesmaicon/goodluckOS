@@ -155,6 +155,8 @@ The same list is in System Settings -> Input Settings, next to a button tester.
 ### Luanti
 Luanti opens on its main menu, trimmed to what works without network: New asks for the world's name (left empty, it takes the next free one) and its game mode, Survival or Creative. As in Minecraft, Creative mode lets you fly, breaks blocks at once and has no damage, hunger or monster attacks. With "Allow changing the game mode" ticked, a button in the inventory switches between the two. The console has no mouse cursor, so whenever a menu or the inventory is open, Luanti draws one that the sticks move.
 
+The inventory's tabs are icons, as in Minecraft. In Creative they sit where Minecraft (Java Edition) puts its own: Building Blocks, Colored Blocks, Natural Blocks, Functional Blocks, Recipes and Search above the panel, and Tools & Utilities, Combat, Food & Drinks, Ingredients, Spawn Eggs and the Inventory below it (there is no Redstone tab, as Minetest Game has no redstone). Each tab's items scroll with R1/L1 or the bar beside them, and the trash next to the hotbar deletes whatever is put in it. Survival has two tabs, the Inventory and Recipes.
+
 Its settings (the gear on the main menu, or START > Settings in a game) open on Video, the render distance as in Minecraft: 4 to 20 chunks of 16 blocks. Fewer chunks make the game faster, and a change made in a game shows at once.
 
 Clicking a text field (a world's name, a setting, a sign, a book, the creative inventory's search) opens the launcher's keyboard: the D-pad moves between keys, B types, A deletes (and closes it when nothing is left), START closes it, SELECT closes it and puts the old text back, L1/R1 move the cursor in the text.
