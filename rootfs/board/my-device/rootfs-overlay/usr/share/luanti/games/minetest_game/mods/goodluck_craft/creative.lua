@@ -31,7 +31,8 @@ local function natural(name, def, g)
 		"^default:[%a_]*stone$", "^default:gravel$", "^default:clay$", "^default:obsidian$", "^default:cactus$",
 		"^default:large_cactus_seedling$", "^default:papyrus$", "^default:dry_shrub$", "^default:coral_",
 		"^default:sand_with_kelp$", "^default:permafrost", "bush_stem$", "^default:[%a_]*_source$",
-		"^farming:cotton_wild$", "^flowers:", "^mobs:cobweb$", "^mobs:beehive$", "^mobs:hearing_vines$"))
+		"^farming:cotton_wild$", "^flowers:", "^mobs:cobweb$", "^mobs:beehive$", "^mobs:hearing_vines$",
+		"^goodluck_amethyst:"))
 end
 
 local function functional(name)
@@ -79,7 +80,7 @@ local CATEGORIES = {
 		return matches(name, "^wool:", "^beds:")
 	end},
 	{"natural_blocks", S("Natural Blocks"), "default:dirt_with_grass", 1, 3, natural, {"^dirt_with_grass$", "dirt",
-		"permafrost", "sand$", "^gravel$", "^clay$", "snow", "^ice$", "stone$", "^stone_with_", "^obsidian$", "tree$",
+		"permafrost", "sand$", "^gravel$", "^clay$", "snow", "^ice$", "stone$", "^stone_with_", "^obsidian$", "^calcite$", "^amethyst", "tree$",
 		"leaves", "needles$", "sapling$", "seedling$", "stem$", "grass", "fern", "^dry_shrub$", "^cactus$", "vines$",
 		"^papyrus$", "^seed_", "^cotton_wild$", "^rose$", "^tulip", "^dandelion", "^chrysanthemum", "^geranium$",
 		"^viola$", "^mushroom", "^waterlily$", "^coral", "kelp$", "^bee", "^cobweb$", "^butterfly", "^firefly$",
@@ -91,7 +92,7 @@ local CATEGORIES = {
 	{"combat", S("Combat"), "default:sword_diamond", 2, 2, combat},
 	{"food_drinks", S("Food & Drinks"), "default:apple", 2, 3, food, {"^apple$", "^blueberries$", "^bread$"}},
 	{"ingredients", S("Ingredients"), "default:steel_ingot", 2, 4, ingredients, {"^coal_lump$", "_lump$", "_ingot$",
-		"^diamond$", "^mese_crystal", "^flint$", "^stick$", "^clay", "^paper$", "^book$", "^string$", "^cotton$",
+		"^diamond$", "^mese_crystal", "^amethyst_shard$", "^flint$", "^stick$", "^clay", "^paper$", "^book$", "^string$", "^cotton$",
 		"^wheat$", "^flour$"}},
 	{"spawn_eggs", S("Spawn Eggs"), "goodluck_craft_spawn_egg.png", 2, 5, function(name, def, g)
 		return any_group(g, "spawn_egg")
