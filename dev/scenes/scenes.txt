@@ -15,9 +15,11 @@ list             list  on    en        Down Down Down Down Down
 list-page        list  on    en        Right Right
 list-nes         list  on    en        F1 F1 Down Down
 list-long-name   list  on    en        F1 F1 Down Down Down Down Down Down Down Down
+all-games-port   list  on    en        Down Down Down Down Down Down Down Down Down Down Down
 apps-tab         list  on    en        F2 F2 F2
 my-list-empty    grid  on    en        F2
 my-list-grid     grid  on    en        space Right space Right Right Right space F2
+my-list-port     grid  on    en        Down Down Down Right Right space F2
 favorites        list  on    en        F1 F1 Down space Down space F2 F2 F2
 recent           list  on    en        Down Return Down Return F2 F2
 recent-again     list  on    en        Down Return Down Return F2 F2 Down Return

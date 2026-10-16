@@ -105,7 +105,7 @@ Add a new entry by modifying the `apps.puppy` file in your HOME partition. Take 
 
 Works with scraped collections: point Skraper (or anything that writes EmulationStation's `gamelist.xml`) at your rom folders and Puppy shows the games' names, artwork, descriptions and year/genre/players, no conversion needed (see [How do I add games?](#how-do-i-add-games)).
 
-Each system and app category gets its own tab, plus an "All Games" tab with every system's games, a "My List" tab with your favourites and, once you've played something, a "Recent" tab with the last 30 games you opened, newest first. The strip at the top shows five tabs of the same width, the current one in the middle, and wraps around. Controls:
+Each system and app category gets its own tab, plus an "All Games" tab with every system's games and the native ports of the Games tab (tagged "Ports"), a "My List" tab with your favourites and, once you've played something, a "Recent" tab with the last 30 games you opened, newest first. The strip at the top shows five tabs of the same width, the current one in the middle, and wraps around. Controls:
 
 | Button | Action |
 |---|---|
