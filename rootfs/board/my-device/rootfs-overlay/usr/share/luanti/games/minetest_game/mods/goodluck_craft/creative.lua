@@ -2,8 +2,7 @@
 -- minetest_game's All/Nodes/Tools/Items. An item shows in every tab whose test it passes, as in Minecraft; one that
 -- passes none goes to Building Blocks (nodes), Tools & Utilities (tools) or Ingredients (the rest)
 local S = core.get_translator("goodluck_craft")
-local COLS, ROWS = 8, 6
-local TOP = 0.53
+local COLS, ROWS = 9, 5
 local players = {}
 
 local function any_group(g, ...)
@@ -226,7 +225,8 @@ function goodluck_craft.trash(x, y)
 		y + 0.1, x, y)
 end
 
--- the title, the items in a scrolling grid (the shoulder buttons scroll it, as the mouse wheel does), the hotbar
+-- the title, the items in a scrolling grid of Minecraft's 9x5 (the shoulder buttons scroll it, as the mouse wheel
+-- does), the hotbar
 local function page_formspec(player, cat, title)
 	local st = state(player)
 	local name = player:get_player_name()
@@ -241,26 +241,27 @@ local function page_formspec(player, cat, title)
 	local fs = {"label[0,-0.2;" .. esc(title) .. "]"}
 	if cat == "search" then
 		fs[#fs + 1] = "field_enter_after_edit[goodluck_filter;true]field_close_on_enter[goodluck_filter;false]" ..
-			"field[3.6,0.22;3.9,0.5;goodluck_filter;;" .. esc(st.filter) .. "]" ..
-			"image_button[7.3,-0.06;0.7,0.7;creative_clear_icon.png;goodluck_clear;]" ..
+			"field[4.3,0.24;4.2,0.5;goodluck_filter;;" .. esc(st.filter) .. "]" ..
+			"image_button[8.3,-0.1;0.7,0.6;creative_clear_icon.png;goodluck_clear;]" ..
 			"tooltip[goodluck_clear;" .. esc(S("Reset")) .. "]"
 	end
 	if #items == 0 then
-		fs[#fs + 1] = "label[2.8,3;" .. esc(S("No items to show.")) .. "]"
+		fs[#fs + 1] = "label[3.2,2.5;" .. esc(S("No items to show.")) .. "]"
 	end
 	fs[#fs + 1] = ("scrollbaroptions[min=0;max=%d;smallstep=%d;largestep=%d;thumbsize=%d;arrows=hide]"):format(max,
 		ROWS, ROWS, math.max(1, math.floor(ROWS * ROWS / rows + 0.5)))
-	fs[#fs + 1] = ("scrollbar[8.06,0.42;0.5,%g;vertical;goodluck_scroll;%d]"):format(ROWS - 0.15, scroll)
+	fs[#fs + 1] = ("scrollbar[9.05,0.42;0.45,%g;vertical;goodluck_scroll;%d]"):format(ROWS - 0.15, scroll)
 	-- a scroll_container's place is in image sizes from the form's corner, containers included, and the elements in it
 	-- get the form's padding (3/8 image) again: the grid's top-left is at 0,0.5 like the other elements; it scrolls by
 	-- whole image sizes, which the old coordinates' row spacing isn't, so the grid's rows are spaced in image sizes too
-	fs[#fs + 1] = ("scroll_container[0,%g;10.2,%g;goodluck_scroll;vertical;%g]"):format(
-		(TOP + 0.5) * 15 / 13 + 0.375 - TOP, (ROWS - 1) * 15 / 13 + 1, 15 / 13)
+	local top = goodluck_craft.COMPACT_TOP
+	fs[#fs + 1] = ("scroll_container[0,%g;11.45,%g;goodluck_scroll;vertical;%g]"):format(
+		(top + 0.5) * 15 / 13 + 0.375 - top, (ROWS - 1) * 15 / 13 + 1, 15 / 13)
 	fs[#fs + 1] = "style_type[list;spacing=-1,0.15385]"
 	fs[#fs + 1] = ("list[detached:creative_%s;main;0,-0.325;%d,%d;]"):format(name, COLS, rows)
 	fs[#fs + 1] = "style_type[list;spacing=-1,-1]"
 	fs[#fs + 1] = "scroll_container_end[]"
-	fs[#fs + 1] = goodluck_craft.hotbar(7.3)
+	fs[#fs + 1] = goodluck_craft.hotbar(goodluck_craft.COMPACT_HOTBAR)
 	fs[#fs + 1] = ("listring[detached:creative_%s;main]listring[current_player;main]"):format(name)
 	return table.concat(fs)
 end

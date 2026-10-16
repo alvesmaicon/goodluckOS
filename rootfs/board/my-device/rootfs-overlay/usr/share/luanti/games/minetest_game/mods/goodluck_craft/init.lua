@@ -106,47 +106,57 @@ local function lock_armor_slots(name)
 	end
 end
 
-local function armor_formspec(player)
+-- one place per piece: a column of four beside the player (survival), or two columns of two as in Minecraft's
+-- creative inventory; the shield by the player's feet
+local PLACES = {
+	{{0, 0}, {0, 1}, {0, 2}, {0, 3}, {3, 3}},
+	{{0, 0.45}, {0, 1.45}, {1, 0.45}, {1, 1.45}, {4.05, 1.45}},
+}
+local function armor_formspec(player, compact)
 	local name = player:get_player_name()
 	local inv, tex = armor_inv(name), armor.textures[name]
 	if not inv or not tex then
 		return ""
 	end
-	-- the box (in slot spacings) covers two columns by four rows; the model (in slot sizes) is fitted to a view 1.2
-	-- times that, a little right of centre as its bounding box is not symmetric, and leaves the mouse to the slots below
-	local fs = {
-		"box[1,0;1.8,3.867;#000000]",
-		"model[0.97,-0.387;2.7,5.354;goodluck_player;3d_armor_character.b3d;" ..
-			core.formspec_escape(tex.skin) .. "," .. core.formspec_escape(tex.armor) ..
-			",blank.png;0,180;false;false;0,79;30]",
-	}
+	-- the box (in slot spacings) covers two columns by four rows (two in the compact one); the model (in slot sizes)
+	-- is fitted to a view 1.2 times that, a little right of centre as its bounding box is not symmetric, and leaves
+	-- the mouse to the slots below
+	local model = "goodluck_player;3d_armor_character.b3d;" .. core.formspec_escape(tex.skin) .. "," ..
+		core.formspec_escape(tex.armor) .. ",blank.png;0,180;false;false;0,79;30]"
+	local fs = compact and {"box[2.05,0.45;1.8,1.867;#000000]", "model[2.02,0.26;2.7,2.585;" .. model} or
+		{"box[1,0;1.8,3.867;#000000]", "model[0.97,-0.387;2.7,5.354;" .. model}
+	local places = PLACES[compact and 2 or 1]
 	for i, element in ipairs(SLOTS) do
 		if inv:get_stack("armor", i):is_empty() then
-			local x, y = 0, i - 1
-			if element == "shield" then
-				x, y = 3, 3
-			end
-			fs[#fs + 1] = ("image[%g,%g;1,1;goodluck_craft_slot_%s.png]"):format(x, y, element)
+			fs[#fs + 1] = ("image[%g,%g;1,1;goodluck_craft_slot_%s.png]"):format(places[i][1], places[i][2], element)
 		end
 	end
-	fs[#fs + 1] = ("list[detached:%s_armor;armor;0,0;1,4;0]"):format(name)
-	fs[#fs + 1] = ("list[detached:%s_armor;armor;3,3;1,1;4]"):format(name)
+	local list = "list[detached:" .. name .. "_armor;armor;%g,%g;%d,%d;%d]"
+	if compact then
+		fs[#fs + 1] = list:format(0, 0.45, 1, 2, 0) .. list:format(1, 0.45, 1, 2, 2)
+	else
+		fs[#fs + 1] = list:format(0, 0, 1, 4, 0)
+	end
+	fs[#fs + 1] = list:format(places[5][1], places[5][2], 1, 1, 4)
 	fs[#fs + 1] = ("listring[detached:%s_armor;armor]listring[current_player;main]"):format(name)
 	return table.concat(fs)
 end
 
--- below the grid, when the world was made with "Allow changing the game mode": it shows the mode and switches it,
--- as Minecraft's game mode button does
-local function mode_button(player)
+-- when the world was made with "Allow changing the game mode": it shows the mode and switches it, as Minecraft's game
+-- mode button does; below the grid, or on the title line of the compact page
+local function mode_button(player, compact)
 	if not mode or not mode.can_switch() then
 		return ""
 	end
 	local label = core.is_creative_enabled(player:get_player_name()) and S("Game mode: Creative") or
 		S("Game mode: Survival")
-	return "button[4.05,2.9;3.95,0.8;goodluck_mode;" .. core.formspec_escape(label) .. "]"
+	-- an old-coordinates button is always 0.8 high, which the title line hasn't room for; an image button is as high
+	-- as it is told
+	return (compact and "image_button[5.3,-0.11;4.25,0.65;blank.png;" or "button[4.05,2.9;3.95,0.8;") ..
+		"goodluck_mode;" .. core.formspec_escape(label) .. "]"
 end
 
-local function crafting_formspec(player)
+local function crafting_formspec(player, compact)
 	if at_table[player:get_player_name()] then
 		return "label[0,0;" .. core.formspec_escape(S("Crafting Table")) .. "]" ..
 			"list[current_player;craft;1.5,0.6;3,3;]" ..
@@ -154,13 +164,22 @@ local function crafting_formspec(player)
 			"list[current_player;craftpreview;5.8,1.6;1,1;]" ..
 			"listring[current_player;main]listring[current_player;craft]"
 	end
-	return (has_armor and armor_formspec(player) or "") ..
+	local grid = compact and "list[current_player;craft;5.4,0.45;2,2;]" ..
+		"image[7.4,0.95;1,1;sfinv_crafting_arrow.png]" ..
+		"list[current_player;craftpreview;8.4,0.95;1,1;]" or
 		"label[4.2,0;" .. core.formspec_escape(S("Crafting")) .. "]" ..
 		"list[current_player;craft;4.2,0.6;2,2;]" ..
 		"image[6.2,1.1;1,1;sfinv_crafting_arrow.png]" ..
-		"list[current_player;craftpreview;7,1.1;1,1;]" ..
-		"listring[current_player;main]listring[current_player;craft]" ..
-		mode_button(player)
+		"list[current_player;craftpreview;7,1.1;1,1;]"
+	return (has_armor and armor_formspec(player, compact) or "") .. grid ..
+		"listring[current_player;main]listring[current_player;craft]" .. mode_button(player, compact)
+end
+
+-- creative's pages, as in Minecraft's creative inventory: tabs above and below a lower panel; the recipes and the
+-- crafting table keep the survival inventory's taller one (Minecraft shows its crafting screen there too)
+function goodluck_craft.compact(player, context)
+	local name = player:get_player_name()
+	return core.is_creative_enabled(name) and not at_table[name] and context.page ~= "mtg_craftguide:craftguide"
 end
 
 local function leave_table(player)
@@ -242,7 +261,7 @@ core.register_on_leaveplayer(function(player)
 end)
 core.register_on_dieplayer(leave_table)
 
--- rows first and the hotbar at the bottom; the hotbar stays at 7.3 on every page
+-- rows first and the hotbar at the bottom, which stays in its place on every page
 local function inventory(y)
 	return ("list[current_player;main;0,%g;8,3;8]"):format(y) .. goodluck_craft.hotbar(y + 3.15)
 end
@@ -250,27 +269,32 @@ function goodluck_craft.hotbar(y)
 	return default.get_hotbar_bg(0, y) .. ("list[current_player;main;0,%g;8,1;]"):format(y)
 end
 
--- the panel holds a page of the old 8.2 high forms, with tabs above it (and below it, in creative) inside the form, so
--- that its size fits the screen with them: the sizes give 41 px slots in creative and 44 in survival at 640x480; the
--- prepend's background would fill the tab rows, so the form draws its own (creative is wider, for the scrollbar and
--- the trash beside the hotbar), and in creative a band behind the lower tabs hides the HUD hotbar
-local TOP = 0.53
+-- the panel holds a page; the tabs are rows of their own above it (and below it, in creative) inside the form, which
+-- is as high in both (9.1 gives 41 px slots at 640x480), with the rows and the panel centred in it; the prepend's
+-- background would fill the tab rows, so the form draws its own (the compact one is wider: 9 columns, the scrollbar,
+-- the trash beside the hotbar), and a band below the panel hides the HUD hotbar
+local TAB_ROW = 1.05
+goodluck_craft.COMPACT_TOP = 0.32 + TAB_ROW
+goodluck_craft.COMPACT_HOTBAR = 5.65
 function sfinv.make_formspec(player, context, content, show_inv)
-	local creative = core.is_creative_enabled(player:get_player_name())
-	local w = creative and 9 or 8.5
+	local compact = goodluck_craft.compact(player, context)
+	local w = compact and 9.7 or 8.5
+	-- where the page ends: the hotbar's bottom
+	local bottom = compact and goodluck_craft.COMPACT_HOTBAR + 0.87 or show_inv and 9.02 or 8.17
+	local top = compact and goodluck_craft.COMPACT_TOP or -0.16 + TAB_ROW
 	return table.concat({
-		("size[%g,%g]"):format(w, creative and 9.1 or 8.4),
+		("size[%g,9.1]"):format(w),
 		"padding[0.01,0.01]",
 		"no_prepend[]",
 		"bgcolor[#080808BB;true]",
 		"listcolors[#00000069;#5A5A5A;#141318;#30434C;#FFF]",
-		creative and ("box[-1,%g;%g,2;#080808FF]"):format(TOP + 8.26, w + 2) or "",
-		("background9[-0.2,%g;%g,8.72;gui_formbg.png;false;10]"):format(TOP - 0.26, w + 0.4),
-		goodluck_craft.tabs_formspec(context, creative, -0.52, TOP + 8.25),
-		("container[%g,%g]"):format(creative and 0 or 0.25, TOP),
+		("box[-1,%g;%g,3;#080808FF]"):format(top + bottom + (compact and 0.09 or 0.3), w + 2),
+		("background9[-0.2,%g;%g,%g;gui_formbg.png;false;10]"):format(top - 0.26, w + 0.4, bottom + 0.55),
+		goodluck_craft.tabs_formspec(context, compact, top - TAB_ROW, top + bottom + 0.08, 8.65),
+		("container[%g,%g]"):format(compact and 0 or 0.25, top),
 		show_inv and inventory(4.15) or "",
 		context.page == "mtg_craftguide:craftguide" and content:gsub("container%[0,5%.6%]", "container[0,5.2]") or content,
-		creative and goodluck_craft.trash and goodluck_craft.trash(8, 7.3) or "",
+		compact and goodluck_craft.trash and goodluck_craft.trash(8, goodluck_craft.COMPACT_HOTBAR) or "",
 		"container_end[]",
 	})
 end
@@ -278,7 +302,9 @@ end
 sfinv.override_page("sfinv:crafting", {
 	title = S("Inventory"),
 	get = function(self, player, context)
-		return sfinv.make_formspec(player, context, inventory(4.15) .. crafting_formspec(player), false)
+		local compact = goodluck_craft.compact(player, context)
+		return sfinv.make_formspec(player, context,
+			inventory(compact and goodluck_craft.COMPACT_HOTBAR - 3.15 or 4.15) .. crafting_formspec(player, compact))
 	end,
 	on_player_receive_fields = function(self, player, context, fields)
 		if fields.goodluck_mode and mode and mode.can_switch() then
