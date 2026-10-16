@@ -53,9 +53,19 @@ stamina
   Code LGPL-2.1; armor textures CC BY-SA 3.0 (davidthecreator); sounds CC0:
   mods/3d_armor/LICENSE.md
 
+x_enchanting
+  https://bitbucket.org/minetest_gamers/x_enchanting, commit @X_ENCHANTING_VERSION@
+  Code LGPL-2.1+; textures and models CC BY-SA 4.0 (some derived from
+  CC BY-SA 3.0 and 4.0 ones, each named), sounds CC0, CC BY 3.0 and CC BY 4.0:
+  mods/x_enchanting/LICENSE.txt
+  Replaced by goodluckOS's own: x_enchanting_image_trade_1.png to _3.png, the
+  enchanting table's cost, mese crystals there and lapis lazuli here. Added:
+  the pt_BR translation.
+
 Left out of mobs, mobs_animal, mobs_monster and stamina: screenshot.jpg, made
 on textstudio.com, whose terms are unclear. The game doesn't use them.
 
-goodluck_* mods, and the stamina, mobs_animal and mobs_monster media above
+goodluck_* mods, and the stamina, mobs_animal, mobs_monster and x_enchanting
+media above
   Code, pixel art, the rat's model and the item pickup and experience sounds
   made for goodluckOS, under goodluckOS's license, GPL-2.0.
