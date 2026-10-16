@@ -90,3 +90,47 @@ function core.handle_node_drops(pos, drops, digger)
 	end})
 	return handle_node_drops(pos, drops, plain)
 end
+
+-- an enchanted tool for the villages' traders: x_enchanting's draw for a table with this many bookshelves, written in
+-- the item as the table writes it (XEnchanting.set_enchanted_tool, without the table)
+goodluck_enchanting = {}
+
+local function glint(image)
+	return image .. "^((" .. image .. "^[contrast:127:127)^[mask:x_enchanting_glint.png^[opacity:80)"
+end
+
+function goodluck_enchanting.enchant(name, bookshelves)
+	local stack = ItemStack(name)
+	local def = core.registered_tools[stack:get_name()]
+	if not def then
+		return stack
+	end
+	-- x_enchanting seeds its draw by the second (os.time): a seed of our own, or every tool of a trader gets the same
+	XEnchanting.player_seeds.goodluck_trader = core.get_us_time() % 2147483647
+	local data = XEnchanting:get_enchantment_data({get_player_name = function() return "goodluck_trader" end},
+		bookshelves, def)
+	XEnchanting.player_seeds.goodluck_trader = nil
+	math.randomseed(core.get_us_time())
+	local slot = data.slots[math.random(1, #data.slots)]
+	if not slot or #slot.final_enchantments == 0 then
+		return stack
+	end
+	local meta = stack:get_meta()
+	local saved = {}
+	for _, e in ipairs(slot.final_enchantments) do
+		meta:set_float("is_" .. e.id, e.value)
+		saved[e.id] = {value = e.value}
+	end
+	meta:set_tool_capabilities(slot.tool_cap_data)
+	meta:set_string("description", stack:get_description() .. "\n" .. slot.descriptions.enchantments_desc)
+	meta:set_string("short_description", core.translate("x_enchanting", "Enchanted") .. " " ..
+		stack:get_short_description())
+	meta:set_int("is_enchanted", 1)
+	meta:set_string("x_enchanting", core.serialize(saved))
+	for _, field in ipairs({"inventory_image", "inventory_overlay", "wield_image", "wield_overlay"}) do
+		if def[field] and def[field] ~= "" then
+			meta:set_string(field, glint(def[field]))
+		end
+	end
+	return stack
+end

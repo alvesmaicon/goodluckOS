@@ -47,6 +47,15 @@ stamina
   Replaced: stamina_hud_fg.png, stamina_hud_bg.png and stamina_hud_poison.png,
   by goodluckOS's own (see goodluck_* below).
 
+mobs_npc
+  https://codeberg.org/tenplus1/mobs_npc, commit @MOBS_NPC_VERSION@
+  Code MIT; model CC BY-SA 3.0, textures CC BY-SA 3.0 and 4.0 and CC0:
+  mods/mobs_npc/license.txt
+  Replaced by goodluckOS's own: gui_arrow_blank.png and mobs_npc_shop_icon.png,
+  which its credits don't name. Added: an empty spawn.lua, so mobs_npc spawns
+  nothing by itself (goodluck_villages places the villagers), and the pt_BR
+  translation.
+
 3d_armor
   https://github.com/minetest-mods/3d_armor, commit @3D_ARMOR_VERSION@
   Only these mods of the modpack, without the .blend files: @3D_ARMOR_MODS@
@@ -62,10 +71,16 @@ x_enchanting
   enchanting table's cost, mese crystals there and lapis lazuli here. Added:
   the pt_BR translation.
 
-Left out of mobs, mobs_animal, mobs_monster and stamina: screenshot.jpg, made
+goodluck_villages
+  Built on villages_mtg 1.0.3 by Drix03,
+  https://content.luanti.org/packages/Drix03/villages_mtg/, MIT:
+  mods/goodluck_villages/LICENSE-villages_mtg.md. Its eight buildings
+  (schems/) are unchanged; the village code is reworked by goodluckOS.
+
+Left out of mobs, mobs_animal, mobs_monster, stamina and mobs_npc: screenshot.jpg, made
 on textstudio.com, whose terms are unclear. The game doesn't use them.
 
-goodluck_* mods, and the stamina, mobs_animal, mobs_monster and x_enchanting
-media above
+goodluck_* mods (but goodluck_villages' buildings, above), and the stamina,
+mobs_animal, mobs_monster, x_enchanting and mobs_npc media above
   Code, pixel art, the rat's model and the item pickup and experience sounds
   made for goodluckOS, under goodluckOS's license, GPL-2.0.
