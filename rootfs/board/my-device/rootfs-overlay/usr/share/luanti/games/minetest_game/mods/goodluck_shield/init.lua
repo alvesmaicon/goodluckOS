@@ -1,5 +1,6 @@
--- With a 3d_armor shield on, L1 (place) held with nothing to place in hand, or sneaking as on Bedrock, raises it after
--- 0.25 s as in Minecraft: hits and arrows from the front half do no damage and wear only the shield
+-- With a 3d_armor shield on, L1 (place) held with nothing to place in hand, or sneaking as on Bedrock, raises it; after
+-- 0.25 s, as in Minecraft, hits and arrows from the front half do no damage and wear only the shield. Attacking lowers
+-- it, as on Bedrock. The engine (patch 0022) holds the "offhand" list's item in the left hand, raised by its meta
 local RAISE_DELAY = 0.25 * 1e6
 -- raised, it walks as slow as sneaking, which already is
 local SLOW = (tonumber(core.settings:get("movement_speed_crouch")) or 1.35) /
@@ -7,7 +8,7 @@ local SLOW = (tonumber(core.settings:get("movement_speed_crouch")) or 1.35) /
 -- a mob that hits it is pushed back as mobs_redo's own knockback does
 local PUSH, PUSH_UP, PUSH_PAUSE = 5, 2, 0.25
 local sprint = core.get_modpath("goodluck_sprint") and goodluck_sprint
-local since, raised, slowed, huds = {}, {}, {}, {}
+local since, up_now, raised, slowed = {}, {}, {}, {}
 
 local function shield_slot(name)
 	local inv = core.get_inventory({type = "detached", name = name .. "_armor"})
@@ -59,30 +60,31 @@ local function set_slowed(player, name, on)
 	end
 end
 
-local function set_raised(player, name, on)
-	if (raised[name] or false) == on then
+-- the shield worn, copied to the left hand, raised or not
+local function show(player, name)
+	local inv = player:get_inventory()
+	if inv:get_size("offhand") ~= 1 then
+		inv:set_size("offhand", 1)
+	end
+	local _, stack = shield_slot(name)
+	local shown = ItemStack(stack and stack:get_name() or "")
+	if up_now[name] and not shown:is_empty() then
+		shown:get_meta():set_string("raised", "1")
+	end
+	if not inv:get_stack("offhand", 1):equals(shown) then
+		inv:set_stack("offhand", 1, shown)
+	end
+end
+
+local function set_up(player, name, on)
+	if (up_now[name] or false) == on then
 		return
 	end
-	raised[name] = on or nil
+	up_now[name] = on or nil
 	if sprint then
 		sprint.stop(player, on)
 	end
-	if on then
-		local _, stack = shield_slot(name)
-		-- as Minecraft draws it: big, low left of the crosshair, only its top right corner on screen, under the HUD
-		huds[name] = player:hud_add({
-			type = "image",
-			position = {x = 0.5, y = 0.5},
-			alignment = {x = -1, y = 1},
-			offset = {x = -30, y = 10},
-			scale = {x = 24, y = 24},
-			z_index = -1,
-			text = stack:get_definition().inventory_image,
-		})
-	elseif huds[name] then
-		player:hud_remove(huds[name])
-		huds[name] = nil
-	end
+	show(player, name)
 end
 
 core.register_globalstep(function()
@@ -90,15 +92,16 @@ core.register_globalstep(function()
 	for _, player in ipairs(core.get_connected_players()) do
 		local name = player:get_player_name()
 		local ctrl = player:get_player_control()
-		local up = (ctrl.sneak or ctrl.place and not places(player:get_wielded_item())) and player:get_hp() > 0 and
-			shield_slot(name) ~= nil
+		local up = (ctrl.sneak or ctrl.place and not places(player:get_wielded_item())) and not ctrl.dig and
+			player:get_hp() > 0 and shield_slot(name) ~= nil
 		if not up then
 			since[name] = nil
 		elseif not since[name] then
 			since[name] = now
 		end
-		set_raised(player, name, up and now - since[name] >= RAISE_DELAY)
-		set_slowed(player, name, raised[name] and not ctrl.sneak or false)
+		set_up(player, name, up)
+		raised[name] = up and now - since[name] >= RAISE_DELAY or nil
+		set_slowed(player, name, up and not ctrl.sneak)
 	end
 end)
 
@@ -144,9 +147,10 @@ armor:register_on_update(function(player)
 	if slowed[name] then
 		player:set_physics_override({speed = walk_speed(name) * SLOW})
 	end
+	show(player, name)
 end)
 
 core.register_on_leaveplayer(function(player)
 	local name = player:get_player_name()
-	since[name], raised[name], slowed[name], huds[name] = nil, nil, nil, nil
+	since[name], up_now[name], raised[name], slowed[name] = nil, nil, nil, nil
 end)
