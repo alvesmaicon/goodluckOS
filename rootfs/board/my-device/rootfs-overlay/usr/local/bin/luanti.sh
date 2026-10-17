@@ -16,6 +16,12 @@ set_conf() {
     if grep -q "^$1 *=" "$conf"; then sed -i "s|^$1 *=.*|$1 = $2|" "$conf"; else echo "$1 = $2" >> "$conf"; fi
 }
 
+# no menu sets these: they follow the image's defaults even when already in the conf
+for key in loading_terrain_radius loading_terrain_timeout; do
+    value=$(sed -n "s/^$key *= *//p" "$defaults" | tail -n 1)
+    [ -n "$value" ] && set_conf "$key" "$value"
+done
+
 # the same setting as gl-tr
 code=$(sed -n 's/^language=//p' "$HOME/.config/puppy/settings" 2>/dev/null | tail -n 1)
 if [ "$code" = pt-BR ]; then
