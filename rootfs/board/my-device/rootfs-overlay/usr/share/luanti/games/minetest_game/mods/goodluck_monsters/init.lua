@@ -56,6 +56,17 @@ local function burn(self, dtime)
 	end
 end
 
+-- the sound a monster makes now and then, every 4 to 10 s as in Minecraft, heard 16 nodes away, so one can tell
+-- what is around in the dark (mobs_redo plays it 1 time in 100 a second)
+local HEAR = 16
+local function ambient(self, dtime)
+	self._ambient = (self._ambient or math.random() * 6) - dtime
+	if self._ambient <= 0 then
+		self._ambient = 4 + math.random() * 6
+		self:mob_sound(self.sounds.random)
+	end
+end
+
 -- arms held out in front, on top of whatever the animation does
 local function arms_out(self, on)
 	if self._arms == on or not self.object.set_bone_override then
@@ -83,7 +94,7 @@ mobs:register_mob(MOD .. "zombie", {
 	textures = {skin("goodluck_monsters_zombie.png")},
 	makes_footstep_sound = true,
 	sounds = {random = "goodluck_monsters_zombie", damage = "goodluck_monsters_zombie_hurt",
-		death = "goodluck_monsters_zombie_hurt"},
+		death = "goodluck_monsters_zombie_hurt", distance = HEAR},
 	walk_velocity = 1, run_velocity = 2,
 	view_range = 16,
 	jump = true,
@@ -103,6 +114,7 @@ mobs:register_mob(MOD .. "zombie", {
 		if burn(self, dtime) then
 			return false
 		end
+		ambient(self, dtime)
 	end,
 })
 
@@ -125,7 +137,7 @@ mobs:register_mob(MOD .. "skeleton", {
 	use_texture_alpha = true,
 	makes_footstep_sound = true,
 	sounds = {random = "goodluck_monsters_skeleton", damage = "goodluck_monsters_skeleton",
-		death = "goodluck_monsters_skeleton", shoot_attack = bows and "x_bows_bow_shoot" or nil},
+		death = "goodluck_monsters_skeleton", shoot_attack = bows and "x_bows_bow_shoot" or nil, distance = HEAR},
 	walk_velocity = 1, run_velocity = 2,
 	view_range = 16,
 	jump = true,
@@ -145,6 +157,7 @@ mobs:register_mob(MOD .. "skeleton", {
 		if burn(self, dtime) then
 			return false
 		end
+		ambient(self, dtime)
 		-- the bow up while it has someone in its sights
 		arms_out(self, self.state == "attack")
 	end,
@@ -186,7 +199,7 @@ mobs:register_mob(MOD .. "spider", {
 	mesh = "mobs_spider.b3d",
 	textures = {{"goodluck_monsters_spider.png"}},
 	makes_footstep_sound = false,
-	sounds = {random = "mobs_spider", attack = "mobs_spider"},
+	sounds = {random = "mobs_spider", attack = "mobs_spider", distance = HEAR},
 	walk_velocity = 1.5, run_velocity = 2.5,
 	view_range = 16,
 	jump = true,
@@ -209,7 +222,8 @@ mobs:register_mob(MOD .. "spider", {
 		self._angry = true
 		self.passive = false
 	end,
-	do_custom = function(self)
+	do_custom = function(self, dtime)
+		ambient(self, dtime)
 		local pos = self.object:get_pos()
 		self.passive = not self._angry and pos and (core.get_node_light(pos) or 0) >= 12 or false
 	end,
