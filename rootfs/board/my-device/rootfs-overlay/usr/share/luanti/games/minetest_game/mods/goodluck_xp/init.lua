@@ -31,6 +31,8 @@ local function creative(player)
 end
 
 local huds = {}
+-- players whose bar something else takes for now (the horse's jump bar)
+local hidden = {}
 
 local function update_hud(player)
 	local ids = huds[player:get_player_name()]
@@ -39,7 +41,7 @@ local function update_hud(player)
 	end
 	local meta = player:get_meta()
 	local level, points = meta:get_int(LEVEL), meta:get_int(POINTS)
-	local hide = creative(player)
+	local hide = creative(player) or hidden[player:get_player_name()]
 	local w = math.floor(points / need(level) * (BAR_W - 2) + 0.5)
 	player:hud_change(ids.bg, "text", hide and "blank.png" or "goodluck_xp_bar_bg.png")
 	player:hud_change(ids.fill, "text", (hide or w == 0) and "blank.png" or
@@ -48,6 +50,11 @@ local function update_hud(player)
 	for _, id in ipairs(ids.level) do
 		player:hud_change(id, "text", text)
 	end
+end
+
+function goodluck_xp.hide(player, on)
+	hidden[player:get_player_name()] = on or nil
+	update_hud(player)
 end
 
 function goodluck_xp.get_level(player)
@@ -201,6 +208,7 @@ end)
 
 core.register_on_leaveplayer(function(player)
 	huds[player:get_player_name()] = nil
+	hidden[player:get_player_name()] = nil
 	last_pickup[player:get_player_name()] = nil
 end)
 

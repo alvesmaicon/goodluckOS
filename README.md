@@ -167,6 +167,8 @@ The monsters are Minecraft's classic ones, drawn anew, and every few seconds you
 
 The compass, four iron ingots around a mese fragment (Minetest Game's stand-in for redstone), points to the world's spawn in the inventory and in the hand, and while held it shows where you are at the top of the screen. Maps are Minecraft's: eight papers around a compass make an empty map, and R1 turns it into the map of the 128 by 128 blocks around you, on a grid so that maps sit side by side; held, it fills in as you walk (64 blocks around you), north up, and shows you as an arrow. A world made with "Bonus chest" ticked starts with a chest by the spawn, torches around it, holding a map of the place, a stone pickaxe and axe, apples, bread, sticks, planks, logs and torches.
 
+Horses are Minecraft's: herds of two to six in grassland and savanna, now and then with a foal, in seven coats (white, creamy, chestnut, brown, black, gray, dark brown) with or without white socks and a blaze, white patches, white or black dots, and each with health, speed and jump of its own. A wild horse is tamed by getting on it (L1 with an empty hand): it throws you off a few times, each time a little calmer, and wheat, apples and golden apples calm it faster, until it keeps you and hearts show. Only a saddle lets you steer it (three leather over an iron ingot, or from village chests and dungeons); sneaking (A) gets you off. Holding jump (B) fills the jump bar where the experience bar is, and letting go jumps higher the fuller it is, up to five blocks for the best horses. Horse armor, leather (seven leather, and it takes a dye's colour), iron, gold or diamond (these only from village chests and dungeons), takes 12 to 44 % off the damage. A horse's inventory, with its saddle and armor slots, opens from the inventory while riding, or with A held and L1 on it. A golden apple (eight gold ingots around an apple) to each of two tamed horses makes a foal, with health, speed and jump between theirs; wheat, apples, golden apples and straw make foals grow faster. Horses run 5 to 9 blocks a second, slower than Minecraft's fastest (14.6); `goodluck_horse_max_speed` in minetest.conf sets the top.
+
 The inventory's tabs are icons, as in Minecraft. In Creative they sit where Minecraft (Java Edition) puts its own: Building Blocks, Colored Blocks, Natural Blocks, Functional Blocks, Recipes and Search above the panel, and Tools & Utilities, Combat, Food & Drinks, Ingredients, Spawn Eggs and the Inventory below it (there is no Redstone tab, as Minetest Game has no redstone). Each tab's grid has Minecraft's 9 columns and scrolls with R1/L1 or the bar beside it, and the trash next to the hotbar deletes whatever is put in it. Survival has two tabs, the Inventory and Recipes.
 
 A world opens only once the terrain in view is loaded and drawn, as far as the view goes (up to 320 blocks), so it doesn't show building itself; a new world has to be made first, which can take up to a minute.
@@ -179,10 +181,10 @@ Clicking a text field (a world's name, a setting, a sign, a book, the creative i
 |---|---|---|
 | Left stick | Walk | Move the cursor |
 | Right stick | Look around | Scroll (lists with a scrollbar, wherever the cursor is) |
-| B (bottom) | Jump | Click (on a text field: the keyboard) |
-| A (right) | Sneak (with a shield on: hold it up) | Back |
+| B (bottom) | Jump (on a horse: held, it charges the jump bar; let go to jump) | Click (on a text field: the keyboard) |
+| A (right) | Sneak (with a shield on: hold it up; on a horse: get off) | Back |
 | X / Y | Inventory | X: right click (half a stack), Y: click |
-| R1 / L1 | Dig, eat, look through the spyglass (held) / place, draw a bow (held; let go to shoot; with a shield on and no block in hand, L1 holds it up) | Scroll |
+| R1 / L1 | Dig, eat, look through the spyglass (held) / place, draw a bow (held; let go to shoot; with a shield on and no block in hand, L1 holds it up), get on a horse (with A held: its inventory) | Scroll |
 | R2 / L2 | Next / previous item | |
 | L3 | Run | |
 | D-pad | Up: camera view, down: drop the item, left: fly (Creative mode), right: screenshot | Move the cursor slowly |

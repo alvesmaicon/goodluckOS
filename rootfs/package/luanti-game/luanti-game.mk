@@ -7,7 +7,7 @@
 # minetest_game has no tag since 5.8.0 (2023); master is the maintained one
 LUANTI_GAME_VERSION = c42e4d0c0ff9d27ff7b9b308c3cfc14098dd3a0f
 LUANTI_GAME_SITE = $(call github,luanti-org,minetest_game,$(LUANTI_GAME_VERSION))
-LUANTI_GAME_LICENSE = LGPL-2.1+ (code), LGPL-2.1 (3d_armor code), MIT (mobs code), CC-BY-SA-3.0, CC-BY-SA-4.0, \
+LUANTI_GAME_LICENSE = LGPL-2.1+ (code), LGPL-2.1 (3d_armor code), MIT (mobs and mob_horse code and model), CC-BY-SA-3.0, CC-BY-SA-4.0, \
 	CC-BY-3.0, CC-BY-4.0, CC0-1.0, WTFPL (media)
 LUANTI_GAME_LICENSE_FILES = LICENSE.txt
 
@@ -21,6 +21,8 @@ LUANTI_GAME_3D_ARMOR_VERSION = a4f311cbcf8125b4b83ba884d1d0d12f018021da
 LUANTI_GAME_X_ENCHANTING_VERSION = 0d589e69b39642b31397ec52b5b5b5239a0c45f6
 # 5.3.1, the ContentDB release
 LUANTI_GAME_X_BOWS_VERSION = 7b36ca2d9c7df12314b90b83541a5200f517b7c3
+# the ContentDB release of 2026-10-17
+LUANTI_GAME_MOB_HORSE_VERSION = aa3ad5e04c7c13b54d3ae80d95c59710f9daf44b
 # the modpack's mods that need nothing outside minetest_game, without the armor stand and wieldview
 LUANTI_GAME_3D_ARMOR_MODS = 3d_armor 3d_armor_sfinv armor_wood armor_cactus armor_bronze \
 	armor_steel armor_gold armor_diamond shields
@@ -32,7 +34,8 @@ LUANTI_GAME_EXTRA_DOWNLOADS = \
 	https://codeberg.org/tenplus1/mobs_npc/archive/$(LUANTI_GAME_MOBS_NPC_VERSION).tar.gz \
 	https://github.com/minetest-mods/3d_armor/archive/$(LUANTI_GAME_3D_ARMOR_VERSION).tar.gz \
 	https://bitbucket.org/minetest_gamers/x_enchanting/get/$(LUANTI_GAME_X_ENCHANTING_VERSION).tar.gz \
-	https://bitbucket.org/minetest_gamers/x_bows/get/$(LUANTI_GAME_X_BOWS_VERSION).tar.gz
+	https://bitbucket.org/minetest_gamers/x_bows/get/$(LUANTI_GAME_X_BOWS_VERSION).tar.gz \
+	https://codeberg.org/tenplus1/mob_horse/archive/$(LUANTI_GAME_MOB_HORSE_VERSION).tar.gz
 
 # not LUANTI_GAME_DIR: Buildroot owns <pkg>_DIR (the build directory)
 LUANTI_GAME_DEST = $(TARGET_DIR)/usr/share/luanti/games/minetest_game
@@ -61,6 +64,7 @@ define LUANTI_GAME_INSTALL_TARGET_CMDS
 	$(call LUANTI_GAME_EXTRACT_MOD,mobs_npc,$(LUANTI_GAME_MOBS_NPC_VERSION))
 	$(call LUANTI_GAME_EXTRACT_MOD,x_enchanting,$(LUANTI_GAME_X_ENCHANTING_VERSION))
 	$(call LUANTI_GAME_EXTRACT_MOD,x_bows,$(LUANTI_GAME_X_BOWS_VERSION),--exclude=smoke_puff.png --exclude='x_bows_quiver.*.ogg')
+	$(call LUANTI_GAME_EXTRACT_MOD,mob_horse,$(LUANTI_GAME_MOB_HORSE_VERSION),--exclude='*.png' --exclude=spawn_example.lua)
 	mkdir -p $(LUANTI_GAME_DEST)/mods/3d_armor
 	$(call suitable-extractor,$(LUANTI_GAME_3D_ARMOR_VERSION).tar.gz) \
 		$(LUANTI_GAME_DL_DIR)/$(LUANTI_GAME_3D_ARMOR_VERSION).tar.gz | \
@@ -76,6 +80,7 @@ define LUANTI_GAME_INSTALL_TARGET_CMDS
 		-e 's/@3D_ARMOR_VERSION@/$(LUANTI_GAME_3D_ARMOR_VERSION)/' \
 		-e 's/@X_ENCHANTING_VERSION@/$(LUANTI_GAME_X_ENCHANTING_VERSION)/' \
 		-e 's/@X_BOWS_VERSION@/$(LUANTI_GAME_X_BOWS_VERSION)/' \
+		-e 's/@MOB_HORSE_VERSION@/$(LUANTI_GAME_MOB_HORSE_VERSION)/' \
 		-e 's/@3D_ARMOR_MODS@/$(strip $(LUANTI_GAME_3D_ARMOR_MODS))/' \
 		$(LUANTI_GAME_PKGDIR)/CREDITS.txt > $(LUANTI_GAME_DEST)/CREDITS.txt
 endef
