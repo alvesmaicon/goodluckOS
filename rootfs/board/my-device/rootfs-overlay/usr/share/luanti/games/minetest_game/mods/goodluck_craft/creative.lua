@@ -305,7 +305,13 @@ for _, cat in ipairs(CATEGORIES) do
 	goodluck_craft.set_tab("creative:" .. cat[1], cat[3], cat[4], cat[5])
 end
 register("search", S("Search Items"))
-goodluck_craft.set_tab("creative:search", "goodluck_craft_compass.png", 1, 7)
+-- an item, not an image: a selected image_button loses its picture under the open tab's style
+core.register_craftitem("goodluck_craft:search_icon", {
+	description = S("Search Items"),
+	inventory_image = "goodluck_craft_compass.png",
+	groups = {not_in_creative_inventory = 1},
+})
+goodluck_craft.set_tab("creative:search", "goodluck_craft:search_icon", 1, 7)
 
 -- minetest_game's own creative tabs give way to these
 for _, cat in ipairs({"all", "nodes", "tools", "craftitems"}) do

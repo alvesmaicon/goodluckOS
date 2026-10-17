@@ -56,14 +56,16 @@ local function burn(self, dtime)
 	end
 end
 
--- the sound a monster makes now and then, every 4 to 10 s as in Minecraft, heard 16 nodes away, so one can tell
--- what is around in the dark (mobs_redo plays it 1 time in 100 a second)
-local HEAR = 16
+-- the sound a monster makes now and then, every 4 to 10 s as in Minecraft, heard 16 nodes away at 40 % of its
+-- volume, so one can tell what is around in the dark without it being loud (mobs_redo plays its "random" 1 time in
+-- 100 a second, at full volume: those monsters have none). A new table each time: mob_sound changes the one it gets
+local HEAR, AMBIENT_GAIN = 16, 0.4
+local AMBIENT = {}
 local function ambient(self, dtime)
 	self._ambient = (self._ambient or math.random() * 6) - dtime
 	if self._ambient <= 0 then
 		self._ambient = 4 + math.random() * 6
-		self:mob_sound(self.sounds.random)
+		self:mob_sound({name = AMBIENT[self.name], gain = AMBIENT_GAIN})
 	end
 end
 
@@ -93,7 +95,7 @@ mobs:register_mob(MOD .. "zombie", {
 	mesh = MESH,
 	textures = {skin("goodluck_monsters_zombie.png")},
 	makes_footstep_sound = true,
-	sounds = {random = "goodluck_monsters_zombie", damage = "goodluck_monsters_zombie_hurt",
+	sounds = {damage = "goodluck_monsters_zombie_hurt",
 		death = "goodluck_monsters_zombie_hurt", distance = HEAR},
 	walk_velocity = 1, run_velocity = 2,
 	view_range = 16,
@@ -136,7 +138,7 @@ mobs:register_mob(MOD .. "skeleton", {
 	textures = {skin("goodluck_monsters_skeleton.png", bows and "x_bows_bow_wood.png")},
 	use_texture_alpha = true,
 	makes_footstep_sound = true,
-	sounds = {random = "goodluck_monsters_skeleton", damage = "goodluck_monsters_skeleton",
+	sounds = {damage = "goodluck_monsters_skeleton",
 		death = "goodluck_monsters_skeleton", shoot_attack = bows and "x_bows_bow_shoot" or nil, distance = HEAR},
 	walk_velocity = 1, run_velocity = 2,
 	view_range = 16,
@@ -199,7 +201,7 @@ mobs:register_mob(MOD .. "spider", {
 	mesh = "mobs_spider.b3d",
 	textures = {{"goodluck_monsters_spider.png"}},
 	makes_footstep_sound = false,
-	sounds = {random = "mobs_spider", attack = "mobs_spider", distance = HEAR},
+	sounds = {attack = "mobs_spider", distance = HEAR},
 	walk_velocity = 1.5, run_velocity = 2.5,
 	view_range = 16,
 	jump = true,
@@ -301,6 +303,10 @@ mobs:register_mob(MOD .. "mushroom", {
 		self.object:set_properties({visual_size = {x = k, y = k}})
 	end,
 })
+
+AMBIENT[MOD .. "zombie"] = "goodluck_monsters_zombie"
+AMBIENT[MOD .. "skeleton"] = "goodluck_monsters_skeleton"
+AMBIENT[MOD .. "spider"] = "mobs_spider"
 
 -- drops
 core.register_craftitem(MOD .. "rotten_flesh", {
