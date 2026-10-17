@@ -370,6 +370,12 @@ local function build(vm, emin, emax, minp, maxp, vx, vy, vz, seed)
 		for _, c in ipairs(core.find_nodes_in_area(p.pos, p2, {"default:chest", "group:chest"})) do
 			fill_chest(c, p.file == "herreria.mts", pr)
 		end
+		-- the smith's porch: an anvil where the building has a stone block, by the armorer
+		if p.file == "herreria.mts" and core.registered_nodes["goodluck_anvil:anvil"] then
+			for _, b in ipairs(core.find_nodes_in_area(p.pos, p2, {"default:stone_block"})) do
+				core.set_node(b, {name = "goodluck_anvil:anvil", param2 = pr(0, 3)})
+			end
+		end
 		-- traders by trade; in a house, one villager a bed
 		for _, job in ipairs(residents[p.file] or {}) do
 			spawns[#spawns + 1] = {p.pos, p2, job}
