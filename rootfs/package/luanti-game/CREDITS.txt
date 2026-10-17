@@ -126,5 +126,5 @@ above), and the stamina, mobs_animal, mobs_monster, x_enchanting, mobs_npc and
 x_bows media above (but the half-drawn bow, CC BY-SA 4.0)
   Code, pixel art (goodluck_horse's coats, markings, saddle and horse armor
   are painted by a script on mob_horse's model), the rat's and the bomb
-  mushroom's models, and the item pickup, experience, bow, monster and horse
-  equip sounds made for goodluckOS, under goodluckOS's license, GPL-2.0.
+  mushroom's models, and the item pickup, experience, bow, monster, horse equip
+  and anvil sounds made for goodluckOS, under goodluckOS's license, GPL-2.0.
