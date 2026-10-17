@@ -17,7 +17,7 @@ function item.set_item(self, ...)
 end
 
 -- builtin's handle_node_drops drops on the ground what the digger's inventory doesn't take: it gets the digger
--- without an inventory, through creative's and the lava pick's, which still run (both are loaded before this one)
+-- without an inventory, through creative's, the lava pick's and the enchantments', which still run (all loaded before)
 local handle_node_drops = core.handle_node_drops
 function core.handle_node_drops(pos, drops, digger)
 	if not digger or not digger:is_player() or core.is_creative_enabled(digger:get_player_name()) then

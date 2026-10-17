@@ -1,10 +1,23 @@
--- Armor above the hearts, hunger in the hearts' row on the right (stamina_hud_x/y), breath one row above hunger
+-- Armor above the hearts, hunger in the hearts' row on the right, breath one row above hunger, all of them over
+-- goodluck_xp's bar
 if not core.settings:get_bool("enable_damage") then
 	return
 end
 
 local ROW = 22
-local HEARTS_Y = -(48 + 24 + 16)
+local HEARTS_Y = -(48 + 24 + 16) - (core.get_modpath("goodluck_xp") and 12 or 0)
+
+core.hud_replace_builtin("health", {
+	type = "statbar",
+	position = {x = 0.5, y = 1},
+	text = "heart.png",
+	text2 = "heart_gone.png",
+	number = core.PLAYER_MAX_HP_DEFAULT,
+	item = core.PLAYER_MAX_HP_DEFAULT,
+	direction = 0,
+	size = {x = 24, y = 24},
+	offset = {x = -265, y = HEARTS_Y},
+})
 
 core.hud_replace_builtin("breath", {
 	type = "statbar",
@@ -59,6 +72,7 @@ core.register_on_joinplayer(function(player)
 	local data = hunger and hunger.players[name]
 	if data then
 		player:hud_change(data.hud_id, "text2", "stamina_hud_bg.png")
+		player:hud_change(data.hud_id, "offset", {x = 25, y = HEARTS_Y})
 	end
 	if armor_mod then
 		armor_hud[name] = player:hud_add({

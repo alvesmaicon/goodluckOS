@@ -36,7 +36,10 @@ mobs_monster
   the cobweb, the lava pick, the sand particles, and the fire spirit (an
   empty image, as it was). Redrawn by goodluckOS: the stone monster's four
   textures, and the dirt and sand monsters' two each. mobs_spider.ogg is the
-  sound mobs_animal's license.txt credits: Cyberpangolin, WTFPL.
+  sound mobs_animal's license.txt credits: Cyberpangolin, WTFPL. Added: an
+  empty spawn.lua, so its monsters no longer spawn (goodluck_monsters spawns
+  Minecraft's classic ones); they stay registered, their eggs out of the
+  creative inventory.
 
 stamina
   https://codeberg.org/tenplus1/stamina, commit @STAMINA_VERSION@
@@ -47,15 +50,65 @@ stamina
   Replaced: stamina_hud_fg.png, stamina_hud_bg.png and stamina_hud_poison.png,
   by goodluckOS's own (see goodluck_* below).
 
+mobs_npc
+  https://codeberg.org/tenplus1/mobs_npc, commit @MOBS_NPC_VERSION@
+  Code MIT; model CC BY-SA 3.0, textures CC BY-SA 3.0 and 4.0 and CC0:
+  mods/mobs_npc/license.txt
+  Replaced by goodluckOS's own: gui_arrow_blank.png and mobs_npc_shop_icon.png,
+  which its credits don't name. Added: an empty spawn.lua, so mobs_npc spawns
+  nothing by itself (goodluck_villages places the villagers), and the pt_BR
+  translation.
+
 3d_armor
   https://github.com/minetest-mods/3d_armor, commit @3D_ARMOR_VERSION@
   Only these mods of the modpack, without the .blend files: @3D_ARMOR_MODS@
   Code LGPL-2.1; armor textures CC BY-SA 3.0 (davidthecreator); sounds CC0:
   mods/3d_armor/LICENSE.md
 
-Left out of mobs, mobs_animal, mobs_monster and stamina: screenshot.jpg, made
+x_enchanting
+  https://bitbucket.org/minetest_gamers/x_enchanting, commit @X_ENCHANTING_VERSION@
+  Code LGPL-2.1+; textures and models CC BY-SA 4.0 (some derived from
+  CC BY-SA 3.0 and 4.0 ones, each named), sounds CC0, CC BY 3.0 and CC BY 4.0:
+  mods/x_enchanting/LICENSE.txt
+  Replaced by goodluckOS's own: x_enchanting_image_trade_1.png to _3.png, the
+  enchanting table's cost, mese crystals there and lapis lazuli here. Added:
+  the pt_BR translation.
+
+x_bows
+  https://bitbucket.org/minetest_gamers/x_bows, commit @X_BOWS_VERSION@
+  Code LGPL-2.1+; textures and models CC BY-SA 4.0 and CC BY-SA 3.0, the
+  arrows' flyby sounds CC0: mods/x_bows/LICENSE.txt
+  Replaced by goodluckOS's own: the bow's sounds (drawing, fully drawn,
+  shooting, the critical shot, the arrow hitting, the hit on a player), which
+  its credits give to freesound.org authors with no particular Creative
+  Commons license; and x_bows_bow_wood_semi_charged.png, which its credits
+  don't name, redrawn from its x_bows_bow_wood.png and
+  x_bows_bow_wood_charged.png and so under their CC BY-SA 4.0. Left out:
+  the quiver's sounds (same credits as above; goodluck_bow takes the quiver
+  out of the game) and smoke_puff.png (not credited, empty, unused). Added:
+  the pt_BR translation.
+
+goodluck_monsters
+  The zombie and the skeleton wear 3d_armor's character model (see 3d_armor).
+  The spider is mobs_monster's mobs_spider.b3d (AspireMint, CC BY-SA 3.0)
+  with its mobs_spider.ogg (see mobs_monster); its skin,
+  goodluck_monsters_spider.png, is mobs_spider_grey.png (AspireMint, CC BY-SA
+  3.0) recoloured, with bigger red eyes, and so under CC BY-SA 3.0. The bomb
+  mushroom's model, every other texture and the sounds are goodluckOS's own
+  (see goodluck_* below).
+
+goodluck_villages
+  Built on villages_mtg 1.0.3 by Drix03,
+  https://content.luanti.org/packages/Drix03/villages_mtg/, MIT:
+  mods/goodluck_villages/LICENSE-villages_mtg.md. Its eight buildings
+  (schems/) are unchanged; the village code is reworked by goodluckOS.
+
+Left out of mobs, mobs_animal, mobs_monster, stamina and mobs_npc: screenshot.jpg, made
 on textstudio.com, whose terms are unclear. The game doesn't use them.
 
-goodluck_* mods, and the stamina, mobs_animal and mobs_monster media above
-  Code, pixel art, the rat's model and the item pickup sound made for
-  goodluckOS, under goodluckOS's license, GPL-2.0.
+goodluck_* mods (but goodluck_villages' buildings and goodluck_monsters' spider,
+above), and the stamina, mobs_animal, mobs_monster, x_enchanting, mobs_npc and
+x_bows media above (but the half-drawn bow, CC BY-SA 4.0)
+  Code, pixel art, the rat's and the bomb mushroom's models, and the item
+  pickup, experience, bow and monster sounds made for goodluckOS, under
+  goodluckOS's license, GPL-2.0.

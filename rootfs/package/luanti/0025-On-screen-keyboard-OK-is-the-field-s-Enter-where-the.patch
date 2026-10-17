@@ -1,0 +1,101 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Sat, 17 Oct 2026 01:20:51 -0300
+Subject: [PATCH 25/26] On-screen keyboard: OK is the field's Enter where the
+ form asks for it
+
+The keyboard only set the text and closed, so a field with field_enter_after_edit (a search box that
+searches on Enter, as minetest_game's creative inventory's) never heard back: Android's input
+dialog sends that Enter, the keyboard didn't. Its OK key and START now close it and send the box's
+parent an EGET_EDITBOX_ENTER whose element is the box; a form takes it as the field's Enter only
+where field_enter_after_edit asks for it, and ignores it elsewhere (a world's name in the main menu
+doesn't create the world). B on an empty box and losing the focus still just close it.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/irr/src/CGUIOnScreenKeyboard.cpp b/irr/src/CGUIOnScreenKeyboard.cpp
+index 19f10d35b..3e4551860 100644
+--- a/irr/src/CGUIOnScreenKeyboard.cpp
++++ b/irr/src/CGUIOnScreenKeyboard.cpp
+@@ -62,6 +62,24 @@ void CGUIOnScreenKeyboard::close(bool accept)
+ 	Box = nullptr;
+ }
+ 
++void CGUIOnScreenKeyboard::submit()
++{
++	IGUIElement *box = Box;
++	if (!box)
++		return;
++	box->grab();
++	close(true);
++	if (IGUIElement *parent = box->getParent()) {
++		SEvent enter{};
++		enter.EventType = EET_GUI_EVENT;
++		enter.GUIEvent.Caller = box;
++		enter.GUIEvent.Element = box;
++		enter.GUIEvent.EventType = EGET_EDITBOX_ENTER;
++		parent->OnEvent(enter);
++	}
++	box->drop();
++}
++
+ void CGUIOnScreenKeyboard::setTexts(const core::stringw &space, const core::stringw &del,
+ 		const core::stringw &ok, const core::stringw &hints)
+ {
+@@ -108,7 +126,7 @@ void CGUIOnScreenKeyboard::press(const SKey &key, const Post &post)
+ 		Caps = !Caps;
+ 		break;
+ 	case TYPE_OK:
+-		close(true);
++		submit();
+ 		break;
+ 	case TYPE_DEL:
+ 		postKey(KEY_BACK, post);
+@@ -156,7 +174,7 @@ void CGUIOnScreenKeyboard::button(GamepadButton button, const Post &post)
+ 			postKey(KEY_BACK, post);
+ 		break;
+ 	case GamepadButton::START:
+-		close(true);
++		submit();
+ 		break;
+ 	case GamepadButton::BACK:
+ 		close(false);
+diff --git a/irr/src/CGUIOnScreenKeyboard.h b/irr/src/CGUIOnScreenKeyboard.h
+index d5a82745b..f52fa08c9 100644
+--- a/irr/src/CGUIOnScreenKeyboard.h
++++ b/irr/src/CGUIOnScreenKeyboard.h
+@@ -32,6 +32,9 @@ class CGUIOnScreenKeyboard
+ 	void open(IGUIElement *box);
+ 	//! closes it; without accept, the box gets back the text it had
+ 	void close(bool accept);
++	//! closes it keeping the text, and tells the box's parent, as an Enter whose element is the box itself (a form
++	//! takes it as the field's Enter only where it asks for one: field_enter_after_edit)
++	void submit();
+ 	bool isOpen() const { return Box != nullptr; }
+ 	IGUIElement *getBox() const { return Box; }
+ 
+diff --git a/src/gui/guiFormSpecMenu.cpp b/src/gui/guiFormSpecMenu.cpp
+index cc78db0db..b157ec5a7 100644
+--- a/src/gui/guiFormSpecMenu.cpp
++++ b/src/gui/guiFormSpecMenu.cpp
+@@ -5458,6 +5458,20 @@ bool GUIFormSpecMenu::OnEvent(const SEvent& event)
+ 			if (caller_id <= ID_PROCEED_BTN)
+ 				break;
+ 
++			// the on-screen keyboard's OK (its element is the box) is the field's Enter only where asked for
++			if (event.GUIEvent.Element && event.GUIEvent.Element == event.GUIEvent.Caller) {
++				bool enter_after_edit = false;
++				for (const FieldSpec &s : m_fields) {
++					if (s.ftype == f_Unknown && s.fid == caller_id) {
++						auto it = field_enter_after_edit.find(s.fname);
++						enter_after_edit = it != field_enter_after_edit.end() && it->second;
++						break;
++					}
++				}
++				if (!enter_after_edit)
++					return true;
++			}
++
+ 			close_on_enter = true;
+ 			for (GUIFormSpecMenu::FieldSpec &s : m_fields) {
+ 				if (s.ftype == f_Unknown &&
