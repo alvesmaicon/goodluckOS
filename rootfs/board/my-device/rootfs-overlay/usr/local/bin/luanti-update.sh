@@ -11,10 +11,11 @@ STAGE=/tmp/luanti-update
 GAME=usr/share/luanti/games/minetest_game
 ALLOWED='^usr/share/luanti/[^ ]*$|^usr/bin/luanti$|^usr/share/goodluck/defaults/luanti\.conf$|^usr/local/bin/luanti(\.sh|-perflog\.sh|-update\.sh)$'
 
-# the console's font has no accents
+# the console's font has no accents; one letter at a time, as BusyBox's sed reads a [...] of them byte by byte
 ascii() {
-    printf '%s' "$1" | sed 's/[áàâã]/a/g; s/[éê]/e/g; s/í/i/g; s/[óôõ]/o/g; s/ú/u/g; s/ç/c/g; s/[ÁÀÂÃ]/A/g;
-        s/[ÉÊ]/E/g; s/Í/I/g; s/[ÓÔÕ]/O/g; s/Ú/U/g; s/Ç/C/g'
+    printf '%s' "$1" | sed 's/á/a/g; s/à/a/g; s/â/a/g; s/ã/a/g; s/é/e/g; s/ê/e/g; s/í/i/g; s/ó/o/g; s/ô/o/g; s/õ/o/g;
+        s/ú/u/g; s/ç/c/g; s/Á/A/g; s/À/A/g; s/Â/A/g; s/Ã/A/g; s/É/E/g; s/Ê/E/g; s/Í/I/g; s/Ó/O/g; s/Ô/O/g; s/Õ/O/g;
+        s/Ú/U/g; s/Ç/C/g'
 }
 
 # say "English text with %s" [arg]: translated as Puppy is, on the screen and in the log
