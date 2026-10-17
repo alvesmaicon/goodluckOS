@@ -11,6 +11,7 @@
 #include "settings.h"
 #include "system/clock.h"
 #include "system/device.h"
+#include "system/retroarch.h"
 #include "tester.h"
 #include "util.h"
 
@@ -513,8 +514,10 @@ std::vector<Row> SettingsScreen::inputPage() {
         prefs.confirmBottom = i == 1;
         prefs.save();
         setConfirmBottom(app.gamepad(), prefs.confirmBottom);
+        if (prefs.confirmBottom) addRetroArchSwap();
+        else removeRetroArchSwap();
     });
-    confirm.hint = "The other one goes back. Apps follow it from the next one you open; RetroArch keeps its own.";
+    confirm.hint = "The other one goes back. Apps and the Nintendo systems' games follow it from the next one you open.";
     rows.push_back(confirm);
     rows.push_back(Row::link("Shortcuts", [this] { open(Page::Shortcuts); }));
     rows.push_back(Row::link("Button Tester", [this] { app.push(std::make_unique<TesterScreen>(app)); }));

@@ -18,6 +18,7 @@
 #include "library.h"
 #include "model.h"
 #include "system/prefs.h"
+#include "system/retroarch.h"
 #include "ui.h"
 #include "util.h"
 
@@ -39,6 +40,7 @@ int main(int argc, char** argv) {
     fonts::choose(prefs.font, font, fontScale);
     accents::choose(prefs.accent);
     setConfirmBottom(nullptr, prefs.confirmBottom);    // sdl_controller.sh already mapped the pad
+    if (prefs.confirmBottom) addRetroArchSwap();       // cards set to B before RetroArch followed it
     Ui ui(font, fontScale);
     if (!ui.ok()) return 1;
 
