@@ -95,7 +95,8 @@ local function footprint(a, x1, z1, x2, z2, min_y, max_y)
 	end
 end
 
--- Minecraft's village chests: food, tools and iron, a little gold and lapis, diamonds only now and then at the smith
+-- Minecraft's village chests: food, tools and iron, a little gold and lapis, diamonds only now and then at the smith,
+-- saddles and horse armor
 local blacksmith_loot = {
 	{name = "default:diamond", min = 1, max = 2, chance = 8},
 	{name = "default:mese_crystal", min = 1, max = 2, chance = 10},
@@ -113,6 +114,11 @@ local blacksmith_loot = {
 	{name = "bucket:bucket_water", min = 1, max = 1, chance = 35},
 	{name = "farming:bread", min = 4, max = 8, chance = 75},
 	{name = "default:torch", min = 8, max = 16, chance = 80},
+	-- horse gear, as in the armorer's and toolsmith's chests
+	{name = "mobs:saddle", min = 1, max = 1, chance = 30},
+	{name = "goodluck_horse:armor_iron", min = 1, max = 1, chance = 15},
+	{name = "goodluck_horse:armor_gold", min = 1, max = 1, chance = 10},
+	{name = "goodluck_horse:armor_diamond", min = 1, max = 1, chance = 6},
 }
 
 local house_loot = {
@@ -132,6 +138,7 @@ local house_loot = {
 	{name = "default:paper", min = 4, max = 16, chance = 75},
 	{name = "farming:string", min = 2, max = 8, chance = 70},
 	{name = "default:flint", min = 2, max = 6, chance = 70},
+	{name = "mobs:saddle", min = 1, max = 1, chance = 15},
 }
 
 local function fill_chest(pos, blacksmith, pr)

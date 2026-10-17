@@ -117,10 +117,30 @@ function goodluck_villages.spawn(p1, p2, job)
 	if ent and jobs[job] then
 		ent.goodluck_job = job
 		ent.game_name = jobs[job].title
-		ent.nametag = jobs[job].title
-		obj:set_properties({nametag = ent.nametag, nametag_color = "#FFFFFF"})
+		-- no name over their heads, as in Minecraft (the trade window says who they are); mobs_npc names traders
+		ent.nametag, ent._nametag = nil, nil
+		obj:set_properties({nametag = ""})
 	end
 	return ent
+end
+
+-- villagers saved with their job, or mobs_npc's "Trader", over their heads lose it
+local trader = core.get_translator("mobs_npc")("Trader")
+for _, name in ipairs({"mobs_npc:npc", "mobs_npc:trader"}) do
+	local def = core.registered_entities[name]
+	local activate = def and def.on_activate
+	if activate then
+		def.on_activate = function(self, ...)
+			local r = activate(self, ...)
+			local job = jobs[self.goodluck_job or ""]
+			local tag = self._nametag or self.nametag
+			if job and self.object:get_pos() and (tag == job.title or tag == trader) then
+				self._nametag, self.nametag = nil, nil
+				self.object:set_properties({nametag = ""})
+			end
+			return r
+		end
+	end
 end
 
 -- mobs_npc's shop, for item strings that carry an enchantment: buttons show the item and its count, the

@@ -1,0 +1,1 @@
+-- goodluck_horse spawns the horses (herds in grassland and savanna, as in Minecraft)

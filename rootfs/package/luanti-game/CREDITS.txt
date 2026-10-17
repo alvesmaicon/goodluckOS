@@ -88,6 +88,20 @@ x_bows
   out of the game) and smoke_puff.png (not credited, empty, unused). Added:
   the pt_BR translation.
 
+mob_horse
+  https://codeberg.org/tenplus1/mob_horse, commit @MOB_HORSE_VERSION@
+  Code MIT (TenPlus1); model mobs_horse.x MIT (Krupnov Pavel); sounds CC BY
+  3.0: mob_horse.1.ogg by blazecon0 (freesound.org/people/blazecon0/sounds/99222),
+  mob_horse.2.ogg by Gingerhoney (freesound.org/people/Gingerhoney/sounds/655070),
+  mob_horse_whinny.ogg by GoodListener
+  (freesound.org/people/GoodListener/sounds/322445): mods/mob_horse/license.txt
+  and sounds/license.txt.
+  Left out: its textures (the coats, CC BY-SA 3.0 by Mjollna, the horseshoes
+  and the saddle overlay), as goodluck_horse paints its own and takes the
+  horseshoes out of the game, and spawn_example.lua. Added: a spawn.lua that
+  spawns nothing: goodluck_horse registers its own horse, donkey and mule on
+  this model and these sounds, and mob_horse's horse never appears.
+
 goodluck_monsters
   The zombie and the skeleton wear 3d_armor's character model (see 3d_armor).
   The spider is mobs_monster's mobs_spider.b3d (AspireMint, CC BY-SA 3.0)
@@ -103,12 +117,14 @@ goodluck_villages
   mods/goodluck_villages/LICENSE-villages_mtg.md. Its eight buildings
   (schems/) are unchanged; the village code is reworked by goodluckOS.
 
-Left out of mobs, mobs_animal, mobs_monster, stamina and mobs_npc: screenshot.jpg, made
-on textstudio.com, whose terms are unclear. The game doesn't use them.
+Left out of mobs, mobs_animal, mobs_monster, stamina, mobs_npc and mob_horse:
+screenshot.jpg, made on textstudio.com, whose terms are unclear. The game
+doesn't use them.
 
 goodluck_* mods (but goodluck_villages' buildings and goodluck_monsters' spider,
 above), and the stamina, mobs_animal, mobs_monster, x_enchanting, mobs_npc and
 x_bows media above (but the half-drawn bow, CC BY-SA 4.0)
-  Code, pixel art, the rat's and the bomb mushroom's models, and the item
-  pickup, experience, bow and monster sounds made for goodluckOS, under
-  goodluckOS's license, GPL-2.0.
+  Code, pixel art (goodluck_horse's coats, markings, saddle and horse armor
+  are painted by a script on mob_horse's model), the rat's and the bomb
+  mushroom's models, and the item pickup, experience, bow, monster and horse
+  equip sounds made for goodluckOS, under goodluckOS's license, GPL-2.0.
