@@ -68,9 +68,14 @@ send() {
     tmp=$(mktemp -d)
     cp "$pkg" "$tmp/$part"
     echo "== $name ($(($(wc -c < "$pkg") / 1024)) KB) to HOME over MTP, about 1 min"
-    if [ "$(uname)" = Darwin ]; then killall ptpcamerad 2>/dev/null || true; fi
-    mtp-sendfile "$tmp/$part" "$part" > "$tmp/log" 2>&1 ||
-        { cat "$tmp/log"; rm -rf "$tmp"; die "MTP failed: nothing was installed"; }
+    # libmtp can hang opening the session; the next run resets the USB interface first
+    for try in 1 2 3; do
+        if [ "$(uname)" = Darwin ]; then killall ptpcamerad 2>/dev/null || true; fi
+        perl -e 'alarm shift; exec @ARGV' 180 mtp-sendfile "$tmp/$part" "$part" > "$tmp/log" 2>&1 && break
+        g "rm -f $H/$part" > /dev/null
+        [ $try -lt 3 ] || { cat "$tmp/log"; rm -rf "$tmp"; die "MTP failed: nothing was installed"; }
+        echo "   MTP stopped (try $try of 3), again"
+    done
     rm -rf "$tmp"
     sum=$(sha "$pkg")
     have=$(g "sha256sum $H/$part | cut -c1-64" --timeout 60 | grep -E '^[0-9a-f]{64}$' || true)
