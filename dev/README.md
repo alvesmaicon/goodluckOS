@@ -9,6 +9,7 @@ A full image (kernel + Buildroot + image) takes 1-2 hours and is only needed for
 | The Mesa patch (`rootfs/board/my-device/patches/mesa3d`) | `dev/gl rootfs mesa3d-rebuild` (see below) | `libgallium-*.so` → HOME → `cp` to `/usr/lib` |
 | Kernel, DTS, kernel patches | `dev/gl kernel` (~5 min after the first) | `android_boot_a33.img` → HOME → `dd` at sector 172032 |
 | Buildroot config, new packages | `dev/gl rootfs` | `dev/gl ext4` → card reader → `dev/sdcard-mac.sh` |
+| Luanti on a `feat/luanti*` branch (engine, game, its overlay files) | `dev/gl luanti-pkg <commit>` | `dev/luanti-console.sh send <card> <package>` ([Luanti packages](#luanti-packages)) |
 | A UI change you want to see | `dev/gl shot puppy overlay "F5 Down Down Down Return \|"` | (no console needed) |
 
 The console needs the real binary built for armhf. `dev/gl app` also builds a native one (`dev/out/<app>.aarch64` on a Mac, `.x86_64` on a PC) for screenshots in Xvfb.
@@ -39,6 +40,7 @@ dev/gl scenes-diff dev/out/scenes-before dev/out/scenes-after
                                         # the scenes that changed, pixel by pixel
 dev/gl rootfs                           # first time: full Buildroot (1-2 h on an M1)
 dev/gl rootfs puppy-rebuild             # then: one package, seconds; output in the work volume
+dev/gl luanti-pkg feat/luanti-xp        # dev/out/luanti/luanti-<date>-<time>-<commit>.tar.xz, for Update Luanti
 dev/gl ext4                             # dev/out/rootfs.ext4 from dev/out/rootfs.tar
 dev/gl kernel                           # dev/out/android_boot_a33.img (panel 1; GL_PANEL=2 dev/gl kernel for panel 2)
 dev/gl shell                            # a shell in the container (/repo, /work)
@@ -74,6 +76,24 @@ dev/glserial.py get --cmd "dmesg" dmesg.txt
 Then reboot (`reboot`), or close and reopen the app. A new `appctl` needs the reboot: the appd daemon keeps running the copy it started with. The rootfs is mounted read-write. The console has no `pkill`/`pgrep`: use `ps | grep`, `awk` and `kill`.
 
 **The whole rootfs or the kernel with the card in the reader:** `dev/sdcard-mac.sh <diskN> boot|rootfs <file>` writes only that region. It backs the region up first and checks the write by reading it back. It refuses the daily card unless you pass `--daily-card`. Before writing a new rootfs to a card with an older HOME, check what the new rootfs expects in HOME (e.g. appd needs `HOME/.local/launcher.sh`).
+
+## Luanti packages
+
+Luanti lives on the `feat/luanti*` branches. A card whose image has Update Luanti takes a new Luanti as one file, `luanti-<date>-<time>-<commit>.tar.xz`, copied to `HOME/updates`; [docs/ports](../docs/ports/README.md#updating-luanti) describes the console side. A package holds what the commit's image would: the engine, the game with its mods, the overlay's Luanti files (`usr/share/luanti`, `luanti.conf`, `luanti*.sh`) and the engine's translations that the image keeps.
+
+```sh
+dev/gl luanti-pkg feat/luanti-xp        # dev/out/luanti/luanti-20261017-1350-f7506b7.tar.xz (a branch, tag or commit)
+dev/luanti-console.sh send multilaser-16gb-test dev/out/luanti/luanti-20261017-1350-f7506b7.tar.xz
+dev/luanti-console.sh undo multilaser-16gb-test
+dev/luanti-console.sh apply multilaser-16gb-test        # a package already copied to HOME/updates
+dev/luanti-console.sh updater ultra-dev feat/luanti-xp  # Update Luanti on a card whose image is older
+```
+
+`dev/gl luanti-pkg` builds the commit, not the checkout, so it runs from any branch. It copies the commit's `rootfs/` into the Buildroot tree of the work volume and has Buildroot build `luanti` and `luanti-game` there. The engine is compiled again (about 3 min) only when the commit's `rootfs/package/luanti` differs from the last build; the game takes seconds. Then the overlay's Luanti files go on top and the binary is stripped, as `target-finalize` does for the image. The version is the commit's date in UTC and its hash. The console only installs a newer version than the one it has, so a package of an older commit is refused there (Undo is the way back). `luanti-pkg` won't start while another `dev/gl rootfs` or `luanti-pkg` runs: they share one output tree.
+
+`dev/luanti-console.sh` works over the USB data port. Every command first reads `HOME/.card-name` and stops if the console holds another card or has an app open; the daily card also needs `--daily-card`. `send` copies the package over MTP (about 1 min for 10 MB), checks it, moves it into `HOME/updates` and runs Update Luanti on the console's screen, then prints the lines it logged and the installed version. Without MTP, copy the package to `HOME/updates` with the card reader and use `apply`. `updater` gives a card whose image predates Update Luanti the commit's `luanti-update.sh`, its doas line, the two launcher entries and their pt-BR translations, each only if missing, plus a readme in `HOME/updates`.
+
+Someone without these tools only needs the file: they copy it to the console's `updates` folder (Windows shows the console as a drive) and run Update Luanti in the Games tab.
 
 ## Console screenshots
 

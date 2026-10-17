@@ -20,6 +20,7 @@ usage: dev/gl <command> [args]
   scenes [dir]              launcher scenes of dev/scenes, one screenshot each (default dev/out/scenes)
   scenes-diff <dir> <dir>   the scenes whose screenshots differ between two runs, pixel by pixel
   rootfs [make targets]     Buildroot, incremental (e.g. mesa3d-rebuild, puppy-rebuild)
+  luanti-pkg <commit>       dev/out/luanti/luanti-<date>-<commit>.tar.xz: Luanti of any commit, for Update Luanti
   ext4                      dev/out/rootfs.ext4 from the last rootfs.tar (partition 1, 384 MiB)
   kernel                    dev/out/android_boot_a33.img (+a23) with panel 1 (GL_PANEL=2), like kernel/Dockerfile
 EOF
@@ -27,6 +28,23 @@ EOF
 }
 
 [ $# -ge 1 ] || usage
+
+# Buildroot changes the volume that other checkouts and sessions build in and read from: one at a time
+if { [ "$1" = rootfs ] || [ "$1" = luanti-pkg ]; } && [ ! -f /.dockerenv ] && command -v docker >/dev/null 2>&1; then
+    busy=$(docker ps --filter volume=$VOLUME --format '{{.Names}} ({{.Image}}): {{.Command}}')
+    [ -z "$busy" ] || { echo "another container uses $VOLUME, try again when it ends:"; echo "$busy"; exit 1; }
+fi
+
+# luanti-pkg builds a commit, not the checkout: git runs here, where worktrees resolve, and the commit's rootfs/ goes
+# in as a tar named by the package's version (the commit's date in UTC, then its hash)
+if [ "$1" = luanti-pkg ] && [ ! -f /.dockerenv ]; then
+    [ $# -eq 2 ] || usage
+    c=$(git -C "$REPO" rev-parse --short=7 "$2^{commit}")
+    v=$(TZ=UTC git -C "$REPO" show -s --format=%cd --date=format-local:%Y%m%d-%H%M "$c")-$c
+    mkdir -p "$REPO/dev/out/luanti"
+    git -C "$REPO" archive --format=tar "$c" rootfs > "$REPO/dev/out/luanti/src-$v.tar"
+    set -- luanti-pkg "$v"
+fi
 
 # --- outside the container: hand everything to it ---------------------------------------------
 if [ ! -f /.dockerenv ] && [ -z "${GL_NATIVE:-}" ]; then
@@ -185,26 +203,90 @@ scenes_diff() {
 }
 
 # Buildroot the way rootfs/Dockerfile + scripts/build.sh do, but with its tree on a Linux
-# filesystem (the work volume): macOS bind mounts are case-insensitive and slow
-rootfs() {
-    local br=$WORK/br
-    local ver; ver=$(sed -n 's/.* -b \([^ ]*\) https:\/\/gitlab.com\/buildroot.*/\1/p' "$REPO/rootfs/Dockerfile")
+# filesystem (the work volume): macOS bind mounts are case-insensitive and slow.
+# br_tree <rootfs dir>: that tree's board, configs and package in, and BR_MAKE to run make there
+br_tree() {
+    local src=$1 br=$WORK/br
+    local ver; ver=$(sed -n 's/.* -b \([^ ]*\) https:\/\/gitlab.com\/buildroot.*/\1/p' "$src/Dockerfile")
     mkdir -p "$br"
     [ -d "$br/buildroot" ] || git clone -q --depth 1 -b "$ver" https://gitlab.com/buildroot.org/buildroot.git "$br/buildroot"
-    for d in board configs package; do rsync -a --delete "$REPO/rootfs/$d/" "$br/$d/"; done
+    for d in board configs package; do rsync -a --delete "$src/$d/" "$br/$d/"; done
     printf 'name: GOODLUCKOS\ndesc: An enthusiast OS for the GA36-MB\n' > "$br/external.desc"
     echo 'include $(sort $(wildcard $(BR2_EXTERNAL_GOODLUCKOS_PATH)/package/*/*.mk))' > "$br/external.mk"
     echo "source \"$br/package/Config.in\"" > "$br/Config.in"
-    local mk="make -C $br/buildroot O=$br/out BR2_EXTERNAL=$br BR2_DL_DIR=$br/dl BR2_JLEVEL=$JOBS"
+    BR_MAKE="make -C $br/buildroot O=$br/out BR2_EXTERNAL=$br BR2_DL_DIR=$br/dl BR2_JLEVEL=$JOBS"
     # the defconfig only when it changed, so an incremental build stays incremental
     if ! cmp -s "$br/configs/goodluck_defconfig" "$br/.defconfig-used"; then
-        $mk goodluck_defconfig && cp "$br/configs/goodluck_defconfig" "$br/.defconfig-used"
+        $BR_MAKE goodluck_defconfig && cp "$br/configs/goodluck_defconfig" "$br/.defconfig-used"
     fi
-    date +%T; $mk "$@"; date +%T
+}
+
+rootfs() {
+    local br=$WORK/br
+    br_tree "$REPO/rootfs"
+    date +%T; $BR_MAKE "$@"; date +%T
     if [ -f "$br/out/images/rootfs.tar" ]; then
         cp "$br/out/images/rootfs.tar" "$OUT/"
         echo "dev/out/rootfs.tar; single files are in $br/out/target (e.g. usr/lib/libgallium-*.so)"
     fi
+}
+
+# A package for Update Luanti (usr/local/bin/luanti-update.sh) holding what that commit's image holds: Buildroot builds
+# the engine (again only when rootfs/package/luanti changed) and the game, the overlay's Luanti files go over them, and
+# the binary and locales are pruned as target-finalize does; then goodluck-version, files.md5, a root-owned ustar
+luanti_pkg() {
+    local v=$1 br=$WORK/br src=$WORK/luanti-src s=$WORK/luanti-pkg
+    local in=$OUT/luanti/src-$v.tar t=$WORK/br/out/target o mk ver extra bd sum locs l pkg
+    [ -f "$in" ] || { echo "no dev/out/luanti/src-$v.tar: run dev/gl luanti-pkg <commit> from outside the container"; exit 1; }
+    rm -rf "$src" "$s"; mkdir -p "$src" "$s"
+    tar -xf "$in" -C "$src"; rm -f "$in"
+    grep -q '^BR2_PACKAGE_LUANTI=y' "$src/rootfs/configs/goodluck_defconfig" || { echo "${v##*-} doesn't build Luanti"; exit 1; }
+    mk=$src/rootfs/package/luanti/luanti.mk
+    ver=$(sed -n 's/^LUANTI_VERSION = //p' "$mk")
+    extra=$(sed -n 's/.*-DVERSION_EXTRA=\([^ ]*\).*/\1/p' "$mk")
+    bd=$br/out/build/luanti-$ver
+    sum=$(cd "$src/rootfs/package/luanti" && find . -type f | LC_ALL=C sort | xargs sha256sum | sha256sum | cut -c1-64)
+    br_tree "$src/rootfs"
+    # what the two packages install and nothing else, not a file a build of another branch left there
+    rm -rf "$t/usr/bin/luanti" "$t/usr/share/luanti" "$t"/usr/share/locale/*/LC_MESSAGES/luanti.mo
+    date +%T
+    if [ "$(cat "$bd/.goodluck-sources" 2>/dev/null)" = "$sum" ] &&
+            strings "$bd/buildroot-build/bin/luanti" 2>/dev/null | grep -xF "$ver-$extra" > /dev/null; then
+        echo "== engine $ver-$extra: already built from these sources, installing it again"
+        $BR_MAKE luanti-reinstall
+    else
+        echo "== engine $ver-$extra: building it (about 3 min)"
+        $BR_MAKE luanti-dirclean
+        $BR_MAKE luanti
+        echo "$sum" > "$bd/.goodluck-sources"
+    fi
+    echo "== game"
+    $BR_MAKE luanti-game-dirclean
+    $BR_MAKE luanti-game
+    date +%T
+    strings "$t/usr/bin/luanti" | grep -xF "$ver-$extra" > /dev/null || { echo "the engine in the target isn't $ver-$extra"; exit 1; }
+    locs=$(ls "$t"/usr/share/locale)
+    if grep -q '^BR2_ENABLE_LOCALE_PURGE=y' "$br/out/.config"; then
+        locs=$(sed -n 's/^BR2_ENABLE_LOCALE_WHITELIST="\(.*\)"$/\1/p' "$br/out/.config")
+    fi
+    set -- usr/bin/luanti usr/share/luanti
+    for l in $locs; do
+        if [ -f "$t/usr/share/locale/$l/LC_MESSAGES/luanti.mo" ]; then set -- "$@" "usr/share/locale/$l/LC_MESSAGES/luanti.mo"; fi
+    done
+    (cd "$t" && tar -cf - "$@") | tar -xf - -C "$s"
+    o=$src/rootfs/board/my-device/rootfs-overlay
+    (cd "$o" && ls -d usr/share/luanti usr/share/goodluck/defaults/luanti.conf usr/local/bin/luanti*.sh 2>/dev/null || true) |
+        rsync -a -r --files-from=- --chmod=u=rwX,go=rX --exclude .empty --exclude '*~' "$o/" "$s/"
+    if grep -q '^BR2_STRIP_strip=y' "$br/out/.config"; then
+        "$br"/out/host/bin/arm-buildroot-linux-gnueabihf-strip --remove-section=.comment --remove-section=.note \
+            "$s/usr/bin/luanti"
+    fi
+    echo "$v" > "$s/usr/share/luanti/goodluck-version"
+    (cd "$s" && find usr -type f -print0 | LC_ALL=C sort -z | xargs -0 md5sum) > "$s/files.md5"
+    pkg=$OUT/luanti/luanti-$v.tar.xz
+    (cd "$s" && tar --format=ustar --owner=root:0 --group=root:0 --sort=name -cf - usr files.md5) | xz -9 > "$pkg"
+    echo "dev/out/luanti/${pkg##*/}: $(wc -l < "$s/files.md5") files, $(($(stat -c %s "$pkg") / 1024)) KB," \
+        "engine $ver-$extra"
 }
 
 ext4() {
@@ -278,6 +360,7 @@ case $cmd in
     _scenes) scenes_run "$@" ;;
     scenes-diff) [ $# -eq 2 ] || usage; scenes_diff "$@" ;;
     rootfs) rootfs "$@" ;;
+    luanti-pkg) [ $# -eq 1 ] || usage; luanti_pkg "$1" ;;
     ext4) ext4 ;;
     kernel) kernel ;;
     deploy) deploy "$@" ;;

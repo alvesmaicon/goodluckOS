@@ -44,7 +44,7 @@ If the new version misbehaves, **Undo Luanti update**, below it, brings back the
 
 Worlds and settings in `HOME/.minetest` are never touched. Before it changes anything, Update Luanti checks every file of the package against the package's checksums, that the package holds only Luanti's files and all of them, and that the system has room for it; if any check fails, nothing changes. A package older than the installed version, or the same one, is refused. With several packages in the folder it installs the newest and moves the others to `updates/old`; the installed one goes to `updates/installed`. Each step is written to `HOME/logs/luanti-update.log`.
 
-Update Luanti is part of the system image built from `feat/luanti-xp`: a card with an older image needs that image first. This fork publishes no packages yet; they are made on a PC from the branch.
+Update Luanti is part of the system image built from `feat/luanti-xp`: a card with an older image needs that image first, or gets Update Luanti from a PC over USB. This fork publishes no packages yet; `dev/gl luanti-pkg` makes them on a PC from any commit of the branch ([dev/README.md](../../dev/README.md#luanti-packages)).
 
 ### The engine: Luanti 5.17 for handhelds
 
