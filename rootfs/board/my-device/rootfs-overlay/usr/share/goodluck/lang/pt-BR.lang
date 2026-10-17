@@ -319,3 +319,7 @@ Going back to the version before the last update... = Voltando para a versão de
 Luanti is back to the previous version (undo again to return) = O Luanti voltou para a versão anterior (desfaça de novo para retornar)
 Undoing failed: nothing was changed = Não deu para desfazer: nada foi mudado
 Back to the menu in %s s = Voltando ao menu em %s s
+Installed: %s = Instalado: %s
+Already up to date = Já está atualizado
+This update (%s) is older than the installed one: nothing was changed = Esta atualização (%s) é mais antiga que a instalada: nada foi mudado
+Not a whole Luanti update: nothing was changed = Não é uma atualização completa do Luanti: nada foi mudado
