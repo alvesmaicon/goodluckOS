@@ -27,6 +27,25 @@ Luanti is an open-source engine for Minecraft-like games, and Minetest Game, its
 
 **Install:** Luanti is part of the system image (a Buildroot package), so there is nothing to copy. Build the rootfs from `feat/luanti-xp` and write it to the card (`dev/gl rootfs`, `dev/gl ext4`, `dev/sdcard-mac.sh`, see [dev/README.md](../../dev/README.md)), and it shows up in the Games tab. `feat/luanti` doesn't have the classic monsters, the villages, experience and enchanting, the bow, the compass and the maps yet. Worlds and settings are kept in `HOME/.minetest`. The controls are in that branch's README.
 
+### Updating Luanti
+
+Once a card has Luanti, a new version needs no new system image: it comes as one file, a package named `luanti-<date>-<time>-<commit>.tar.xz` (about 10 MB). A package holds all of Luanti, the engine and the game, so it installs over any older version, without the ones in between.
+
+1. Copy the package to the `updates` folder of HOME, over USB (the console is an MTP device: Windows shows it as a drive) or with the card in a card reader:
+
+   ```sh
+   cp luanti-20261017-1610-3a390df.tar.xz /Volumes/HOME/updates/
+   dot_clean /Volumes/HOME
+   ```
+
+2. In the launcher's Games tab, run **Update Luanti**, right below Luanti. It shows each step on the screen, takes about 20 seconds, and goes back to the menu by itself.
+
+If the new version misbehaves, **Undo Luanti update**, below it, brings back the one installed before; running it again returns to the update.
+
+Worlds and settings in `HOME/.minetest` are never touched. Before it changes anything, Update Luanti checks every file of the package against the package's checksums, that the package holds only Luanti's files and all of them, and that the system has room for it; if any check fails, nothing changes. A package older than the installed version, or the same one, is refused. With several packages in the folder it installs the newest and moves the others to `updates/old`; the installed one goes to `updates/installed`. Each step is written to `HOME/logs/luanti-update.log`.
+
+Update Luanti is part of the system image built from `feat/luanti-xp`: a card with an older image needs that image first. This fork publishes no packages yet; they are made on a PC from the branch.
+
 ### The engine: Luanti 5.17 for handhelds
 
 The engine is Luanti 5.17.0 (celeron55 and contributors; code LGPL-2.1+, media CC BY-SA 3.0) with the commits of the `handheld/5.17` branch of [alvesmaicon/luanti](https://github.com/alvesmaicon/luanti/tree/handheld/5.17), which Buildroot applies as patches (`rootfs/package/luanti/`). `feat/luanti-xp` builds 5.17.0-handheld.10. The patches are under Luanti's license. They were written with AI assistance, which Luanti's AI policy doesn't accept, so they stay in that fork; fixes upstream could use are its issues labelled "upstream candidate".
