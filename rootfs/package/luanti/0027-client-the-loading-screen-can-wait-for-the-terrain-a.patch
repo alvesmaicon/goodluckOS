@@ -1,0 +1,296 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Sat, 17 Oct 2026 01:54:12 -0300
+Subject: [PATCH 27/27] client: the loading screen can wait for the terrain
+ around the player
+
+In singleplayer the loading screen ended once the textures and nodes were ready, and only then did
+the server place the player and send the map: the world showed building itself around them, which
+looks unfinished. With loading_terrain_radius (nodes, 0 = as before) the screen stays, as "Loading
+terrain...", until the server has sent, culled or left out as air every block within that radius
+(its RemoteClient's nearest unsent distance, read through the local server) and the client has made
+every mesh asked for, or loading_terrain_timeout seconds pass. The player's pitch and yaw now come
+with TOCLIENT_MOVE_PLAYER into the local player, so the position sent meanwhile asks for the blocks
+the player will see first, and the camera's wanted range is set before the first frame. The time
+taken goes to the log ("Terrain within N nodes loaded after T s").
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/builtin/settingtypes.txt b/builtin/settingtypes.txt
+index 13a52cb44..c10d9a725 100644
+--- a/builtin/settingtypes.txt
++++ b/builtin/settingtypes.txt
+@@ -498,6 +498,14 @@ fps_max_unfocused (FPS when unfocused) int 10 1 4294967295
+ #    View distance in nodes.
+ viewing_range (Viewing range) int 190 20 4000
+ 
++#    In singleplayer, the loading screen stays until the terrain this many nodes
++#    around where the player comes in is loaded and drawn, so the world doesn't
++#    show building itself. 0 enters at once, as before.
++loading_terrain_radius (Terrain loaded before entering) int 0 0 320
++
++#    The longest the loading screen waits for that terrain, in seconds.
++loading_terrain_timeout (Terrain loading timeout) float 30 1 300
++
+ #    Undersampling is similar to using a lower screen resolution, but it applies
+ #    to the game world only, keeping the GUI intact.
+ #    It should give a significant performance boost at the cost of less detailed image.
+diff --git a/po/pt_BR/luanti.po b/po/pt_BR/luanti.po
+index 5524ae505..1d3b1526e 100644
+--- a/po/pt_BR/luanti.po
++++ b/po/pt_BR/luanti.po
+@@ -1084,6 +1084,10 @@ msgstr "Permitir trocar de modo"
+ msgid "Bonus chest"
+ msgstr "Baú inicial"
+ 
++#: src/client/game.cpp
++msgid "Loading terrain..."
++msgstr "Carregando terreno..."
++
+ #: src/client/clientlauncher.cpp
+ msgid "space"
+ msgstr "espaço"
+diff --git a/src/client/client.cpp b/src/client/client.cpp
+index fa3b2bad2..6c5444d5e 100644
+--- a/src/client/client.cpp
++++ b/src/client/client.cpp
+@@ -1910,6 +1910,11 @@ void Client::showUpdateProgressTexture(void *args, float progress)
+ 		0, shown_progress);
+ }
+ 
++bool Client::meshesDone() const
++{
++	return m_mesh_update_manager->isIdle();
++}
++
+ void Client::afterContentReceived()
+ {
+ 	infostream<<"Client::afterContentReceived() started"<<std::endl;
+@@ -1968,7 +1973,9 @@ void Client::afterContentReceived()
+ 	if (m_mods_loaded)
+ 		m_script->on_client_ready(m_env.getLocalPlayer());
+ 
+-	m_rendering_engine->draw_load_screen(wstrgettext("Done!"), guienv, m_tsrc, 0, 100);
++	// the terrain still to load fills the rest of the bar
++	if (g_settings->getS16("loading_terrain_radius") <= 0)
++		m_rendering_engine->draw_load_screen(wstrgettext("Done!"), guienv, m_tsrc, 0, 100);
+ 	infostream<<"Client::afterContentReceived() done"<<std::endl;
+ }
+ 
+diff --git a/src/client/client.h b/src/client/client.h
+index a9c33f890..c1fe72d5b 100644
+--- a/src/client/client.h
++++ b/src/client/client.h
+@@ -332,6 +332,11 @@ class Client : public con::PeerHandler, public InventoryManager, public IGameDef
+ 	{ return !m_media_downloader; }
+ 	bool activeObjectsReceived() const
+ 	{ return m_activeobjects_received; }
++	//! the server placed the player (TOCLIENT_MOVE_PLAYER)
++	bool playerPosReceived() const
++	{ return m_player_pos_received; }
++	//! every block mesh asked for so far was made and taken
++	bool meshesDone() const;
+ 
+ 	u16 getProtoVersion() const
+ 	{ return m_proto_ver; }
+@@ -561,6 +566,7 @@ class Client : public con::PeerHandler, public InventoryManager, public IGameDef
+ 	std::queue<ClientEvent *> m_client_event_queue;
+ 	bool m_itemdef_received = false;
+ 	bool m_nodedef_received = false;
++	bool m_player_pos_received = false;
+ 	bool m_activeobjects_received = false;
+ 	bool m_mods_loaded = false;
+ 
+diff --git a/src/client/game.cpp b/src/client/game.cpp
+index b271b758b..16b7c79a8 100644
+--- a/src/client/game.cpp
++++ b/src/client/game.cpp
+@@ -6,6 +6,7 @@
+ 
+ #include <cmath>
+ #include <csignal>
++#include <iomanip>
+ #include "client/gameui.h"
+ #include "client/inputhandler.h"
+ #include "client/texturepaths.h"
+@@ -925,7 +926,7 @@ bool Game::createClient(const GameStartData &start_data)
+ 	if (mapper && client->modsLoaded())
+ 		client->getScript()->on_minimap_ready(mapper);
+ 
+-	return true;
++	return loadTerrain();
+ }
+ 
+ bool Game::shouldShowTouchControls()
+@@ -1105,6 +1106,56 @@ bool Game::connectToServer(const GameStartData &start_data,
+ 	return true;
+ }
+ 
++/*
++	The terrain around where the player comes in, before the world shows (singleplayer):
++	the loading screen stays until the server has sent, culled or left out as air every block
++	within loading_terrain_radius nodes and the client has made their meshes, or for at most
++	loading_terrain_timeout seconds. The player's look comes with the position, so the blocks
++	asked for are those the player will see first.
++*/
++bool Game::loadTerrain()
++{
++	const s16 radius = g_settings->getS16("loading_terrain_radius");
++	if (radius <= 0 || !server)
++		return true;
++	const s16 blocks = (radius + MAP_BLOCKSIZE - 1) / MAP_BLOCKSIZE;
++	const float timeout = g_settings->getFloat("loading_terrain_timeout");
++	// what the camera sets each frame, for the position sent meanwhile
++	camera->updateViewingRange();
++
++	FpsControl fps_control;
++	f32 dtime;
++	fps_control.reset();
++	const u64 start = porting::getTimeMs();
++	while (m_rendering_engine->run()) {
++		fps_control.limit(device, &dtime);
++		step(dtime);
++
++		if (!checkConnection())
++			return false;
++		if (client->getState() < LC_Init) {
++			errordata->message = gettext("Client disconnected");
++			errorstream << errordata->message << std::endl;
++			return false;
++		}
++
++		const float waited = (porting::getTimeMs() - start) / 1000.0f;
++		const s16 sent = client->playerPosReceived() ? server->getNearestUnsentDistance() : 0;
++		const bool done = sent > blocks && client->meshesDone();
++		if (done || waited >= timeout) {
++			actionstream << "Terrain within " << radius << " nodes " << (done ? "loaded" : "not loaded")
++				<< " after " << std::fixed << std::setprecision(1) << waited << " s" << std::endl;
++			m_rendering_engine->draw_load_screen(wstrgettext("Done!"), guienv, texture_src, 0, 100);
++			return true;
++		}
++
++		const int progress = 70 + 29 * std::min(sent, blocks) / blocks;
++		m_rendering_engine->draw_load_screen(wstrgettext("Loading terrain..."), guienv, texture_src,
++				dtime, progress);
++	}
++	return false;
++}
++
+ bool Game::getServerContent(bool *aborted)
+ {
+ 	input->clear();
+diff --git a/src/client/game_internal.h b/src/client/game_internal.h
+index 21efc020b..7f26684ae 100644
+--- a/src/client/game_internal.h
++++ b/src/client/game_internal.h
+@@ -140,6 +140,7 @@ class Game {
+ 	bool connectToServer(const GameStartData &start_data,
+ 			bool *connect_ok, bool *aborted);
+ 	bool getServerContent(bool *aborted);
++	bool loadTerrain();
+ 
+ 	// Main loop
+ 
+diff --git a/src/client/mesh_generator_thread.h b/src/client/mesh_generator_thread.h
+index b86322873..136824d69 100644
+--- a/src/client/mesh_generator_thread.h
++++ b/src/client/mesh_generator_thread.h
+@@ -94,6 +94,13 @@ class MeshUpdateQueue
+ 		return m_queue.size();
+ 	}
+ 
++	//! nothing queued nor being made
++	bool idle()
++	{
++		MutexAutoLock lock(m_mutex);
++		return m_queue.empty() && m_inflight_blocks.empty();
++	}
++
+ 	/// @param finish if true, also clears updates that need to be acked to the server
+ 	void clear(bool finish = false);
+ 
+@@ -175,6 +182,8 @@ class MeshUpdateManager
+ 	void wait();
+ 
+ 	bool isRunning();
++	//! every block mesh asked for was made and taken (simplified far meshes aside)
++	bool isIdle() { return m_queue_in.idle() && m_queue_out.empty() && m_queue_out_urgent.empty(); }
+ 
+ private:
+ 	typedef MutexedQueue<MeshUpdateResult> ResultQueue;
+diff --git a/src/defaultsettings.cpp b/src/defaultsettings.cpp
+index ff56a8ae6..c1a36010b 100644
+--- a/src/defaultsettings.cpp
++++ b/src/defaultsettings.cpp
+@@ -254,6 +254,8 @@ void set_default_settings()
+ 	settings->setDefault("fps_max", "60");
+ 	settings->setDefault("fps_max_unfocused", "10");
+ 	settings->setDefault("viewing_range", "190");
++	settings->setDefault("loading_terrain_radius", "0");
++	settings->setDefault("loading_terrain_timeout", "30");
+ 	settings->setDefault("client_mesh_chunk", "1");
+ 	settings->setDefault("client_lod_distance", "160");
+ 	settings->setDefault("screen_w", "1024");
+diff --git a/src/network/clientpackethandler.cpp b/src/network/clientpackethandler.cpp
+index 589d03b8e..d4811e875 100644
+--- a/src/network/clientpackethandler.cpp
++++ b/src/network/clientpackethandler.cpp
+@@ -582,6 +582,10 @@ void Client::handleCommand_MovePlayer(NetworkPacket* pkt)
+ 	*pkt >> pos >> pitch >> yaw;
+ 
+ 	player->setPosition(pos);
++	// the look too, so the position sent while the terrain loads asks for what the player will see
++	player->setPitch(pitch);
++	player->setYaw(yaw);
++	m_player_pos_received = true;
+ 
+ 	infostream << "Client got TOCLIENT_MOVE_PLAYER"
+ 			<< " pos=" << pos
+diff --git a/src/server.cpp b/src/server.cpp
+index 5c6cee5ca..268e39d90 100644
+--- a/src/server.cpp
++++ b/src/server.cpp
+@@ -651,6 +651,16 @@ void Server::stop()
+ 	infostream<<"Server: Threads stopped"<<std::endl;
+ }
+ 
++s16 Server::getNearestUnsentDistance()
++{
++	ClientInterface::AutoLock clientlock(m_clients);
++	for (const auto &client_it : m_clients.getClientList()) {
++		if (client_it.second->getState() >= CS_Active)
++			return client_it.second->getNearestUnsentD();
++	}
++	return 0;
++}
++
+ void Server::step()
+ {
+ 	// Throw if fatal error occurred in thread
+diff --git a/src/server.h b/src/server.h
+index ee2cc2248..297e347e2 100644
+--- a/src/server.h
++++ b/src/server.h
+@@ -195,6 +195,8 @@ class Server : public con::PeerHandler, public MapEventReceiver,
+ 
+ 	void start();
+ 	void stop();
++	//! the first active client's nearest unsent distance in blocks (singleplayer: the only one)
++	s16 getNearestUnsentDistance();
+ 	// Actual processing is done in another thread.
+ 	// This just checks if there was an error in that thread.
+ 	void step();
+diff --git a/src/server/clientiface.h b/src/server/clientiface.h
+index 9bc450ad0..d63ead89d 100644
+--- a/src/server/clientiface.h
++++ b/src/server/clientiface.h
+@@ -273,6 +273,9 @@ class RemoteClient
+ 		return insert_result.second; // true = was inserted
+ 	}
+ 
++	//! every block closer than this many blocks was sent, culled or left out as air
++	s16 getNearestUnsentD() const { return m_nearest_unsent_d; }
++
+ 	void PrintInfo(std::ostream &o)
+ 	{
+ 		o << "RemoteClient " << peer_id << ": "
