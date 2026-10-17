@@ -47,8 +47,8 @@ Card layout (A33):
 
 - `origin` is upstream CodeZombie; `fork` is alvesmaicon. `develop` is the fork's main branch: start new work from it on `feat/*`, `fix/*` or `debug/*`, then merge back. `pr/*` branches start from `origin/main`.
 - A branch merged into `develop` is deleted in the same step: `git worktree remove` its worktree, `git branch -d` it, and `git push fork --delete` it if it is on the fork. A `pr/*` branch goes the same way once upstream merges or closes its PR. The commits stay in `develop`, and the merge commit keeps the branch's name. Before removing a worktree, check `git status` there: uncommitted work gets committed or the owner decides.
-- Upstream PRs merged: #48 (Jeferson's A/B fix), #52 (MTP HOME), #55 (boot: appctl path, no power-manager respawn), #56 (headphones + FN+DOWN), #59 (TF-2 slot), #60 (idempotent `post-build.sh`), #64 (D-pad hold-to-repeat), #66 (TF-2 card over MTP), #70 (A23 audio), #77 (MTP cancel/rename). #69 (A23 TF-2 power) is obsolete: upstream's DTS split gives both SoCs the supply.
-- Upstream issues that the fork's code already answers: #23 (Gallium HUD options, branch `feat/overlay` ready), #24 (Mesa overlay), #5 (System Settings), #13/#14 (LED, partly). #46 is the owner's "features from my fork" list.
+- Upstream PRs merged: #48 (Jeferson's A/B fix), #52 (MTP HOME), #55 (boot: appctl path, no power-manager respawn), #56 (headphones + FN+DOWN), #59 (TF-2 slot), #60 (idempotent `post-build.sh`), #64 (D-pad hold-to-repeat), #66 (TF-2 card over MTP), #70 (A23 audio), #77 (MTP cancel/rename), #88 (autolaunch at boot). #69 (A23 TF-2 power) is obsolete: upstream's DTS split gives both SoCs the supply.
+- Upstream issues that the fork's code already answers: #23 (Gallium HUD options, in `develop`), #24 (Mesa overlay), #5 (System Settings), #13/#14 (LED, partly). #46 is the owner's "features from my fork" list.
 - Fork issues: #1 screen artifacts (thermal suspected, `debug/thermal-log` logs to `HOME/logs/templog.csv`); #2 Wi-Fi dongle on OTG (no VBUS: DTS lacks `x-powers,drive-vbus-en` and `usb0_vbus-supply`).
 
 ## Hardware facts
