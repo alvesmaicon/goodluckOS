@@ -1,200 +1,451 @@
--- Minecraft's maps. An empty map (eight papers around a compass), used with R1, becomes the map of the 128 x 128 nodes
--- around you, on a grid so that maps sit side by side; held, it draws what lies within 64 nodes as you go, north up,
--- shaded as Minecraft's (higher than the north neighbour lighter, deep water darker), and shows you as an arrow.
--- 64 x 64 pixels of 2 x 2 nodes, drawn again at most every 2 s: the engine keeps every image it is sent, so a bigger
--- or more frequent one would eat the console's memory. One ray a pixel (core.raycast) finds the top node
+-- Minecraft's maps (minecraft.wiki/w/Map). An empty map (eight papers around a compass), used with R1, becomes the map
+-- of the 128 x 128 nodes around you, one node a pixel, on Minecraft's grid so that maps sit side by side; eight papers
+-- around a map zoom it out, 1:2 up to 1:16 (2048 nodes), drawn anew as in Minecraft. Held, it draws the surface within
+-- REACH nodes of you, nearest first, north up, each node in the colour of its top texture, shaded as Minecraft's (lighter
+-- than the pixel to the north when higher, darker when lower, water by depth), and shows you as an arrow.
+-- The engine keeps every image it is sent, so the map goes as 16 tiles and only a changed tile is sent again
 local S = core.get_translator("goodluck_map")
 local EMPTY, MAP = "goodluck_map:empty_map", "goodluck_map:map"
-local PIXELS, NODES = 64, 2
-local HALF = PIXELS * NODES / 2
-local REACH = 32 -- pixels around the player that get drawn (64 nodes)
-local RAYS, TICK, REDRAW = 48, 0.25, 2
-local SCALE, MARKER = 3, 2
+local PIXELS, TILE, MAX_ZOOM = 128, 32, 4
+local TILES = PIXELS / TILE
+local REACH = 64
+local TICK, BUDGET = 0.2, 6000 -- s, µs of drawing a tick
+local NEW, OLD, SCAN = 600, 50, 2500 -- columns a tick for new pixels and for drawn ones again, pixels looked at
+local WALK = 96 -- nodes up or down from a guess to the ground
+local LOADS = 3 -- map blocks read from disk a tick, where the server has let go of them
+local REDRAW = {1e6, 1e6, 2e6, 4e6, 8e6} -- µs between two images of a tile, by zoom
+local SCALE, MARKER = 2, 2
+local PAPER = string.char(226, 212, 168, 255)
+local floor = math.floor
+local get_raw, IGNORE = core.get_node_raw, core.CONTENT_IGNORE
 local storage = core.get_mod_storage()
 local maps, held = {}, {}
-local timer = 0
+local timer, clock, loads, loaded, busy = 0, 0, 0, {}, false
 
 goodluck_map = {}
+dofile(core.get_modpath("goodluck_map") .. "/colors.lua")
 
--- Minecraft's map colours, each in its three shades (180, 220 and 255 of 255)
-local CATS = {
-	{"water", 0x4040FF}, {"lava", 0xFF5A00}, {"ice", 0xA0A0FF}, {"snow", 0xFFFFFF}, {"leaves", 0x007C00},
-	{"dry", 0xBAA55A}, {"grass", 0x7FB238}, {"desert", 0xD87F33}, {"sand", 0xF7E9A3}, {"wood", 0x8F7748},
-	{"stone", 0x707070}, {"litter", 0x5A6E2E}, {"dirt", 0x976D4D}, {"clay", 0xA4A8B8}, {"brick", 0x993333},
-	{"other", 0xA0A0A0},
-}
-local INDEX, COLOR = {}, {}
-for i, cat in ipairs(CATS) do
-	INDEX[cat[1]] = i
-	local r, g, b = math.floor(cat[2] / 65536), math.floor(cat[2] / 256) % 256, cat[2] % 256
-	COLOR[i] = {}
-	for s, k in ipairs({180 / 255, 220 / 255, 1}) do
-		COLOR[i][s] = string.char(math.floor(r * k), math.floor(g * k), math.floor(b * k), 255)
+-- by content id: what the map sees through, water
+local clear, water = {}, {}
+local THROUGH = {airlike = true, torchlike = true, signlike = true, firelike = true}
+core.register_on_mods_loaded(function()
+	for name, def in pairs(core.registered_nodes) do
+		local id = core.get_content_id(name)
+		clear[id] = THROUGH[def.drawtype or "normal"]
+		water[id] = (def.groups and def.groups.water or 0) > 0
 	end
-end
-local PAPER = string.char(226, 212, 168, 255)
-local WATER = INDEX.water
+	clear[core.CONTENT_AIR] = true
+end)
 
-local kinds = {}
-local function kind(name)
-	local k = kinds[name]
-	if k then
-		return k
-	end
-	local def = core.registered_nodes[name]
-	local g = def and def.groups or {}
-	local function has(s)
-		return name:find(s, 1, true) ~= nil
-	end
-	local c = g.water and "water" or g.lava and "lava" or has("ice") and "ice" or has("snow") and "snow" or
-		g.leaves and "leaves" or (has("dry_grass") or has("dry_dirt") or has("dry_shrub")) and "dry" or
-		(has("dirt_with_grass") or g.grass or g.flora or has("junglegrass")) and "grass" or
-		has("desert") and "desert" or (g.sand or has("sandstone")) and "sand" or (g.tree or g.wood) and "wood" or
-		(g.stone or has("cobble") or has("gravel") or has("stone")) and "stone" or has("litter") and "litter" or
-		(has("dirt") or has("permafrost") or g.soil) and "dirt" or has("clay") and "clay" or has("brick") and "brick" or
-		"other"
-	kinds[name] = INDEX[c]
-	return INDEX[c]
+-- a pixel keeps one of up to 255 node names (content ids change between runs) and draws it in three shades
+local names, index, by_id, shades = {}, {}, {}, {}
+for name in storage:get_string("names"):gmatch("[^\n]+") do
+	names[#names + 1] = name
+	index[name] = #names
 end
 
--- a map's pixels: kind (0 not drawn yet), height + 128, water depth; kept as strings in mod storage
-local function bytes(s)
-	local t = {}
-	for i = 1, PIXELS * PIXELS do
-		t[i] = s ~= "" and s:byte(i) or 0
+local function entry(id)
+	local k = by_id[id]
+	if not k then
+		local name = core.get_name_from_content_id(id)
+		k = index[name]
+		if not k then
+			k = math.min(#names + 1, 255)
+			names[k], index[name] = name, k
+			storage:set_string("names", table.concat(names, "\n"))
+		end
+		by_id[id] = k
 	end
-	return t
+	return k
 end
 
-local function chars(t)
-	local out = {}
-	for i = 1, #t do
-		out[i] = string.char(t[i])
+local function shade(k)
+	local s = shades[k]
+	if not s then
+		local r, g, b = goodluck_map.node_color(names[k])
+		s = {}
+		for i, f in ipairs({180, 220, 255}) do
+			s[i] = string.char(floor(r * f / 255), floor(g * f / 255), floor(b * f / 255), 255)
+		end
+		local def = core.registered_nodes[names[k]]
+		s.water = (def and def.groups and def.groups.water or 0) > 0
+		shades[k] = s
 	end
-	return table.concat(out)
+	return s
+end
+
+-- a pixel: 0 not drawn yet, else the name's entry + 256 * water depth (0-31) + 8192 * (height + 32768)
+local function pack(k, y, depth)
+	return k + 256 * math.min(depth, 31) + 8192 * (y + 32768)
+end
+
+local function height(v)
+	return floor(v / 8192) - 32768
+end
+
+local function setup(m)
+	local size = PIXELS * 2 ^ m.zoom
+	m.s, m.x0, m.z0 = 2 ^ m.zoom, m.cx - size / 2, m.cz + size / 2 - 1
+	m.dirty, m.img, m.stamp, m.fail = {}, {}, {}, {}
+	for t = 1, TILES * TILES do
+		m.dirty[t], m.stamp[t] = true, 0
+	end
+	return m
 end
 
 local function load(id)
 	if not maps[id] then
-		local cx, cz = (storage:get_string("m" .. id)):match("^(-?%d+),(-?%d+)$")
+		local cx, cz, zoom = storage:get_string("m" .. id):match("^(-?%d+),(-?%d+),?(%d*)$")
 		if not cx then
 			return nil
 		end
-		maps[id] = {id = id, cx = tonumber(cx), cz = tonumber(cz), c = bytes(storage:get_string("c" .. id)),
-			h = bytes(storage:get_string("h" .. id)), d = bytes(storage:get_string("d" .. id))}
+		local m = {id = id, cx = tonumber(cx), cz = tonumber(cz), zoom = tonumber(zoom) or 0, p = {}}
+		local ok, raw = pcall(core.decompress, storage:get_string("p" .. id), "deflate")
+		raw = ok and #raw == 4 * PIXELS * PIXELS and raw
+		for i = 1, PIXELS * PIXELS do
+			local k, d, hi, lo = 0, 0, 0, 0
+			if raw then
+				k, d, hi, lo = raw:byte(4 * i - 3, 4 * i)
+			end
+			m.p[i] = k == 0 and 0 or k + 256 * d + 8192 * (hi * 256 + lo)
+		end
+		-- the first maps (64 x 64 pixels of 2 x 2 nodes) are drawn anew
+		if storage:get_string("c" .. id) ~= "" then
+			for _, key in ipairs({"c", "h", "d"}) do
+				storage:set_string(key .. id, "")
+			end
+		end
+		maps[id] = setup(m)
 	end
 	return maps[id]
 end
 
 local function save(m)
-	if m.unsaved then
-		storage:set_string("c" .. m.id, chars(m.c))
-		storage:set_string("h" .. m.id, chars(m.h))
-		storage:set_string("d" .. m.id, chars(m.d))
+	if m and m.unsaved then
+		local out, char = {}, string.char
+		for i = 1, PIXELS * PIXELS do
+			local v = m.p[i]
+			local e = floor(v / 8192)
+			out[i] = char(v % 256, floor(v / 256) % 32, floor(e / 256), e % 256)
+		end
+		storage:set_string("p" .. m.id, core.compress(table.concat(out), "deflate"))
 		m.unsaved = nil
 	end
 end
 
--- a map of the grid square around pos (Minecraft's: centres every 128 nodes)
-function goodluck_map.new(pos)
+local function describe(id, zoom)
+	local lines = {S("Map #@1", id), core.colorize("#c0c0c0", S("Scaling at 1:@1", 2 ^ zoom)),
+		core.colorize("#c0c0c0", S("(Level @1/@2)", zoom, MAX_ZOOM))}
+	if zoom < MAX_ZOOM then
+		lines[4] = S("Eight papers around it: zoom out")
+	end
+	return table.concat(lines, "\n")
+end
+
+-- a map of the grid square around pos at a zoom (Minecraft's: 128 << zoom nodes, the zoom 0 squares centred on 0, 0)
+function goodluck_map.new(pos, zoom)
+	zoom = zoom or 0
 	local id = storage:get_int("next") + 1
 	storage:set_int("next", id)
-	local cx = math.floor((pos.x + HALF) / (2 * HALF)) * 2 * HALF
-	local cz = math.floor((pos.z + HALF) / (2 * HALF)) * 2 * HALF
-	storage:set_string("m" .. id, cx .. "," .. cz)
+	local size = PIXELS * 2 ^ zoom
+	local cx = floor((pos.x + 64) / size) * size + size / 2 - 64
+	local cz = floor((pos.z + 64) / size) * size + size / 2 - 64
+	storage:set_string("m" .. id, cx .. "," .. cz .. "," .. zoom)
 	local stack = ItemStack(MAP)
 	local meta = stack:get_meta()
 	meta:set_int("goodluck_map:id", id)
-	meta:set_string("description", S("Map #@1", id))
+	meta:set_string("description", describe(id, zoom))
 	return stack
 end
 
--- the pixel a node falls in, fractional, and back
-local function to_pixel(m, x, z)
-	return (x - (m.cx - HALF)) / NODES, ((m.cz + HALF) - z) / NODES
+-- where pos falls on the map, in pixels, fractional
+local function locate(m, pos)
+	return (pos.x + 0.5 - m.x0) / m.s, (m.z0 + 0.5 - pos.z) / m.s
 end
 
-local function draw(m, px, py, y0)
-	local x, z = m.cx - HALF + px * NODES, m.cz + HALF - 1 - py * NODES
-	local ray = core.raycast(vector.new(x, y0 + 48, z), vector.new(x, y0 - 64, z), false, true)
-	local hit = ray:next()
-	while hit and hit.type ~= "node" do
-		hit = ray:next()
+-- a node, from disk if its block isn't in memory (the server keeps blocks 29 s after their last use; the map reaches
+-- further than the active blocks): a few blocks a tick, each block at most every 30 s; busy when the tick's are used
+local function fetch(x, y, z)
+	local id, light, _, ok = get_raw(x, y, z)
+	if ok then
+		return id, light, ok
 	end
-	if not hit then
+	local bx, by, bz = floor(x / 16), floor(y / 16), floor(z / 16)
+	local key = (bx + 2048) + 4096 * ((by + 2048) + 4096 * (bz + 2048))
+	if clock - (loaded[key] or -30e6) < 30e6 then
+		return id, light, ok
+	end
+	if loads >= LOADS then
+		busy = true
+		return id, light, ok
+	end
+	loaded[key], loads = clock, loads + 1
+	core.load_area(vector.new(bx * 16, by * 16, bz * 16))
+	id, light, _, ok = get_raw(x, y, z)
+	return id, light, ok
+end
+
+local function surface(x, y, z, id)
+	local depth = 0
+	if water[id] then
+		repeat
+			depth = depth + 1
+			local below, _, ok = fetch(x, y - depth, z)
+		until not ok or not water[below] or depth >= 31
+	end
+	return id, y, depth
+end
+
+-- the top of a column as Minecraft's heightmap has it, the highest node under the open sky: from a guessed height
+-- down through air, or up through ground and roofs to the first air the sun reaches; nil where it isn't loaded
+local function column(x, z, y)
+	local id, light, ok = fetch(x, y, z)
+	if not ok or id == IGNORE then
+		return nil
+	end
+	if clear[id] then
+		for _ = 1, WALK do
+			local below, l, ok2 = fetch(x, y - 1, z)
+			if not ok2 or below == IGNORE then
+				return nil
+			end
+			y = y - 1
+			if not clear[below] then
+				if light % 16 == 15 then
+					return surface(x, y, z, below)
+				end
+				id = below
+				break
+			end
+			light = l
+		end
+		if clear[id] then
+			return nil
+		end
+	end
+	for _ = 1, WALK do
+		local above, l, ok2 = fetch(x, y + 1, z)
+		if not ok2 or above == IGNORE then
+			return nil
+		end
+		if clear[above] and l % 16 == 15 and not clear[id] then
+			return surface(x, y, z, id)
+		end
+		y, id = y + 1, above
+	end
+end
+
+-- a guess at a pixel's height: a drawn neighbour's
+local function guess(m, px, py, fallback)
+	local p, i = m.p, py * PIXELS + px + 1
+	local v = px > 0 and p[i - 1] or 0
+	if v == 0 and px < PIXELS - 1 then
+		v = p[i + 1]
+	end
+	if v == 0 and py > 0 then
+		v = p[i - PIXELS]
+	end
+	if v == 0 and py < PIXELS - 1 then
+		v = p[i + PIXELS]
+	end
+	return v > 0 and height(v) or fallback
+end
+
+-- a pixel from its column, or zoomed out from four spread over it, the most common node as in Minecraft's
+local function draw(m, px, py, y)
+	local s = m.s
+	local x, z = m.x0 + px * s, m.z0 - py * s
+	local id, depth
+	if s == 1 then
+		id, y, depth = column(x, z, y)
+		if not id then
+			return false
+		end
+	else
+		local half, count, most, n, sum, wet, wn = s / 2, {}, 0, 0, 0, 0, 0
+		for j = 0, 1 do
+			for i = 0, 1 do
+				local c, cy, d = column(x + i * half, z - j * half, y)
+				if c then
+					y, n, sum = cy, n + 1, sum + cy
+					count[c] = (count[c] or 0) + 1
+					if count[c] > most then
+						id, most = c, count[c]
+					end
+					if d > 0 then
+						wet, wn = wet + d, wn + 1
+					end
+				end
+			end
+		end
+		if n == 0 then
+			return false
+		end
+		y, depth = floor(sum / n + 0.5), wn > 0 and floor(wet / wn + 0.5) or 0
+	end
+	local v, i = pack(entry(id), y, depth), py * PIXELS + px + 1
+	if m.p[i] ~= v then
+		m.p[i], m.unsaved = v, true
+		local t = floor(py / TILE) * TILES + floor(px / TILE) + 1
+		m.dirty[t] = true
+		if py % TILE == TILE - 1 and py < PIXELS - 1 then
+			m.dirty[t + TILES] = true
+		end
+	end
+	return true
+end
+
+-- the offsets within reach at each zoom, nearest first
+local rings = {}
+local function ring(zoom)
+	local r = rings[zoom]
+	if not r then
+		local rp = REACH / 2 ^ zoom
+		r = {}
+		for dy = -rp, rp do
+			for dx = -rp, rp do
+				local d = dx * dx + dy * dy
+				if d <= rp * rp then
+					r[#r + 1] = d * 1048576 + (dx + 512) * 1024 + dy + 512
+				end
+			end
+		end
+		table.sort(r)
+		rings[zoom] = r
+	end
+	return r
+end
+
+-- the first offset at a distance of at least d
+local function from(r, d)
+	local lo, hi, key = 1, #r + 1, d * d * 1048576
+	while lo < hi do
+		local mid = floor((lo + hi) / 2)
+		if r[mid] < key then
+			lo = mid + 1
+		else
+			hi = mid
+		end
+	end
+	return lo
+end
+
+-- new pixels nearest first; after a step only the ring that the step uncovers (what was done around the old spot is
+-- done around the new one too, less the step); pixels that failed again after a while; with nothing new, a few drawn
+-- pixels again (the world changes). The outer ring of the reach only on every other pixel, Minecraft's checkered edge
+local function survey(m, st, pos, t0)
+	local r = ring(m.zoom)
+	local fx, fy = locate(m, pos)
+	local cx, cy = floor(fx), floor(fy)
+	local rp = REACH / m.s
+	local edge = (rp - math.max(1, rp / 32)) ^ 2 * 1048576
+	local feet = floor(pos.y + 0.5)
+	local cost = m.s == 1 and 1 or 4
+	if cx ~= st.cx or cy ~= st.cy then
+		local done = math.sqrt(math.min(edge, st.new > 0 and r[math.min(st.new, #r)] or 0) / 1048576)
+		local keep = st.cx and done - math.sqrt((cx - st.cx) ^ 2 + (cy - st.cy) ^ 2) - 1 or 0
+		st.new = from(r, math.max(0, keep)) - 1
+		st.cx, st.cy = cx, cy
+	elseif st.new >= #r and st.failed and t0 >= st.retry then
+		st.new, st.failed = 0, false
+	end
+	local spent, n, open = 0, 0, st.new < #r
+	while st.new < #r and spent < NEW and n < SCAN do
+		n = n + 1
+		if n % 64 == 0 and core.get_us_time() - t0 > BUDGET then
+			break
+		end
+		st.new = st.new + 1
+		local e = r[st.new]
+		local k = e % 1048576
+		local px, py = cx + floor(k / 1024) - 512, cy + k % 1024 - 512
+		if px >= 0 and py >= 0 and px < PIXELS and py < PIXELS and (e <= edge or (px + py) % 2 == 1) then
+			local i = py * PIXELS + px + 1
+			if m.p[i] == 0 then
+				if (m.fail[i] or 0) > t0 then
+					st.failed = true
+				elseif draw(m, px, py, guess(m, px, py, feet)) then
+					st.drew = true
+					spent = spent + cost
+				elseif busy then
+					st.new = st.new - 1
+					break
+				else
+					m.fail[i], st.failed = t0 + 5e6, true
+					spent = spent + cost
+				end
+			end
+		end
+	end
+	if st.new < #r then
 		return
 	end
-	local c = kind(core.get_node(hit.under).name)
-	local depth = 0
-	if c == WATER then
-		local floor = core.raycast(hit.under, vector.offset(hit.under, 0, -24, 0), false, false):next()
-		depth = floor and floor.type == "node" and hit.under.y - floor.under.y or 24
+	if open and st.failed then
+		st.retry, st.drew = t0 + (st.drew and 5e6 or 20e6), false
 	end
-	local i = py * PIXELS + px + 1
-	local h = math.max(0, math.min(255, hit.under.y + 128))
-	if m.c[i] ~= c or m.h[i] ~= h or m.d[i] ~= depth then
-		m.c[i], m.h[i], m.d[i] = c, h, depth
-		m.dirty, m.unsaved = true, true
-	end
-end
-
-local function image(m)
-	local px = {}
-	for i = 1, PIXELS * PIXELS do
-		local c = m.c[i]
-		if c == 0 then
-			px[i] = PAPER
-		else
-			local shade
-			if c == WATER then
-				shade = m.d[i] <= 2 and 3 or m.d[i] <= 6 and 2 or 1
-			else
-				local n = i - PIXELS
-				local hn = n >= 1 and m.c[n] ~= 0 and m.c[n] ~= WATER and m.h[n]
-				shade = not hn and 2 or m.h[i] > hn and 3 or m.h[i] < hn and 1 or 2
+	spent = 0
+	for _ = 1, SCAN do
+		if spent >= OLD or core.get_us_time() - t0 > BUDGET then
+			break
+		end
+		st.old = st.old % #r + 1
+		local k = r[st.old] % 1048576
+		local px, py = cx + floor(k / 1024) - 512, cy + k % 1024 - 512
+		local v = px >= 0 and py >= 0 and px < PIXELS and py < PIXELS and m.p[py * PIXELS + px + 1] or 0
+		if v > 0 then
+			if not draw(m, px, py, height(v)) and busy then
+				break
 			end
-			px[i] = COLOR[c][shade]
+			spent = spent + cost
 		end
 	end
-	return "[png:" .. core.encode_base64(core.encode_png(PIXELS, PIXELS, table.concat(px)))
 end
 
--- the arrow: where the player is on it and which way they look (north up), or a dot on the edge when off it
+local function image(m, t)
+	local p, s = m.p, m.s
+	local x0, y0 = (t - 1) % TILES * TILE, floor((t - 1) / TILES) * TILE
+	local out, n = {}, 0
+	for py = y0, y0 + TILE - 1 do
+		local row = py * PIXELS + 1
+		for px = x0, x0 + TILE - 1 do
+			local v = p[row + px]
+			n = n + 1
+			if v == 0 then
+				out[n] = PAPER
+			else
+				local sh, odd, k = shade(v % 256), (px + py) % 2
+				if sh.water then
+					local f = floor(v / 256) % 32 * 0.1 + odd * 0.2
+					k = f < 0.5 and 3 or f > 0.9 and 1 or 2
+				else
+					local north = py > 0 and p[row + px - PIXELS] or 0
+					local e = (north > 0 and (height(v) - height(north)) * 4 / (s + 4) or 0) + (odd - 0.5) * 0.4
+					k = e > 0.6 and 3 or e < -0.6 and 1 or 2
+				end
+				out[n] = sh[k]
+			end
+		end
+	end
+	return "[png:" .. core.encode_base64(core.encode_png(TILE, TILE, table.concat(out)))
+end
+
+local function redraw(m, now)
+	for t = 1, TILES * TILES do
+		if m.dirty[t] and now - m.stamp[t] >= REDRAW[m.zoom + 1] then
+			m.dirty[t], m.stamp[t] = false, now
+			m.img[t] = image(m, t)
+		end
+	end
+end
+
+-- the arrow: where the player is on the map and which way they look (north up), or a dot on the edge when off it
 local function marker(m, player)
-	local pos = player:get_pos()
-	local fx, fy = to_pixel(m, pos.x, pos.z)
+	local fx, fy = locate(m, player:get_pos())
 	local off = fx < 0 or fy < 0 or fx > PIXELS or fy > PIXELS
 	fx, fy = math.max(0, math.min(PIXELS, fx)), math.max(0, math.min(PIXELS, fy))
-	local k = math.floor(-player:get_look_horizontal() / (2 * math.pi) * 16 + 0.5) % 16
+	local k = floor(-player:get_look_horizontal() / (2 * math.pi) * 16 + 0.5) % 16
 	return off and "goodluck_map_player_off.png" or "goodluck_map_player_" .. k .. ".png",
-		{x = math.floor((fx - PIXELS / 2) * SCALE), y = math.floor((fy - PIXELS / 2) * SCALE)}
-end
-
-local function show(player, m)
-	local name = player:get_player_name()
-	local st = held[name]
-	if st and st.id ~= m.id then
-		for _, id in pairs(st.hud) do
-			player:hud_remove(id)
-		end
-		st = nil
-	end
-	if not st then
-		local tex, off = marker(m, player)
-		local at = {x = 0.5, y = 0.5}
-		st = {id = m.id, cursor = 0, drawn = 0, tex = tex, off = off, hud = {
-			frame = player:hud_add({type = "image", text = "goodluck_map_frame.png", position = at,
-				alignment = {x = 0, y = 0}, scale = {x = SCALE, y = SCALE}, z_index = 20}),
-			map = player:hud_add({type = "image", text = image(m), position = at, alignment = {x = 0, y = 0},
-				scale = {x = SCALE, y = SCALE}, z_index = 21}),
-			marker = player:hud_add({type = "image", text = tex, position = at, offset = off,
-				alignment = {x = 0, y = 0}, scale = {x = MARKER, y = MARKER}, z_index = 22}),
-		}}
-		held[name] = st
-		m.dirty = false
-		player:hud_set_flags({wielditem = false})
-	end
-	return st
+		{x = floor((fx - PIXELS / 2) * SCALE), y = floor((fy - PIXELS / 2) * SCALE)}
 end
 
 local function hide(player)
@@ -205,29 +456,36 @@ local function hide(player)
 		end
 		held[player:get_player_name()] = nil
 		player:hud_set_flags({wielditem = true})
+		save(maps[st.id])
 	end
 end
 
--- the next RAYS pixels within reach, sweeping the square around the player
-local function survey(m, st, player)
-	local pos = player:get_pos()
-	local fx, fy = to_pixel(m, pos.x, pos.z)
-	local x0, y0 = math.floor(fx) - REACH, math.floor(fy) - REACH
-	local side = 2 * REACH + 1
-	local y = math.floor(pos.y + 0.5)
-	local rays = 0
-	for _ = 1, side * side do
-		if rays >= RAYS then
-			break
-		end
-		st.cursor = (st.cursor + 1) % (side * side)
-		local px, py = x0 + st.cursor % side, y0 + math.floor(st.cursor / side)
-		local dx, dy = px - fx, py - fy
-		if px >= 0 and py >= 0 and px < PIXELS and py < PIXELS and dx * dx + dy * dy <= REACH * REACH then
-			draw(m, px, py, y)
-			rays = rays + 1
-		end
+local function show(player, m, now)
+	local st = held[player:get_player_name()]
+	if st and st.id ~= m.id then
+		hide(player)
+		st = nil
 	end
+	if not st then
+		redraw(m, now)
+		local at = {x = 0.5, y = 0.5}
+		st = {id = m.id, new = 0, old = 0, saved = now, shown = {}, hud = {}}
+		st.hud.frame = player:hud_add({type = "image", text = "goodluck_map_frame.png", position = at,
+			alignment = {x = 0, y = 0}, scale = {x = SCALE, y = SCALE}, z_index = 20})
+		for t = 1, TILES * TILES do
+			local ox, oy = (t - 1) % TILES * TILE, floor((t - 1) / TILES) * TILE
+			st.hud[t] = player:hud_add({type = "image", text = m.img[t], position = at, alignment = {x = 1, y = 1},
+				offset = {x = (ox - PIXELS / 2) * SCALE, y = (oy - PIXELS / 2) * SCALE},
+				scale = {x = SCALE, y = SCALE}, z_index = 21})
+			st.shown[t] = m.img[t]
+		end
+		st.tex, st.off = marker(m, player)
+		st.hud.marker = player:hud_add({type = "image", text = st.tex, position = at, offset = st.off,
+			alignment = {x = 0, y = 0}, scale = {x = MARKER, y = MARKER}, z_index = 22})
+		held[player:get_player_name()] = st
+		player:hud_set_flags({wielditem = false})
+	end
+	return st
 end
 
 core.register_globalstep(function(dtime)
@@ -236,17 +494,20 @@ core.register_globalstep(function(dtime)
 		return
 	end
 	timer = 0
-	local now = core.get_us_time() / 1e6
 	for _, player in ipairs(core.get_connected_players()) do
 		local stack = player:get_wielded_item()
 		local m = stack:get_name() == MAP and load(stack:get_meta():get_int("goodluck_map:id"))
 		if m then
-			local st = show(player, m)
-			survey(m, st, player)
-			if m.dirty and now - st.drawn >= REDRAW then
-				st.drawn, m.dirty = now, false
-				player:hud_change(st.hud.map, "text", image(m))
-				save(m)
+			local now = core.get_us_time()
+			clock, loads, busy = now, 0, false
+			local st = show(player, m, now)
+			survey(m, st, player:get_pos(), now)
+			redraw(m, now)
+			for t = 1, TILES * TILES do
+				if st.shown[t] ~= m.img[t] then
+					st.shown[t] = m.img[t]
+					player:hud_change(st.hud[t], "text", m.img[t])
+				end
 			end
 			local tex, off = marker(m, player)
 			if tex ~= st.tex then
@@ -257,6 +518,10 @@ core.register_globalstep(function(dtime)
 				st.off = off
 				player:hud_change(st.hud.marker, "offset", off)
 			end
+			if now - st.saved > 60e6 then
+				st.saved = now
+				save(m)
+			end
 		else
 			hide(player)
 		end
@@ -264,10 +529,9 @@ core.register_globalstep(function(dtime)
 end)
 
 core.register_on_leaveplayer(function(player)
+	local st = held[player:get_player_name()]
 	held[player:get_player_name()] = nil
-	for _, m in pairs(maps) do
-		save(m)
-	end
+	save(st and maps[st.id])
 end)
 
 core.register_on_shutdown(function()
@@ -312,6 +576,46 @@ core.register_craft({
 		{"default:paper", "default:paper", "default:paper"},
 	},
 })
+
+-- zooming out (Bedrock's crafting table recipe, Minetest Game has no cartography table): a new map one level out
+-- around the old one's centre, empty
+core.register_craft({
+	output = MAP,
+	recipe = {
+		{"default:paper", "default:paper", "default:paper"},
+		{"default:paper", MAP, "default:paper"},
+		{"default:paper", "default:paper", "default:paper"},
+	},
+})
+
+local function zooming(stack, old_grid)
+	local center = old_grid[5]
+	if stack:get_name() == MAP and center and center:get_name() == MAP then
+		return center, load(center:get_meta():get_int("goodluck_map:id"))
+	end
+end
+
+core.register_craft_predict(function(stack, _, old_grid)
+	local center, m = zooming(stack, old_grid)
+	if center then
+		if not m or m.zoom >= MAX_ZOOM then
+			return ItemStack("")
+		end
+		local out = ItemStack(MAP)
+		out:get_meta():set_string("description", describe("?", m.zoom + 1))
+		return out
+	end
+end)
+
+core.register_on_craft(function(stack, _, old_grid)
+	local center, m = zooming(stack, old_grid)
+	if center then
+		if not m or m.zoom >= MAX_ZOOM then
+			return center
+		end
+		return goodluck_map.new({x = m.cx, z = m.cz}, m.zoom + 1)
+	end
+end)
 
 -- Minetest Game's mapping kit works the minimap, which this console keeps off
 if core.registered_items["map:mapping_kit"] then

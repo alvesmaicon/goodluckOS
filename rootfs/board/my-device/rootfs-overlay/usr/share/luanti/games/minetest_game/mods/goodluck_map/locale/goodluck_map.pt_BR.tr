@@ -3,3 +3,6 @@ Map=Mapa
 Map #@1=Mapa nº @1
 Empty Map=Mapa vazio
 R1: start the map of where you are=R1: começa o mapa de onde você está
+Scaling at 1:@1=Escala de 1:@1
+(Level @1/@2)=(Nível @1/@2)
+Eight papers around it: zoom out=Oito papéis em volta: menos zoom
