@@ -27,7 +27,8 @@ say() {
     _fmt=$(/usr/local/bin/gl-tr "$1")
     shift
     _msg=$(printf "$_fmt" "$@")
-    printf '  %s\n' "$(ascii "$_msg")"
+    ascii "$_msg" | fold -s -w 76 | sed 's/^/  /'
+    printf '\n'
     echo "$(date '+%F %T') $_msg" >> "$LOG"
 }
 
