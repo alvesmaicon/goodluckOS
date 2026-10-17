@@ -19,6 +19,8 @@ LUANTI_GAME_MOBS_NPC_VERSION = 4d6096d7576a731aea6369fb8cf0448ca8070cd3
 LUANTI_GAME_3D_ARMOR_VERSION = a4f311cbcf8125b4b83ba884d1d0d12f018021da
 # v1.9.3, the ContentDB release
 LUANTI_GAME_X_ENCHANTING_VERSION = 0d589e69b39642b31397ec52b5b5b5239a0c45f6
+# 5.3.1, the ContentDB release
+LUANTI_GAME_X_BOWS_VERSION = 7b36ca2d9c7df12314b90b83541a5200f517b7c3
 # the modpack's mods that need nothing outside minetest_game, without the armor stand and wieldview
 LUANTI_GAME_3D_ARMOR_MODS = 3d_armor 3d_armor_sfinv armor_wood armor_cactus armor_bronze \
 	armor_steel armor_gold armor_diamond shields
@@ -29,7 +31,8 @@ LUANTI_GAME_EXTRA_DOWNLOADS = \
 	https://codeberg.org/tenplus1/stamina/archive/$(LUANTI_GAME_STAMINA_VERSION).tar.gz \
 	https://codeberg.org/tenplus1/mobs_npc/archive/$(LUANTI_GAME_MOBS_NPC_VERSION).tar.gz \
 	https://github.com/minetest-mods/3d_armor/archive/$(LUANTI_GAME_3D_ARMOR_VERSION).tar.gz \
-	https://bitbucket.org/minetest_gamers/x_enchanting/get/$(LUANTI_GAME_X_ENCHANTING_VERSION).tar.gz
+	https://bitbucket.org/minetest_gamers/x_enchanting/get/$(LUANTI_GAME_X_ENCHANTING_VERSION).tar.gz \
+	https://bitbucket.org/minetest_gamers/x_bows/get/$(LUANTI_GAME_X_BOWS_VERSION).tar.gz
 
 # not LUANTI_GAME_DIR: Buildroot owns <pkg>_DIR (the build directory)
 LUANTI_GAME_DEST = $(TARGET_DIR)/usr/share/luanti/games/minetest_game
@@ -57,6 +60,7 @@ define LUANTI_GAME_INSTALL_TARGET_CMDS
 	$(call LUANTI_GAME_EXTRACT_MOD,stamina,$(LUANTI_GAME_STAMINA_VERSION),--exclude=stamina_burp.ogg)
 	$(call LUANTI_GAME_EXTRACT_MOD,mobs_npc,$(LUANTI_GAME_MOBS_NPC_VERSION))
 	$(call LUANTI_GAME_EXTRACT_MOD,x_enchanting,$(LUANTI_GAME_X_ENCHANTING_VERSION))
+	$(call LUANTI_GAME_EXTRACT_MOD,x_bows,$(LUANTI_GAME_X_BOWS_VERSION),--exclude=smoke_puff.png --exclude='x_bows_quiver.*.ogg')
 	mkdir -p $(LUANTI_GAME_DEST)/mods/3d_armor
 	$(call suitable-extractor,$(LUANTI_GAME_3D_ARMOR_VERSION).tar.gz) \
 		$(LUANTI_GAME_DL_DIR)/$(LUANTI_GAME_3D_ARMOR_VERSION).tar.gz | \
@@ -71,6 +75,7 @@ define LUANTI_GAME_INSTALL_TARGET_CMDS
 		-e 's/@MOBS_NPC_VERSION@/$(LUANTI_GAME_MOBS_NPC_VERSION)/' \
 		-e 's/@3D_ARMOR_VERSION@/$(LUANTI_GAME_3D_ARMOR_VERSION)/' \
 		-e 's/@X_ENCHANTING_VERSION@/$(LUANTI_GAME_X_ENCHANTING_VERSION)/' \
+		-e 's/@X_BOWS_VERSION@/$(LUANTI_GAME_X_BOWS_VERSION)/' \
 		-e 's/@3D_ARMOR_MODS@/$(strip $(LUANTI_GAME_3D_ARMOR_MODS))/' \
 		$(LUANTI_GAME_PKGDIR)/CREDITS.txt > $(LUANTI_GAME_DEST)/CREDITS.txt
 endef

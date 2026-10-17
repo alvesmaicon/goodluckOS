@@ -161,6 +161,8 @@ The enchanting table, crafted as in Minecraft from a book, two diamonds and four
 
 Villages appear in ground not generated yet, as in Minecraft: gravel roads crossing at the middle, houses, a blacksmith, a church, a library and wheat fields, with loot in the chests. A villager lives in each house with a bed, and traders stand at work: the armorer (iron and diamond armor, the shield), the toolsmith (enchanted tools and swords), the cleric (lapis lazuli), the librarian (bookshelves and books) and the farmer. They are paid in gold ingots, as Minetest Game has no emeralds, and each one also buys something (coal, iron, paper, wheat...) for gold. Villagers fight the monsters that come into the village.
 
+The bow works as in Minecraft: crafted from three sticks and three strings, it draws while L1 is held and shoots when L1 is let go; a full draw takes a second and does 6, a short one less, and a tap sends nothing. Drawing walks as slow as sneaking. Arrows come from the inventory, four from a flint, a stick and a feather (chickens drop them), and one stuck in a block is picked up by walking into it. The enchanting table gives a bow Power, Punch or Infinity, as in Minecraft.
+
 The inventory's tabs are icons, as in Minecraft. In Creative they sit where Minecraft (Java Edition) puts its own: Building Blocks, Colored Blocks, Natural Blocks, Functional Blocks, Recipes and Search above the panel, and Tools & Utilities, Combat, Food & Drinks, Ingredients, Spawn Eggs and the Inventory below it (there is no Redstone tab, as Minetest Game has no redstone). Each tab's grid has Minecraft's 9 columns and scrolls with R1/L1 or the bar beside it, and the trash next to the hotbar deletes whatever is put in it. Survival has two tabs, the Inventory and Recipes.
 
 Its settings (the gear on the main menu, or START > Settings in a game) open on Video, the render distance as in Minecraft: 4 to 20 chunks of 16 blocks. Fewer chunks make the game faster, and a change made in a game shows at once.
@@ -174,7 +176,7 @@ Clicking a text field (a world's name, a setting, a sign, a book, the creative i
 | B (bottom) | Jump | Click (on a text field: the keyboard) |
 | A (right) | Sneak (with a shield on: hold it up) | Back |
 | X / Y | Inventory | X: right click (half a stack), Y: click |
-| R1 / L1 | Dig, eat, look through the spyglass (held) / place (with a shield on and no block in hand, L1 holds it up) | Scroll |
+| R1 / L1 | Dig, eat, look through the spyglass (held) / place, draw a bow (held; let go to shoot; with a shield on and no block in hand, L1 holds it up) | Scroll |
 | R2 / L2 | Next / previous item | |
 | L3 | Run | |
 | D-pad | Up: camera view, down: drop the item, left: fly (Creative mode), right: screenshot | Move the cursor slowly |

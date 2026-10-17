@@ -71,6 +71,20 @@ x_enchanting
   enchanting table's cost, mese crystals there and lapis lazuli here. Added:
   the pt_BR translation.
 
+x_bows
+  https://bitbucket.org/minetest_gamers/x_bows, commit @X_BOWS_VERSION@
+  Code LGPL-2.1+; textures and models CC BY-SA 4.0 and CC BY-SA 3.0, the
+  arrows' flyby sounds CC0: mods/x_bows/LICENSE.txt
+  Replaced by goodluckOS's own: the bow's sounds (drawing, fully drawn,
+  shooting, the critical shot, the arrow hitting, the hit on a player), which
+  its credits give to freesound.org authors with no particular Creative
+  Commons license; and x_bows_bow_wood_semi_charged.png, which its credits
+  don't name, redrawn from its x_bows_bow_wood.png and
+  x_bows_bow_wood_charged.png and so under their CC BY-SA 4.0. Left out:
+  the quiver's sounds (same credits as above; goodluck_bow takes the quiver
+  out of the game) and smoke_puff.png (not credited, empty, unused). Added:
+  the pt_BR translation.
+
 goodluck_villages
   Built on villages_mtg 1.0.3 by Drix03,
   https://content.luanti.org/packages/Drix03/villages_mtg/, MIT:
@@ -81,6 +95,7 @@ Left out of mobs, mobs_animal, mobs_monster, stamina and mobs_npc: screenshot.jp
 on textstudio.com, whose terms are unclear. The game doesn't use them.
 
 goodluck_* mods (but goodluck_villages' buildings, above), and the stamina,
-mobs_animal, mobs_monster, x_enchanting and mobs_npc media above
-  Code, pixel art, the rat's model and the item pickup and experience sounds
-  made for goodluckOS, under goodluckOS's license, GPL-2.0.
+mobs_animal, mobs_monster, x_enchanting, mobs_npc and x_bows media above (but
+the half-drawn bow, CC BY-SA 4.0)
+  Code, pixel art, the rat's model and the item pickup, experience and bow
+  sounds made for goodluckOS, under goodluckOS's license, GPL-2.0.
