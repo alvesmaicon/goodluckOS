@@ -99,7 +99,8 @@ mob_horse
   Left out: its textures (the coats, CC BY-SA 3.0 by Mjollna, the horseshoes
   and the saddle overlay), as goodluck_horse paints its own and takes the
   horseshoes out of the game, and spawn_example.lua. Added: a spawn.lua that
-  spawns nothing (goodluck_horse spawns the herds).
+  spawns nothing: goodluck_horse registers its own horse, donkey and mule on
+  this model and these sounds, and mob_horse's horse never appears.
 
 goodluck_monsters
   The zombie and the skeleton wear 3d_armor's character model (see 3d_armor).

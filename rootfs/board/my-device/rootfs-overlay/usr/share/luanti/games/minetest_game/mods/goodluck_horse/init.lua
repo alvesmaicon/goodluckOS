@@ -1,11 +1,11 @@
--- Horses as in Minecraft (Java), on mob_horse's horse: herds in grassland and savanna, seven coats and five
--- markings, health, speed and jump of their own; tamed by riding them until they stop throwing you off, steered
--- only with a saddle, horse armor, an inventory with both (sneak + place on the horse, or the inventory while
--- riding), a jump that charges while jump is held, foals from golden apples
+-- Horses, donkeys and mules as in Minecraft (Java), on mob_horse's model and sounds: herds in grassland and savanna,
+-- seven coats and five markings, health, speed and jump of their own; tamed by riding them until they stop throwing
+-- you off, steered only with a saddle, horse armor (horses) or a chest (donkeys and mules), an inventory with them
+-- (sneak + place on the animal, or the inventory while riding), a jump that charges while jump is held, foals from
+-- golden apples, a horse and a donkey make a mule
 local S = core.get_translator("goodluck_horse")
 goodluck_horse = {}
 
-local NAME = "mob_horse:horse"
 local G = "goodluck_horse_"
 local PAGE = "goodluck_horse:horse"
 -- Minecraft's horses run 4.9 to 14.6 nodes a second; the handheld can't load terrain that fast
@@ -18,6 +18,20 @@ local has_xp = core.get_modpath("goodluck_xp") and goodluck_xp
 local COATS = {"white", "creamy", "chestnut", "brown", "black", "gray", "darkbrown"}
 local MARKINGS = {"", "white", "whitefield", "whitedots", "blackdots"}
 
+-- donkeys and mules: Minecraft's fixed speed (7.55 of 4.9 to 14.6, here as far along 5 to 9) and jump strength
+local KINDS = {
+	horse = {name = "goodluck_horse:horse", description = S("Horse"), coats = COATS, markings = MARKINGS,
+		armor = true, scale = 1},
+	donkey = {name = "goodluck_horse:horse_donkey", description = S("Donkey"), coats = {"donkey"}, markings = {""},
+		chest = true, scale = 0.85, speed = MIN_SPEED + (MAX_SPEED - MIN_SPEED) * 0.28, jump = 0.5},
+	mule = {name = "goodluck_horse:horse_mule", description = S("Mule"), coats = {"mule"}, markings = {""},
+		chest = true, scale = 0.95, speed = MIN_SPEED + (MAX_SPEED - MIN_SPEED) * 0.28, jump = 0.5, sterile = true},
+}
+local KIND_OF = {}
+for kind, k in pairs(KINDS) do
+	KIND_OF[k.name] = kind
+end
+
 -- armor points as in Minecraft; each one takes 4 % off the damage
 local ARMORS = {
 	["goodluck_horse:armor_leather"] = 3,
@@ -26,6 +40,7 @@ local ARMORS = {
 	["goodluck_horse:armor_diamond"] = 11,
 }
 local LEATHER = "#a0653a"
+local CHEST_SLOTS = 15
 
 -- Minecraft's horse food: health, seconds off a foal's growing, temper; a golden apple starts breeding
 local FOOD = {
@@ -44,6 +59,10 @@ local function jump_height(s)
 	return math.min(-0.1817584952 * s ^ 3 + 3.689713992 * s ^ 2 + 2.128599134 * s - 0.343930367, MAX_JUMP)
 end
 
+local function kind_of(self)
+	return KINDS[KIND_OF[self.name] or "horse"]
+end
+
 local function texture(self)
 	local t = G .. (self._coat or "brown") .. ".png"
 	if self._marking and self._marking ~= "" then
@@ -56,6 +75,9 @@ local function texture(self)
 			G .. "armor_leather_trim.png"
 	elseif armor then
 		t = t .. "^" .. G .. "armor_" .. armor:get_name():match("armor_(%a+)$") .. ".png"
+	end
+	if self._chest then
+		t = t .. "^" .. G .. "chest.png"
 	end
 	if self._saddle then
 		t = t .. "^" .. G .. "saddle.png"
@@ -73,12 +95,13 @@ local function update_look(self)
 	self.object:set_armor_groups({fleshy = self.armor})
 end
 
--- a new horse: Minecraft's random stats
+-- a new animal: Minecraft's random stats
 local function roll(self, coat)
-	self._coat = coat or COATS[math.random(#COATS)]
-	self._marking = MARKINGS[math.random(#MARKINGS)]
-	self._speed = MIN_SPEED + (MAX_SPEED - MIN_SPEED) * rand3()
-	self._jump = 0.4 + 0.6 * rand3()
+	local k = kind_of(self)
+	self._coat = coat or k.coats[math.random(#k.coats)]
+	self._marking = k.markings[math.random(#k.markings)]
+	self._speed = k.speed or MIN_SPEED + (MAX_SPEED - MIN_SPEED) * rand3()
+	self._jump = k.jump or 0.4 + 0.6 * rand3()
 	self._hp = 15 + math.random(0, 8) + math.random(0, 7)
 	self._temper = 0
 end
@@ -90,7 +113,7 @@ local function set_health(self, hp)
 	self.object:set_hp(self.health)
 end
 
--- ---- the inventory: one detached inventory per horse while it is loaded -----------------------------------------
+-- ---- the inventory: one detached inventory per animal while it is loaded ------------------------------------------
 local horses = {}
 local next_id = 0
 
@@ -114,6 +137,13 @@ local function sync_from_inv(self, inv)
 	local saddle, armor = inv:get_stack("saddle", 1), inv:get_stack("armor", 1)
 	self._saddle = not saddle:is_empty() or nil
 	self._armor = not armor:is_empty() and armor:to_string() or nil
+	if self._chest then
+		local items = {}
+		for i, s in ipairs(inv:get_list("chest") or {}) do
+			items[i] = s:to_string()
+		end
+		self._chest_items = items
+	end
 	update_look(self)
 	self.object:set_properties({stepheight = self._saddle and 1.1 or 0.6})
 	if self.driver and self.tamed then
@@ -126,33 +156,47 @@ local function get_inv(self)
 	local inv = core.get_inventory({type = "detached", name = name})
 	if not inv then
 		local id = self._id
+		local function mine(player)
+			local h = by_id(id)
+			return h and near(h, player) and h.owner == player:get_player_name() and h
+		end
 		inv = core.create_detached_inventory(name, {
 			allow_put = function(_, listname, _, stack, player)
-				local h = by_id(id)
-				if not h or h.child or not near(h, player) or h.owner ~= player:get_player_name() then
+				local h = mine(player)
+				if not h or h.child then
 					return 0
 				end
 				if listname == "saddle" and stack:get_name() == "mobs:saddle" then
 					return 1
 				end
-				if listname == "armor" and ARMORS[stack:get_name()] then
+				if listname == "armor" and kind_of(h).armor and ARMORS[stack:get_name()] then
 					return 1
+				end
+				if listname == "chest" and h._chest then
+					return stack:get_count()
 				end
 				return 0
 			end,
 			allow_take = function(_, _, _, stack, player)
-				local h = by_id(id)
-				return h and near(h, player) and h.owner == player:get_player_name() and stack:get_count() or 0
+				return mine(player) and stack:get_count() or 0
 			end,
-			allow_move = function() return 0 end,
-			on_put = function(inv2)
+			allow_move = function(_, from, _, to, _, count, player)
+				return mine(player) and from == "chest" and to == "chest" and count or 0
+			end,
+			on_put = function(inv2, listname)
 				local h = by_id(id)
 				if h then
 					sync_from_inv(h, inv2)
-					core.sound_play("goodluck_horse_equip", {object = h.object, gain = 0.6}, true)
+					if listname ~= "chest" then
+						core.sound_play("goodluck_horse_equip", {object = h.object, gain = 0.6}, true)
+					end
 				end
 			end,
 			on_take = function(inv2)
+				local h = by_id(id)
+				if h then sync_from_inv(h, inv2) end
+			end,
+			on_move = function(inv2)
 				local h = by_id(id)
 				if h then sync_from_inv(h, inv2) end
 			end,
@@ -162,25 +206,40 @@ local function get_inv(self)
 	end
 	inv:set_stack("saddle", 1, self._saddle and "mobs:saddle" or "")
 	inv:set_stack("armor", 1, self._armor or "")
+	inv:set_size("chest", self._chest and CHEST_SLOTS or 0)
+	if self._chest then
+		inv:set_list("chest", self._chest_items or {})
+	end
 	return inv
 end
 
--- who looks at which horse's page
+-- who looks at which animal's page
 local viewing = {}
 
-local function horse_formspec(self, player)
+local function horse_formspec(self)
 	local inv = "detached:" .. inv_name(self)
 	local esc = core.formspec_escape
-	local title = self._nametag and self._nametag ~= "" and self._nametag or S("Horse")
+	local k = kind_of(self)
+	local title = self._nametag and self._nametag ~= "" and self._nametag or k.description
 	local t = texture(self)
-	return "label[0,0;" .. esc(title) .. "]" ..
-		"model[2.1,0.4;5.6,3.4;horse;mobs_horse.x;" .. esc(t) .. "," .. esc(t) .. ";-8,150;false;true;25,25]" ..
-		"image[0.1,0.6;1,1;" .. G .. "slot_saddle.png]" ..
-		"list[" .. inv .. ";saddle;0.1,0.6;1,1;]" ..
-		"image[0.1,1.7;1,1;" .. G .. "slot_armor.png]" ..
-		"list[" .. inv .. ";armor;0.1,1.7;1,1;]" ..
-		"listring[" .. inv .. ";saddle]listring[current_player;main]" ..
-		"listring[" .. inv .. ";armor]listring[current_player;main]"
+	local fs = {
+		"label[0,0;" .. esc(title) .. "]",
+		"image[0.1,0.6;1,1;" .. G .. "slot_saddle.png]",
+		"list[" .. inv .. ";saddle;0.1,0.6;1,1;]",
+		"listring[" .. inv .. ";saddle]listring[current_player;main]",
+	}
+	if k.armor then
+		fs[#fs + 1] = "image[0.1,1.7;1,1;" .. G .. "slot_armor.png]"
+		fs[#fs + 1] = "list[" .. inv .. ";armor;0.1,1.7;1,1;]"
+		fs[#fs + 1] = "listring[" .. inv .. ";armor]listring[current_player;main]"
+	end
+	local mw = self._chest and 2.4 or 5.6
+	fs[#fs + 1] = ("model[1.3,0.4;%g,3.4;horse;mobs_horse.x;%s,%s;-8,150;false;true;25,25]"):format(mw, esc(t), esc(t))
+	if self._chest then
+		fs[#fs + 1] = "list[" .. inv .. ";chest;3.15,0.6;5,3;]"
+		fs[#fs + 1] = "listring[" .. inv .. ";chest]listring[current_player;main]"
+	end
+	return table.concat(fs)
 end
 
 sfinv.register_page(PAGE, {
@@ -195,7 +254,7 @@ sfinv.register_page(PAGE, {
 		-- the rows and the hotbar where the inventory page has them
 		local rows = "list[current_player;main;0,4.15;8,3;8]" .. (goodluck_craft and goodluck_craft.hotbar(7.3) or
 			"list[current_player;main;0,7.3;8,1;]")
-		return sfinv.make_formspec(player, context, rows .. horse_formspec(self, player))
+		return sfinv.make_formspec(player, context, rows .. horse_formspec(self))
 	end,
 })
 
@@ -218,7 +277,7 @@ local function hide_inventory(player)
 	end
 end
 
--- closing the page opened beside the horse goes back to the inventory; while riding it stays the horse's
+-- closing the page opened beside the animal goes back to the inventory; while riding it stays the animal's
 core.register_on_player_receive_fields(function(player, formname, fields)
 	if formname == "" and fields.quit and sfinv.get_page(player) == PAGE then
 		local self = by_id(viewing[player:get_player_name()] or -1)
@@ -249,7 +308,6 @@ local function show_bar(player, on)
 		if has_xp then goodluck_xp.hide(player, false) end
 	end
 end
-
 goodluck_horse.show_bar = show_bar
 
 local function set_bar(player, charge)
@@ -271,8 +329,9 @@ local function hearts(self)
 end
 
 local function mount(self, player)
-	self.driver_attach_at = {x = 0, y = 10, z = -2}
-	self.driver_eye_offset = {x = 0, y = 13, z = 0}
+	local s = kind_of(self).scale
+	self.driver_attach_at = {x = 0, y = 10 * s, z = -2 * s}
+	self.driver_eye_offset = {x = 0, y = 13 * s, z = 0}
 	self.driver_scale = {x = 0.8, y = 0.8}
 	mobs.attach(self, player)
 	self._charge = nil
@@ -376,7 +435,8 @@ local function feed(self, player, food, stack)
 		self._temper = math.min(self._temper + food.temper, 100)
 		used = true
 	end
-	if food.love and self.tamed and not self.child and not self.horny and (self.hornytimer or 0) == 0 then
+	if food.love and self.tamed and not self.child and not kind_of(self).sterile and not self.horny and
+			(self.hornytimer or 0) == 0 then
 		self.horny = true
 		self.hornytimer = 0
 		hearts(self)
@@ -400,16 +460,24 @@ local function inherit(x, y, lo, hi)
 	return math.max(lo, math.min(hi, v))
 end
 
+-- two of a kind make that kind, a horse and a donkey a mule; mules don't breed
 local function on_breed(self, other)
+	local a, b = KIND_OF[self.name], KIND_OF[other.name]
+	if not a or not b or KINDS[a].sterile or KINDS[b].sterile then
+		return false
+	end
+	local kind = a == b and a or "mule"
 	local pos = self.object:get_pos()
-	local ent = mobs:add_mob(pos, {name = NAME, child = true, owner = self.owner, ignore_count = true})
+	local ent = mobs:add_mob(pos, {name = KINDS[kind].name, child = true, owner = self.owner, ignore_count = true})
 	if ent then
-		local r = math.random(9)
-		ent._coat = r <= 4 and self._coat or r <= 8 and other._coat or COATS[math.random(#COATS)]
-		r = math.random(5)
-		ent._marking = r <= 2 and self._marking or r <= 4 and other._marking or MARKINGS[math.random(#MARKINGS)]
-		ent._speed = inherit(self._speed, other._speed, MIN_SPEED, MAX_SPEED)
-		ent._jump = inherit(self._jump, other._jump, 0.4, 1)
+		if kind == "horse" then
+			local r = math.random(9)
+			ent._coat = r <= 4 and self._coat or r <= 8 and other._coat or COATS[math.random(#COATS)]
+			r = math.random(5)
+			ent._marking = r <= 2 and self._marking or r <= 4 and other._marking or MARKINGS[math.random(#MARKINGS)]
+			ent._speed = inherit(self._speed, other._speed, MIN_SPEED, MAX_SPEED)
+			ent._jump = inherit(self._jump, other._jump, 0.4, 1)
+		end
 		ent._hp = math.floor(inherit(self._hp, other._hp, 15, 30) + 0.5)
 		ent._temper = 0
 		ent.tamed = true
@@ -422,29 +490,8 @@ local function on_breed(self, other)
 	return false
 end
 
--- ---- the horse: mob_horse's model, sounds and animations with this behaviour ---------------------------------------
-local def = core.registered_entities[NAME]
-def.passive = true
-def.attack_monsters = false
-def.attack_type = nil
-def.runaway = false
-def.fall_damage = false
-def.replace_what = nil
-def.follow = {"goodluck_horse:golden_apple"}
-def.drops = {{name = "mobs:leather", chance = 1, min = 0, max = 2}}
-def.texture_list = {{G .. "brown.png", G .. "brown.png"}}
-
--- mobs_redo runs after_activate from mob_horse's own table: wrap the activation instead
-local activate = def.on_activate
-def.on_activate = function(self, staticdata, dtime)
-	local r = activate(self, staticdata, dtime)
-	if self.object:get_pos() then
-		goodluck_horse.after_activate(self)
-	end
-	return r
-end
-
-function goodluck_horse.after_activate(self)
+-- ---- the animals: mob_horse's model, sounds and animations with this behaviour -------------------------------------
+local function after_activate(self)
 	if not self._coat then
 		roll(self)
 		set_health(self, self._hp)
@@ -455,12 +502,12 @@ function goodluck_horse.after_activate(self)
 	end
 	horses[self._id] = self
 	self.hp_max = self._hp
-	self.object:set_properties({hp_max = self._hp})
+	self.object:set_properties({hp_max = self._hp, stepheight = self._saddle and 1.1 or 0.6})
 	update_look(self)
-	self.object:set_properties({stepheight = self._saddle and 1.1 or 0.6})
 end
+goodluck_horse.after_activate = after_activate
 
-def.on_deactivate = function(self)
+local function on_deactivate(self)
 	if self.driver then
 		dismount(self, self.driver)
 	end
@@ -468,21 +515,11 @@ def.on_deactivate = function(self)
 	core.remove_detached_inventory("goodluck_horse_" .. (self._id or ""))
 end
 
-def.do_custom = function(self, dtime)
-	if self.driver then
-		if not self.driver:is_player() then
-			self.driver = nil
-		else
-			ride(self, dtime)
-			return false
-		end
-	end
-end
-
-def.on_rightclick = function(self, clicker)
+local function on_rightclick(self, clicker)
 	if not clicker or not clicker:is_player() or self.driver then
 		return
 	end
+	local k = kind_of(self)
 	local name = clicker:get_player_name()
 	local stack = clicker:get_wielded_item()
 	local item = stack:get_name()
@@ -504,18 +541,24 @@ def.on_rightclick = function(self, clicker)
 	end
 	if mine and not self.child then
 		local inv = get_inv(self)
-		if item == "mobs:saddle" and not self._saddle then
-			inv:set_stack("saddle", 1, stack:take_item())
+		local slot = item == "mobs:saddle" and not self._saddle and "saddle" or
+			k.armor and ARMORS[item] and not self._armor and "armor"
+		if slot then
+			inv:set_stack(slot, 1, stack:take_item())
 			clicker:set_wielded_item(stack)
 			sync_from_inv(self, inv)
 			core.sound_play("goodluck_horse_equip", {object = self.object, gain = 0.6}, true)
 			return
 		end
-		if ARMORS[item] and not self._armor then
-			inv:set_stack("armor", 1, stack:take_item())
+		-- Minecraft: a chest on a donkey or a mule gives it 15 slots, for good
+		if k.chest and item == "default:chest" and not self._chest then
+			stack:take_item()
 			clicker:set_wielded_item(stack)
-			sync_from_inv(self, inv)
-			core.sound_play("goodluck_horse_equip", {object = self.object, gain = 0.6}, true)
+			self._chest = true
+			self._chest_items = {}
+			get_inv(self)
+			update_look(self)
+			core.sound_play("default_place_node_hard", {object = self.object}, true)
 			return
 		end
 	end
@@ -524,27 +567,82 @@ def.on_rightclick = function(self, clicker)
 	end
 end
 
-def.on_die = function(self, pos)
+local function on_die(self, pos)
 	if self.driver then
 		dismount(self, self.driver)
 	end
 	if not self.child then
 		if self._saddle then core.add_item(pos, "mobs:saddle") end
 		if self._armor then core.add_item(pos, self._armor) end
+		if self._chest then
+			core.add_item(pos, "default:chest")
+			for _, s in ipairs(self._chest_items or {}) do
+				if s ~= "" then core.add_item(pos, s) end
+			end
+		end
 	end
 	horses[self._id or ""] = nil
 	core.remove_detached_inventory("goodluck_horse_" .. (self._id or ""))
 end
 
-def.on_breed = on_breed
+local function do_custom(self, dtime)
+	if self.driver then
+		if not self.driver:is_player() then
+			self.driver = nil
+		else
+			ride(self, dtime)
+			return false
+		end
+	end
+end
 
-core.register_on_leaveplayer(function(player)
-	viewing[player:get_player_name()] = nil
-	bars[player:get_player_name()] = nil
-end)
+for kind, k in pairs(KINDS) do
+	local s = 1.2 * k.scale
+	mobs:register_mob(k.name, {
+		description = k.description,
+		type = "animal",
+		passive = true,
+		visual = "mesh",
+		visual_size = {x = s, y = s},
+		mesh = "mobs_horse.x",
+		collisionbox = {-0.4 * k.scale, -0.01, -0.4 * k.scale, 0.4 * k.scale, 1.25 * k.scale, 0.4 * k.scale},
+		animation = {
+			speed_normal = 15,
+			stand_start = 25, stand_end = 25,
+			stand2_start = 25, stand2_end = 50, stand2_loop = false,
+			walk_start = 75, walk_end = 100,
+			run_start = 75, run_end = 100, run_speed = 45,
+			punch_start = 55, punch_end = 75, punch_speed = 35,
+		},
+		textures = {{G .. k.coats[1] .. ".png", G .. k.coats[1] .. ".png"}},
+		fear_height = 3,
+		walk_chance = 60,
+		view_range = 7,
+		follow = {"goodluck_horse:golden_apple"},
+		pushable = true,
+		hp_min = 15,
+		hp_max = 30,
+		armor = 100,
+		lava_damage = 5,
+		fire_damage = 4,
+		fall_damage = false,
+		water_damage = 0,
+		makes_footstep_sound = true,
+		sounds = {random = "mob_horse", death = "mob_horse_whinny", damage = "mob_horse_whinny"},
+		drops = {{name = "mobs:leather", chance = 1, min = 0, max = 2}},
+		after_activate = function(self) after_activate(self) end,
+		do_custom = do_custom,
+		on_rightclick = on_rightclick,
+		on_die = on_die,
+		on_breed = on_breed,
+	})
+	core.registered_entities[k.name].on_deactivate = on_deactivate
+	mobs:register_egg(k.name, k.description, G .. kind .. "_egg.png", 0)
+end
 
--- herds of 2 to 6 in grassland and savanna, a foal now and then, one coat each herd
+-- herds of 2 to 6 horses in grassland and savanna, now and then a foal, one coat each herd; sometimes 1 to 3 donkeys
 local BIOMES = {grassland = true, savanna = true}
+local GRASS = {"default:dirt_with_grass", "default:dry_dirt_with_dry_grass"}
 
 function goodluck_horse.spawn_herd(self, pos)
 	local biome = core.get_biome_data(pos)
@@ -552,15 +650,23 @@ function goodluck_horse.spawn_herd(self, pos)
 		self.object:remove()
 		return
 	end
+	local name = self.name
+	if name == KINDS.horse.name and math.random(6) == 1 then
+		-- a donkey herd instead
+		self.object:remove()
+		local ent = mobs:add_mob(pos, {name = KINDS.donkey.name, ignore_count = true})
+		if not ent then return end
+		self, name = ent, ent.name
+	end
 	roll(self)
 	set_health(self, self._hp)
 	update_look(self)
-	local grass = core.find_nodes_in_area_under_air(vector.offset(pos, -6, -2, -6), vector.offset(pos, 6, 2, 6),
-		{"default:dirt_with_grass", "default:dry_dirt_with_dry_grass"})
-	for _ = 1, math.random(1, 5) do
+	local grass = core.find_nodes_in_area_under_air(vector.offset(pos, -6, -2, -6), vector.offset(pos, 6, 2, 6), GRASS)
+	local more = name == KINDS.horse.name and math.random(1, 5) or math.random(0, 2)
+	for _ = 1, more do
 		if #grass == 0 then break end
 		local p = vector.offset(table.remove(grass, math.random(#grass)), 0, 1, 0)
-		local ent = mobs:add_mob(p, {name = NAME, child = math.random(5) == 1, ignore_count = true})
+		local ent = mobs:add_mob(p, {name = name, child = math.random(5) == 1, ignore_count = true})
 		if ent then
 			roll(ent, self._coat)
 			set_health(ent, ent._hp)
@@ -570,8 +676,8 @@ function goodluck_horse.spawn_herd(self, pos)
 end
 
 mobs:spawn({
-	name = NAME,
-	nodes = {"default:dirt_with_grass", "default:dry_dirt_with_dry_grass"},
+	name = KINDS.horse.name,
+	nodes = GRASS,
 	neighbors = {"air"},
 	min_light = 10,
 	interval = 30,
@@ -582,14 +688,14 @@ mobs:spawn({
 	day_toggle = true,
 	on_spawn = function(self, pos) goodluck_horse.spawn_herd(self, pos) end,
 })
-
-core.override_item(NAME, {
-	description = S("Horse"),
-	inventory_image = G .. "egg.png",
-})
+-- donkeys come only with the horse spawns above, mules only from breeding
+mobs.spawning_mobs[KINDS.donkey.name] = mobs.spawning_mobs[KINDS.donkey.name] or {}
+mobs.spawning_mobs[KINDS.mule.name] = mobs.spawning_mobs[KINDS.mule.name] or {}
 
 -- ---- items -----------------------------------------------------------------------------------------------------------
--- mob_horse's horseshoes aren't Minecraft's
+-- mob_horse's own horse never spawns (its spawn.lua is empty): its egg makes ours, its horseshoes aren't Minecraft's
+core.unregister_item("mob_horse:horse")
+core.register_alias("mob_horse:horse", KINDS.horse.name)
 for _, metal in ipairs({"steel", "bronze", "mese", "diamond", "crystal"}) do
 	local item = "mobs:horseshoe_" .. metal
 	if core.registered_items[item] then
@@ -706,7 +812,7 @@ if core.get_modpath("dungeon_loot") then
 	})
 end
 
-function goodluck_horse.is_horse(obj)
-	local e = obj and obj:get_luaentity()
-	return e and e.name == NAME
-end
+core.register_on_leaveplayer(function(player)
+	viewing[player:get_player_name()] = nil
+	bars[player:get_player_name()] = nil
+end)
