@@ -14,6 +14,11 @@ with TOCLIENT_MOVE_PLAYER into the local player, so the position sent meanwhile 
 the player will see first, and the camera's wanted range is set before the first frame. The time
 taken goes to the log ("Terrain within N nodes loaded after T s").
 
+The steps before it then fill the first 60 % of the bar (RenderingEngine::setLoadScreenRange maps a
+load screen's 0-100 % into a part of the bar) and the terrain the rest; the server starts its sweep
+again when the player moves to another block or turns, so the bar shows the farthest it got and
+never goes back (it went back to 70 % a few times on the console).
+
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 diff --git a/builtin/settingtypes.txt b/builtin/settingtypes.txt
@@ -102,7 +107,7 @@ index a9c33f890..c1fe72d5b 100644
  	bool m_mods_loaded = false;
  
 diff --git a/src/client/game.cpp b/src/client/game.cpp
-index b271b758b..16b7c79a8 100644
+index b271b758b..5f26f98d8 100644
 --- a/src/client/game.cpp
 +++ b/src/client/game.cpp
 @@ -6,6 +6,7 @@
@@ -113,7 +118,26 @@ index b271b758b..16b7c79a8 100644
  #include "client/gameui.h"
  #include "client/inputhandler.h"
  #include "client/texturepaths.h"
-@@ -925,7 +926,7 @@ bool Game::createClient(const GameStartData &start_data)
+@@ -456,11 +457,13 @@ bool Game::startup(volatile std::sig_atomic_t *kill,
+ 
+ 	g_client_translations->clear();
+ 
+-	if (!init(start_data.world_spec.path, start_data.address,
+-			start_data.socket_port, start_data.game_spec))
+-		return false;
+-
+-	if (!createClient(start_data))
++	// with the terrain to wait for (a local game, see loadTerrain), the steps before it fill the first 60 %
++	if (g_settings->getS16("loading_terrain_radius") > 0 && start_data.address.empty())
++		m_rendering_engine->setLoadScreenRange(0, 60);
++	const bool started = init(start_data.world_spec.path, start_data.address,
++			start_data.socket_port, start_data.game_spec) && createClient(start_data);
++	m_rendering_engine->setLoadScreenRange(0, 100);
++	if (!started)
+ 		return false;
+ 
+ 	m_rendering_engine->initialize(client, hud);
+@@ -925,7 +928,7 @@ bool Game::createClient(const GameStartData &start_data)
  	if (mapper && client->modsLoaded())
  		client->getScript()->on_minimap_ready(mapper);
  
@@ -122,7 +146,7 @@ index b271b758b..16b7c79a8 100644
  }
  
  bool Game::shouldShowTouchControls()
-@@ -1105,6 +1106,56 @@ bool Game::connectToServer(const GameStartData &start_data,
+@@ -1105,6 +1108,62 @@ bool Game::connectToServer(const GameStartData &start_data,
  	return true;
  }
  
@@ -143,6 +167,11 @@ index b271b758b..16b7c79a8 100644
 +	// what the camera sets each frame, for the position sent meanwhile
 +	camera->updateViewingRange();
 +
++	// the rest of the bar; the server starts its sweep again when the player moves to another block or turns,
++	// so the bar shows the farthest it got
++	m_rendering_engine->setLoadScreenRange(60, 100);
++	s16 farthest = 0;
++
 +	FpsControl fps_control;
 +	f32 dtime;
 +	fps_control.reset();
@@ -161,6 +190,7 @@ index b271b758b..16b7c79a8 100644
 +
 +		const float waited = (porting::getTimeMs() - start) / 1000.0f;
 +		const s16 sent = client->playerPosReceived() ? server->getNearestUnsentDistance() : 0;
++		farthest = std::max(farthest, sent);
 +		const bool done = sent > blocks && client->meshesDone();
 +		if (done || waited >= timeout) {
 +			actionstream << "Terrain within " << radius << " nodes " << (done ? "loaded" : "not loaded")
@@ -169,7 +199,7 @@ index b271b758b..16b7c79a8 100644
 +			return true;
 +		}
 +
-+		const int progress = 70 + 29 * std::min(sent, blocks) / blocks;
++		const int progress = 99 * std::min(farthest, blocks) / blocks;
 +		m_rendering_engine->draw_load_screen(wstrgettext("Loading terrain..."), guienv, texture_src,
 +				dtime, progress);
 +	}
@@ -218,6 +248,38 @@ index b86322873..136824d69 100644
  
  private:
  	typedef MutexedQueue<MeshUpdateResult> ResultQueue;
+diff --git a/src/client/renderingengine.cpp b/src/client/renderingengine.cpp
+index 49023d1e3..0e74b2464 100644
+--- a/src/client/renderingengine.cpp
++++ b/src/client/renderingengine.cpp
+@@ -323,7 +323,7 @@ void RenderingEngine::draw_load_screen(const std::wstring &text,
+ 	}
+ 
+ 	int percent_min = 0;
+-	int percent_max = percent;
++	int percent_max = m_load_from + (m_load_to - m_load_from) * percent / 100;
+ 	if (indef_pos) {
+ 		*indef_pos = fmodf(*indef_pos + (dtime * 50.0f), 140.0f);
+ 		percent_max = std::min((int) *indef_pos, 100);
+diff --git a/src/client/renderingengine.h b/src/client/renderingengine.h
+index cd3b920e5..81d40278a 100644
+--- a/src/client/renderingengine.h
++++ b/src/client/renderingengine.h
+@@ -127,6 +127,8 @@ class RenderingEngine
+ 			gui::IGUIEnvironment *guienv, ITextureSource *tsrc,
+ 			float dtime = 0, int percent = 0, float *indef_pos = nullptr,
+ 			const std::wstring &bottom_text = {});
++	//! the part of the bar the next load screens' 0-100 % fill: from..to %
++	void setLoadScreenRange(int from, int to) { m_load_from = from; m_load_to = to; }
+ 
+ 	void draw_scene(video::SColor skycolor, bool show_hud,
+ 			bool draw_wield_tool, bool draw_crosshair);
+@@ -170,4 +172,5 @@ class RenderingEngine
+ 	video::IVideoDriver *driver;
+ 	MyEventReceiver *m_receiver = nullptr;
+ 	static RenderingEngine *s_singleton;
++	int m_load_from = 0, m_load_to = 100;
+ };
 diff --git a/src/defaultsettings.cpp b/src/defaultsettings.cpp
 index ff56a8ae6..c1a36010b 100644
 --- a/src/defaultsettings.cpp
