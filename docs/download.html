@@ -306,7 +306,6 @@
       <header>Video Guides</header>
       <article>
           Check out the <a href="https://www.youtube.com/watch?v=bkud4CBHvI8"><i class="bi bi-youtube"></i> Window Video Guide</a>, or the <a href="https://www.youtube.com/watch?v=3RUR5a7hDDs"> <i class="bi bi-youtube"></i> Linux Video Guide</a>
-
       </article>
   </div>
   <br/>
@@ -359,7 +358,11 @@
         <p>Be sure you download the correct version for your hardware. A33 builds are NOT compatible with A23 hardware and vice versa.</p>
     </div>
     <div class="row">
-        <a class="download button fullwidth" :href="latestImageUrl" x-text="'Download ' + desiredGoodluckBaseImageFileName + '.zip'"></a>
+        <a class="download button fullwidth" :href="latestImageUrl" x-text="'Download ' + desiredGoodluckBaseImageFileName + '_' + panelType + '.zip'"></a>
+        <select class="button secondary" x-model="panelType">
+            <option value="panel1" selected>Panel 1</option>
+            <option value="panel2">Panel 2</option>
+        </select>
     </div>
     <div class="fullwidth">
         <svg class="svg-icon disabled" width="32" viewBox="0 0 32 32" xml:space="preserve">
@@ -424,8 +427,10 @@ const CONFIG = {
   SCRIPT_BIN_MAX_LENGTH: 131072,
 
   GOODLUCK_BASE_IMAGE_URLS: {
-    "a33": "https://github.com/CodeZombie/goodluckOS/releases/latest/download/goodluckOS_base_a33.zip",
-    "a23": "https://github.com/CodeZombie/goodluckOS/releases/latest/download/goodluckOS_base_a23.zip"
+    "a33_panel1": "https://github.com/CodeZombie/goodluckOS/releases/download/0.1.0/goodluck_base_a33_panel1.zip",
+    "a23_panel1": "https://github.com/CodeZombie/goodluckOS/releases/download/0.1.0/goodluck_base_a23_panel1.zip",
+    "a33_panel2": "https://github.com/CodeZombie/goodluckOS/releases/download/0.1.0/goodluck_base_a33_panel2.zip",
+    "a23_panel2": "https://github.com/CodeZombie/goodluckOS/releases/download/0.1.0/goodluck_base_a23_panel2.zip"
   },
 
   // Script.bin hashes you have personally approved.
@@ -443,17 +448,17 @@ const CONFIG = {
     "ad0b836c8b3cc6dd2b3b0d8c1817e2fdfe9ed48998a3bed758a73603f05f96e1": {
       name: "GA36-MB A23 Esisla",
       soc: "A23",
-      supported: false
+      supported: true
     },
     "755aae75f7df87348a1427b94532e6a1ef758e3071fb5bf52f10a7f7032318e4": {
       name: "GA36-MB A23 Underscore",
       soc: "A23",
-      supported: false
+      supported: true
     },
     "39a74a42c3d4f9d0599bf5f0db136a7f53bb6a072aa117eaae14e0f27872c798": {
       name: "GA36-MB A23 Xeno",
       soc: "A23",
-      supported: false
+      supported: true
     }
   }
 };
@@ -562,12 +567,14 @@ document.addEventListener("alpine:init", () => {
     output: null,       // { url, name, label } once built
     downloader: null,
     allowUnsupportedVariant: false,
+    panelType: "panel1",
 
     get latestImageUrl() {
       if (!this.variant) {
         return ""
       }
-      return CONFIG.GOODLUCK_BASE_IMAGE_URLS[this.variant.soc.toLowerCase()];
+      console.log(this.variant.soc.toLowerCase() + '_' + this.panelType.toLowerCase())
+      return CONFIG.GOODLUCK_BASE_IMAGE_URLS[this.variant.soc.toLowerCase() + '_' + this.panelType.toLowerCase()];
     },
 
     get desiredGoodluckBaseImageFileName() {

@@ -14,7 +14,6 @@ struct Config {
     // (puppy.conf), Puppy writes the command to launch_file and quits, for a script that runs it
     std::string launchCommand = "doas appctl launch-application";
     std::string launchFile    = "/dev/shm/launch";
-    std::string autoStartMark = "/dev/shm/puppy-autolaunched";   // the autolaunch runs once per boot
     std::string stateFile     = "/dev/shm/launcher_state";
     std::string autoStartFile = "/home/player/autolaunch";
     std::string configDir     = "/home/player/.config/puppy";   // settings, favorites

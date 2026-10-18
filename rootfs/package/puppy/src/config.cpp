@@ -42,7 +42,6 @@ bool loadConfig(int argc, char** argv) {
     };
     std::map<std::string, std::string*> paths = {
         {"font", &cfg.font}, {"fallback_icon", &cfg.fallbackIcon}, {"launch_file", &cfg.launchFile},
-        {"autolaunch_mark", &cfg.autoStartMark},
         {"state_file", &cfg.stateFile}, {"autolaunch_file", &cfg.autoStartFile}, {"config_dir", &cfg.configDir},
         {"cache_dir", &cfg.cacheDir}, {"lang_dir", &cfg.langDir}, {"power_fifo", &cfg.powerFifo},
         {"backlight", &cfg.backlight}, {"trash_dir", &cfg.trashDir},

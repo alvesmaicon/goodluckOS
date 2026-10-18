@@ -62,18 +62,6 @@ bool launch(const Model& m, const Entry& e) {
     return true;
 }
 
-// The autolaunch entry, once per boot: its command is the file's second line.
-bool runAutoStart() {
-    std::error_code ec;
-    if (cfg.launchCommand.empty() || fs::exists(cfg.autoStartMark, ec)) return false;
-    { std::ofstream mark(cfg.autoStartMark); }
-    std::ifstream in(cfg.autoStartFile);
-    std::string header, command;
-    if (!std::getline(in, header) || !std::getline(in, command) || command.empty()) return false;
-    command = cfg.launchCommand + " " + shellQuote(command);
-    return std::system(command.c_str()) == 0;
-}
-
 void restoreCursor(Model& m) {
     std::ifstream in(cfg.stateFile);
     std::string tabName, category, name;

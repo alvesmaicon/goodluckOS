@@ -35,6 +35,7 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 # ----------------------------------------------------------------- config ---
 RUN_USER=player
 LAUNCHER_CMD=/home/player/.local/launcher.sh
+AUTOLAUNCH=/home/player/autolaunch
 CONSOLE=/dev/tty1                 # where the "loading" screen is drawn
 RUN_DIR=/run/appd                 # FIFO + pidfile (use /dev/shm/appd if no /run)
 LOG_DIR=/dev/shm/application
@@ -239,6 +240,15 @@ do_launch() {
     spawn app "$_cmd" "$_out" "$_term"
 }
 
+start_autolaunch() {
+    _cmd=$(grep -v '^#' "$AUTOLAUNCH" 2>/dev/null | head -n 1)
+    if [ -z "$_cmd" ] || [ -e "$RUN_DIR/autolaunched" ]; then
+        start_launcher; return
+    fi
+    : >"$RUN_DIR/autolaunched"
+    do_launch "0 $_cmd"
+}
+
 on_exit() {                            # <role> <gen> <rc>
     case $1 in
         launcher)
@@ -306,7 +316,7 @@ daemon() {
 
     trap shutdown_all TERM INT HUP
     exec 3<>"$FIFO"                     # RDWR so we never see EOF
-    start_launcher
+    start_autolaunch
 
     while read -r line <&3; do
         case $line in

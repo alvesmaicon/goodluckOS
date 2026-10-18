@@ -8,12 +8,10 @@ An uncompromisingly fast, small, modern, and feature-rich custom firmware for A2
 >
 > This fork is my personal workspace. I use it to improve my own console (a GA36-MB v1.1, A33) and to prepare contributions, which I offer upstream as small pull requests, only the ones Jeremy wants. It is not meant to compete with goodluckOS or to be installed by anyone else: there are no releases or images here, and none are planned. Everything in it was written with an AI coding assistant (Claude Code), has only run on my device, and is still being reviewed. What it changes, and where each change stands, is in the [fork status](https://github.com/alvesmaicon/goodluckOS/discussions/3) discussion.
 
-## PLEASE READ
-goodluckOS is PRE-RELEASE software. There are no gaurantees that it will work on your hardware.
-
-Please visit [The Firmware Builder](https://codezombie.github.io/goodluckOS/download.html). This will walk you through the steps of identifying if you have a compatible unit, and if so, easily building a bootable goodluckOS image.
-
-Please Note: At the time of writing, Allwinner-A23 based GA36-MB devices (which seem to be what most people have) are _not_ supported.
+> [!IMPORTANT]
+> **goodluckOS is BETA software. You will run into bugs!**
+>
+> Please visit [The Firmware Builder](https://codezombie.github.io/goodluckOS/download.html). This will walk you through the steps of identifying if you have a compatible unit, and building a flashable goodluckOS image.
 
 ## Features
 - Mainline Linux 7.2
@@ -50,14 +48,31 @@ Please Note: At the time of writing, Allwinner-A23 based GA36-MB devices (which 
 - HOME shows up on your PC over USB (MTP), like a phone: copy games and saves without taking the SD card out
 - Half Life 1 ported and playable: [Get It Here](https://github.com/CodeZombie/glOSports-half-life)
 
-### Features In Development
+### USB TTY
+goodluckOS gives you a direct line into the operating system from your desktop PC so you can edit system files, monitor processes, debug configurations, etc.
+
+To use it:
+1. Plug your console into a Linux PC with a usb cable via the OTG port.
+2. Open a terminal and run `sudo screen /dev/ttyACM* 115200`
+3. When prompted, enter the credentials (username: `root`, password: `root`)
+
+## How Do I Install goodluckOS?
+Check out the [Firmware Builder](https://codezombie.github.io/goodluckOS/download.html) for instructions and video guides.
+
+You'll need a backup of at least the first 128mb of the original microSD card that came with your device.
+
+Don't have the original microSD card? Open an issue here on github, we have microSD card dumps for several hardware variants, and one of them may work for you. We'll get you sorted out.
+
+Once it's installed, System Settings -> Storage -> `Resize Home` expands your HOME partition to fill all the remaining space on your SD card. Do it before copying your games: HOME is backed up to RAM while it's resized. You only need to do this once.
+
+## What still needs to be done
+- Headphone auto-detection. We have reason to believe some GA36-MB variants simply lack the hardware to do this.
+- More LibRetro cores
+- Fine tune existing LibRetro cores for best performance.
 - Portmaster (or equivalent)
-- EmulationStation
+- EmulationStation (as an optional replacement for Puppy)
 - USB Networking
-- Headphone support
-- GA36-MB TF-2 support (If the hardware supports it)
-- CPU overclocking
-- Improve performance of PPSSPP emulator core. 
+- CPU Overclocking
 - Portable Puppy for other firmwares (see below; config file, es_systems.cfg support and runner done)
 
 ### Portable Puppy (in development)
@@ -70,20 +85,26 @@ Puppy can also run as an optional frontend on other handheld firmwares that use 
 The portable folder looks like this: `puppy`, `puppy-run.sh`, `puppy.conf`, `assets/` (`Inter_24pt-Medium.ttf`, `fallback.png`), `lang/` (the `.lang` files) and an optional `apps/` folder of `*.puppy` files. So far it has been tested only on a PC with an ArkOS-style `es_systems.cfg`. Step 4 needs testers with an original R36S or other RK3326 device: if that's you, open an issue!
 
 ## Supported Devices
-- GA36-MB v1.2
-- GA36-MB v1.1
+Every known variant of the GA36-MB is supported. There are many more Allwinner A23/A33 devices that will almost certainly work, but without the hardware it's hard to say for certain.
+
+### Display Panels
+The GA36-MB family of devices ship with at least two different display panels. gooduckOS supports both, but we haven't yet found a good way to determine which panel you have ahead of time. For now, just try both until one works.
+
+If the Firmware Builder tells you your device is not supported, you may have a new variant we've never seen before. In that case, send us your script.bin file so we can verify that goodluckOS is safe for your device. We'll update you when we support it.
 
 #### Coming Soon:
-- GA36-MB v1.0
+- R36MAX
 - F35v
 - Other A23/A33-based devices
 
 Know of another Allwinner-based handheld not listed on this page? Open a new [Issue](https://github.com/CodeZombie/goodluckOS/issues) and let me know!
 
-Consider contributing to the [Device Fund](https://ko-fi.com/jeremyclark) so I can purchase new consoles and port goodluckOS to them.
+If you have one such device, and some spare time, leave an issue on Github and we'll work with you to build support for it, and get it running on your hardware.
+
+Alternatively, consider contributing to the [Device Fund](https://ko-fi.com/jeremyclark) so we can purchase new consoles and port goodluckOS to them.
 
 ## Puppy
-Puppy is goodluckOS' application launcher. It's what you see when you start goodluckOS.
+Puppy is goodluckOS' application launcher. It's what you see when you start goodluckOS. It was designed to be simple, flexible, and most importantly: fast.
 
 | Grid view | List view |
 | --- | --- |
@@ -99,7 +120,7 @@ Changing the brightness (FN+Vol) or the volume shows a level bar for a moment, a
 | --- | --- | --- |
 | ![Brightness level bar](docs/screenshots/osd-brightness.png) | ![Volume level bar](docs/screenshots/osd-volume.png) | ![Audio output](docs/screenshots/osd-output.png) |
 
-It starts up fast, uses very little power, launches applications instantly, and uses zero RAM and CPU after launching an application.
+Puppy works with appd to ensure it's never running when you launch an application. This ensures all of your RAM and CPU resources are available to your game, not an idle launcher.
 
 Puppy uses a ini-formatted `apps.puppy` files to populate it's application list. 
 
@@ -263,14 +284,6 @@ Stock firmware:
 ## Which chip does my console have?
 GA36-MB consoles (sold as R36S) come with an Allwinner A23 or A33, and goodluckOS builds for one don't boot on the other. The stock menu reports a 64-bit CPU and 1 GB of RAM on both, and the marking on the chip can't be trusted either. On Windows, [chip-version](chip-version/README.md) reads the microSD card that came with the console and tells which chip it has.
 
-## How Do I Install goodluckOS?
-1. Make an image of the microSD card that came with your device (at least its first 128mb), e.g. with Win32 Disk Imager or `dd if=/dev/sdx of=stock_sdcard.img bs=1M count=128`. It holds your board's boot data, which goodluckOS needs. Keep it: it's also your way back to the stock firmware.
-2. Download the goodluckOS image for your SoC from [Releases](https://github.com/CodeZombie/goodluckOS/releases) (A33 and A23 builds are not interchangeable) and extract it
-3. Open the [Firmware Builder](https://codezombie.github.io/goodluckOS/download.html), load your card image and the goodluckOS image, and download your personalised image. Don't flash the release image directly: without your board's boot data it won't start.
-4. Flash your image to a good microSD card of at least 1gb with [balenaEtcher](https://etcher.balena.io/), [Rufus (in DD mode)](https://rufus.ie/en/), [dd](https://man7.org/linux/man-pages/man1/dd.1.html), etc
-5. Plug the micro SD card into TF Slot 1 (TF1-OS) on your GA36-MB and power it on.
-6. [optional] In System Settings -> Storage, `Resize Home` expands your HOME partition to fill all the remaining space on your SD card. Do it before copying your games: HOME is backed up to RAM while it's resized. You only need to do this once.
-
 ## How do I add games?
 Plug the console into your PC with a USB cable and open `goodluckOS -> HOME` (Windows: This PC; Linux: your file manager; macOS needs an MTP app such as [OpenMTP](https://openmtp.ganeshrvel.com/)). Or plug the SD card into your PC and open up the HOME partition. In there you'll find a `roms` folder with a few subfolders for each system. Add your roms to those.
 
@@ -283,9 +296,9 @@ To add custom art to Puppy, add an image file into the `icons` folder in your ro
 Puppy also reads a `gamelist.xml` in the rom folder (as written by Skraper or EmulationStation): it takes each game's name, description, year/genre/players and image from it. An image in `icons` still wins over the gamelist's. With the interface in another language, a `gamelist.<code>.xml` next to it (e.g. `gamelist.pt-BR.xml`, written by a scraper pass in that language) supplies that language's names, descriptions and genres; images and anything it lacks still come from `gamelist.xml`. Big images are scaled down once and cached in `~/.cache/puppy/thumbs`.
 
 ### Second card (TF-2 slot)
-A FAT32 card in the second slot shows up in the launcher, in its own External Card tab and in each system's tab. The card is found when the console starts; to swap it with the console on, use System Settings -> Storage: Eject card before taking it out, and Detect card after putting one in. Put the games in a `roms` folder with the same system folders as HOME (`roms/snes`, `roms/psx`, `roms/gba`...), and covers in each folder's `icons`. A card with no `roms` folder gets the folders created the first time it's mounted; existing folders and files are never touched. Music and videos go in `media/music` and `media/videos`.
+A FAT32 or exFAT card in the second slot shows up in the launcher, in its own External Card tab and in each system's tab. The card is found when the console starts; to swap it with the console on, use System Settings -> Storage: Eject card before taking it out, and Detect card after putting one in. Put the games in a `roms` folder with the same system folders as HOME (`roms/snes`, `roms/psx`, `roms/gba`...), and covers in each folder's `icons`. A card with no `roms` folder gets the folders created the first time it's mounted; existing folders and files are never touched. Music and videos go in `media/music` and `media/videos`.
 
-Puppy finds games by folder, not by file type: games loose on the card, or in the wrong system's folder, won't show up or won't start. exFAT cards (most cards over 32 GB come that way) aren't read yet, so format the card as FAT32.
+Puppy finds games by folder, not by file type: games loose on the card, or in the wrong system's folder, won't show up or won't start.
 
 ### Can I add my own archives?
 You sure can!
@@ -321,9 +334,9 @@ With the confirm button on B, A and B swap here too.
 The A33 decodes video in software: up to 640x480 H.264 plays smoothly, 1080p and H.265 don't. Convert bigger videos on your PC first, e.g. `ffmpeg -i in.mp4 -vf scale=640:480:force_original_aspect_ratio=decrease:force_divisible_by=2 -c:v libx264 -tune fastdecode -crf 23 -c:a aac -ac 2 out.mkv`. On Windows, macOS or Linux, [convert-videos](convert-videos/README.md) does this for a whole folder, turns portrait videos to fill the screen and saves a frame of each one as its art.
 
 ## Does goodluckOS come with any games?
-Only Doom, through Chocolate Doom.
+goodluckOS ships with Chocolate Doom and a shareware Doom wad.
 
-goodluckOS will never be distributed with unauthorized copyright protected materials. If you own the copyright to any games or demos (or know of any permissively-licensed/CC games) that you think might make a good fit, please open an Issue! I'd love to include some high quality games with the OS by default.
+goodluckOS will never be distributed with unauthorized copyright-protected materials. If you own the copyright to any games (or know of any permissively-licensed/CC games) that you think might make a good fit, please open an Issue! We would love to include more small, high-quality games with the OS by default.
 
 ## About Ports
 Some subset of portmaster games could theoretically work, however I want to tamper your expectations a little bit before we all start getting too excited.
@@ -339,6 +352,8 @@ Four ports are in progress here (Luanti still on its own branch, `feat/luanti`).
 | ![Luanti](docs/ports/luanti.png) | ![Stardew Valley](docs/ports/stardew-valley.png) | ![Ocarina of Time](docs/ports/ocarina-of-time.png) | ![Majora's Mask](docs/ports/majoras-mask.png) |
 | Free, in the system image | The game from Steam | Your ROM | Your ROM |
 
+# Development
+
 ## How Do I Build It?
 GoodluckOS uses a novel four-step containerized build system featuring Buildroot. This means the OS can be configured and built extremely easily and portably with no extra dependencies at all besides Docker and Docker Compose (or Podman).
 
@@ -353,7 +368,7 @@ goodluckOS has been designed with a few core principles:
 
 Please keep those in mind if you intend for your work to be merged upstream :)
 
-I am currently in the process of choosing a package-management solution for goodluckOS, so if your application/feature is not approved for merging upstream, please feel free to package it up as an installable application and I will be happy to advertise it as an optional feature for goodluckOS users.
+We're currently in the process of choosing a package-management solution for goodluckOS, so if your application/feature is not approved for merging upstream please feel free to package it up as an installable application and we would be happy to advertise it as an optional feature for goodluckOS.
 
 ## AI Contribution Policy
 Contributors should feel free to use any tool at their disposal to write their code. Good code is good code regardless who (or what) wrote it. However, large systems that have not been properly tested, documented, or are not understood by the human contributors will _not_ be accepted until all of these conditions are met. This rule applies to both human written code and LLM-generated code.
@@ -361,5 +376,5 @@ Contributors should feel free to use any tool at their disposal to write their c
 ## LICENSE
 This project is licensed under the GNU GENERAL PUBLIC LICENSE VERSION 2.0 see the [LICENSE](LICENSE) file for details.
 
-## DISCLAIMER
+# DISCLAIMER
 **WARNING**: The GNU General Public License v2 covers this in more detail, but to re-iterate: This software has the potential to permanently damage your hardware. You alone are responsible for _all_ damages, and the ensuing results of said damages that may occur as a result of using, or attempting to use this software.

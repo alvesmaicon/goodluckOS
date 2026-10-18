@@ -10,7 +10,6 @@ bool loadModel(Model& m);
 bool readAutoStartId(std::string& category, std::string& name);
 void toggleAutoStart(Model& m);
 bool launch(const Model& m, const Entry& e);
-bool runAutoStart();
 void restoreCursor(Model& m);
 void addAllGamesTab(Model& m);
 void loadFavorites(Model& m);

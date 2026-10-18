@@ -5,7 +5,6 @@
 #include <memory>
 #include <string>
 
-#include <unistd.h>
 
 #include "accents.h"
 #include "app.h"
@@ -25,8 +24,6 @@
 int main(int argc, char** argv) {
     unsetenv("GALLIUM_HUD_STATUS");     // the top bar already shows it
     if (!loadConfig(argc, argv)) return 2;
-    if (runAutoStart())
-        for (;;) pause();           // appd stops the launcher once the app starts
     const Prefs prefs = Prefs::load();
     i18n::load(!cfg.language.empty() ? cfg.language : prefs.language);
 
