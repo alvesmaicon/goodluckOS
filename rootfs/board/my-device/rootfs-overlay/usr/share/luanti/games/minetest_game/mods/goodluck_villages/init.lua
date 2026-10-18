@@ -216,10 +216,11 @@ core.register_on_mods_loaded(function()
 	for name, def in pairs(core.registered_nodes) do
 		local id = core.get_content_id(name)
 		local g = def.groups or {}
-		if def.buildable_to or g.flora or g.grass or g.plant or g.leaves or g.tree or g.flower or g.sapling or
-				g.attached_node or def.drawtype == "plantlike" or def.drawtype == "plantlike_rooted" or
-				name:find("flower") or name:find("grass") or name:find("fern") or name:find("snow") or
-				name:find("bush") then
+		-- what isn't the ground: plants, snow layers, leaves, trunks (by kind: a name with "grass" or "snow" was
+		-- the grass block and the snowy dirt too, and villages sank a node into them)
+		if def.liquidtype == "none" and (def.buildable_to or not def.walkable or g.flora or g.plant or g.leaves or
+				g.tree or g.flower or g.sapling or g.attached_node or def.drawtype == "plantlike" or
+				def.drawtype == "plantlike_rooted") then
 			clear_cids[id] = true
 		end
 		if g.soil or name:find("dirt") then
@@ -241,7 +242,8 @@ core.register_on_mods_loaded(function()
 end)
 
 -- houses along four roads from the middle, the special buildings first, each at the height of the road before its
--- door, on a foundation, with the ground around cut and filled in slopes so no wall of earth shuts its door
+-- door (a node up where its ground is higher), on a foundation, with the ground around cut and filled in slopes so
+-- no wall of earth shuts its door
 local function layout(vx, vz, pr, minp, maxp, a, along)
 	local placements, trees = {}, {}
 	local boxes = {
@@ -285,8 +287,9 @@ local function layout(vx, vz, pr, minp, maxp, a, along)
 					local t = footprint(a, px, pz, px + sx - 1, pz + sz - 1, minp.y, maxp.y)
 					local cx, cz = px + math.floor(sx / 2), pz + math.floor(sz / 2)
 					local road = arm.dx ~= 0 and along.x[cx] or along.z[cz]
-					if t and road and t.diff <= 6 and math.abs(road - t.avg_y) <= 4 then
-						local y = road
+					if t and road and t.diff <= 6 and t.avg_y - road <= 3 and road - t.avg_y <= 4 then
+						-- on ground higher than the road a node up, the step before the door climbs it
+						local y = t.avg_y > road and road + 1 or road
 						local base = foundation_cid({x = cx, y = y, z = cz}, data[a:index(cx, y, cz)])
 						local top = math.min(maxp.y, y + info.size.y + HEADROOM / 2)
 						for fx = math.max(minp.x, px - 1 - SLOPE), math.min(maxp.x, px + sx + SLOPE) do
