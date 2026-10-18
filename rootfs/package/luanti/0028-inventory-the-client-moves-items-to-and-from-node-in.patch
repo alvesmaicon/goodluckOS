@@ -1,0 +1,36 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Sat, 17 Oct 2026 23:26:36 -0300
+Subject: [PATCH 28/28] inventory: the client moves items to and from node
+ inventories at once
+
+Moving an item between the player's inventory and a chest's (or a furnace's) only showed once the server
+answered: the client predicts a move only when both sides are the player's own inventory. Dropped on the
+other side, the item went back to its slot until then, and on a busy server (a new world saving its
+generated blocks takes the server's step past a second on a slow device) it blinked there for as long.
+
+A node's inventory is predicted too now. The server always sends the node's metadata and the player's
+affected lists again after a move, before any check, so when it refuses one (a callback allowing less, too
+far away) the guess is put right. Detached inventories stay as before: they are sent again only when they
+change, and some hand out items without losing them (creative).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/src/inventorymanager.cpp b/src/inventorymanager.cpp
+index 6adb6f6a6..ca72f6b68 100644
+--- a/src/inventorymanager.cpp
++++ b/src/inventorymanager.cpp
+@@ -628,7 +628,12 @@ void IMoveAction::clientApply(InventoryManager *mgr, IGameDef *gamedef)
+ 	InventoryLocation current_player;
+ 	current_player.setCurrentPlayer();
+ 	Inventory *inv_player = mgr->getInventory(current_player);
+-	if (inv_from != inv_player || inv_to != inv_player)
++	// A node's inventory too: the server sends its metadata and the player's list again after every move
++	// (see Server::handleCommand_InventoryAction), so a guess its callbacks refuse is put right
++	auto predicted = [&](const InventoryLocation &loc, Inventory *inv) {
++		return inv == inv_player || loc.type == InventoryLocation::NODEMETA;
++	};
++	if (!predicted(from_inv, inv_from) || !predicted(to_inv, inv_to))
+ 		return;
+ 
+ 	InventoryList *list_from = inv_from->getList(from_list);
