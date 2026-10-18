@@ -91,14 +91,147 @@ function core.handle_node_drops(pos, drops, digger)
 	return handle_node_drops(pos, drops, plain)
 end
 
--- an enchanted tool for the villages' traders: x_enchanting's draw for a table with this many bookshelves, written in
--- the item as the table writes it (XEnchanting.set_enchanted_tool, without the table)
+-- Minecraft's glint: a purple sheen drifting over an enchanted item. The engine takes an overlay's animation from the
+-- item's definition and only its texture from the meta, so every tool gets an animated overlay with no texture, and an
+-- enchanted one 16 frames of its image cut by goodluck_enchanting_glint.png (x_enchanting's was still, a lilac tint)
 goodluck_enchanting = {}
 
-local function glint(image)
-	return image .. "^((" .. image .. "^[contrast:127:127)^[mask:x_enchanting_glint.png^[opacity:80)"
+local FRAMES = 16
+local ANIMATION = {type = "vertical_frames", aspect_w = 16, aspect_h = 16, length = 2.4}
+
+local function escape(s)
+	return (s:gsub("[\\%^:]", "\\%0"))
 end
 
+-- the item tinted purple, 16 times, cut by the sheen: in the hand, where an overlay is drawn or not by its
+-- alpha, the streak still shows the item's pixels
+local function sheen(image)
+	local tinted = escape(image .. "^[resize:16x16^[colorize:#A86CFF:180")
+	local parts = {}
+	for i = 0, FRAMES - 1 do
+		parts[#parts + 1] = "0," .. i * 16 .. "=" .. tinted
+	end
+	return "[combine:16x" .. FRAMES * 16 .. ":" .. table.concat(parts, ":") .. "^[mask:goodluck_enchanting_glint.png"
+end
+
+local function image_of(def, field)
+	return type(def[field]) == "string" and def[field] or ""
+end
+
+-- the glint of an enchanted stack, for the image its item has now (a bow's changes as it is drawn)
+function goodluck_enchanting.glint(stack)
+	local def = stack:get_definition()
+	local meta = stack:get_meta()
+	for _, field in ipairs({"inventory_image", "wield_image"}) do
+		if meta:get_string(field):find("x_enchanting_glint.png", 1, true) then
+			meta:set_string(field, "")
+		end
+	end
+	local image, wield = image_of(def, "inventory_image"), image_of(def, "wield_image")
+	meta:set_string("inventory_overlay", image ~= "" and sheen(image) or "")
+	meta:set_string("wield_overlay", wield ~= "" and sheen(wield) or "")
+	meta:set_string("goodluck_glint", stack:get_name())
+	return stack
+end
+
+-- an enchanted stack whose glint is x_enchanting's or was made for another item gets it anew
+function goodluck_enchanting.update(stack)
+	local meta = stack:get_meta()
+	if meta:get_int("is_enchanted") == 1 and meta:get_string("goodluck_glint") ~= stack:get_name() then
+		goodluck_enchanting.glint(stack)
+		return true
+	end
+	return false
+end
+
+-- one frame of it over the item's image, for a button
+function goodluck_enchanting.preview(stack)
+	local overlay = stack:get_meta():get_string("inventory_overlay")
+	local image = image_of(stack:get_definition(), "inventory_image")
+	if stack:get_meta():get_int("is_enchanted") ~= 1 or overlay == "" or image == "" then
+		return ""
+	end
+	return image .. "^(" .. overlay .. "^[verticalframe:" .. FRAMES .. ":3)"
+end
+
+core.register_on_mods_loaded(function()
+	for name, def in pairs(core.registered_tools) do
+		local animated = {}
+		for _, field in ipairs({"inventory_overlay", "wield_overlay"}) do
+			if def[field] == nil or type(def[field]) == "string" then
+				animated[field] = {name = def[field] or "", animation = ANIMATION}
+			end
+		end
+		core.override_item(name, animated)
+	end
+end)
+
+-- x_enchanting writes its own glint over the item's images: it is shown none, and ours goes on after
+local set_enchanted_tool = XEnchanting.set_enchanted_tool
+function XEnchanting.set_enchanted_tool(self, pos, itemstack, level, player_name)
+	local name = itemstack:get_name()
+	local def = core.registered_tools[name]
+	if def then
+		core.registered_tools[name] = setmetatable({inventory_image = "", inventory_overlay = "", wield_image = "",
+			wield_overlay = ""}, {__index = def})
+	end
+	local ok, err = pcall(set_enchanted_tool, self, pos, itemstack, level, player_name)
+	core.registered_tools[name] = def
+	if not ok then
+		error(err, 0)
+	end
+	local inv = core.get_meta(pos):get_inventory()
+	local stack = inv:get_stack("item", 1)
+	if stack:get_meta():get_int("is_enchanted") == 1 then
+		inv:set_stack("item", 1, goodluck_enchanting.glint(stack))
+	end
+end
+
+-- items enchanted before: in the player's inventory when joining, in the hand (and a bow as it is drawn), in chests
+local function update_inventory(inv)
+	for listname, list in pairs(inv:get_lists()) do
+		local changed = false
+		for _, stack in ipairs(list) do
+			changed = goodluck_enchanting.update(stack) or changed
+		end
+		if changed then
+			inv:set_list(listname, list)
+		end
+	end
+end
+
+core.register_on_joinplayer(function(player)
+	update_inventory(player:get_inventory())
+end)
+
+local timer = 0
+core.register_globalstep(function(dtime)
+	timer = timer + dtime
+	if timer < 0.2 then
+		return
+	end
+	timer = 0
+	for _, player in ipairs(core.get_connected_players()) do
+		local stack = player:get_wielded_item()
+		if goodluck_enchanting.update(stack) then
+			player:set_wielded_item(stack)
+		end
+	end
+end)
+
+core.register_lbm({
+	label = "Enchanted items in chests get the moving glint",
+	name = "goodluck_enchanting:glint",
+	nodenames = {"default:chest", "default:chest_open", "default:chest_locked", "default:chest_locked_open",
+		"bones:bones", "x_enchanting:table", "x_enchanting:grindstone", "goodluck_anvil:anvil"},
+	run_at_every_load = false,
+	action = function(pos)
+		update_inventory(core.get_meta(pos):get_inventory())
+	end,
+})
+
+-- an enchanted tool for the villages' traders: x_enchanting's draw for a table with this many bookshelves, written in
+-- the item as the table writes it (XEnchanting.set_enchanted_tool, without the table)
 function goodluck_enchanting.enchant(name, bookshelves)
 	local stack = ItemStack(name)
 	local def = core.registered_tools[stack:get_name()]
@@ -127,10 +260,5 @@ function goodluck_enchanting.enchant(name, bookshelves)
 		stack:get_short_description())
 	meta:set_int("is_enchanted", 1)
 	meta:set_string("x_enchanting", core.serialize(saved))
-	for _, field in ipairs({"inventory_image", "inventory_overlay", "wield_image", "wield_overlay"}) do
-		if def[field] and def[field] ~= "" then
-			meta:set_string(field, glint(def[field]))
-		end
-	end
-	return stack
+	return goodluck_enchanting.glint(stack)
 end
