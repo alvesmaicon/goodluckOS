@@ -37,8 +37,9 @@ if [ -f "$dir/perf.env" ]; then
     luanti-perflog.sh $$ "${PERFLOG_INTERVAL:-5}" &
 fi
 
-# by position as on an Xbox pad: B (bottom) is SDL's south button (jump, click in menus), A (right) east (sneak, back)
+# by position as on an Xbox pad: B (bottom) is SDL's south button (jump, click in menus), A (right) east (sneak, back),
+# Y (left) west (half a stack), X (top) north (shift-click)
 [ -n "$SDL_GAMECONTROLLERCONFIG" ] && export SDL_GAMECONTROLLERCONFIG=$(echo "$SDL_GAMECONTROLLERCONFIG" |
-    sed 's/,a:b1,/,a:B0,/; s/,b:b0,/,b:b1,/; s/,a:B0,/,a:b0,/')
+    sed 's/,a:b1,/,a:B0,/; s/,b:b0,/,b:b1,/; s/,a:B0,/,a:b0,/; s/,x:b2,/,x:B3,/; s/,y:b3,/,y:b2,/; s/,x:B3,/,x:b3,/')
 
 exec luanti

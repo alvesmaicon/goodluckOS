@@ -1,0 +1,64 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Sun, 18 Oct 2026 09:07:10 -0300
+Subject: [PATCH 29/29] SDL on KMSDRM: the top face button shift-clicks in
+ menus
+
+In the inventory the gamepad had a left click (take or drop the whole stack) on two buttons and a right
+click (half of it) on the left one, but nothing for a shift-click, which sends a stack straight to the other
+side of a chest, a furnace or the crafting grid (listring) and crafts as many as it can from the output.
+
+The top button (Y on an Xbox pad) is now that shift-click: its clicks, and the moves and wheel turns while
+it is held, carry Shift, so holding it and sweeping the cursor over slots moves each of them as a held
+Shift does with a mouse. That is Minecraft Bedrock's layout by position: bottom takes all, left takes half,
+top moves the stack. The bottom button still clicks as before and still opens the on-screen keyboard on a
+text field, and so does the top one.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/irr/src/CIrrDeviceSDL.cpp b/irr/src/CIrrDeviceSDL.cpp
+index 4eb93f091..10f5ad04d 100644
+--- a/irr/src/CIrrDeviceSDL.cpp
++++ b/irr/src/CIrrDeviceSDL.cpp
+@@ -1242,7 +1242,7 @@ bool CIrrDeviceSDL::run()
+ }
+ 
+ #if defined(_IRR_COMPILE_WITH_JOYSTICK_EVENTS_)
+-//! A/Y, X, B/START, L1/R1 and the D-pad act as the mouse while the cursor is visible
++//! A, Y (a shift-click), X, B/START, L1/R1 and the D-pad act as the mouse while the cursor is visible
+ bool CIrrDeviceSDL::gamepadButtonAsMouse(GamepadButton button, bool down)
+ {
+ 	const u32 bit = 1u << static_cast<u32>(button);
+@@ -1281,7 +1281,7 @@ bool CIrrDeviceSDL::gamepadButtonAsMouse(GamepadButton button, bool down)
+ 
+ 	switch (button) {
+ 	case GamepadButton::SOUTH:
+-	case GamepadButton::NORTH:
++	case GamepadButton::NORTH: // with Shift while held: moves a stack to the other inventory
+ 		postGamepadClick(SDL_BUTTON_LEFT, down);
+ 		// a click on a text field opens the on-screen keyboard
+ 		if (!down && GUIEnvironment)
+@@ -1416,6 +1416,7 @@ void CIrrDeviceSDL::postGamepadClick(u32 button, bool down)
+ 		irrevent.MouseInput.Event = down ? EMIE_RMOUSE_PRESSED_DOWN : EMIE_RMOUSE_LEFT_UP;
+ 	irrevent.MouseInput.Button = button;
+ 	irrevent.MouseInput.ButtonStates = MouseButtonStates;
++	irrevent.MouseInput.Shift = GamepadMouseButtons & (1u << static_cast<u32>(GamepadButton::NORTH));
+ 	irrevent.MouseInput.X = MouseX;
+ 	irrevent.MouseInput.Y = MouseY;
+ 	postEventFromUser(irrevent);
+@@ -1438,6 +1439,7 @@ void CIrrDeviceSDL::postGamepadWheel(f32 wheel)
+ 	irrevent.MouseInput.Wheel = wheel;
+ 	irrevent.MouseInput.Gamepad = true;
+ 	irrevent.MouseInput.ButtonStates = MouseButtonStates;
++	irrevent.MouseInput.Shift = GamepadMouseButtons & (1u << static_cast<u32>(GamepadButton::NORTH));
+ 	irrevent.MouseInput.X = MouseX;
+ 	irrevent.MouseInput.Y = MouseY;
+ 	postEventFromUser(irrevent);
+@@ -1450,6 +1452,7 @@ void CIrrDeviceSDL::postGamepadMouse(EMOUSE_INPUT_EVENT event, f32 wheel)
+ 	irrevent.MouseInput.Event = event;
+ 	irrevent.MouseInput.Wheel = wheel;
+ 	irrevent.MouseInput.ButtonStates = MouseButtonStates;
++	irrevent.MouseInput.Shift = GamepadMouseButtons & (1u << static_cast<u32>(GamepadButton::NORTH));
+ 	irrevent.MouseInput.X = MouseX;
+ 	irrevent.MouseInput.Y = MouseY;
+ 	postEventFromUser(irrevent);

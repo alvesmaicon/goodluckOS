@@ -18,7 +18,7 @@ LUANTI_DEPENDENCIES = freetype jpeg jsoncpp libgles libpng libvorbis openal \
 # 5.17.0 with the handheld patches of github.com/alvesmaicon/luanti (tag 5.17.0-handheld.N): the number stays
 # 5.17.0 for games' min_minetest_version, the suffix goes up with each binary
 LUANTI_CONF_OPTS = \
-	-DVERSION_EXTRA=handheld.11 \
+	-DVERSION_EXTRA=handheld.12 \
 	-DBUILD_CLIENT=ON \
 	-DBUILD_SERVER=OFF \
 	-DBUILD_UNITTESTS=OFF \
