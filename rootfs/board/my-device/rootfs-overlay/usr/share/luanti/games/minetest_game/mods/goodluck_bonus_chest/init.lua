@@ -32,7 +32,7 @@ local function spot(pos)
 	end
 end
 
-local function fill(inv, player)
+local function fill(inv, pos)
 	local items = {
 		"default:pick_stone", "default:axe_stone", "default:apple " .. math.random(3, 5),
 		"default:stick " .. math.random(6, 12), "default:wood " .. math.random(6, 12),
@@ -42,21 +42,20 @@ local function fill(inv, player)
 		items[#items + 1] = "farming:bread " .. math.random(1, 3)
 	end
 	if core.global_exists("goodluck_map") then
-		table.insert(items, 1, goodluck_map.new(player:get_pos()))
+		table.insert(items, 1, goodluck_map.new(pos))
 	end
 	for _, item in ipairs(items) do
 		inv:add_item("main", item)
 	end
 end
 
-local function place(player)
-	local pos = spot(player:get_pos())
+local function place(near)
+	local pos = spot(near)
 	if not pos then
 		return false
 	end
-	core.set_node(pos, {name = "default:chest", param2 = core.dir_to_facedir(vector.direction(pos,
-		player:get_pos()))})
-	fill(core.get_meta(pos):get_inventory(), player)
+	core.set_node(pos, {name = "default:chest", param2 = core.dir_to_facedir(vector.direction(pos, near))})
+	fill(core.get_meta(pos):get_inventory(), near)
 	for _, d in ipairs({{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) do
 		local t = vector.offset(pos, d[1], 0, d[2])
 		if free(t) and ground(t) then
@@ -71,17 +70,28 @@ core.register_on_joinplayer(function(player)
 	if storage:get_string("done") ~= "" or not Settings(WORLD):get_bool("bonus_chest", false) then
 		return
 	end
-	-- once the ground around is there
+	-- by where they came in, once every mapchunk around is made: when the generator finishes one it writes back a
+	-- block-wide edge from the copy it started with, which took a chest placed there meanwhile (a second a chunk on
+	-- the console); the chest is at most 4 nodes off and an edge reaches 16 past its chunk, so 20 around
 	local name = player:get_player_name()
 	local tries = 0
 	local function try()
 		local p = core.get_player_by_name(name)
-		tries = tries + 1
-		if p and storage:get_string("done") == "" and (place(p) or tries >= 10) then
-			storage:set_string("done", "1")
-		elseif p and tries < 10 then
-			core.after(1, try)
+		if not p or storage:get_string("done") ~= "" then
+			return
 		end
+		tries = tries + 1
+		local near = vector.round(p:get_pos())
+		core.emerge_area(vector.subtract(near, 20), vector.add(near, 20), function(_, _, remaining)
+			if remaining > 0 or storage:get_string("done") ~= "" then
+				return
+			end
+			if place(near) or tries >= 10 then
+				storage:set_string("done", "1")
+			else
+				core.after(1, try)
+			end
+		end)
 	end
 	core.after(1, try)
 end)
