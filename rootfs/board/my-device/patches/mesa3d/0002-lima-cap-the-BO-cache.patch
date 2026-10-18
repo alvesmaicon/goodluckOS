@@ -1,0 +1,76 @@
+From: Maicon Alves <maicon.alves@posthaus.com.br>
+Subject: [PATCH] lima: cap the BO cache
+
+Freed BOs stay in the cache for 6 seconds, with no limit on their total
+size. An app that draws heavy frames (Luanti looking over a forest, ~450k
+triangles a frame) left 150 to 290 MB of them in the cache on a 512 MB
+device, until the OOM killer took the app.
+
+The cache now keeps at most LIMA_BO_CACHE_MAX_MB (64 by default) of them;
+over that, the oldest are freed first.
+
+---
+--- a/src/gallium/drivers/lima/lima_bo.c
++++ b/src/gallium/drivers/lima/lima_bo.c
+@@ -32,6 +32,7 @@
+ #include "util/u_hash_table.h"
+ #include "util/u_math.h"
+ #include "util/os_time.h"
++#include "util/u_debug.h"
+ #include "util/os_mman.h"
+ 
+ #include "frontend/drm_driver.h"
+@@ -65,6 +66,12 @@
+    for (int i = 0; i < NR_BO_CACHE_BUCKETS; i++)
+       list_inithead(&screen->bo_cache_buckets[i]);
+ 
++   /* Freed BOs wait here for 6 seconds; without a limit a busy app holds
++    * hundreds of MB of them, more than a 512 MB device has to spare. */
++   screen->bo_cache_size = 0;
++   screen->bo_cache_max =
++      (uint64_t)debug_get_num_option("LIMA_BO_CACHE_MAX_MB", 64) << 20;
++
+    return true;
+ }
+ 
+@@ -80,6 +87,7 @@
+ {
+    list_del(&bo->size_list);
+    list_del(&bo->time_list);
++   bo->screen->bo_cache_size -= bo->size;
+ }
+ 
+ static void lima_close_kms_handle(struct lima_screen *screen, uint32_t handle)
+@@ -221,11 +229,21 @@
+    bo->free_time = time.tv_sec;
+    list_addtail(&bo->size_list, bucket);
+    list_addtail(&bo->time_list, &screen->bo_cache_time);
++   screen->bo_cache_size += bo->size;
+    lima_bo_cache_free_stale_bos(screen, time.tv_sec);
+    if (lima_debug & LIMA_DEBUG_BO_CACHE) {
+       fprintf(stderr, "%s: put BO: %p (size=%d)\n", __func__, bo, bo->size);
+       lima_bo_cache_print_stats(screen);
+    }
++   /* Over the limit, the oldest go first (this one too, if it alone is
++    * larger) */
++   list_for_each_entry_safe(struct lima_bo, entry,
++                            &screen->bo_cache_time, time_list) {
++      if (screen->bo_cache_size <= screen->bo_cache_max)
++         break;
++      lima_bo_cache_remove(entry);
++      lima_bo_free(entry);
++   }
+    mtx_unlock(&screen->bo_cache_lock);
+ 
+    return true;
+--- a/src/gallium/drivers/lima/lima_screen.h
++++ b/src/gallium/drivers/lima/lima_screen.h
+@@ -81,6 +81,8 @@
+    struct hash_table *bo_flink_names;
+    struct list_head bo_cache_buckets[NR_BO_CACHE_BUCKETS];
+    struct list_head bo_cache_time;
++   uint64_t bo_cache_size;
++   uint64_t bo_cache_max;
+ 
+    struct slab_parent_pool transfer_pool;
+ 
