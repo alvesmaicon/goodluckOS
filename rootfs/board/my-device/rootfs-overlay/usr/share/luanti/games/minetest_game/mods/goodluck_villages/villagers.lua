@@ -1,6 +1,6 @@
--- Villagers: mobs_npc's NPC, one a bed, and its trader with one of Minecraft's trades at the blacksmith (armorer,
--- toolsmith), the church (cleric), the library (librarian) and the fields (farmer). Paid in gold ingots, as Minetest
--- Game has no emeralds; every trader also buys something, as Minecraft's do, and that is how gold is earned.
+-- Villagers: mobs_npc's NPC, one a bed (sleep.lua), and its trader with one of Minecraft's trades at the blacksmith
+-- (armorer, toolsmith), the church (cleric), the library (librarian) and the fields (farmer). Paid in gold ingots, as
+-- Minetest Game has no emeralds; every trader also buys something, as Minecraft's do, and that is how gold is earned.
 local S = core.get_translator("goodluck_villages")
 
 if not core.get_modpath("mobs_npc") then
@@ -107,7 +107,7 @@ local function standing_spot(p1, p2)
 	return spots[math.random(math.max(1, #spots))]
 end
 
-function goodluck_villages.spawn(p1, p2, job)
+function goodluck_villages.spawn(p1, p2, job, bed)
 	local pos = standing_spot(p1, p2)
 	if not pos then
 		return
@@ -120,6 +120,9 @@ function goodluck_villages.spawn(p1, p2, job)
 		-- no name over their heads, as in Minecraft (the trade window says who they are); mobs_npc names traders
 		ent.nametag, ent._nametag = nil, nil
 		obj:set_properties({nametag = ""})
+	end
+	if ent and bed then
+		goodluck_villages.give_bed(ent, bed)
 	end
 	return ent
 end
