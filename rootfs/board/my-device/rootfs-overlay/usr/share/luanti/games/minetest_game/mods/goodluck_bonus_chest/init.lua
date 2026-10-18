@@ -4,32 +4,77 @@
 local WORLD = core.get_worldpath() .. "/world.mt"
 local storage = core.get_mod_storage()
 
+-- air or a plant: what the chest or a torch takes the place of
 local function free(pos)
 	local def = core.registered_nodes[core.get_node(pos).name]
 	return def and def.buildable_to and not def.walkable and def.liquidtype == "none"
 end
 
-local function ground(pos)
-	local def = core.registered_nodes[core.get_node(vector.offset(pos, 0, -1, 0)).name]
-	return def and def.walkable
+-- the ground a chest stands on: a full block of the land, not leaves, a trunk or planks
+local function land(pos)
+	local def = core.registered_nodes[core.get_node(pos).name]
+	local g = def and def.groups or {}
+	return def and def.walkable and def.drawtype == "normal" and not (g.leaves or g.tree or g.wood)
 end
 
--- a free spot on the ground near pos, not where the player stands
+-- the land under pos, or a snow layer on it (the chest stands on the snow, as the player does)
+local function ground(pos)
+	local below = vector.offset(pos, 0, -1, 0)
+	if land(below) then
+		return true
+	end
+	local def = core.registered_nodes[core.get_node(below).name]
+	return def and def.walkable and def.buildable_to and land(vector.offset(below, 0, -1, 0))
+end
+
+-- nothing over it: not under a tree or a ledge
+local function open_sky(pos)
+	for y = 1, 24 do
+		local def = core.registered_nodes[core.get_node(vector.offset(pos, 0, y, 0)).name]
+		if not def or def.walkable or (def.groups and def.groups.leaves) then
+			return false
+		end
+	end
+	return true
+end
+
+local AROUND = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {1, -1}, {-1, 1}, {-1, -1}}
+
+-- the open ground near pos as Minecraft's bonus chest has it: each column's top on the land (not on a tree), scored
+-- by flat free ground around it (the torches and room to open it), the open sky (not under a tree or a ledge), and a
+-- little by how near and how level with the player it is
 local function spot(pos)
 	local p0 = vector.round(pos)
-	for r = 2, 4 do
-		for dx = -r, r do
-			for dz = -r, r do
-				for dy = 1, -2, -1 do
-					local p = vector.offset(p0, dx, dy, dz)
-					if (math.abs(dx) == r or math.abs(dz) == r) and free(p) and ground(p) and
-							free(vector.offset(p, 0, 1, 0)) then
-						return p
+	local best
+	for dx = -6, 6 do
+		for dz = -6, 6 do
+			local r = math.max(math.abs(dx), math.abs(dz))
+			local p = vector.offset(p0, dx, 8, dz)
+			if r >= 2 and free(p) then
+				while p.y > p0.y - 12 and free(vector.offset(p, 0, -1, 0)) do
+					p.y = p.y - 1
+				end
+				if ground(p) and free(vector.offset(p, 0, 1, 0)) then
+					local score = -0.4 * r - math.abs(p.y - p0.y) + (open_sky(p) and 0 or -8)
+					local torches = 0
+					for i, d in ipairs(AROUND) do
+						local n = vector.offset(p, d[1], 0, d[2])
+						if free(n) and free(vector.offset(n, 0, 1, 0)) and ground(n) then
+							score = score + (i <= 4 and 3 or 1.5)
+							torches = torches + (i <= 4 and 1 or 0)
+						end
+					end
+					if torches < 2 then
+						score = score - 10
+					end
+					if not best or score > best.score then
+						best = {pos = p, score = score}
 					end
 				end
 			end
 		end
 	end
+	return best and best.pos
 end
 
 local function fill(inv, pos)
