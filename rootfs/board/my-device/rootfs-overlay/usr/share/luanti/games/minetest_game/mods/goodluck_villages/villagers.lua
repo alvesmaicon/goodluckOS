@@ -157,6 +157,13 @@ function mobs_npc.shop_trade(self, clicker, race)
 			self.trades[i] = {type(t[1]) == "function" and t[1]() or t[1], t[2]}
 		end
 	end
+	-- goods enchanted before get the moving glint
+	for _, t in ipairs(self.trades) do
+		local goods = ItemStack(t[1])
+		if goodluck_enchanting and goodluck_enchanting.update(goods) then
+			t[1] = goods:to_string()
+		end
+	end
 	self.id = set_npc_id(self)
 	local fs = {"size[8,10]", default.gui_bg_img or "", default.gui_slots or "",
 		"label[0.5,-0.1;" .. core.formspec_escape(job.title) .. "]"}
@@ -170,7 +177,7 @@ function mobs_npc.shop_trade(self, clicker, race)
 		local function button(stack, kind)
 			local id = kind .. "#" .. i .. "#" .. self.id
 			local bx = kind == "prices" and x or x + 2
-			local image = stack:get_meta():get_string("inventory_image")
+			local image = goodluck_enchanting and goodluck_enchanting.preview(stack) or ""
 			local b = image ~= "" and ("image_button[%s,%s;1,1;%s;%s;]"):format(bx, y, core.formspec_escape(image), id) or
 				("item_image_button[%s,%s;1,1;%s;%s;]"):format(bx, y, stack:get_name() .. " " .. stack:get_count(), id)
 			return b .. ("tooltip[%s;%s]"):format(id, core.formspec_escape(stack:get_description()))

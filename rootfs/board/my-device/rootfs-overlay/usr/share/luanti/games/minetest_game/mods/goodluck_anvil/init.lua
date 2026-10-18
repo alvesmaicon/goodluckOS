@@ -97,10 +97,6 @@ local function merge(a, b)
 	return out, cost
 end
 
-local function glint(image)
-	return image .. "^((" .. image .. "^[contrast:127:127)^[mask:x_enchanting_glint.png^[opacity:80)"
-end
-
 -- the item's name (its own or the one given here) and its enchantments, written as x_enchanting writes them
 local function rewrite(stack, levels)
 	local def = core.registered_items[stack:get_name()]
@@ -123,10 +119,8 @@ local function rewrite(stack, levels)
 		meta:set_tool_capabilities(XEnchanting:get_enchanted_tool_capabilities(def, list))
 		meta:set_string("x_enchanting", core.serialize(saved))
 		meta:set_int("is_enchanted", 1)
-		for _, field in ipairs({"inventory_image", "inventory_overlay", "wield_image", "wield_overlay"}) do
-			if def[field] and def[field] ~= "" then
-				meta:set_string(field, glint(def[field]))
-			end
+		if goodluck_enchanting then
+			goodluck_enchanting.glint(stack)
 		end
 	end
 	local base = custom ~= "" and custom or def.description
