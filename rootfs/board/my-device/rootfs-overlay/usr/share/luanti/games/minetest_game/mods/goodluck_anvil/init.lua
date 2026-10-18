@@ -258,6 +258,19 @@ local function inv_of(name)
 	return core.get_inventory({type = "detached", name = "goodluck_anvil_" .. name})
 end
 
+-- the two slots also live in the player's meta, saved together with the inventory: a game that dies with the
+-- window open (no close, no leave) gives them back on the next join instead of losing them
+local KEPT = "goodluck_anvil:kept"
+local function keep(player)
+	local inv = inv_of(player:get_player_name())
+	if not inv then
+		return
+	end
+	local left, right = inv:get_stack("left", 1), inv:get_stack("right", 1)
+	player:get_meta():set_string(KEPT, left:is_empty() and right:is_empty() and "" or
+		core.serialize({left:to_string(), right:to_string()}))
+end
+
 local function formspec(player)
 	local name = player:get_player_name()
 	local st = open[name]
@@ -305,6 +318,7 @@ local function refresh(player, show)
 	local name = player:get_player_name()
 	local st = open[name]
 	local inv = inv_of(name)
+	keep(player)
 	if not st or not inv then
 		return
 	end
@@ -332,6 +346,7 @@ local function give_back(player)
 		inv:set_stack(list, 1, "")
 	end
 	inv:set_stack("result", 1, "")
+	keep(player)
 end
 
 local function close(player)
@@ -437,6 +452,15 @@ end
 
 core.register_on_joinplayer(function(player)
 	make_inv(player:get_player_name())
+	local kept = core.deserialize(player:get_meta():get_string(KEPT)) or {}
+	local pinv = player:get_inventory()
+	for _, item in ipairs(kept) do
+		local left = pinv:add_item("main", item)
+		if not left:is_empty() then
+			core.add_item(player:get_pos(), left)
+		end
+	end
+	player:get_meta():set_string(KEPT, "")
 end)
 
 core.register_on_leaveplayer(function(player)
