@@ -5,6 +5,7 @@
 goodluck_villages = {}
 
 local modpath = core.get_modpath("goodluck_villages")
+dofile(modpath .. "/sleep.lua")
 dofile(modpath .. "/villagers.lua")
 
 local CHUNKSIZE = tonumber(core.get_mapgen_setting("chunksize")) or 5
@@ -15,6 +16,8 @@ local CHANCE = 75
 -- the most the ground may rise across the middle, and the room above it the buildings need
 local MAX_SLOPE = 20
 local HEADROOM = 16
+-- how far around a building the ground is sloped to it
+local SLOPE = 4
 
 local c_air, c_gravel, c_dirt, c_sand, c_desert_sand
 local clear_cids, dirt_cids, sand_cids = {}, {}, {}
@@ -237,8 +240,9 @@ core.register_on_mods_loaded(function()
 	end
 end)
 
--- houses along four roads from the middle, the special buildings first, each levelled on a foundation
-local function layout(vx, vz, pr, minp, maxp, a)
+-- houses along four roads from the middle, the special buildings first, each at the height of the road before its
+-- door, on a foundation, with the ground around cut and filled in slopes so no wall of earth shuts its door
+local function layout(vx, vz, pr, minp, maxp, a, along)
 	local placements, trees = {}, {}
 	local boxes = {
 		{x1 = vx - 1, z1 = vz - RADIUS, x2 = vx + 1, z2 = vz + RADIUS},
@@ -279,17 +283,23 @@ local function layout(vx, vz, pr, minp, maxp, a)
 				if px >= minp.x + 2 and px + sx <= maxp.x - 2 and pz >= minp.z + 2 and pz + sz <= maxp.z - 2 and
 						not overlapping(px, pz, px + sx - 1, pz + sz - 1, boxes, 2) then
 					local t = footprint(a, px, pz, px + sx - 1, pz + sz - 1, minp.y, maxp.y)
-					if t and t.diff <= 6 then
-						local y = t.avg_y
-						local cx, cz = px + math.floor(sx / 2), pz + math.floor(sz / 2)
+					local cx, cz = px + math.floor(sx / 2), pz + math.floor(sz / 2)
+					local road = arm.dx ~= 0 and along.x[cx] or along.z[cz]
+					if t and road and t.diff <= 6 and math.abs(road - t.avg_y) <= 4 then
+						local y = road
 						local base = foundation_cid({x = cx, y = y, z = cz}, data[a:index(cx, y, cz)])
-						for fx = math.max(minp.x, px - 1), math.min(maxp.x, px + sx) do
-							for fz = math.max(minp.z, pz - 1), math.min(maxp.z, pz + sz) do
-								for fy = y + 1, math.min(maxp.y, y + info.size.y + 2) do
-									data[a:index(fx, fy, fz)] = c_air
-								end
-								for fy = math.max(minp.y, surface_y(a, fx, fz, minp.y, y) or y - 1), y do
-									data[a:index(fx, fy, fz)] = base
+						local top = math.min(maxp.y, y + info.size.y + HEADROOM / 2)
+						for fx = math.max(minp.x, px - 1 - SLOPE), math.min(maxp.x, px + sx + SLOPE) do
+							for fz = math.max(minp.z, pz - 1 - SLOPE), math.min(maxp.z, pz + sz + SLOPE) do
+								-- d: how far out of the building and the row around it
+								local d = math.max(px - 1 - fx, fx - px - sx, pz - 1 - fz, fz - pz - sz, 0)
+								if d == 0 or not overlapping(fx, fz, fx, fz, boxes, 0) then
+									for fy = y + 1 + d, top do
+										data[a:index(fx, fy, fz)] = c_air
+									end
+									for fy = math.max(minp.y, surface_y(a, fx, fz, minp.y, y - d) or y - d), y - d do
+										data[a:index(fx, fy, fz)] = base
+									end
 								end
 							end
 						end
@@ -336,24 +346,50 @@ local function layout(vx, vz, pr, minp, maxp, a)
 	return placements, trees
 end
 
-local function build(vm, emin, emax, minp, maxp, vx, vy, vz, seed)
-	local a = VoxelArea:new({MinEdge = emin, MaxEdge = emax})
-	local pr = create_prng(seed)
-	-- the roads: gravel on the ground, cleared above
-	for x = math.max(minp.x, vx - RADIUS), math.min(maxp.x, vx + RADIUS) do
-		for z = math.max(minp.z, vz - RADIUS), math.min(maxp.z, vz + RADIUS) do
-			if math.abs(x - vx) <= 1 or math.abs(z - vz) <= 1 then
-				local y = surface_y(a, x, z, minp.y, maxp.y)
-				if y then
-					data[a:index(x, y, z)] = c_gravel
-					for fy = y + 1, math.min(maxp.y, y + 3) do
-						data[a:index(x, fy, z)] = c_air
-					end
-				end
+-- the roads: from the middle out, gravel at most a node up or down from the last (villagers walk them), the ground
+-- under them filled and cleared over them; their height along each axis
+local function roads(a, vx, vy, vz, minp, maxp)
+	local along = {x = {[vx] = vy}, z = {[vz] = vy}}
+	local base = foundation_cid({x = vx, y = vy, z = vz}, data[a:index(vx, vy, vz)])
+	local function lay(x, z, y)
+		if x < minp.x or x > maxp.x or z < minp.z or z > maxp.z then
+			return
+		end
+		for fy = math.max(minp.y, surface_y(a, x, z, minp.y, y) or y), y - 1 do
+			data[a:index(x, fy, z)] = base
+		end
+		data[a:index(x, y, z)] = c_gravel
+		for fy = y + 1, math.min(maxp.y, y + 4) do
+			data[a:index(x, fy, z)] = c_air
+		end
+	end
+	for _, arm in ipairs({{dx = 1, dz = 0}, {dx = -1, dz = 0}, {dx = 0, dz = 1}, {dx = 0, dz = -1}}) do
+		local y = vy
+		for d = 0, RADIUS do
+			local cx, cz = vx + arm.dx * d, vz + arm.dz * d
+			local sy = d > 1 and surface_y(a, cx, cz, minp.y, maxp.y)
+			if sy then
+				y = math.max(y - 1, math.min(y + 1, sy))
+			end
+			y = math.max(minp.y + 1, math.min(maxp.y - HEADROOM, y))
+			if arm.dx ~= 0 then
+				along.x[cx] = y
+			else
+				along.z[cz] = y
+			end
+			for w = -1, 1 do
+				lay(cx + arm.dz * w, cz + arm.dx * w, y)
 			end
 		end
 	end
-	local placements, trees = layout(vx, vz, pr, minp, maxp, a)
+	return along
+end
+
+local function build(vm, emin, emax, minp, maxp, vx, vy, vz, seed)
+	local a = VoxelArea:new({MinEdge = emin, MaxEdge = emax})
+	local pr = create_prng(seed)
+	local along = roads(a, vx, vy, vz, minp, maxp)
+	local placements, trees = layout(vx, vz, pr, minp, maxp, a, along)
 	vm:set_data(data)
 	for _, p in ipairs(placements) do
 		core.place_schematic_on_vmanip(vm, p.pos, p.path, p.rot, {}, true)
@@ -382,13 +418,13 @@ local function build(vm, emin, emax, minp, maxp, vx, vy, vz, seed)
 		end
 		if not residents[p.file] then
 			for _, bed in ipairs(core.find_nodes_in_area(p.pos, p2, {"beds:bed_bottom"})) do
-				spawns[#spawns + 1] = {vector.offset(bed, -2, 0, -2), vector.offset(bed, 2, 1, 2), "villager"}
+				spawns[#spawns + 1] = {vector.offset(bed, -2, 0, -2), vector.offset(bed, 2, 1, 2), "villager", bed}
 			end
 		end
 	end
 	core.after(0, function()
 		for _, s in ipairs(spawns) do
-			goodluck_villages.spawn(s[1], s[2], s[3])
+			goodluck_villages.spawn(s[1], s[2], s[3], s[4])
 		end
 	end)
 	return #placements, #spawns
