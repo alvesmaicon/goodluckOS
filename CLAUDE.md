@@ -47,7 +47,7 @@ Card layout (A33):
 
 - `origin` is upstream CodeZombie; `fork` is alvesmaicon. `develop` is the fork's main branch: start new work from it on `feat/*`, `fix/*` or `debug/*`, then merge back. `pr/*` branches start from `origin/main`.
 - A branch merged into `develop` is deleted in the same step: `git worktree remove` its worktree, `git branch -d` it, and `git push fork --delete` it if it is on the fork. A `pr/*` branch goes the same way once upstream merges or closes its PR. The commits stay in `develop`, and the merge commit keeps the branch's name. Before removing a worktree, check `git status` there: uncommitted work gets committed or the owner decides.
-- Upstream PRs merged: #48 (Jeferson's A/B fix), #52 (MTP HOME), #55 (boot: appctl path, no power-manager respawn), #56 (headphones + FN+DOWN), #59 (TF-2 slot), #60 (idempotent `post-build.sh`), #64 (D-pad hold-to-repeat), #66 (TF-2 card over MTP), #70 (A23 audio), #77 (MTP cancel/rename), #88 (autolaunch at boot). #69 (A23 TF-2 power) is obsolete: upstream's DTS split gives both SoCs the supply.
+- Upstream PRs merged: #48 (Jeferson's A/B fix), #52 (MTP HOME), #55 (boot: appctl path, no power-manager respawn), #56 (headphones + FN+DOWN), #59 (TF-2 slot), #60 (idempotent `post-build.sh`), #64 (D-pad hold-to-repeat), #66 (TF-2 card over MTP), #70 (A23 audio), #77 (MTP cancel/rename), #88 (autolaunch at boot). #69 (A23 TF-2 power) was closed: upstream's DTS split already gives both SoCs the supply.
 - Upstream issues that the fork's code already answers: #23 (Gallium HUD options, in `develop`), #24 (Mesa overlay), #5 (System Settings), #13/#14 (LED, partly). #46 is the owner's "features from my fork" list.
 - Fork issues: #1 screen artifacts (thermal suspected, `debug/thermal-log` logs to `HOME/logs/templog.csv`); #2 Wi-Fi dongle on OTG (no VBUS: DTS lacks `x-powers,drive-vbus-en` and `usb0_vbus-supply`).
 
@@ -76,6 +76,7 @@ Card layout (A33):
 - Git Bash on Windows rewrites `/tmp/...` arguments into Windows paths: set `MSYS_NO_PATHCONV=1`.
 - MTP is ~10 MB/s; the card reader is 40-80 MB/s. Use the reader for big copies (ROMs).
 - The overlay over games is the Gallium HUD patched in Mesa (`rootfs/board/my-device/patches/mesa3d`): a feedback panel (`/dev/shm/hud-osd`) and a status bar (`GALLIUM_HUD_STATUS`, set by `etc/profile.d/gallium_hud.sh`). FN+UP sends signal 34 to the running app.
+- Autolaunch: `appctl` starts `HOME/autolaunch` once per boot (the first line not starting with `#`); Puppy only writes that file (SELECT). On a new HOME it holds upstream's `glos-setup` (first-boot welcome and headphone warning), which deletes the file when it ends.
 - The fork's Puppy reads `gamelist.xml` (names, descriptions, images). Upstream's Puppy only shows `icons/<game name>.png`.
 - Upstream `main` has no time zone setting and shows UTC. The fork has Date & Time. The owner is in Brazil (UTC-3).
 - Emulation limits on this hardware: no viable N64/NDS/Dreamcast core (parallel-n64 runs, badly). Half-Life 1 (Xash3D, gles1) and the native SM64 port run well.
