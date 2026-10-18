@@ -1,10 +1,10 @@
 menu "goodluckOS Custom Packages"
+source "../package/imgui/Config.in"
 source "../package/retroarch/Config.in"
 source "../package/libretro-cores/Config.in"
 source "../package/puppy/Config.in"
 source "../package/ppsspp/Config.in"
 source "../package/evsieve/Config.in"
 source "../package/credits/Config.in"
-source "../package/milkytracker/Config.in"
 source "../package/glos-setup/Config.in"
 endmenu
