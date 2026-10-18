@@ -1,19 +1,20 @@
 -- Minecraft's maps (minecraft.wiki/w/Map). An empty map (eight papers around a compass), used with R1, becomes the map
 -- of the 128 x 128 nodes around you, one node a pixel, on Minecraft's grid so that maps sit side by side; eight papers
 -- around a map zoom it out, 1:2 up to 1:16 (2048 nodes), drawn anew as in Minecraft. Held, it draws the surface within
--- REACH nodes of you, nearest first, north up, each node in the colour of its top texture, shaded as Minecraft's (lighter
--- than the pixel to the north when higher, darker when lower, water by depth), and shows you as an arrow.
+-- REACH pixels of you (so a new 1:1 map starts mostly blank and a zoomed out one reaches as far as you see), nearest
+-- first, north up, each node in the colour of its top texture, shaded as Minecraft's (lighter than the pixel to the
+-- north when higher, darker when lower, water by depth), and shows you as an arrow.
 -- The engine keeps every image it is sent, so the map goes as 16 tiles and only a changed tile is sent again
 local S = core.get_translator("goodluck_map")
 local EMPTY, MAP = "goodluck_map:empty_map", "goodluck_map:map"
 local PIXELS, TILE, MAX_ZOOM = 128, 32, 4
 local TILES = PIXELS / TILE
-local REACH = 64
+local REACH = 32 -- pixels at any zoom, 32 nodes at 1:1 up to 512 at 1:16, never past the viewing range
 local TICK, BUDGET = 0.2, 6000 -- s, µs of drawing a tick
 local NEW, OLD, SCAN = 600, 50, 2500 -- columns a tick for new pixels and for drawn ones again, pixels looked at
 local WALK = 96 -- nodes up or down from a guess to the ground
 local LOADS = 3 -- map blocks read from disk a tick, where the server has let go of them
-local REDRAW = {1e6, 1e6, 2e6, 4e6, 8e6} -- µs between two images of a tile, by zoom
+local REDRAW, BIG = {1e6, 1e6, 2e6, 4e6, 8e6}, 64 -- µs between two images of a tile by zoom, 1 s with BIG new pixels
 local SCALE, MARKER = 2, 2
 local PAPER = string.char(226, 212, 168, 255)
 local floor = math.floor
@@ -86,9 +87,9 @@ end
 local function setup(m)
 	local size = PIXELS * 2 ^ m.zoom
 	m.s, m.x0, m.z0 = 2 ^ m.zoom, m.cx - size / 2, m.cz + size / 2 - 1
-	m.dirty, m.img, m.stamp, m.fail = {}, {}, {}, {}
+	m.dirty, m.img, m.stamp, m.fail, m.changed = {}, {}, {}, {}, {}
 	for t = 1, TILES * TILES do
-		m.dirty[t], m.stamp[t] = true, 0
+		m.dirty[t], m.stamp[t], m.changed[t] = true, 0, 0
 	end
 	return m
 end
@@ -287,7 +288,7 @@ local function draw(m, px, py, y)
 	if m.p[i] ~= v then
 		m.p[i], m.unsaved = v, true
 		local t = floor(py / TILE) * TILES + floor(px / TILE) + 1
-		m.dirty[t] = true
+		m.dirty[t], m.changed[t] = true, m.changed[t] + 1
 		if py % TILE == TILE - 1 and py < PIXELS - 1 then
 			m.dirty[t + TILES] = true
 		end
@@ -295,12 +296,11 @@ local function draw(m, px, py, y)
 	return true
 end
 
--- the offsets within reach at each zoom, nearest first
+-- the offsets within rp pixels, nearest first
 local rings = {}
-local function ring(zoom)
-	local r = rings[zoom]
+local function ring(rp)
+	local r = rings[rp]
 	if not r then
-		local rp = REACH / 2 ^ zoom
 		r = {}
 		for dy = -rp, rp do
 			for dx = -rp, rp do
@@ -311,7 +311,7 @@ local function ring(zoom)
 			end
 		end
 		table.sort(r)
-		rings[zoom] = r
+		rings[rp] = r
 	end
 	return r
 end
@@ -334,10 +334,15 @@ end
 -- done around the new one too, less the step); pixels that failed again after a while; with nothing new, a few drawn
 -- pixels again (the world changes). The outer ring of the reach only on every other pixel, Minecraft's checkered edge
 local function survey(m, st, pos, t0)
-	local r = ring(m.zoom)
+	local view = math.min(tonumber(core.settings:get("viewing_range")) or 190,
+		(tonumber(core.settings:get("max_block_send_distance")) or 12) * 16)
+	local rp = math.max(1, math.min(REACH, floor(view / m.s)))
+	local r = ring(rp)
+	if st.rp ~= rp then
+		st.rp, st.new, st.old, st.cx = rp, 0, 0, nil
+	end
 	local fx, fy = locate(m, pos)
 	local cx, cy = floor(fx), floor(fy)
-	local rp = REACH / m.s
 	local edge = (rp - math.max(1, rp / 32)) ^ 2 * 1048576
 	local feet = floor(pos.y + 0.5)
 	local cost = m.s == 1 and 1 or 4
@@ -431,8 +436,9 @@ end
 
 local function redraw(m, now)
 	for t = 1, TILES * TILES do
-		if m.dirty[t] and now - m.stamp[t] >= REDRAW[m.zoom + 1] then
-			m.dirty[t], m.stamp[t] = false, now
+		local wait = now - m.stamp[t]
+		if m.dirty[t] and (wait >= REDRAW[m.zoom + 1] or wait >= 1e6 and m.changed[t] >= BIG) then
+			m.dirty[t], m.stamp[t], m.changed[t] = false, now, 0
 			m.img[t] = image(m, t)
 		end
 	end
