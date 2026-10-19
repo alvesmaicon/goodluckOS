@@ -43,25 +43,15 @@ core.register_craft({
 	recipe = {{"goodluck_lapis:block"}},
 })
 
--- tin's numbers, between copper (from -64) and gold (from -256); new terrain only, old caves stay as they are
+-- as in Minecraft before 1.18: one vein of ~5 (its size 7) a 16x16 column, up to its y 32 (ours -30, see
+-- goodluck_ores) and on down; new terrain only, old caves stay as they are
 core.register_ore({
 	ore_type = "scatter",
 	ore = "goodluck_lapis:stone_with_lapis",
 	wherein = "default:stone",
-	clust_scarcity = 13 * 13 * 13,
-	clust_num_ores = 4,
-	clust_size = 3,
-	y_max = -32,
-	y_min = -255,
-})
-
-core.register_ore({
-	ore_type = "scatter",
-	ore = "goodluck_lapis:stone_with_lapis",
-	wherein = "default:stone",
-	clust_scarcity = 10 * 10 * 10,
+	clust_scarcity = 16 * 16 * 32,
 	clust_num_ores = 5,
-	clust_size = 3,
-	y_max = -256,
+	clust_size = 2,
+	y_max = -30,
 	y_min = -31000,
 })
