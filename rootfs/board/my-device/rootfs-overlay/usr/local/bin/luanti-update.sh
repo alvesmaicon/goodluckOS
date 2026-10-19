@@ -24,7 +24,7 @@ ascii() {
 
 # say "English text with %s" [args]: translated as Puppy is, on the screen and in the log
 say() {
-    _fmt=$(/usr/local/bin/gl-tr "$1")
+    _fmt=$(/usr/local/bin/gl-tr "$1" 2>/dev/null || printf '%s' "$1")
     shift
     _msg=$(printf "$_fmt" "$@")
     ascii "$_msg" | fold -s -w 76 | sed 's/^/  /'
