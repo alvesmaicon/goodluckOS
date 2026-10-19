@@ -253,6 +253,7 @@ core.register_on_dieplayer(leave_table)
 local function inventory(y)
 	return ("list[current_player;main;0,%g;8,3;8]"):format(y) .. goodluck_craft.hotbar(y + 3.15)
 end
+goodluck_craft.inventory = inventory
 function goodluck_craft.hotbar(y)
 	return default.get_hotbar_bg(0, y) .. ("list[current_player;main;0,%g;8,1;]"):format(y)
 end

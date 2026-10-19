@@ -111,6 +111,13 @@ goodluck_monsters
   mushroom's model, every other texture and the sounds are goodluckOS's own
   (see goodluck_* below).
 
+goodluck_chest
+  The big chest's halves, goodluck_chest_{front,top,back,inside}_{left,right}.png,
+  are Minetest Game's default_chest_front, _top, _side and _inside.png (see
+  Minetest Game, mods/default/license.txt) cut and joined by a script, and so
+  under CC BY-SA 3.0. Its page numbers, goodluck_chest_page_1 and _2.png, are
+  goodluckOS's own (see goodluck_* below).
+
 goodluck_villages
   Built on villages_mtg 1.0.3 by Drix03,
   https://content.luanti.org/packages/Drix03/villages_mtg/, MIT:
@@ -121,8 +128,8 @@ Left out of mobs, mobs_animal, mobs_monster, stamina, mobs_npc and mob_horse:
 screenshot.jpg, made on textstudio.com, whose terms are unclear. The game
 doesn't use them.
 
-goodluck_* mods (but goodluck_villages' buildings and goodluck_monsters' spider,
-above), and the stamina, mobs_animal, mobs_monster, x_enchanting, mobs_npc and
+goodluck_* mods (but goodluck_villages' buildings, goodluck_monsters' spider and
+goodluck_chest's halves, above), and the stamina, mobs_animal, mobs_monster, x_enchanting, mobs_npc and
 x_bows media above (but the half-drawn bow, CC BY-SA 4.0)
   Code, pixel art (goodluck_horse's coats, markings, saddle and horse armor
   are painted by a script on mob_horse's model), the rat's and the bomb

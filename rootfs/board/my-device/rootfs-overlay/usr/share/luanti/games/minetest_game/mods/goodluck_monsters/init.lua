@@ -313,19 +313,14 @@ core.register_craftitem(MOD .. "rotten_flesh", {
 	description = S("Rotten Flesh"),
 	inventory_image = "goodluck_monsters_rotten_flesh.png",
 	groups = {food = 1},
-	-- 4 of hunger, and as Minecraft's Hunger effect, 4 times in 5 two of them go again soon after
+	-- 4 of hunger, and 4 times in 5 Minecraft's Hunger effect (goodluck_hunger)
 	on_use = function(itemstack, user, pointed_thing)
+		local before = itemstack:get_count()
 		local left = core.item_eat(4)(itemstack, user, pointed_thing)
-		if user and math.random(5) <= 4 and core.global_exists("stamina") and stamina.change_saturation then
-			local name = user:get_player_name()
-			for i = 1, 2 do
-				core.after(3 * i, function()
-					local player = core.get_player_by_name(name)
-					if player then
-						stamina.change_saturation(player, -1)
-					end
-				end)
-			end
+		-- stamina doesn't eat on a full bar
+		local eaten = left and left:get_count() < before
+		if eaten and user and math.random(5) <= 4 and core.global_exists("goodluck_hunger") then
+			goodluck_hunger.hungry(user)
 		end
 		return left
 	end,
