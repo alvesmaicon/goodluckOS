@@ -289,6 +289,8 @@ Plug the console into your PC with a USB cable and open `goodluckOS -> HOME` (Wi
 
 If the console was connected to a charger when it booted (no PC), restart it before plugging it into a PC to get MTP; the serial console works either way. Games copied while Puppy is open show up after you reopen it.
 
+On a PC's USB the battery charges up to 90% and then rests, so a console left plugged in for days doesn't wear its battery out. It charges again once the cable comes out and goes back in, or at 50% if a game drains it while plugged in. A charger with no PC behind it charges to full.
+
 Already have a scraped collection (e.g. made with [Skraper](https://www.skraper.net/) for EmulationStation)? Copy it as it is, `gamelist.xml` and `media` folder included: Puppy reads them.
 
 To add custom art to Puppy, add an image file into the `icons` folder in your rom folder with the same name as the rom file. (eg. if your game is `roms/snes/super-mario.smc`, your image would be `roms/snes/icons/super-mario.png`)
