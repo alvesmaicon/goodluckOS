@@ -17,7 +17,7 @@ set_conf() {
 }
 
 # no menu sets these: they follow the image's defaults even when already in the conf
-for key in loading_terrain_radius loading_terrain_timeout; do
+for key in loading_terrain_radius loading_terrain_timeout mob_active_limit; do
     value=$(sed -n "s/^$key *= *//p" "$defaults" | tail -n 1)
     [ -n "$value" ] && set_conf "$key" "$value"
 done
