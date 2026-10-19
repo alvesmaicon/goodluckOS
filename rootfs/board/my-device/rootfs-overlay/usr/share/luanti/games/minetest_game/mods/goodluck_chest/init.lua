@@ -61,11 +61,9 @@ local function lids(lp, open)
 	end
 end
 
--- the inventory's panel and tab row (goodluck_craft), the chest's 4 rows where the inventory has the player; the
--- panel ~12 px around the slots on every side at 640x480, as over the first row (in its units they take 8 x 8.38)
+-- the inventory's panel and tab row (goodluck_craft), the chest's 4 rows where the inventory has the player
 local TAB_ROW = 1.05
 local TOP = -0.16 + TAB_ROW
-local SIDE, EDGE = 0.24, 0.26
 local function formspec(lp, page)
 	local loc = ("nodemeta:%d,%d,%d"):format(lp.x, lp.y, lp.z)
 	local fs = {
@@ -74,8 +72,7 @@ local function formspec(lp, page)
 		"no_prepend[]",
 		"bgcolor[#080808BB;true]",
 		"listcolors[#00000069;#5A5A5A;#141318;#30434C;#FFF]",
-		("background9[%g,%g;%g,%g;gui_formbg.png;false;10]"):format(0.25 - SIDE, TOP - EDGE, 8 + 2 * SIDE,
-			8.38 + 2 * EDGE),
+		goodluck_craft and goodluck_craft.panel(TOP) or "",
 	}
 	for i = 1, 2 do
 		local x, y = 0.25 + (i - 1) * 1.25, TOP - TAB_ROW + 0.043
