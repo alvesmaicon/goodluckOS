@@ -40,6 +40,7 @@ local function tab(i, title, icon, selected, x, y, row, creative)
 	fs[#fs + 1] = ("tooltip[%s;%s]"):format(name, core.formspec_escape(title))
 	return table.concat(fs)
 end
+goodluck_craft.tab = tab
 
 -- top and bottom: the rows' y, the upper one ending at the panel and the lower one starting there; right: the last
 -- place's x
