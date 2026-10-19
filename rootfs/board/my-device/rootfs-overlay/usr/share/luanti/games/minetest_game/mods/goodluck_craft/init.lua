@@ -264,6 +264,14 @@ end
 -- wider, for the 9th column, the scrollbar and the trash beside the hotbar); the engine leaves the HUD out under it
 local TAB_ROW = 1.05
 goodluck_craft.CREATIVE_TOP = -0.17 + TAB_ROW
+-- survival's panel stands 12 px from the slots at the sides and the bottom at 640x480 (in its units they take
+-- 8.04 x 8.4, the hotbar's bottom in the same place on every page), 11 over the first row, where the tabs sit on
+-- it; goodluck_chest's big chest draws it too
+local SIDE, EDGE = 0.24, 0.26
+function goodluck_craft.panel(top)
+	return ("background9[%g,%g;%g,%g;gui_formbg.png;false;10]"):format(0.25 - SIDE, top - EDGE, 8.04 + 2 * SIDE,
+		8.4 + 2 * EDGE)
+end
 function sfinv.make_formspec(player, context, content, show_inv)
 	local creative = core.is_creative_enabled(player:get_player_name())
 	local w = creative and 9.7 or 8.5
@@ -278,8 +286,9 @@ function sfinv.make_formspec(player, context, content, show_inv)
 		"no_prepend[]",
 		"bgcolor[#080808BB;true]",
 		"listcolors[#00000069;#5A5A5A;#141318;#30434C;#FFF]",
-		-- as much panel below the hotbar as at the sides and the top
-		("background9[-0.2,%g;%g,%g;gui_formbg.png;false;10]"):format(top - 0.26, w + 0.4, bottom + 0.66),
+		-- creative's: as much panel below the hotbar as at the sides and the top
+		creative and ("background9[-0.2,%g;%g,%g;gui_formbg.png;false;10]"):format(top - 0.26, w + 0.4, bottom + 0.66)
+			or goodluck_craft.panel(top),
 		goodluck_craft.tabs_formspec(context, creative, tabs_top, tabs_bottom, 8.65),
 		("container[%g,%g]"):format(creative and 0 or 0.25, top),
 		show_inv and inventory(4.15) or "",
