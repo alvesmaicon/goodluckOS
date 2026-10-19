@@ -95,6 +95,13 @@ DESCRIPTION=It's Doom.
 ICON=/usr/share/icons/chocolate-doom.png
 COMMAND=chocolate-doom
 
+[ENTRY]
+CATEGORY=Games
+NAME=Luanti
+DESCRIPTION=A world of blocks: build, mine, craft and survive
+ICON=/usr/share/icons/luanti.png
+COMMAND=luanti.sh
+
 [ARCHIVE]
 NAME=Playstation
 Description=Sony Playstation
