@@ -1,0 +1,36 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Tue, 13 Oct 2026 02:49:42 -0300
+Subject: [PATCH 04/13] formspec: fit fixed-size forms to screens under 800x600
+
+size[w,h,true] locks a form to a base screen of 800x600: it is laid
+out and centered as if the screen were that big, shifted by half the
+extra space when the real screen is bigger, and not at all when it is
+smaller. On a 640x480 screen such a form (the main menu's "create
+world" dialog, for one) is centered at (400,300) instead of (320,240):
+80 pixels right and 60 down, with its buttons off the screen.
+
+Only lock when the screen is at least 800x600; below that the form is
+sized to fit the screen and centered on it, as a form without the
+fixed flag is (and as touch_gui already makes them all).
+
+Upstream: not sent yet.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/src/gui/guiFormSpecMenu.cpp b/src/gui/guiFormSpecMenu.cpp
+index 04a2a7089..6064f294c 100644
+--- a/src/gui/guiFormSpecMenu.cpp
++++ b/src/gui/guiFormSpecMenu.cpp
+@@ -337,7 +337,10 @@ void GUIFormSpecMenu::parseSize(parserData* data, const std::string &element)
+ 
+ 		lockSize(false);
+ 		if (!g_settings->getBool("touch_gui") && parts.size() == 3) {
+-			if (parts[2] == "true") {
++			// on a screen smaller than the 800x600 base the form would be centered off it:
++			// fit it to the screen instead
++			const v2u32 screen = RenderingEngine::get_video_driver()->getScreenSize();
++			if (parts[2] == "true" && screen.X >= 800 && screen.Y >= 600) {
+ 				lockSize(true,v2u32(800,600));
+ 			}
+ 		}

@@ -1,0 +1,167 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Fri, 16 Oct 2026 00:46:40 -0300
+Subject: [PATCH 19/19] GUI: item meshes share one depth clear per frame
+
+drawItemStack cleared the depth buffer before every item it draws as a
+mesh (a node without an inventory image). On tiled GPUs a clear that
+follows a draw ends the render pass: Mesa's lima submits the frame so
+far and reloads it (lima_clear flushes the job when draws are pending).
+An inventory page full of blocks drew one whole frame per block and ran
+at about 5 FPS on a Mali-400, and the HUD hotbar paid the same for each
+block in it.
+
+Each mesh now gets a slice of the depth range of its own, nearer than
+the ones drawn before it, so meshes keep their drawing order without a
+clear; only the first mesh after a reset clears, as the world's depth is
+still there. The reset runs where a frame's 2D drawing starts (the HUD,
+the main menu, the menu scenes) and after a model[] scene, which uses
+the depth buffer the usual way. After 256 slices it clears again.
+
+The view matrix maps z from -1 to 3 onto 0 to 4/101; the projection's z
+row now maps that onto the slice instead of the whole range.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/src/client/render/plain.cpp b/src/client/render/plain.cpp
+index 961f90016..6f47f5274 100644
+--- a/src/client/render/plain.cpp
++++ b/src/client/render/plain.cpp
+@@ -13,6 +13,7 @@
+ #include "client/minimap.h"
+ #include "client/shadows/dynamicshadowsrender.h"
+ #include <IGUIEnvironment.h>
++#include "gui/drawItemStack.h"
+ 
+ /// Draw3D pipeline step
+ void Draw3D::run(PipelineContext &context)
+@@ -39,6 +40,7 @@ void DrawWield::run(PipelineContext &context)
+ 
+ void DrawHUD::run(PipelineContext &context)
+ {
++	drawItemStackDepthReset();
+ 	if (context.show_hud) {
+ 		if (context.shadow_renderer)
+ 			context.shadow_renderer->drawDebug();
+diff --git a/src/client/renderingengine.cpp b/src/client/renderingengine.cpp
+index ccc44522b..49023d1e3 100644
+--- a/src/client/renderingengine.cpp
++++ b/src/client/renderingengine.cpp
+@@ -20,6 +20,7 @@
+ #include "porting.h"
+ #include "clientmap.h"
+ #include "renderingengine.h"
++#include "gui/drawItemStack.h"
+ #include "render/core.h"
+ #include "render/factory.h"
+ #include "filesys.h"
+@@ -370,6 +371,7 @@ void RenderingEngine::draw_load_screen(const std::wstring &text,
+ 		}
+ 	}
+ 
++	drawItemStackDepthReset();
+ 	guienv->drawAll();
+ 	driver->endScene();
+ 	guitext->remove();
+diff --git a/src/gui/drawItemStack.cpp b/src/gui/drawItemStack.cpp
+index e9dddafef..9a11011b2 100644
+--- a/src/gui/drawItemStack.cpp
++++ b/src/gui/drawItemStack.cpp
+@@ -23,6 +23,17 @@ struct MeshTimeInfo {
+ 	scene::IMesh *mesh = nullptr;
+ };
+ 
++// Each item mesh is drawn in a thin slice of the depth range, nearer than the slices before it, instead of after a
++// depth clear: on tiled GPUs a clear that follows a draw ends the render pass (lima submits the frame so far and
++// reloads it), which brought a full inventory down to a few FPS. Only the first mesh after a reset clears.
++static constexpr u32 DEPTH_SLICES = 256;
++static u32 depth_slice = 0;
++
++void drawItemStackDepthReset()
++{
++	depth_slice = 0;
++}
++
+ void drawItemStack(
+ 		video::IVideoDriver *driver,
+ 		gui::IGUIFont *font,
+@@ -69,7 +80,10 @@ void drawItemStack(
+ 	}
+ 	if (has_mesh) {
+ 		scene::IMesh *mesh = imesh->mesh;
+-		driver->clearBuffers(video::ECBF_DEPTH);
++		if (depth_slice == 0 || depth_slice >= DEPTH_SLICES) {
++			driver->clearBuffers(video::ECBF_DEPTH);
++			depth_slice = 0;
++		}
+ 		s32 delta = 0;
+ 		if (rotation_kind < IT_ROT_NONE) {
+ 			MeshTimeInfo &ti = rotation_time_infos[rotation_kind];
+@@ -86,6 +100,12 @@ void drawItemStack(
+ 
+ 		core::matrix4 ProjMatrix;
+ 		ProjMatrix.buildProjectionMatrixOrthoLH(2.0f, 2.0f, -1.0f, 100.0f);
++		// ViewMatrix below maps z from -1 to 3 onto 0 to 4/101: that goes into this mesh's slice of the clip range,
++		// the first slice the farthest
++		const f32 slice = 2.0f / DEPTH_SLICES;
++		ProjMatrix[10] = slice * 101.0f / 4.0f;
++		ProjMatrix[14] = 1.0f - slice * (depth_slice + 1);
++		depth_slice++;
+ 
+ 		core::matrix4 ViewMatrix;
+ 		ViewMatrix.buildProjectionMatrixOrthoLH(
+diff --git a/src/gui/drawItemStack.h b/src/gui/drawItemStack.h
+index 52bccf089..aa13d947f 100644
+--- a/src/gui/drawItemStack.h
++++ b/src/gui/drawItemStack.h
+@@ -21,6 +21,10 @@ enum ItemRotationKind
+ 	IT_ROT_NONE, // Must be last, also serves as number
+ };
+ 
++// Item meshes share the depth buffer instead of clearing it each: call at the start of a frame's 2D drawing, and after
++// anything else in the GUI used the depth buffer (a 3D scene), so that the next mesh clears it once
++void drawItemStackDepthReset();
++
+ void drawItemStack(video::IVideoDriver *driver,
+ 		gui::IGUIFont *font,
+ 		const ItemStack &item,
+diff --git a/src/gui/guiEngine.cpp b/src/gui/guiEngine.cpp
+index ac84c7c53..f95df2d21 100644
+--- a/src/gui/guiEngine.cpp
++++ b/src/gui/guiEngine.cpp
+@@ -3,6 +3,7 @@
+ // Copyright (C) 2013 sapier
+ 
+ #include "guiEngine.h"
++#include "drawItemStack.h"
+ #include "statusTextHelper.h"
+ 
+ #include "client/fontengine.h"
+@@ -367,6 +368,7 @@ void GUIEngine::run()
+ 
+ 			drawFooter(driver);
+ 
++			drawItemStackDepthReset();
+ 			m_rendering_engine->get_gui_env()->drawAll();
+ 
+ 			// The header *must* be drawn after the menu because it uses
+diff --git a/src/gui/guiScene.cpp b/src/gui/guiScene.cpp
+index 12703de21..0741ced70 100644
+--- a/src/gui/guiScene.cpp
++++ b/src/gui/guiScene.cpp
+@@ -3,6 +3,7 @@
+ // Copyright (C) 2020 Jean-Patrick Guerrero <jeanpatrick.guerrero@gmail.com>
+ 
+ #include "guiScene.h"
++#include "drawItemStack.h"
+ 
+ #include <SViewFrustum.h>
+ #include <AnimatedMeshSceneNode.h>
+@@ -112,6 +113,7 @@ void GUIScene::draw()
+ 
+ 	cameraLoop();
+ 	m_smgr->drawAll();
++	drawItemStackDepthReset();
+ 
+ 	m_driver->setViewPort(oldViewPort);
+ }

@@ -1,0 +1,452 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Tue, 13 Oct 2026 02:49:43 -0300
+Subject: [PATCH 11/13] client: merge simplified faces, and leave out far
+ detail meshes
+
+Equal faces next to each other in a simplified mesh (same node, param2
+and light) become one quad when the texture tiles, and an opaque liquid
+(translucent_liquids = false) hides the faces of solid cells. Lake view:
+679,198 -> 529,246 vertices.
+
+Detail meshes of blocks beyond client_lod_distance plus 32 nodes were
+made and kept for nothing. Now a block received there gets no detail
+mesh and is acked right away, since no mesh result would ack it; a far
+block's detail mesh is dropped when the BFS culler visits it; and a
+block left out is meshed again once its region comes within those 32
+nodes, before it is drawn in detail. With the loops culler or range_all,
+which don't draw simplified meshes, every block is meshed again.
+
+Flying over the lake and back (300 nodes at 6 nodes/s), the client's
+RSS on llvmpipe peaked at 571 MB instead of 708 MB.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/src/client/client.cpp b/src/client/client.cpp
+index 8bdaf8ac0..0b5c2c766 100644
+--- a/src/client/client.cpp
++++ b/src/client/client.cpp
+@@ -692,6 +692,12 @@ void Client::step(float dtime)
+ 				if (block)
+ 					block->refDrop();
+ 		}
++		for (size_t i = 0; i < m_far_blocks_to_ack.size(); i += 255) {
++			auto from = m_far_blocks_to_ack.begin() + i;
++			sendGotBlocks(std::vector<v3s16>(from,
++					from + std::min<size_t>(255, m_far_blocks_to_ack.size() - i)));
++		}
++		m_far_blocks_to_ack.clear();
+ 		if (blocks_to_ack.size() > 0) {
+ 				// Acknowledge block(s)
+ 				sendGotBlocks(blocks_to_ack);
+@@ -1808,7 +1814,12 @@ void Client::addUpdateMeshTask(v3s16 p, bool ack_to_server, bool urgent)
+ 
+ void Client::addUpdateMeshTaskWithEdge(v3s16 blockpos, bool ack_to_server, bool urgent)
+ {
+-	m_env.getClientMap().markLodDirty(blockpos);
++	ClientMap &map = m_env.getClientMap();
++	map.markLodDirty(blockpos);
++	if (ack_to_server && map.skipDetailMesh(m_mesh_grid.getMeshPos(blockpos))) {
++		m_far_blocks_to_ack.push_back(blockpos);
++		ack_to_server = false;
++	}
+ 	m_mesh_update_manager->updateBlock(&m_env.getMap(), blockpos, ack_to_server, urgent, true);
+ }
+ 
+diff --git a/src/client/client.h b/src/client/client.h
+index 240990e3d..a9c33f890 100644
+--- a/src/client/client.h
++++ b/src/client/client.h
+@@ -508,6 +508,8 @@ class Client : public con::PeerHandler, public InventoryManager, public IGameDef
+ 
+ 
+ 	std::unique_ptr<MeshUpdateManager> m_mesh_update_manager;
++	// received far away, with no detail mesh to wait for (client_lod_distance)
++	std::vector<v3s16> m_far_blocks_to_ack;
+ 	ClientEnvironment m_env;
+ 	std::unique_ptr<ParticleManager> m_particle_manager;
+ 	std::unique_ptr<con::IConnection> m_con;
+diff --git a/src/client/clientmap.cpp b/src/client/clientmap.cpp
+index f7d809395..76b5ccae5 100644
+--- a/src/client/clientmap.cpp
++++ b/src/client/clientmap.cpp
+@@ -388,17 +388,24 @@ void ClientMap::clearDrawList()
+ 	m_needs_update_drawlist = true;
+ }
+ 
++// Detail meshes are made this many nodes before they are drawn
++static constexpr f32 LOD_DETAIL_MARGIN = 2 * MAP_BLOCKSIZE;
++
+ static const v3s16 lod_face_dirs[6] = {
+ 	v3s16(0, 1, 0), v3s16(0, -1, 0), v3s16(1, 0, 0),
+ 	v3s16(-1, 0, 0), v3s16(0, 0, 1), v3s16(0, 0, -1),
+ };
+ 
+-bool ClientMap::useLod(v3s16 region_pos, u64 now_ms)
++f32 ClientMap::lodDistance(v3s16 region_pos) const
+ {
+ 	constexpr s16 R = LodMeshGenerator::REGION;
+ 	const v3f center = intToFloat(region_pos * MAP_BLOCKSIZE, BS) +
+ 			v3f((R * MAP_BLOCKSIZE * 0.5f - 0.5f) * BS);
+-	const bool far = center.getDistanceFrom(m_camera_position) > m_cache_lod_distance * BS;
++	return center.getDistanceFrom(m_camera_position);
++}
++
++bool ClientMap::useLod(v3s16 region_pos, bool far, u64 now_ms)
++{
+ 	auto it = m_lod_regions.find(region_pos);
+ 	if (!far) {
+ 		if (it != m_lod_regions.end()) {
+@@ -441,6 +448,33 @@ void ClientMap::dropLodMeshes(LodRegion &region)
+ 	}
+ }
+ 
++void ClientMap::dropDetailMesh(MapBlock *block)
++{
++	invalidateMapBlockMesh(block->mesh);
++	delete block->mesh;
++	block->mesh = nullptr;
++	block->lod_no_mesh = true;
++}
++
++bool ClientMap::skipDetailMesh(v3s16 mesh_pos)
++{
++	constexpr s16 R = LodMeshGenerator::REGION;
++	// Only the BFS culler draws simplified meshes
++	if (m_cache_lod_distance <= 0 || m_control.range_all || m_loops_occlusion_culler ||
++			R % m_client->getMeshGrid().cell_size != 0)
++		return false;
++	if (lodDistance(getContainerPos(mesh_pos, R) * R) <=
++			(m_cache_lod_distance + LOD_DETAIL_MARGIN) * BS)
++		return false;
++	MapBlock *block = getBlockNoCreateNoEx(mesh_pos);
++	if (!block)
++		return false;
++	if (block->mesh)
++		dropDetailMesh(block);
++	block->lod_no_mesh = true;
++	return true;
++}
++
+ void ClientMap::setLodMesh(v3s16 region_pos, std::unique_ptr<MapBlockMesh> mesh,
+ 		std::unique_ptr<MapBlockMesh> (&skirts)[6])
+ {
+@@ -566,6 +600,12 @@ void ClientMap::updateDrawList()
+ 				v3s16 block_pos = block->getPos();
+ 				v3s16 block_pos_nodes = block->getPosRelative();
+ 
++				// Left without a detail mesh while the BFS culler drew it simplified
++				if (block->lod_no_mesh) {
++					block->lod_no_mesh = false;
++					m_client->addUpdateMeshTask(block_pos);
++				}
++
+ 				if (mesh) {
+ 					mesh_sphere_center = intToFloat(block_pos_nodes, BS)
+ 							+ mesh->getBoundingSphereCenter();
+@@ -716,11 +756,23 @@ void ClientMap::updateDrawList()
+ 			// Note that we don't fill m_keeplist, or call resetUsageTimer() here.
+ 			// touchMapBlocks() exists to deal with that.
+ 			const v3s16 region_pos = getContainerPos(block_coord, lod_region) * lod_region;
+-			if (lod_enabled && block && useLod(region_pos, now_ms)) {
++			bool lod = false;
++			if (lod_enabled && block) {
++				const f32 d = lodDistance(region_pos);
++				const bool detail_wanted = d <= (m_cache_lod_distance + LOD_DETAIL_MARGIN) * BS;
++				if (block->lod_no_mesh && detail_wanted) {
++					block->lod_no_mesh = false;
++					m_client->addUpdateMeshTask(block_coord);
++				}
++				lod = useLod(region_pos, d > m_cache_lod_distance * BS, now_ms);
++				// Far enough not to need its detail mesh soon
++				if (lod && mesh && !detail_wanted)
++					dropDetailMesh(block);
++			}
++			if (lod)
+ 				lod_regions.insert(region_pos);
+-			} else if (mesh) {
++			else if (mesh)
+ 				add_to_drawlist(block);
+-			}
+ 
+ 			// Decide which sides to traverse next or to block away
+ 
+diff --git a/src/client/clientmap.h b/src/client/clientmap.h
+index f12828a34..dabe074a0 100644
+--- a/src/client/clientmap.h
++++ b/src/client/clientmap.h
+@@ -125,6 +125,8 @@ class ClientMap : public Map, public scene::ISceneNode
+ 			std::unique_ptr<MapBlockMesh> (&skirts)[6]);
+ 	// The block's data changed: regions that use it need a new simplified mesh
+ 	void markLodDirty(v3s16 blockpos);
++	// Whether the mesh at mesh_pos is far enough to be drawn simplified only
++	bool skipDetailMesh(v3s16 mesh_pos);
+ 
+ 	// For debug printing
+ 	void PrintInfo(std::ostream &out) override;
+@@ -159,9 +161,12 @@ class ClientMap : public Map, public scene::ISceneNode
+ 		u64 used_ms = 0;
+ 	};
+ 
+-	// Whether the region holding a block is drawn from its simplified mesh
+-	bool useLod(v3s16 region_pos, u64 now_ms);
++	// Distance from the camera to a region's center, in BS
++	f32 lodDistance(v3s16 region_pos) const;
++	// Whether a region is drawn from its simplified mesh
++	bool useLod(v3s16 region_pos, bool far, u64 now_ms);
+ 	void dropLodMeshes(LodRegion &region);
++	void dropDetailMesh(MapBlock *block);
+ 
+ 	// update the vertex order in transparent mesh buffers
+ 	void updateTransparentMeshBuffers();
+diff --git a/src/client/mesh_generator_thread.cpp b/src/client/mesh_generator_thread.cpp
+index 252f75f51..a7617df0f 100644
+--- a/src/client/mesh_generator_thread.cpp
++++ b/src/client/mesh_generator_thread.cpp
+@@ -6,6 +6,7 @@
+ #include "settings.h"
+ #include "profiler.h"
+ #include "client.h"
++#include "clientmap.h"
+ #include "mapblock.h"
+ #include "mapblock_mesh.h"
+ #include "meshgen/collector.h"
+@@ -115,6 +116,11 @@ bool MeshUpdateQueue::addBlock(Map *map, v3s16 p, bool ack_block_to_server,
+ 	// (where all coordinate are divisible by the chunk size)
+ 	const v3s16 mesh_position = mesh_grid.getMeshPos(p);
+ 
++	// Far away blocks are drawn from the simplified mesh of their region
++	if (!m_lod && !ack_block_to_server &&
++			m_client->getEnv().getClientMap().skipDetailMesh(mesh_position))
++		return true;
++
+ 	MutexAutoLock lock(m_mutex);
+ 
+ 	/*
+diff --git a/src/client/meshgen/lod.cpp b/src/client/meshgen/lod.cpp
+index 2d7ff5add..61bf047cb 100644
+--- a/src/client/meshgen/lod.cpp
++++ b/src/client/meshgen/lod.cpp
+@@ -141,6 +141,7 @@ LodMeshGenerator::Cell LodMeshGenerator::classify(v3s16 c)
+ 	} else if (n_liquid) {
+ 		cell.kind = LIQUID;
+ 		cell.side = cell.top = most_common(liquid, n_liquid);
++		cell.opaque = m_ndef->get(cell.side).alpha == ALPHAMODE_OPAQUE;
+ 	} else {
+ 		cell.kind = AIR;
+ 	}
+@@ -177,28 +178,34 @@ u16 LodMeshGenerator::faceLight(v3s16 c, u8 face)
+ 	return decode_light(day) | (decode_light(night) << 8);
+ }
+ 
+-void LodMeshGenerator::drawFace(v3s16 c, u8 face, const Cell &cell, MeshCollector &out)
++static bool is_tileable(const TileSpec &tile)
+ {
+-	const MapNode &n = face == 0 ? cell.top : cell.side;
+-	const ContentFeatures &f = m_ndef->get(n);
++	constexpr u8 both = MATERIAL_FLAG_TILEABLE_HORIZONTAL | MATERIAL_FLAG_TILEABLE_VERTICAL;
++	return (tile.layers[0].material_flags & both) == both;
++}
++
++void LodMeshGenerator::drawQuad(u8 face, v3s16 c0, v3s16 c1, s16 w, s16 h, const Face &f,
++		MeshCollector &out)
++{
++	const ContentFeatures &cf = m_ndef->get(f.node);
+ 	TileSpec tile;
+-	getNodeTile(n, c * CELL, face_dirs[face], m_data, tile);
+-	if (cell.kind == SOLID) {
++	getNodeTile(f.node, c0 * CELL, face_dirs[face], m_data, tile);
++	if (f.kind == SOLID) {
+ 		for (auto &layer : tile.layers)
+ 			layer.material_flags |= MATERIAL_FLAG_BACKFACE_CULLING;
+ 	}
+ 
+ 	const v3f normal = v3f::from(face_dirs[face]);
+-	video::SColor color = encode_light(faceLight(c, face), f.light_source);
+-	if (!f.light_source)
++	video::SColor color = encode_light(f.light, cf.light_source);
++	if (!cf.light_source)
+ 		applyFacesShading(color, normal);
+ 
+-	const v3f min = intToFloat(c * CELL, BS) - v3f(0.5f * BS);
+-	const v3f max = min + v3f(CELL * BS);
+-	// Textures repeat once per node where they tile
+-	const u8 flags = tile.layers[0].material_flags;
+-	const f32 su = (flags & MATERIAL_FLAG_TILEABLE_HORIZONTAL) ? CELL : 1;
+-	const f32 sv = (flags & MATERIAL_FLAG_TILEABLE_VERTICAL) ? CELL : 1;
++	const v3f min = intToFloat(c0 * CELL, BS) - v3f(0.5f * BS);
++	const v3f max = intToFloat((c1 + v3s16(1)) * CELL, BS) - v3f(0.5f * BS);
++	// Textures repeat once per node where they tile, else stretch
++	const bool tileable = is_tileable(tile);
++	const f32 su = tileable ? w * CELL : 1;
++	const f32 sv = tileable ? h * CELL : 1;
+ 
+ 	video::S3DVertex v[4];
+ 	setup_face(v, face, min, max, su, sv, tile.rotation);
+@@ -221,6 +228,12 @@ void LodMeshGenerator::generate(std::vector<MeshCollector> &out)
+ 	for (c.X = -1; c.X <= m_cells; c.X++)
+ 		at(c) = classify(c);
+ 
++	// The faces to draw, per direction and cell
++	const s32 volume = m_cells * m_cells * m_cells;
++	std::vector<Face> faces(6 * volume);
++	const auto face_at = [&] (u8 face, v3s16 c) -> Face & {
++		return faces[face * volume + (c.Z * m_cells + c.Y) * m_cells + c.X];
++	};
+ 	for (c.Z = 0; c.Z < m_cells; c.Z++)
+ 	for (c.Y = 0; c.Y < m_cells; c.Y++)
+ 	for (c.X = 0; c.X < m_cells; c.X++) {
+@@ -230,20 +243,78 @@ void LodMeshGenerator::generate(std::vector<MeshCollector> &out)
+ 		for (u8 face = 0; face < 6; face++) {
+ 			const v3s16 c2 = c + face_dirs[face];
+ 			const Cell &other = at(c2);
+-			MeshCollector *dst = &out[0];
+-			if (other.kind == SOLID) {
+-				if (cell.kind == LIQUID)
++			u8 dst = 0;
++			if (cell.kind == SOLID) {
++				if (other.kind == LIQUID && other.opaque)
+ 					continue;
+-				const bool inside = c2.X >= 0 && c2.X < m_cells && c2.Y >= 0 &&
+-						c2.Y < m_cells && c2.Z >= 0 && c2.Z < m_cells;
+-				if (inside)
+-					continue;
+-				dst = &out[1 + face];
+-			} else if (cell.kind == LIQUID && other.kind == LIQUID &&
+-					other.side.getContent() == cell.side.getContent()) {
++				if (other.kind == SOLID) {
++					const bool inside = c2.X >= 0 && c2.X < m_cells && c2.Y >= 0 &&
++							c2.Y < m_cells && c2.Z >= 0 && c2.Z < m_cells;
++					if (inside)
++						continue;
++					dst = 1 + face;
++				}
++			} else if (other.kind == SOLID || (other.kind == LIQUID &&
++					other.side.getContent() == cell.side.getContent())) {
+ 				continue;
+ 			}
+-			drawFace(c, face, cell, *dst);
++			Face &f = face_at(face, c);
++			f.dst = dst;
++			f.kind = cell.kind;
++			f.node = face == 0 ? cell.top : cell.side;
++			f.light = faceLight(c, face);
++		}
++	}
++
++	// Equal faces next to each other become one quad; axes: normal, u, v of setup_face()
++	static const u8 axes[6][3] = {
++		{1, 0, 2}, {1, 0, 2}, {0, 2, 1}, {0, 2, 1}, {2, 0, 1}, {2, 0, 1},
++	};
++	std::vector<bool> done(m_cells * m_cells);
++	for (u8 face = 0; face < 6; face++) {
++		const u8 an = axes[face][0], au = axes[face][1], av = axes[face][2];
++		const auto face_uv = [&] (s16 s, s16 u, s16 v) -> Face & {
++			v3s16 p;
++			p[an] = s;
++			p[au] = u;
++			p[av] = v;
++			return face_at(face, p);
++		};
++		for (s16 s = 0; s < m_cells; s++) {
++			std::fill(done.begin(), done.end(), false);
++			for (s16 v = 0; v < m_cells; v++)
++			for (s16 u = 0; u < m_cells; u++) {
++				const Face &f = face_uv(s, u, v);
++				if (done[v * m_cells + u] || f.dst == Face::NONE)
++					continue;
++				TileSpec tile;
++				getNodeTile(f.node, v3s16(0), face_dirs[face], m_data, tile);
++				s16 w = 1, h = 1;
++				if (is_tileable(tile)) {
++					while (u + w < m_cells && !done[v * m_cells + u + w] &&
++							face_uv(s, u + w, v) == f)
++						w++;
++					for (; v + h < m_cells; h++) {
++						bool same = true;
++						for (s16 i = 0; i < w && same; i++)
++							same = !done[(v + h) * m_cells + u + i] &&
++									face_uv(s, u + i, v + h) == f;
++						if (!same)
++							break;
++					}
++				}
++				for (s16 j = 0; j < h; j++)
++				for (s16 i = 0; i < w; i++)
++					done[(v + j) * m_cells + u + i] = true;
++
++				v3s16 c0, c1;
++				c0[an] = c1[an] = s;
++				c0[au] = u;
++				c0[av] = v;
++				c1[au] = u + w - 1;
++				c1[av] = v + h - 1;
++				drawQuad(face, c0, c1, w, h, f, out[f.dst]);
++			}
+ 		}
+ 	}
+ }
+diff --git a/src/client/meshgen/lod.h b/src/client/meshgen/lod.h
+index 3430b8681..1d31ce995 100644
+--- a/src/client/meshgen/lod.h
++++ b/src/client/meshgen/lod.h
+@@ -15,7 +15,8 @@ class NodeDefManager;
+ /*
+ 	Simplified mesh of a region of 2x2x2 mapblocks, for drawing far away:
+ 	each 2x2x2 nodes become one cell, solid when a quarter of them are opaque
+-	cubes, else liquid when one of them is a liquid.
++	cubes, else liquid when one of them is a liquid. Equal faces next to each
++	other are drawn as one quad.
+ */
+ class LodMeshGenerator
+ {
+@@ -37,14 +38,34 @@ class LodMeshGenerator
+ 
+ 	struct Cell {
+ 		Kind kind = UNKNOWN;
++		// an opaque liquid hides the faces of solid cells
++		bool opaque = false;
+ 		MapNode side; // drawn on the sides and the bottom
+ 		MapNode top; // drawn on the top
+ 	};
+ 
++	struct Face {
++		static constexpr u8 NONE = 0xff;
++		// collector index
++		u8 dst = NONE;
++		Kind kind = AIR;
++		MapNode node;
++		u16 light = 0;
++
++		bool operator==(const Face &other) const
++		{
++			return dst == other.dst && kind == other.kind && light == other.light &&
++					node.getContent() == other.node.getContent() &&
++					node.param2 == other.node.param2;
++		}
++	};
++
+ 	Cell classify(v3s16 cell);
+ 	Cell &at(v3s16 cell);
+ 	u16 faceLight(v3s16 cell, u8 face);
+-	void drawFace(v3s16 cell, u8 face, const Cell &c, MeshCollector &out);
++	// One quad over the cells from c0 to c1, w x h of them
++	void drawQuad(u8 face, v3s16 c0, v3s16 c1, s16 w, s16 h, const Face &f,
++			MeshCollector &out);
+ 
+ 	MeshMakeData *m_data;
+ 	const NodeDefManager *m_ndef;
+diff --git a/src/mapblock.h b/src/mapblock.h
+index 6a6dd6b46..17366f08d 100644
+--- a/src/mapblock.h
++++ b/src/mapblock.h
+@@ -460,6 +460,9 @@ class MapBlock
+ 
+ 	// marks the sides which are opaque: 00+Z-Z+Y-Y+X-X
+ 	u8 solid_sides = 0;
++
++	// no detail mesh: far away, drawn from the simplified mesh of its region
++	bool lod_no_mesh = false;
+ #endif
+ 
+ private:

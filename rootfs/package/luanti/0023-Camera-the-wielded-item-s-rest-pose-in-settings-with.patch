@@ -1,0 +1,166 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Fri, 16 Oct 2026 14:26:39 -0300
+Subject: [PATCH 23/23] Camera: the wielded item's rest pose in settings, with
+ one for nodes
+
+The wielded item always rested at (55, -35, 65) turned (-100, 120,
+-100), in a wield camera of a fixed 72 degree FOV with the screen's
+aspect. That pose is made for wide screens: at 640x480 a sword showed
+only part of its blade, almost upright and edge on, a block was a big
+cube mostly past the right edge, and the hand and an apple were cut.
+
+wield_position and wield_rotation now set the rest pose of an item
+drawn as an extruded image, and wield_node_position and
+wield_node_rotation that of a node drawn as itself, so a block can be a
+small cube turned 45 degrees as in Minecraft while tools keep their
+own pose (WieldMeshSceneNode::isNodeMesh tells them apart). The arm's
+inertia moves around the rest pose as before, and the dig swing turns
+the item from its rest pose as it turned the default pose to (80, 30,
+100), so the defaults keep the old pose and swing exactly (checked
+pixel for pixel in the native build).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/builtin/settingtypes.txt b/builtin/settingtypes.txt
+index b33be6531..13a52cb44 100644
+--- a/builtin/settingtypes.txt
++++ b/builtin/settingtypes.txt
+@@ -534,6 +534,14 @@ offhand_rotation (Off-hand rotation) v3f (0, -25, 0)
+ offhand_raised_position (Raised off-hand position) v3f (-22, -18, 50)
+ offhand_raised_rotation (Raised off-hand rotation) v3f (0, 10, 0)
+ 
++#    Where the wielded item is held in first person, at rest: position and
++#    rotation in degrees, for an item drawn as an image and for a node drawn
++#    as itself (a cube). Digging swings it from there.
++wield_position (Wielded item position) v3f (55, -35, 65)
++wield_rotation (Wielded item rotation) v3f (-100, 120, -100)
++wield_node_position (Wielded node position) v3f (55, -35, 65)
++wield_node_rotation (Wielded node rotation) v3f (-100, 120, -100)
++
+ #    Enable view bobbing and amount of view bobbing.
+ #    For example: 0 for no view bobbing; 1.0 for normal; 2.0 for double.
+ view_bobbing_amount (View bobbing factor) float 1.0 0.0 7.9
+diff --git a/src/client/camera.cpp b/src/client/camera.cpp
+index 0d843f95f..a94c15f32 100644
+--- a/src/client/camera.cpp
++++ b/src/client/camera.cpp
+@@ -38,6 +38,7 @@ static const char *setting_names[] = {
+ 	"view_bobbing_amount", "fov", "arm_inertia",
+ 	"show_nametag_backgrounds", "offhand_position", "offhand_rotation",
+ 	"offhand_raised_position", "offhand_raised_rotation",
++	"wield_position", "wield_rotation", "wield_node_position", "wield_node_rotation",
+ };
+ 
+ Camera::Camera(MapDrawControl &draw_control, Client *client, RenderingEngine *rendering_engine):
+@@ -95,6 +96,10 @@ void Camera::readSettings()
+ 	m_offhand_rotation[0] = g_settings->getV3F("offhand_rotation").value_or(v3f(0, -25, 0));
+ 	m_offhand_position[1] = g_settings->getV3F("offhand_raised_position").value_or(v3f(-22, -18, 50));
+ 	m_offhand_rotation[1] = g_settings->getV3F("offhand_raised_rotation").value_or(v3f(0, 10, 0));
++	m_wield_position[0] = g_settings->getV3F("wield_position").value_or(v3f(55, -35, 65));
++	m_wield_rotation[0] = g_settings->getV3F("wield_rotation").value_or(v3f(-100, 120, -100));
++	m_wield_position[1] = g_settings->getV3F("wield_node_position").value_or(v3f(55, -35, 65));
++	m_wield_rotation[1] = g_settings->getV3F("wield_node_rotation").value_or(v3f(-100, 120, -100));
+ }
+ 
+ Camera::~Camera()
+@@ -514,9 +519,11 @@ void Camera::update(LocalPlayer* player, f32 frametime, f32 tool_reload_ratio)
+ 	if (m_arm_inertia)
+ 		addArmInertia(yaw);
+ 
+-	// Position the wielded item
+-	v3f wield_position = v3f(m_wieldmesh_offset.X, m_wieldmesh_offset.Y, 65);
+-	v3f wield_rotation = v3f(-100, 120, -100);
++	// Position the wielded item: its rest pose, with the arm's inertia around it
++	const int pose = m_wieldnode->isNodeMesh() ? 1 : 0;
++	v3f wield_position = m_wield_position[pose] + v3f(m_wieldmesh_offset.X - WIELDMESH_OFFSET_X,
++			m_wieldmesh_offset.Y - WIELDMESH_OFFSET_Y, 0);
++	v3f wield_rotation = m_wield_rotation[pose];
+ 	wield_position.Y += std::abs(m_wield_change_timer)*320 - 40;
+ 	if(m_digging_anim < 0.05 || m_digging_anim > 0.5)
+ 	{
+@@ -538,8 +545,12 @@ void Camera::update(LocalPlayer* player, f32 frametime, f32 tool_reload_ratio)
+ 		wield_position.Z += 25 * 0.5;
+ 
+ 		// Euler angles are PURE EVIL, so why not use quaternions?
++		// The swing turns the item from its rest pose as it turns the default one to (80, 30, 100)
+ 		core::quaternion quat_begin(wield_rotation * core::DEGTORAD);
+-		core::quaternion quat_end(v3f(80, 30, 100) * core::DEGTORAD);
++		core::quaternion swing(v3f(-100, 120, -100) * core::DEGTORAD);
++		swing.makeInverse();
++		swing = swing * core::quaternion(v3f(80, 30, 100) * core::DEGTORAD);
++		core::quaternion quat_end = quat_begin * swing;
+ 		core::quaternion quat_slerp;
+ 		quat_slerp.slerp(quat_begin, quat_end, std::sin(digfrac * M_PI));
+ 		quat_slerp.toEuler(wield_rotation);
+diff --git a/src/client/camera.h b/src/client/camera.h
+index 874730265..32eb39f79 100644
+--- a/src/client/camera.h
++++ b/src/client/camera.h
+@@ -206,6 +206,9 @@ class Camera
+ 	// lowered and raised
+ 	v3f m_offhand_position[2];
+ 	v3f m_offhand_rotation[2];
++	// The wielded item's rest pose: an extruded image, and a node drawn as itself
++	v3f m_wield_position[2];
++	v3f m_wield_rotation[2];
+ 
+ 	// draw control
+ 	MapDrawControl& m_draw_control;
+diff --git a/src/client/wieldmesh.cpp b/src/client/wieldmesh.cpp
+index 8d0bbc919..7a0384409 100644
+--- a/src/client/wieldmesh.cpp
++++ b/src/client/wieldmesh.cpp
+@@ -434,6 +434,7 @@ void WieldMeshSceneNode::setItem(const ItemStack &item, Client *client, bool che
+ 	const ItemDefinition &def = item.getDefinition(idef);
+ 	const ContentFeatures &f = ndef->get(def.name);
+ 	const NodeVisuals &v = *(f.visuals);
++	m_node_mesh = false;
+ 
+ 	{
+ 		// Initialize material type used by setExtruded
+@@ -527,6 +528,7 @@ void WieldMeshSceneNode::setItem(const ItemStack &item, Client *client, bool che
+ 			mesh = createGenericNodeMesh(client, n, &m_buffer_info, f);
+ 			changeToMesh(mesh);
+ 			mesh->drop();
++			m_node_mesh = true;
+ 			m_meshnode->setScale(
+ 				wield_scale * WIELD_SCALE_FACTOR
+ 				/ (BS * f.visual_scale));
+diff --git a/src/client/wieldmesh.h b/src/client/wieldmesh.h
+index 3dd4a5e64..78c9b57b4 100644
+--- a/src/client/wieldmesh.h
++++ b/src/client/wieldmesh.h
+@@ -133,6 +133,9 @@ class WieldMeshSceneNode : public scene::ISceneNode
+ 
+ 	scene::IMesh *getMesh() { return m_meshnode->getMesh(); }
+ 
++	// Drawn as the node itself (a cube...), not as an extruded image
++	bool isNodeMesh() const { return m_node_mesh; }
++
+ 	virtual void render();
+ 
+ 	virtual const aabb3f &getBoundingBox() const { return m_bounding_box; }
+@@ -145,6 +148,7 @@ class WieldMeshSceneNode : public scene::ISceneNode
+ 
+ 	// Child scene node with the current wield mesh
+ 	scene::IMeshSceneNode *m_meshnode = nullptr;
++	bool m_node_mesh = false;
+ 	// Material types used as fallback
+ 	video::E_MATERIAL_TYPE m_material_type;
+ 
+diff --git a/src/defaultsettings.cpp b/src/defaultsettings.cpp
+index 70e28323a..ff56a8ae6 100644
+--- a/src/defaultsettings.cpp
++++ b/src/defaultsettings.cpp
+@@ -311,6 +311,10 @@ void set_default_settings()
+ 	settings->setDefault("offhand_rotation", "(0, -25, 0)");
+ 	settings->setDefault("offhand_raised_position", "(-22, -18, 50)");
+ 	settings->setDefault("offhand_raised_rotation", "(0, 10, 0)");
++	settings->setDefault("wield_position", "(55, -35, 65)");
++	settings->setDefault("wield_rotation", "(-100, 120, -100)");
++	settings->setDefault("wield_node_position", "(55, -35, 65)");
++	settings->setDefault("wield_node_rotation", "(-100, 120, -100)");
+ 	settings->setDefault("hurt_flash_enabled", "true");
+ 	settings->setDefault("show_nametag_backgrounds", "true");
+ 	settings->setDefault("show_block_bounds_radius_near", "4");

@@ -1,0 +1,146 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Tue, 13 Oct 2026 20:13:13 -0300
+Subject: [PATCH 14/14] mainmenu: Survival or Creative chosen when creating a
+ world
+
+The Start Game tab's Creative Mode and Enable Damage checkboxes are two
+independent switches, so a world can be creative with damage on, which
+no player expects. The create-world dialog now asks for the game mode
+with one button that shows it and switches it, as Minecraft's "Game
+Mode" button does: Creative is creative_mode on and damage off,
+Survival the other way round. The engine writes both to world.mt from
+the settings when it creates the world, so they are set just before.
+
+The world list shows each world's mode, read from its world.mt, since a
+game can hide the two checkboxes through game.conf's disabled_settings.
+
+"Allow changing the game mode" is written to world.mt as
+allow_mode_change, for a game's mods to read: goodluckOS's
+minetest_game uses it to switch the mode from the inventory.
+
+pt_BR translations for the four new strings.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/builtin/mainmenu/common.lua b/builtin/mainmenu/common.lua
+index 240e0f083..02c5b3957 100644
+--- a/builtin/mainmenu/common.lua
++++ b/builtin/mainmenu/common.lua
+@@ -162,7 +162,12 @@ function menu_render_worldlist()
+ 	local current_worldlist = menudata.worldlist:get_list()
+ 
+ 	for i, v in ipairs(current_worldlist) do
+-		retval[#retval+1] = core.formspec_escape(v.name)
++		local name = v.name
++		local creative = Settings(v.path .. DIR_DELIM .. "world.mt"):get_bool("creative_mode")
++		if creative ~= nil then
++			name = name .. " (" .. (creative and fgettext_ne("Creative") or fgettext_ne("Survival")) .. ")"
++		end
++		retval[#retval+1] = core.formspec_escape(name)
+ 	end
+ 
+ 	return table.concat(retval, ",")
+diff --git a/builtin/mainmenu/dlg_create_world.lua b/builtin/mainmenu/dlg_create_world.lua
+index 951300df9..a39c3457d 100644
+--- a/builtin/mainmenu/dlg_create_world.lua
++++ b/builtin/mainmenu/dlg_create_world.lua
+@@ -292,12 +292,17 @@ local function create_world_formspec(dialogdata)
+ 
+ 	retval = retval ..
+ 		"label[0,2;" .. fgettext("Mapgen") .. "]"..
+-		"dropdown[0,2.5;6.3;dd_mapgen;" .. mglist .. ";" .. selindex .. "]"
++		"dropdown[0,2.5;6.3;dd_mapgen;" .. mglist .. ";" .. selindex .. "]" ..
++		-- one button that shows the mode and switches it, as in Minecraft
++		"button[0,3.4;6,0.5;btn_game_mode;" ..
++			fgettext("Game mode: $1", fgettext_ne(dialogdata.creative and "Creative" or "Survival")) .. "]" ..
++		"checkbox[0,4.1;cb_mode_change;" .. fgettext("Allow changing the game mode") .. ";" ..
++			tostring(dialogdata.mode_change) .. "]"
+ 
+ 	-- Warning when making a devtest world
+ 	if game.id == "devtest" then
+ 		retval = retval ..
+-			"container[0,3.5]" ..
++			"container[0,5]" ..
+ 			"box[0,0;5.8,1.7;#ff8800]" ..
+ 			"textarea[0.4,0.1;6,1.8;;;"..
+ 			fgettext("Development Test is meant for developers.") .. "]" ..
+@@ -389,6 +394,9 @@ local function create_world_buttonhandler(this, fields)
+ 				mgvalleys_spflags = table_to_flags(this.data.flags.valleys),
+ 				mgflat_spflags = table_to_flags(this.data.flags.flat),
+ 			}
++			-- the engine writes both to world.mt: Creative without damage, Survival with it
++			core.settings:set_bool("creative_mode", this.data.creative)
++			core.settings:set_bool("enable_damage", not this.data.creative)
+ 			message = core.create_world(worldname, game.id, settings)
+ 		end
+ 
+@@ -396,8 +404,13 @@ local function create_world_buttonhandler(this, fields)
+ 			core.settings:set("menu_last_game", game.id)
+ 			menudata.worldlist:set_filtercriteria(game.id)
+ 			menudata.worldlist:refresh()
+-			core.settings:set("mainmenu_last_selected_world",
+-					menudata.worldlist:raw_index_by_uid(worldname))
++			local index = menudata.worldlist:raw_index_by_uid(worldname)
++			core.settings:set("mainmenu_last_selected_world", index)
++			-- for the game's mods (goodluckOS's minetest_game switches the mode from the inventory)
++			local world = menudata.worldlist:get_raw_element(index)
++			local conf = Settings(world.path .. DIR_DELIM .. "world.mt")
++			conf:set_bool("allow_mode_change", this.data.mode_change)
++			conf:write()
+ 		end
+ 
+ 		gamedata.errormessage = message
+@@ -408,6 +421,16 @@ local function create_world_buttonhandler(this, fields)
+ 	this.data.worldname = fields["te_world_name"]
+ 	this.data.seed = fields["te_seed"] or ""
+ 
++	if fields["btn_game_mode"] then
++		this.data.creative = not this.data.creative
++		return true
++	end
++
++	if fields["cb_mode_change"] then
++		this.data.mode_change = core.is_yes(fields["cb_mode_change"])
++		return true
++	end
++
+ 	if fields["games"] then
+ 		local gameindex = core.get_textlist_index("games")
+ 		core.settings:set("menu_last_game", pkgmgr.games[gameindex].id)
+@@ -459,6 +482,8 @@ function create_create_world_dlg()
+ 					nil)
+ 	retval.data = {
+ 		worldname = "",
++		creative = false,
++		mode_change = false,
+ 		-- settings the world is created with:
+ 		seed = core.settings:get("fixed_map_seed") or "",
+ 		flags = {
+diff --git a/po/pt_BR/luanti.po b/po/pt_BR/luanti.po
+index 6e74e66da..d0483347a 100644
+--- a/po/pt_BR/luanti.po
++++ b/po/pt_BR/luanti.po
+@@ -1044,6 +1044,22 @@ msgstr "Baixa humidade e calor elevado resultam em rios rasos ou secos"
+ msgid "Mapgen"
+ msgstr "Gerador de Mundo"
+ 
++#: builtin/mainmenu/dlg_create_world.lua
++msgid "Game mode: $1"
++msgstr "Modo de jogo: $1"
++
++#: builtin/mainmenu/common.lua builtin/mainmenu/dlg_create_world.lua
++msgid "Survival"
++msgstr "Sobrevivência"
++
++#: builtin/mainmenu/common.lua builtin/mainmenu/dlg_create_world.lua
++msgid "Creative"
++msgstr "Criativo"
++
++#: builtin/mainmenu/dlg_create_world.lua
++msgid "Allow changing the game mode"
++msgstr "Permitir trocar de modo"
++
+ #: builtin/mainmenu/dlg_create_world.lua src/settings_translation_file.cpp
+ msgid "Mapgen flags"
+ msgstr "Opções de geração de mundo"

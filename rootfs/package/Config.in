@@ -11,4 +11,6 @@ source "../package/evsieve/Config.in"
 source "../package/credits/Config.in"
 source "../package/milkytracker/Config.in"
 source "../package/glos-setup/Config.in"
+source "../package/luanti/Config.in"
+source "../package/luanti-game/Config.in"
 endmenu

@@ -1,0 +1,107 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Wed, 14 Oct 2026 12:35:04 -0300
+Subject: [PATCH 18/18] settings: a Video page first in the handheld menu, with
+ the render distance
+
+With menu_handheld, the settings dialog (main menu and pause menu alike)
+opens on a "Video" page holding one dropdown: the render distance in
+chunks of 16 nodes, as Minecraft players know it (4, 8, 12, 16, 20). On a
+gamepad, viewing_range was a number typed in a field deep in Graphics;
+now it is two clicks, and the game picks the change up on the next frame.
+
+Five choices because a formspec dropdown shows at most five rows
+(CGUIComboBox's MaxSelectionRows) before it needs a scrollbar, which is
+awkward with the drawn cursor. A value set elsewhere stays in the list as
+an extra entry, in nodes when it is not a whole number of chunks.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/builtin/common/settings/dlg_settings.lua b/builtin/common/settings/dlg_settings.lua
+index 4224ee58a..c56fd47fc 100644
+--- a/builtin/common/settings/dlg_settings.lua
++++ b/builtin/common/settings/dlg_settings.lua
+@@ -170,6 +170,52 @@ local function load()
+ 		table.insert(content, idx, note)
+ 	end
+ 
++	if core.settings:get_bool("menu_handheld") then
++		-- first page: the render distance in chunks of 16 nodes, as in Minecraft, picked instead of typed;
++		-- five choices, the most a dropdown shows without scrolling
++		local render_distance = {
++			query_text = "Render distance",
++			info_text = fgettext_ne("How far you can see. Fewer chunks make the game faster."),
++			max_w = 4.5,
++
++			get_formspec = function(self, avail_w)
++				local range = tonumber(core.settings:get("viewing_range")) or 190
++				self.values = {}
++				for _, chunks in ipairs({4, 8, 12, 16, 20}) do
++					if range < chunks * 16 and table.indexof(self.values, range) < 0 then
++						self.values[#self.values + 1] = range
++					end
++					self.values[#self.values + 1] = chunks * 16
++				end
++				if range > self.values[#self.values] then
++					self.values[#self.values + 1] = range
++				end
++				local items = {}
++				for i, value in ipairs(self.values) do
++					items[i] = value % 16 == 0 and fgettext("$1 chunks", value / 16) or fgettext("$1 nodes", value)
++				end
++				return ("label[0,0.1;%s]dropdown[0,0.3;%f,0.8;handheld_range;%s;%d;true]"):format(
++					fgettext("Render distance"), avail_w, table.concat(items, ","),
++					table.indexof(self.values, range)), 1.1
++			end,
++
++			on_submit = function(self, fields)
++				local value = (self.values or {})[tonumber(fields.handheld_range) or 0]
++				if not value or value == tonumber(core.settings:get("viewing_range")) then
++					return false
++				end
++				core.settings:set("viewing_range", tostring(value))
++				return true
++			end,
++		}
++		add_page({
++			id = "handheld",
++			title = fgettext_ne("Video"),
++			content = { render_distance },
++		})
++		table.insert(all_pages, 1, table.remove(all_pages))
++	end
++
+ 	-- These must not be translated, as they need to show in the local
+ 	-- language no matter the user's current language.
+ 	-- This list must be kept in sync with src/unsupported_language_list.txt.
+diff --git a/po/pt_BR/luanti.po b/po/pt_BR/luanti.po
+index 402bb9c7c..5cf768266 100644
+--- a/po/pt_BR/luanti.po
++++ b/po/pt_BR/luanti.po
+@@ -346,6 +346,26 @@ msgstr "<vazio>"
+ msgid "Accessibility"
+ msgstr "Acessibilidade"
+ 
++#: builtin/common/settings/dlg_settings.lua
++msgid "$1 chunks"
++msgstr "$1 chunks"
++
++#: builtin/common/settings/dlg_settings.lua
++msgid "$1 nodes"
++msgstr "$1 blocos"
++
++#: builtin/common/settings/dlg_settings.lua
++msgid "How far you can see. Fewer chunks make the game faster."
++msgstr "Até onde você enxerga. Menos chunks deixam o jogo mais rápido."
++
++#: builtin/common/settings/dlg_settings.lua
++msgid "Render distance"
++msgstr "Distância de renderização"
++
++#: builtin/common/settings/dlg_settings.lua
++msgid "Video"
++msgstr "Vídeo"
++
+ #. TRANSLATORS: Automatic
+ #: builtin/common/settings/dlg_settings.lua
+ msgid "Auto"

@@ -1,0 +1,53 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Sun, 18 Oct 2026 19:33:37 -0300
+Subject: [PATCH 30/30] mainmenu: the handheld's new world takes a seed again
+
+menu_handheld's create-world dialog left the seed out, so every world got a random one. With the
+gamepad's on-screen keyboard it can be typed again: a Seed field beside the world's name, both half
+as wide, so the dialog keeps its height. Left empty it is still random; a game that disallows the
+seed setting keeps the name field at full width.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/builtin/mainmenu/dlg_create_world.lua b/builtin/mainmenu/dlg_create_world.lua
+index 6e60c4e70..e52894e77 100644
+--- a/builtin/mainmenu/dlg_create_world.lua
++++ b/builtin/mainmenu/dlg_create_world.lua
+@@ -162,13 +162,18 @@ local function create_world_formspec(dialogdata)
+ 				fgettext("Bonus chest"), tostring(dialogdata.bonus_chest))
+ 	end
+ 
+-	-- a handheld types the name with the gamepad's keyboard (left empty, the next free one), and keeps the
+-	-- game's mapgen
++	-- a handheld types the name and the seed with the gamepad's keyboard (left empty, the next free name and
++	-- a random seed), and keeps the game's mapgen
+ 	if core.settings:get_bool("menu_handheld") then
+ 		dialogdata.mg = current_mg
++		local name_w = disallowed_mapgen_settings["seed"] and 6 or 2.95
++		local seed = disallowed_mapgen_settings["seed"] and "" or
++			"field[3.8,0.7;3,0.5;te_seed;" .. fgettext("Seed") .. ";" ..
++				core.formspec_escape(dialogdata.seed) .. "]"
+ 		return "size[7,4.2,true]" ..
+-			"field[0.8,0.7;6,0.5;te_world_name;" .. fgettext("World name") .. ";" ..
++			"field[0.8,0.7;" .. name_w .. ",0.5;te_world_name;" .. fgettext("World name") .. ";" ..
+ 				core.formspec_escape(dialogdata.worldname) .. "]" ..
++			seed ..
+ 			game_mode(0.5, 1.4, 6) ..
+ 			"button[0.5,3.5;3,0.5;world_create_confirm;" .. fgettext("Create") .. "]" ..
+ 			"button[3.5,3.5;3,0.5;world_create_cancel;" .. fgettext("Cancel") .. "]"
+diff --git a/builtin/settingtypes.txt b/builtin/settingtypes.txt
+index 25c3f3b51..fd0c90f06 100644
+--- a/builtin/settingtypes.txt
++++ b/builtin/settingtypes.txt
+@@ -946,8 +946,8 @@ menu_clouds (Clouds in menu) bool true
+ menu_theme (Menu theme) enum light dark,light
+ 
+ #    A main menu for a handheld with no network and no keyboard: no Join Game or Content tabs,
+-#    nothing from ContentDB, no Select Mods, and a new world asks only for its name and game mode
+-#    (it keeps the game's mapgen and a random seed).
++#    nothing from ContentDB, no Select Mods, and a new world asks only for its name, seed and game
++#    mode (it keeps the game's mapgen).
+ menu_handheld (Handheld main menu) bool false
+ 
+ [**HUD]
