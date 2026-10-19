@@ -1,0 +1,109 @@
+name: Image
+
+# Test images of a branch, as image/build.sh makes them; it needs an x86 host
+on:
+  push:
+    branches: [test/luanti-image]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  image:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 355
+    steps:
+      - uses: actions/checkout@v7
+
+      # Restore only: a test branch doesn't evict the main branches' caches
+      - name: Restore downloads
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            rootfs/dl
+            !rootfs/dl/*/git
+          key: rootfs-dl-${{ hashFiles('rootfs/Dockerfile', 'rootfs/configs/goodluck_defconfig', 'rootfs/package/**/*.mk') }}
+          restore-keys: rootfs-dl-
+
+      - name: Restore ccache
+        uses: actions/cache/restore@v6
+        with:
+          path: rootfs/ccache
+          key: rootfs-ccache-${{ github.run_id }}
+          restore-keys: rootfs-ccache-
+
+      - name: Build the kernel and the boot images
+        working-directory: kernel
+        run: docker buildx build --output type=local,dest=./out .
+
+      - name: Build the rootfs
+        working-directory: rootfs
+        timeout-minutes: 300
+        shell: bash
+        run: |
+          mkdir -p dl ccache
+          docker compose run --build --rm -T --name goodluck-ci \
+            -v "$PWD/dl:/src/dl" -v "$PWD/ccache:/root/.buildroot-ccache" \
+            -e CCACHE_MAXSIZE=4G \
+            goodluck-builder bash -c "/src/scripts/configure.sh && /src/scripts/build.sh" \
+            2>&1 | tee build.log | grep --line-buffered '^>>>'
+
+      - name: Show the end of the build log
+        if: failure()
+        run: tail -n 150 rootfs/build.log
+
+      - name: Build HOME
+        working-directory: home
+        run: ./build.sh > /dev/null
+
+      # Same as image/build.sh, which would pick the runner's podman
+      - name: Build the images
+        working-directory: image
+        run: |
+          mkdir -p staging out
+          cp ../kernel/out/android_boot_*.img ../rootfs/out/images/rootfs.tar ../home/out/home.tar staging/
+          for v in a23_panel1 a23_panel2 a33_panel1 a33_panel2; do
+            docker buildx build --build-arg VARIANT=$v --output type=local,dest=./out .
+          done
+          ls -l out
+          df -h /
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: goodluck_base_a23_panel1
+          path: image/out/goodluck_base_a23_panel1.img
+          if-no-files-found: error
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: goodluck_base_a23_panel2
+          path: image/out/goodluck_base_a23_panel2.img
+          if-no-files-found: error
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: goodluck_base_a33_panel1
+          path: image/out/goodluck_base_a33_panel1.img
+          if-no-files-found: error
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: goodluck_base_a33_panel2
+          path: image/out/goodluck_base_a33_panel2.img
+          if-no-files-found: error
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: build-log
+          path: rootfs/build.log
+          retention-days: 14
