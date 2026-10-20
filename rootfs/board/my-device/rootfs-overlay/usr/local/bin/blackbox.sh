@@ -1,8 +1,9 @@
 #!/bin/sh
 # blackbox.sh [seconds] - power cut log (alvesmaicon/goodluckOS#8): battery, PMIC, temperatures, clocks and
 # memory every second, plus kernel messages and POWER key events, synced to the rootfs so a cut keeps all
-# but the last second. Started at boot by S97blackbox when /etc/player-flags/blackbox exists. The previous
-# boot's log is kept as prev.log and its end is copied to HOME/logs/blackbox-prev.txt.
+# but the last second. Started at boot by S97blackbox when /etc/player-flags/blackbox exists. The last five
+# boots are kept as prev.1.gz (newest) to prev.5.gz, and the end of the newest is copied to
+# HOME/logs/blackbox-prev.txt.
 DIR=/var/lib/blackbox
 LOG=$DIR/current.log
 INTERVAL=${1:-1}
@@ -12,9 +13,12 @@ R=/sys/kernel/debug/regmap/sunxi-rsb-3a3/registers
 
 mkdir -p $DIR
 if [ -s $LOG ]; then
-    mv $LOG $DIR/prev.log
     mkdir -p /home/player/logs
-    tail -n 3000 $DIR/prev.log > /home/player/logs/blackbox-prev.txt
+    tail -n 3000 $LOG > /home/player/logs/blackbox-prev.txt
+    for i in 4 3 2 1; do
+        [ -f $DIR/prev.$i.gz ] && mv $DIR/prev.$i.gz $DIR/prev.$((i + 1)).gz
+    done
+    gzip -c $LOG > $DIR/prev.1.gz && rm $LOG
     sync
 fi
 [ -f $R ] || mount -t debugfs none /sys/kernel/debug
