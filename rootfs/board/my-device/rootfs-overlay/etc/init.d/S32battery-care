@@ -1,5 +1,5 @@
 #!/bin/sh
-# Stop charging at 90 % while on a computer's USB (alvesmaicon/goodluckOS#8)
+# Stop charging at 90 % while on a computer's USB
 
 case "$1" in
     start)
