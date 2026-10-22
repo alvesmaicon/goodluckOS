@@ -51,7 +51,7 @@ Card layout (A33):
 - Upstream PRs open: #89 (charging screen when plugged in while off), #109 (CI: kernel and rootfs workflows, issue #108; branch `pr/ci`, also the fork's `main` on top of upstream's), #119 (battery percentage to 100% at the end of a charge, kernel patches 0006-0009, issue #114; `pr/battery-gauge`), #122 (battery care, issue #121; `pr/battery-care`). The learned battery resistance (patch 0010 and battery care's learning) waits for #122, since it changes the same script.
 - Upstream issues that the fork's code already answers: #23 (Gallium HUD options, in `develop`), #24 (Mesa overlay), #5 (System Settings), #13/#14 (LED, partly). #46 is the owner's "features from my fork" list.
 - `feat/vitrine` holds Jeferson's Vitrine launcher (upstream PR #51), with him as author, plus cc6c44b so it still merges into `origin/main`. It starts from upstream, not `develop`, and is the source for Puppy's modern style, not a branch to merge. Code taken from it keeps Jeferson as author (cherry-pick, or `Co-authored-by: Jeferson Lopes <jefersonftlopes@gmail.com>`), gets a line in Credits, and keeps the OFL files of its fonts.
-- Fork issues: #1 screen artifacts (bottom repeats the top; neither the temperature nor the flex explains it, `debug/thermal-log` logs to `HOME/logs/templog.csv`); #2 Wi-Fi dongle on OTG (the board has no OTG boost, the stock firmware gives no 5 V either; host mode works on a powered hub once the PHY takes VBUS as present, test branch `feat/otg-vbus`; Wi-Fi drivers missing); #4 launcher music; #5 headphones reset to volume 0; #8 power cuts under load on battery (gauge and battery care in `develop`; next: low battery warning and clean shutdown, Voff).
+- Fork issues: #1 screen artifacts (bottom repeats the top; neither the temperature nor the flex explains it, `debug/thermal-log` logs to `HOME/logs/templog.csv`); #2 Wi-Fi dongle on OTG (the board has no OTG boost, the stock firmware gives no 5 V either; host mode works on a powered hub once the PHY takes VBUS as present, test branch `feat/otg-vbus`; Wi-Fi drivers missing); #4 launcher music; #5 headphones reset to volume 0; #8 power cuts under load on battery (gauge, battery care, low battery warning, clean power off at 2 % and Voff 3.0 V in `develop`; next: a full discharge test, then the upstream PR).
 
 ## Hardware facts
 
@@ -72,9 +72,10 @@ Card layout (A33):
 - `<pkg>-rebuild` doesn't delete a file removed from a local package's source: after deleting or moving sources, run `puppy-dirclean puppy`.
 - What Puppy starts in the background dies with it when appd starts an app (cgroup kill): anything that must finish (saving the mixer, a reboot request) runs in the foreground (`runScript(..., true)`).
 - `post-build.sh` must stay re-runnable (upstream #60).
+- HOME's "Volume was not properly unmounted" on every boot is an old power cut, not the last shutdown: Linux never clears a FAT dirty flag it found at mount, only `fsck.fat -a` does (with HOME unmounted).
 - Never leave backups (`*.orig`, `*.bak`) in `/etc/init.d`: rcS/rcK run every `S??*` file there.
 - A new rootfs on a card with an older HOME: appd needs `HOME/.local/launcher.sh` (contains `/usr/bin/puppy`). Without it the console hangs at "Starting system...".
-- Serial: ~10 KB/s. After a cable reconnect the console sits at a login prompt (`dev/glserial.py` logs in). The console has no `pkill`/`pgrep`. `/tmp` is lost on reboot.
+- Serial: ~10 KB/s. After a cable reconnect the console sits at a login prompt (`dev/glserial.py` logs in). The console has no `pkill`/`pgrep`. `/tmp` and `/var/log` are lost on reboot (the blackbox in `/var/lib/blackbox` keeps the kernel log).
 - Git Bash on Windows rewrites `/tmp/...` arguments into Windows paths: set `MSYS_NO_PATHCONV=1`.
 - MTP is ~10 MB/s; the card reader is 40-80 MB/s. Use the reader for big copies (ROMs).
 - The overlay over games is the Gallium HUD patched in Mesa (`rootfs/board/my-device/patches/mesa3d`): a feedback panel (`/dev/shm/hud-osd`) and a status bar (`GALLIUM_HUD_STATUS`, set by `etc/profile.d/gallium_hud.sh`). FN+UP sends signal 34 to the running app.
