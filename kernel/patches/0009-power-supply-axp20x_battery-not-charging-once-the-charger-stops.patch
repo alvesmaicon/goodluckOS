@@ -20,7 +20,7 @@ diff --git a/drivers/power/supply/axp20x_battery.c b/drivers/power/supply/axp20x
  #define AXP20X_PWR_OP_BATT_PRESENT	BIT(5)
  #define AXP20X_PWR_OP_BATT_ACTIVATED	BIT(3)
  #define AXP717_PWR_OP_BATT_PRESENT	BIT(3)
-@@ -302,8 +303,16 @@ static int axp20x_battery_get_prop(struct power_supply *psy,
+@@ -299,8 +300,16 @@ static int axp20x_battery_get_prop(struct power_supply *psy,
  			return ret;
  
  		if (reg & AXP20X_PWR_STATUS_BAT_CHARGING) {
