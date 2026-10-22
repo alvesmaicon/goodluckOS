@@ -25,8 +25,9 @@ void App::notice(const std::string& text) {
     noticeUntil = SDL_GetTicks() + kNoticeMs;
 }
 
-void App::clockChanged() {
-    clockFmt = clockFormat();
+void App::topBarChanged() {
+    hud = HudSettings::load();
+    clockFmt = hud.statusLauncher ? clockFormat(hud) : "";
     dirty = true;
 }
 
@@ -41,10 +42,20 @@ void App::follow() {
     followNextRead = SDL_GetTicks() + 30;   // give the script a moment to write it
 }
 
+TopBar App::readTopBar() const {
+    TopBar b;
+    if (!hud.statusLauncher) return b;
+    if (hud.statusCpuTemp) b.cpuTemp = cpuTemperature();
+    if (hud.statusPmicTemp) b.pmicTemp = pmicTemperature();
+    b.clock = clockText(clockFmt);
+    if (hud.statusAudio && audio.volume >= 0) b.audio = audio;
+    if (hud.statusBattery) b.battery = Battery::read();
+    return b;
+}
+
 // The lowest screen of the overlays on top draws itself and the bars; the overlays go over them.
 void App::render() {
-    battery = Battery::read();
-    clock = clockText(clockFmt);
+    bar = readTopBar();
     size_t base = stack.size() - 1;
     while (base > 0 && stack[base]->overlay()) --base;
 
@@ -53,7 +64,7 @@ void App::render() {
     ui.setMarquee(base == stack.size() - 1);
     stack[base]->render(ui);
     // Bars are drawn last so long descriptions or scrolled tiles never spill over them
-    ui.header(stack[base]->header(), battery, audio, clock);
+    ui.header(stack[base]->header(), bar);
     ui.footer(stack.back()->hints());
     for (size_t i = base + 1; i < stack.size(); ++i) {
         ui.setMarquee(i == stack.size() - 1);
@@ -65,7 +76,7 @@ void App::render() {
 
 int App::run() {
     audio.read();
-    clockFmt = clockFormat();
+    topBarChanged();
     lastActivity = SDL_GetTicks();
 
     while (running && !stack.empty()) {
@@ -144,12 +155,10 @@ int App::run() {
                 lastActivity = now;
             } else if (now - lastActivity >= kIdleCheckMs) {
                 lastActivity = now;
-                if (Battery::read() != battery) dirty = true;
-                Audio a;
-                a.read();
-                if (a != audio) { audio = a; dirty = true; }
+                audio.read();
+                if (readTopBar() != bar) dirty = true;
             }
-            if (clockText(clockFmt) != clock) dirty = true;
+            if (clockText(clockFmt) != bar.clock) dirty = true;
             closed.clear();
             continue;
         }

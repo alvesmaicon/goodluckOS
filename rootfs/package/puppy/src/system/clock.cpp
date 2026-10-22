@@ -11,9 +11,10 @@
 
 static const char* kTimezoneFile = "/home/player/.config/timezone";
 
-std::string clockFormat() {
-    const HudSettings h = HudSettings::load();
-    return h.dateFormat + (h.h24 ? " %H:%M" : " %I:%M %p");
+std::string clockFormat(const HudSettings& h) {
+    const std::string time = h.h24 ? "%H:%M" : "%I:%M %p";
+    if (!h.statusTime) return h.statusDate ? h.dateFormat : "";
+    return h.statusDate ? h.dateFormat + " " + time : time;
 }
 
 std::string clockText(const std::string& fmt) {

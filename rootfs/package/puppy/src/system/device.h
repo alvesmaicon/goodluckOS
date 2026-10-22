@@ -1,6 +1,6 @@
 #pragma once
-// The rest of the device: the battery, the screen and its brightness, the power profiles, and power
-// requests and the root scripts.
+// The rest of the device: the battery, the temperatures, the screen and its brightness, the power
+// profiles, and power requests and the root scripts.
 #include <string>
 #include <vector>
 
@@ -14,6 +14,10 @@ struct Battery {
 
     static Battery read();
 };
+
+// Degrees C, -1 when unreadable: the SoC's sensor, and the power chip's (an IIO device with no name file)
+int cpuTemperature();
+int pmicTemperature();
 
 void runDetached(const std::string& command);
 void sendPowerRequest(const char* request);

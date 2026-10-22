@@ -1,12 +1,13 @@
 #pragma once
 // Drawing for every screen: the window, fonts, shapes, text and covers, and the bars they share
-// (the top bar with the clock, volume and battery, and the footer with the button hints).
+// (the top bar with the clock, volume, battery and temperatures, and the footer with the button hints).
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -61,6 +62,18 @@ struct Header {
     bool highlight = false;
 };
 
+// The top bar's items right of the title, the ones System Settings -> Overlay turns on for the launcher.
+struct TopBar {
+    std::optional<int> cpuTemp, pmicTemp;   // degrees C, -1 when unreadable
+    std::string clock;                      // "": off
+    std::optional<Audio> audio;
+    std::optional<Battery> battery;
+
+    bool operator!=(const TopBar& o) const {
+        return cpuTemp != o.cpuTemp || pmicTemp != o.pmicTemp || clock != o.clock || audio != o.audio || battery != o.battery;
+    }
+};
+
 // The footer: each button with what it does.
 using Hints = std::vector<std::pair<std::string, std::string>>;
 
@@ -91,7 +104,7 @@ public:
     Uint32 marqueeDue() const { return marqueeNext; }   // when the scrolling name needs a frame (0: never)
 
     // The bars and messages over everything
-    void header(const Header& h, const Battery& battery, const Audio& audio, const std::string& clock);
+    void header(const Header& h, const TopBar& bar);
     void footer(const Hints& hints);
     void notice(const std::string& text);
     void status(const std::string& text);
@@ -115,6 +128,8 @@ public:
     void speakerIcon(int x, int y, SDL_Color c, bool muted);
     void batteryIcon(int x, int y, int percent, bool charging, bool full);
     void headphonesIcon(int x, int y, SDL_Color c);
+    void chipIcon(int x, int y, SDL_Color c);
+    void boltIcon(int x, int y, SDL_Color c);
 
 private:
     bool sdlUp = false, ok_ = false;
