@@ -1,5 +1,5 @@
 #!/bin/sh
-# Stop charging at 90 % while on a computer's USB
+# Stop charging at 90 % while on a computer's USB, warn when the battery runs low and power off before it's empty
 
 case "$1" in
     start)

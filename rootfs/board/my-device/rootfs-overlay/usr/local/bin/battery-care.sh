@@ -1,10 +1,15 @@
 #!/bin/sh
-# battery-care.sh [limit] [floor] - on a computer's USB, charge up to <limit> % (90) and then stop, so a console
-# left on the data cable for days doesn't sit full and warm. Charging comes back when the cable comes out, or at
-# <floor> % (50) if a game drains the battery while still on it. A charger with no computer behind it charges to
-# full as before. It also learns the battery's resistance for the fuel gauge. Started at boot by S32battery-care.
+# battery-care.sh [limit] [floor] [low] [critical] [off] - on a computer's USB, charge up to <limit> % (90) and
+# then stop, so a console left on the data cable for days doesn't sit full and warm. Charging comes back when the
+# cable comes out, or at <floor> % (50) if a game drains the battery while still on it. A charger with no computer
+# behind it charges to full as before. On battery it warns at <low> (15) and <critical> % (5), and at <off> % (2)
+# closes the app and powers off before the PMIC cuts the power. It also learns the battery's resistance for the
+# fuel gauge. Started at boot by S32battery-care.
 LIMIT=${1:-90}
 FLOOR=${2:-50}
+LOW=${3:-15}
+CRITICAL=${4:-5}
+OFF=${5:-2}
 B=/sys/class/power_supply/axp20x-battery
 U=/sys/class/power_supply/axp20x-usb
 UDC=/sys/class/udc/$(ls /sys/class/udc 2>/dev/null | head -n 1)/state
@@ -14,6 +19,27 @@ charge() {
     # status turns the PMIC's charger on or off, but reading it back gives the current's direction
     case $1 in on) echo Charging > $B/status ;; off) echo "Not charging" > $B/status ;; esac
     logger -t battery-care "charging $1: $2"
+}
+
+# the panel over every app lasts 1.5 s: written each second to stay up for about 4 s
+panel() {
+    for n in 1 2 3; do /usr/local/bin/osd-notify.sh battery $1; sleep 1; done
+}
+
+warn() {
+    warned=$1
+    logger -t battery-care "low battery: $cap %"
+    panel $cap
+}
+
+# the app gets SIGTERM and up to 15 s to save and close, as from its own menu, then the console powers off
+power_off() {
+    logger -t battery-care "powering off at $cap %"
+    panel off
+    /usr/local/bin/appctl stop-application
+    n=0
+    while [ $n -lt 15 ] && /usr/local/bin/appctl status | grep -q '^application'; do sleep 1; n=$((n + 1)); done
+    exec /usr/local/bin/power-action.sh poweroff
 }
 
 # the resistance in mOhm from load steps (an app starting, a cable coming in): dV/dI, away from full
@@ -52,6 +78,8 @@ fi
 charge on "start"
 held=0
 host=0
+warned=101
+drained=0
 while :; do
     learn
     read usb < $U/online
@@ -70,6 +98,21 @@ while :; do
             held=0
             charge on "down to $cap % on the cable"
         fi
+    fi
+    # on battery: each warning once until it charges again, and <off> % twice in a row to power off
+    st=; [ "$cap" -le "$LOW" ] && read st < $B/status
+    if [ "$st" = Discharging ]; then
+        [ "$cap" -le "$OFF" ] && drained=$((drained + 1)) || drained=0
+        if [ $drained -ge 2 ]; then
+            power_off
+        elif [ "$cap" -le "$CRITICAL" ] && [ $warned -gt "$CRITICAL" ]; then
+            warn $CRITICAL
+        elif [ $warned -gt "$LOW" ]; then
+            warn $LOW
+        fi
+    else
+        drained=0
+        [ "$cap" -ge $((LOW + 5)) ] && warned=101
     fi
     sleep 10
 done

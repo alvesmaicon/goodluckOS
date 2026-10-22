@@ -36,7 +36,7 @@
 
         /* Standard lipo battery extrema. I didn't pull this from the fex but every cheap lipo ever has these same values. */
         voltage-max-design-microvolt = <4200000>; /* 4.2V fully charged */
-        voltage-min-design-microvolt = <3300000>; /* 3.3V safe cutoff */
+        voltage-min-design-microvolt = <3000000>; /* 3.0V: at 3.3V a game's load spikes cut the power with charge left */
     };
 
     dummy_vref: dummy-lradc-vref {
