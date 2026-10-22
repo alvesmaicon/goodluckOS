@@ -24,6 +24,7 @@ An uncompromisingly fast, small, modern, and feature-rich custom firmware for A2
 - Hardware accelerated graphics
 - Speaker and headphone audio. The speaker gets a high-pass filter, so it stays clean instead of distorting on bass it can't play
 - Great battery life
+- A low battery warning over any game at 15% and 5%. At 2% the game is closed, saving as when you quit it, and the console shuts down cleanly before the battery cuts out
 - No swap on SD card (massively improves the life of your card over the stock f/w)
 - `Resize Home` (System Settings -> Storage) grows your HOME partition to fill all the available space on your microSD card.
 - Volume buttons change the volume and FN+Vol the screen brightness from anywhere, with a level bar shown over whatever is on screen: the launcher, the settings or any game
