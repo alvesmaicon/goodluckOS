@@ -50,7 +50,8 @@ Card layout (A33):
 - Upstream PRs merged: #48 (Jeferson's A/B fix), #52 (MTP HOME), #55 (boot: appctl path, no power-manager respawn), #56 (headphones + FN+DOWN), #59 (TF-2 slot), #60 (idempotent `post-build.sh`), #64 (D-pad hold-to-repeat), #66 (TF-2 card over MTP), #70 (A23 audio), #77 (MTP cancel/rename), #88 (autolaunch at boot). #69 (A23 TF-2 power) was closed: upstream's DTS split already gives both SoCs the supply.
 - Upstream PRs open: #89 (charging screen when plugged in while off), #109 (CI: kernel and rootfs workflows, issue #108; branch `pr/ci`, also the fork's `main` on top of upstream's).
 - Upstream issues that the fork's code already answers: #23 (Gallium HUD options, in `develop`), #24 (Mesa overlay), #5 (System Settings), #13/#14 (LED, partly). #46 is the owner's "features from my fork" list.
-- Fork issues: #1 screen artifacts (thermal suspected, `debug/thermal-log` logs to `HOME/logs/templog.csv`); #2 Wi-Fi dongle on OTG (no VBUS: DTS lacks `x-powers,drive-vbus-en` and `usb0_vbus-supply`).
+- `feat/vitrine` holds Jeferson's Vitrine launcher (upstream PR #51), with him as author, plus cc6c44b so it still merges into `origin/main`. It starts from upstream, not `develop`, and is the source for Puppy's modern style, not a branch to merge. Code taken from it keeps Jeferson as author (cherry-pick, or `Co-authored-by: Jeferson Lopes <jefersonftlopes@gmail.com>`), gets a line in Credits, and keeps the OFL files of its fonts.
+- Fork issues: #1 screen artifacts (bottom repeats the top; neither the temperature nor the flex explains it, `debug/thermal-log` logs to `HOME/logs/templog.csv`); #2 Wi-Fi dongle on OTG (no VBUS: DTS lacks `x-powers,drive-vbus-en` and `usb0_vbus-supply`); #4 launcher music; #5 headphones reset to volume 0; #8 power cuts under load on battery.
 
 ## Hardware facts
 
@@ -62,7 +63,7 @@ Card layout (A33):
 - USB-C data port: a configfs gadget with ACM serial (`ttyGS0`, root/root) and MTP (umtprd, HOME plus the TF-2 card). USB id 1d6b:0104. Without VBUS, `S30usb-gadget` falls back to serial only and won't recover by itself (`S30usb-gadget stop; sleep 1; S30usb-gadget start`). Its stop/start can hang the gadget or the reboot.
 - The OTG port supplies no 5 V.
 - POWER: in the launcher it opens the power menu; inside an app it only turns the screen off (`toggle-screen.sh`). The RESET button is a hardware reset.
-- The bottom of the screen repeating the top of the frame, even in the u-boot logo, is physical: a fold in the display flex under L2. Reseating the flex fixes it. Don't chase it in software. Issue #1 is a different symptom (ghosting/shifted bars).
+- The bottom of the screen repeating the top of the frame (fork issue #1) is in the hardware, but not the flex: it survives a reboot, shows in the u-boot logo and fades by itself in about 30 minutes, on or off. Reseating the flex only gave it time to fade, and the panel init matches a stock v1.1 dump. Don't chase it in software.
 
 ## Known traps
 
