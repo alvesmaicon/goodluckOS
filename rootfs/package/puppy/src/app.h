@@ -64,13 +64,14 @@ private:
     HudSettings hud;            // what the top bar shows (System Settings -> Overlay)
     std::string clockFmt;       // strftime format of its clock
     TopBar bar;                 // as last drawn
+    Uint32 sensorsDue = 0;      // when its battery and temperatures are read again
     bool following = false;     // after a volume, brightness or output hotkey, which change the levels behind our back
     Uint32 followUntil = 0, followNextRead = 0;
     std::string noticeText;
     Uint32 noticeUntil = 0;
     Uint32 lastActivity = 0;
 
-    TopBar readTopBar() const;
+    TopBar readTopBar(bool sensors) const;
     void render();
     void follow();
 };

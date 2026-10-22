@@ -33,6 +33,7 @@ constexpr int kMaxNameLength        = 96;   // renaming a game's file
 constexpr Uint32 kNoticeMs          = 2500;
 
 constexpr Uint32 kIdleCheckMs       = 60000;
+constexpr Uint32 kSensorReadMs      = 5000;  // the top bar's battery and temperatures, at most this often
 constexpr Uint32 kFollowMs          = 2200;  // after a hotkey, the levels are re-read while the Mesa HUD shows its bar
 constexpr Uint8 kFnButton           = 10;    // BTN_MODE, which the SDL mapping leaves out
 constexpr Uint32 kFollowReadMs      = 100;   // that often (the hotkey script runs async)
