@@ -11,6 +11,7 @@
 #include "input.h"
 #include "system/audio.h"
 #include "system/device.h"
+#include "system/hud.h"
 #include "ui.h"
 
 class App;
@@ -46,7 +47,7 @@ public:
     void pop();                                 // the top screen, destroyed once the event is handled
     void notice(const std::string& text);       // a short message over the footer
     void quit() { running = false; }
-    void clockChanged();                        // its date format, 12/24 hours or time zone
+    void topBarChanged();                       // its items, the clock's format, 12/24 hours or time zone
     void audioChanged();                        // the top bar reads the mixer again
     SDL_GameController* gamepad() const { return pad; }
     Ui& painter() { return ui; }
@@ -60,14 +61,17 @@ private:
     bool running = true;
     bool dirty = true;
     Audio audio;
-    Battery battery;
-    std::string clockFmt, clock;    // strftime format of the top bar's clock, and what it shows
+    HudSettings hud;            // what the top bar shows (System Settings -> Overlay)
+    std::string clockFmt;       // strftime format of its clock
+    TopBar bar;                 // as last drawn
+    Uint32 sensorsDue = 0;      // when its battery and temperatures are read again
     bool following = false;     // after a volume, brightness or output hotkey, which change the levels behind our back
     Uint32 followUntil = 0, followNextRead = 0;
     std::string noticeText;
     Uint32 noticeUntil = 0;
     Uint32 lastActivity = 0;
 
+    TopBar readTopBar(bool sensors) const;
     void render();
     void follow();
 };

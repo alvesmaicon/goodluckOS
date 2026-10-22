@@ -4,7 +4,9 @@
 #include <string>
 #include <vector>
 
-std::string clockFormat();      // strftime format of the top bar's clock: the date and the time
+#include "system/hud.h"
+
+std::string clockFormat(const HudSettings& h);  // strftime format of the status bar's clock: its date and time items
 std::string clockText(const std::string& fmt);
 void setClock(time_t when);     // set-time.sh: the system clock and the RTC
 

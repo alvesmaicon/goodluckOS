@@ -220,29 +220,38 @@ void Ui::end() {
     SDL_RenderPresent(renderer);
 }
 
-void Ui::header(const Header& h, const Battery& battery, const Audio& audio, const std::string& clock) {
+void Ui::header(const Header& h, const TopBar& bar) {
     fill(kBar, {0, 0, kScreenW, kHeaderH});
     const int nameY = (kHeaderH - TTF_FontHeight(fonts.ui)) / 2;
 
+    // Right to left, 14 px apart: each item's text, then its icon (returns where the icon goes)
     const int statusY = (kHeaderH - TTF_FontHeight(fonts.small)) / 2;
-    std::string bat = battery.percent >= 0 ? std::to_string(battery.percent) + "%" : "??";
-    int statusX = kScreenW - kMargin - textWidth(fonts.small, bat);
-    drawText(renderer, fonts.small, bat, statusX, statusY, kGrey);
-    statusX -= 28;
-    batteryIcon(statusX, (kHeaderH - 12) / 2, battery.percent, battery.charging, battery.full);
-
-    if (audio.volume >= 0) {
-        std::string vol = audio.muted ? tr("muted") : std::to_string(audio.volume) + "%";
-        statusX -= 14 + textWidth(fonts.small, vol);
-        drawText(renderer, fonts.small, vol, statusX, statusY, kGrey);
-        statusX -= 22;
-        if (audio.headphones) headphonesIcon(statusX, (kHeaderH - 16) / 2, kGrey);
-        else speakerIcon(statusX, (kHeaderH - 16) / 2, kGrey, audio.muted);
+    int statusX = kScreenW - kMargin + 14;
+    auto item = [&](const std::string& text, int iconW, SDL_Color c) {
+        statusX -= 14 + textWidth(fonts.small, text);
+        drawText(renderer, fonts.small, text, statusX, statusY, c);
+        statusX -= iconW;
+        return statusX;
+    };
+    if (bar.battery) {
+        const Battery& b = *bar.battery;
+        const int x = item(b.percent >= 0 ? std::to_string(b.percent) + "%" : "??", 28, kGrey);
+        batteryIcon(x, (kHeaderH - 12) / 2, b.percent, b.charging, b.full);
     }
-    if (!clock.empty()) {
-        statusX -= 14 + textWidth(fonts.small, clock);
-        drawText(renderer, fonts.small, clock, statusX, statusY, kGrey);
+    if (bar.audio) {
+        const Audio& a = *bar.audio;
+        const int x = item(a.muted ? tr("muted") : std::to_string(a.volume) + "%", 22, kGrey);
+        if (a.headphones) headphonesIcon(x, (kHeaderH - 16) / 2, kGrey);
+        else speakerIcon(x, (kHeaderH - 16) / 2, kGrey, a.muted);
     }
+    if (!bar.clock.empty()) item(bar.clock, 0, kGrey);
+    // the A33 slows down from 75 C; 90 C is "hot"
+    auto temp = [&](int t, void (Ui::*icon)(int, int, SDL_Color)) {
+        const SDL_Color c = t >= 90 ? kRed : t >= 75 ? kYellow : kGrey;
+        (this->*icon)(item(t >= 0 ? std::to_string(t) + "\u00b0" : "??", 20, c), (kHeaderH - 16) / 2, c);
+    };
+    if (bar.pmicTemp) temp(*bar.pmicTemp, &Ui::boltIcon);
+    if (bar.cpuTemp) temp(*bar.cpuTemp, &Ui::chipIcon);
 
     int countW = textWidth(fonts.small, h.count);
     int maxNameW = statusX - 24 - countW - 10 - kMargin;
@@ -494,4 +503,28 @@ void Ui::headphonesIcon(int x, int y, SDL_Color c) {
     fill(c, {x + 14, y + 3, 2, 7});
     fill(c, {x, y + 9, 4, 7});
     fill(c, {x + 12, y + 9, 4, 7});
+}
+
+// 16x16, like the in-game status bar's: the CPU temperature...
+void Ui::chipIcon(int x, int y, SDL_Color c) {
+    fill(c, {x + 3, y + 3, 10, 1});
+    fill(c, {x + 3, y + 12, 10, 1});
+    fill(c, {x + 3, y + 3, 1, 10});
+    fill(c, {x + 12, y + 3, 1, 10});
+    fill(c, {x + 6, y + 6, 4, 4});
+    for (int i = 5; i <= 11; i += 3) {
+        fill(c, {x + i, y + 1, 1, 2});
+        fill(c, {x + i, y + 13, 1, 2});
+        fill(c, {x + 1, y + i, 2, 1});
+        fill(c, {x + 13, y + i, 2, 1});
+    }
+}
+
+// ...and the power chip's
+void Ui::boltIcon(int x, int y, SDL_Color c) {
+    static const int rows[][3] = {
+        {9, 1, 3}, {8, 2, 3}, {7, 3, 3}, {6, 4, 3}, {5, 5, 3}, {4, 6, 8}, {4, 7, 8},
+        {8, 8, 3}, {7, 9, 3}, {6, 10, 3}, {5, 11, 3}, {4, 12, 2}, {4, 13, 1},
+    };
+    for (const auto& r : rows) fill(c, {x + r[0], y + r[1], r[2], 1});
 }

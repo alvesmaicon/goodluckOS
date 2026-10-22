@@ -148,6 +148,15 @@ scene_games() {
     for g in "$dst"/*/gamelist.xml; do echo '</gameList>' >>"$g"; done
 }
 
+# The SoC's sensor at $1 degrees C and the AXP's (an IIO device found by its path) at $2, for one scene
+scene_temps() {
+    mount -t tmpfs none /sys/class/thermal
+    mkdir /sys/class/thermal/thermal_zone0; echo $(($1 * 1000)) >/sys/class/thermal/thermal_zone0/temp
+    mkdir -p /media/axp20x-adc; echo $(($2 * 10 + 1447)) >/media/axp20x-adc/in_temp_raw
+    echo -1447 >/media/axp20x-adc/in_temp_offset; echo 100 >/media/axp20x-adc/in_temp_scale
+    mount -t tmpfs none /sys/bus; mkdir -p /sys/bus/iio/devices; ln -s /media/axp20x-adc /sys/bus/iio/devices/iio:device0
+}
+
 # Inside the namespace of scenes(): one fresh Puppy per line of dev/scenes/scenes.txt
 scenes_run() {
     local out=$1 epoch name view tabs lang keys k pid n=0 bat=/sys/class/power_supply/battery
@@ -165,11 +174,18 @@ scenes_run() {
         cp -a /media/games /home/player/roms
         mkdir -p /home/player/.config/puppy
         printf 'view=%s\ntabs=%s\nlanguage=%s\n' "$view" "$tabs" "$lang" >/home/player/.config/puppy/settings
-        local conf="" press=""
+        local conf="" hud="" temps="" press=""
         for k in $keys; do
-            case $k in conf:*) conf="$conf${k#conf:}"$'\n' ;; *) press="$press $k" ;; esac
+            case $k in
+                conf:*) conf="$conf${k#conf:}"$'\n' ;;
+                hud:*) hud="$hud${k#hud:}"$'\n' ;;
+                temps:*) temps=${k#temps:} ;;
+                *) press="$press $k" ;;
+            esac
         done
         [ -n "$conf" ] && printf '%s' "$conf" >/home/player/scene.conf
+        [ -n "$hud" ] && printf '%s' "$hud" >/home/player/.config/gallium_hud.conf
+        [ -n "$temps" ] && scene_temps "${temps%:*}" "${temps#*:}"
         DISPLAY=:98 SDL_VIDEODRIVER=x11 TZ=UTC0 FAKE_EPOCH=$epoch LD_PRELOAD=$WORK/scene-shim.so \
             env ${conf:+PUPPY_CONFIG=/home/player/scene.conf} "$OUT/puppy.$ARCH" >"$out/$name.log" 2>&1 & pid=$!
         sleep 2
@@ -180,6 +196,7 @@ scenes_run() {
         DISPLAY=:98 xwd -root -silent | convert xwd:- "$out/$name.png"
         kill $pid 2>/dev/null || true; wait $pid 2>/dev/null || true
         [ -s "$out/$name.log" ] || rm -f "$out/$name.log"
+        [ -n "$temps" ] && umount /sys/class/thermal /sys/bus
         n=$((n + 1))
     done 3<"$DEV/scenes/scenes.txt"
     kill $X 2>/dev/null || true

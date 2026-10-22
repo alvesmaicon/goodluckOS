@@ -11,13 +11,17 @@
 static const char* kHudDefaults = "/usr/share/goodluck/defaults/gallium_hud.conf";
 static const char* kHudConfig = "/home/player/.config/gallium_hud.conf";
 
-static void readHudFile(const char* path, HudSettings& h) {
+// False for a file saved before the In game and Launcher switches
+static bool readHudFile(const char* path, HudSettings& h) {
     std::ifstream in(path);
+    bool switches = !in;
     for (std::string line; std::getline(in, line);) {
         const size_t eq = line.find('=');
         if (eq == std::string::npos) continue;
         const std::string key = line.substr(0, eq), value = line.substr(eq + 1);
-        if (key == "HUD_STATUS_DATE") h.statusDate = value == "true";
+        if (key == "HUD_STATUS_GAME") { h.statusGame = value == "true"; switches = true; }
+        else if (key == "HUD_STATUS_LAUNCHER") h.statusLauncher = value == "true";
+        else if (key == "HUD_STATUS_DATE") h.statusDate = value == "true";
         else if (key == "HUD_STATUS_TIME") h.statusTime = value == "true";
         else if (key == "HUD_STATUS_BATTERY") h.statusBattery = value == "true";
         else if (key == "HUD_STATUS_AUDIO") h.statusAudio = value == "true";
@@ -32,13 +36,22 @@ static void readHudFile(const char* path, HudSettings& h) {
         else if (key == "HUD_DATE_FORMAT" && !value.empty()) h.dateFormat = value;
         else if (key == "HUD_ACCENT" && value.size() == 6) h.accent = value;
     }
+    return switches;
 }
 
 // The system's defaults, then the user's choices
 HudSettings HudSettings::load() {
     HudSettings h;
     readHudFile(kHudDefaults, h);
-    readHudFile(kHudConfig, h);
+    const HudSettings d = h;
+    if (!readHudFile(kHudConfig, h)) {
+        // its items were the game's; with none, the launcher keeps the default ones
+        h.statusGame = h.statusDate || h.statusTime || h.statusBattery || h.statusAudio || h.statusCpuTemp || h.statusPmicTemp;
+        if (!h.statusGame) {
+            h.statusDate = d.statusDate; h.statusTime = d.statusTime; h.statusBattery = d.statusBattery;
+            h.statusAudio = d.statusAudio; h.statusCpuTemp = d.statusCpuTemp; h.statusPmicTemp = d.statusPmicTemp;
+        }
+    }
     return h;
 }
 
@@ -49,7 +62,9 @@ void HudSettings::save() const {
         std::ofstream out(tmp);
         if (!out) return;
         auto flag = [](bool on) { return on ? "true" : "false"; };
-        out << "HUD_STATUS_DATE=" << flag(statusDate) << "\n"
+        out << "HUD_STATUS_GAME=" << flag(statusGame) << "\n"
+            << "HUD_STATUS_LAUNCHER=" << flag(statusLauncher) << "\n"
+            << "HUD_STATUS_DATE=" << flag(statusDate) << "\n"
             << "HUD_STATUS_TIME=" << flag(statusTime) << "\n"
             << "HUD_STATUS_BATTERY=" << flag(statusBattery) << "\n"
             << "HUD_STATUS_AUDIO=" << flag(statusAudio) << "\n"

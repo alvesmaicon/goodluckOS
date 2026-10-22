@@ -267,18 +267,21 @@ std::vector<Row> SettingsScreen::overlayPage() {
         return Row::toggle(label, hud.*field, [this, field](int on) {
             hud.*field = on;
             hud.save();
+            app.topBarChanged();
         });
     };
-    // The in-game status bar; the launcher has its own top bar. The clock's format and 12/24 hours
-    // come from Date & Time
-    rows.push_back(Row::section("In-game status bar"));
+    // The same items in games and in the launcher's top bar. The clock's format and 12/24 hours come
+    // from Date & Time
+    rows.push_back(Row::section("Status bar"));
+    rows.push_back(flag("In game", &HudSettings::statusGame));
+    rows.push_back(flag("In the launcher", &HudSettings::statusLauncher));
     rows.push_back(flag("Show date", &HudSettings::statusDate));
     rows.push_back(flag("Show time", &HudSettings::statusTime));
     rows.push_back(flag("Show battery", &HudSettings::statusBattery));
     rows.push_back(flag("Show audio", &HudSettings::statusAudio));
     rows.push_back(flag("Show CPU temperature", &HudSettings::statusCpuTemp));
     rows.push_back(flag("Show power chip temperature", &HudSettings::statusPmicTemp));
-    rows.push_back(Row::level("Opacity", hud.statusOpacity, 0, 100, 10, [this](int v) {
+    rows.push_back(Row::level("Opacity in game", hud.statusOpacity, 0, 100, 10, [this](int v) {
         hud.statusOpacity = v;
         hud.save();
     }));
@@ -321,7 +324,7 @@ std::vector<Row> SettingsScreen::dateTimePage() {
     rows.push_back(Row::toggle("24-hour clock", hud.h24, [this](int on) {
         hud.h24 = on;
         hud.save();
-        app.clockChanged();
+        app.topBarChanged();
     }));
     std::vector<std::string> formats;
     int format = 0;
@@ -332,7 +335,7 @@ std::vector<Row> SettingsScreen::dateTimePage() {
     Row dateFormat = Row::choice("Date format", formats, format, [this](int i) {
         hud.dateFormat = dateFormats()[i].value;
         hud.save();
-        app.clockChanged();
+        app.topBarChanged();
     });
     dateFormat.rawChoices = true;
     rows.push_back(dateFormat);
@@ -386,7 +389,7 @@ std::vector<Row> SettingsScreen::dateTimePage() {
         zone = i;
         setTimezone(i);
         clockEdit.tm_year = 0;      // shows the clock in the new zone
-        app.clockChanged();
+        app.topBarChanged();
     });
     timeZone.rawChoices = true;
     rows.push_back(timeZone);
@@ -482,7 +485,7 @@ void SettingsScreen::restoreDefaults() {
     applyFont();
     profile = defaultPowerProfile();
     runScript("power-profile.sh default", false);
-    app.clockChanged();
+    app.topBarChanged();
     defaultsRestored = true;
 }
 
