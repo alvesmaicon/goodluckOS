@@ -23,7 +23,7 @@ struct PowerItem {
 // The time spent in a game, from appd's sessions
 struct PlayTime {
     long long seconds = 0;
-    long long last = 0;     // when it was last started (epoch)
+    long long last = 0;     // when it was last played (epoch)
 };
 
 struct Model {

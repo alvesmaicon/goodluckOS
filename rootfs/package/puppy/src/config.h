@@ -16,7 +16,7 @@ struct Config {
     std::string launchFile    = "/dev/shm/launch";
     std::string stateFile     = "/dev/shm/launcher_state";
     std::string autoStartFile = "/home/player/autolaunch";
-    std::string sessionsFile  = "/home/player/.local/state/sessions";   // appctl's log of the apps run: the play time
+    std::string sessionsFile  = "/dev/shm/application/sessions";   // appctl's log of the apps run: the play time
     std::string configDir     = "/home/player/.config/puppy";   // settings, favorites
     std::string cacheDir      = "/home/player/.cache/puppy";    // downscaled covers
     std::string langDir       = "/usr/share/goodluck/lang";
@@ -40,7 +40,7 @@ struct Config {
     std::string settingsFile() const  { return configDir + "/settings"; }
     std::string favoritesFile() const { return configDir + "/favorites"; }   // "category<TAB>id" lines
     std::string recentsFile() const   { return configDir + "/recents"; }     // the same, most recent first
-    std::string playTimeFile() const  { return configDir + "/playtime"; }    // "category<TAB>id<TAB>seconds<TAB>last start" lines
+    std::string playTimeFile() const  { return configDir + "/playtime"; }    // "category<TAB>id<TAB>seconds<TAB>last played" lines
     std::string thumbDir() const      { return cacheDir + "/thumbs"; }
 };
 extern Config cfg;

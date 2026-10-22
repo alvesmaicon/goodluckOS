@@ -40,8 +40,8 @@ CONSOLE=/dev/tty1                 # where the "loading" screen is drawn
 RUN_DIR=/run/appd                 # FIFO + pidfile (use /dev/shm/appd if no /run)
 LOG_DIR=/dev/shm/application
 APP_LOG=$LOG_DIR/application.log
-SESSIONS=/home/player/.local/state/sessions   # one line per app run, for the launcher's play time
 LAUNCHER_LOG=$LOG_DIR/launcher.log
+SESSIONS=$LOG_DIR/sessions        # one line per app run, for the launcher's play time
 CG_MOUNT=/sys/fs/cgroup
 CG_ROOT=$CG_MOUNT/appd
 MIN_LAUNCHER_UPTIME=5             # launcher dying faster than this is "crashing"
@@ -69,11 +69,11 @@ nap() { sleep 0.1 2>/dev/null || sleep 1; }
 
 uptime_s() { read -r _up _ </proc/uptime; echo "${_up%%.*}"; }
 
-# the app that ran: "<start epoch> TAB <seconds> TAB <command>" (HOME may be read-only)
+# the app that ran: "<seconds> TAB <command>", until the launcher counts it and empties the file
 end_session() {
     [ "$APP_GEN" != 0 ] && [ -n "$SESSION_CMD" ] || return 0
-    mkdir -p "${SESSIONS%/*}" 2>/dev/null
-    printf '%s\t%s\t%s\n' "$SESSION_EPOCH" $(( $(uptime_s) - SESSION_T )) "$SESSION_CMD" 2>/dev/null >>"$SESSIONS"
+    read -r _up _ </proc/uptime
+    printf '%s\t%s\n' $(( ${_up%.*} - ${SESSION_T%.*} )) "$SESSION_CMD" 2>/dev/null >>"$SESSIONS"
     SESSION_CMD=
 }
 
@@ -247,7 +247,7 @@ do_launch() {
     fi
 
     STATE=app
-    SESSION_CMD=$_cmd; SESSION_EPOCH=$(date +%s); SESSION_T=$(uptime_s)
+    SESSION_CMD=$_cmd; read -r SESSION_T _ </proc/uptime
     spawn app "$_cmd" "$_out" "$_term"
 }
 
@@ -301,7 +301,6 @@ do_kill_app() {
 shutdown_all() {
     trap '' TERM INT HUP
     log "shutting down"
-    end_session
     LAUNCHER_GEN=0; APP_GEN=0
     cg_stop "$CG_ROOT/launcher"
     cg_stop "$CG_ROOT/app"
@@ -316,6 +315,7 @@ daemon() {
     init_timing
     mkdir -p "$RUN_DIR" "$LOG_DIR" || exit 1
     chmod 755 "$LOG_DIR"
+    : >>"$SESSIONS"; chown "$RUN_USER" "$SESSIONS"    # the launcher empties it
     rm -f "$FIFO"
     mkfifo -m 0620 "$FIFO" || exit 1
     chown "root:$(id -gn "$RUN_USER" 2>/dev/null || echo root)" "$FIFO"

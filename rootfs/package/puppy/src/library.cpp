@@ -2,10 +2,14 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <ctime>
 #include <fstream>
 #include <iostream>
 #include <iterator>
 #include <map>
+#include <string_view>
+
+#include <unistd.h>
 
 #include "catalog.h"
 #include "config.h"
@@ -262,8 +266,14 @@ void addRecent(Model& m, const Entry& e) {
     if (inRecent) m.select(m.tab, 0);
 }
 
-// The time in each game, plus the sessions appctl logged since the last start: those are matched to
-// the games by their command, added and then removed.
+// The command without the spaces around it, as appctl reads it (no copy: it's done for every game)
+static std::string_view trimmed(const std::string& s) {
+    const size_t a = s.find_first_not_of(" \t\r\n");
+    return a == std::string::npos ? std::string_view() : std::string_view(s).substr(a, s.find_last_not_of(" \t\r\n") - a + 1);
+}
+
+// The time in each game, plus the sessions appctl logged in RAM since Puppy last ran: they are
+// matched to the games by their command and added, and the log is emptied.
 void loadPlayTime(Model& m) {
     std::ifstream in(cfg.playTimeFile());
     for (std::string line; std::getline(in, line);) {
@@ -274,31 +284,38 @@ void loadPlayTime(Model& m) {
         p.last = atoll(line.c_str() + c + 1);
     }
 
-    std::ifstream sessions(cfg.sessionsFile);
-    if (!sessions) return;
-    std::map<std::string, std::string> games;   // command -> key
-    for (const auto& c : m.categories)
-        for (const auto& e : c.entries)
-            if (isGame(c, e)) games.emplace(trim(e.command), Model::favoriteKey(e));
-    bool added = false;
-    for (std::string line; std::getline(sessions, line);) {
-        const size_t a = line.find('\t'), b = line.find('\t', a + 1);
-        if (b == std::string::npos) continue;
-        const long long start = atoll(line.c_str()), seconds = atoll(line.c_str() + a + 1);
-        const auto game = games.find(trim(line.substr(b + 1)));
-        if (game == games.end() || seconds <= 0) continue;
-        PlayTime& p = m.playTime[game->second];
-        p.seconds += seconds;
-        p.last = std::max(p.last, start);
-        added = true;
+    std::map<std::string, long long, std::less<>> ran;   // command -> seconds
+    {
+        std::ifstream sessions(cfg.sessionsFile);
+        for (std::string line; std::getline(sessions, line);) {
+            const size_t tab = line.find('\t');
+            const long long seconds = atoll(line.c_str());
+            if (tab == std::string::npos || seconds <= 0) continue;
+            const std::string command = line.substr(tab + 1);
+            ran[std::string(trimmed(command))] += seconds;
+        }
     }
-    sessions.close();
-    std::error_code ec;
-    if (!added || savePlayTime(m)) fs::remove(cfg.sessionsFile, ec);
+    // what can't be emptied would count again at every start
+    if (ran.empty() || access(cfg.sessionsFile.c_str(), W_OK) != 0) return;
+    const long long now = time(nullptr);
+    bool added = false;
+    for (const auto& c : m.categories)
+        for (const auto& e : c.entries) {
+            if (!isGame(c, e)) continue;
+            const auto r = ran.find(trimmed(e.command));
+            if (r == ran.end()) continue;
+            PlayTime& p = m.playTime[Model::favoriteKey(e)];
+            p.seconds += r->second;
+            p.last = now;
+            ran.erase(r);
+            added = true;
+        }
+    if (!added || savePlayTime(m)) std::ofstream(cfg.sessionsFile, std::ios::trunc);
 }
 
 // The Most Played tab: the games with play time, the most played first, right after Recent.
 void addMostPlayedTab(Model& m) {
+    if (m.playTime.empty()) return;
     std::vector<Entry> list;
     for (const auto& c : m.categories)
         for (const auto& e : c.entries)
