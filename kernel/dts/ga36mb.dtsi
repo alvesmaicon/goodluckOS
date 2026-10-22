@@ -32,7 +32,7 @@
     bat: battery {
         compatible = "simple-battery";
         charge-full-design-microamp-hours = <3000000>; /* fex: pmu_battery_cap = 3000 */
-        factory-internal-resistance-micro-ohms = <280000>; /* fex: pmu_battery_rdc = 119, measured 255-300 mOhm */
+        factory-internal-resistance-micro-ohms = <119000>; /* fex: pmu_battery_rdc = 119 */
 
         /* Standard lipo battery extrema. I didn't pull this from the fex but every cheap lipo ever has these same values. */
         voltage-max-design-microvolt = <4200000>; /* 4.2V fully charged */
