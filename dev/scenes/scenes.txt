@@ -79,3 +79,9 @@ settings-accent-list grid on en        F5 Down Down Return Down Down Return Down
 accent-launcher  list  on    en        F5 Down Down Return Down Down Right Right Right Right Right Escape Escape
 power-restart    grid  on    en        F6 Down Return
 power-shutdown   list  on    en        F6 Down Down Return
+played-list    list  on    en        conf:launch_command=/repo/dev/scenes/session.sh F1 F1 Down Down Down Return Return Down Return restart Up
+played-grid    grid  on    en        conf:launch_command=/repo/dev/scenes/session.sh F1 F1 Right Right Right Return Return Right Return restart Left
+most-played    list  on    en        conf:launch_command=/repo/dev/scenes/session.sh F1 F1 Down Down Down Return Return Down Return restart F2 F2 F2 F2 F2
+my-list-played grid  on    en        conf:launch_command=/repo/dev/scenes/session.sh F1 F1 space Right Right Right space Return Return restart F2 F2 F2
+pt-most-played grid  on    pt-BR     conf:launch_command=/repo/dev/scenes/session.sh F1 F1 Right Right Right Return Return Right Return restart F2 F2 F2 F2 F2
+played-rename  list  on    en        conf:launch_command=/repo/dev/scenes/session.sh F1 F1 Down Down Down Return Return Down Return restart Up F7 Return x F5 restart Up

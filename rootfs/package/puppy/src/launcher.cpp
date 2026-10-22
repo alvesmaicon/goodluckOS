@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "config.h"
+#include "system/clock.h"
 #include "system/device.h"
 #include "layout.h"
 #include "library.h"
@@ -13,7 +14,7 @@
 #include "settings.h"
 #include "util.h"
 
-LauncherScreen::LauncherScreen(App& app, Model model) : Screen(app), model(std::move(model)) {}
+LauncherScreen::LauncherScreen(App& app, Model model) : Screen(app), model(std::move(model)), dateFmt(dateFormat()) {}
 
 void LauncherScreen::onAction(Action a) {
     const bool grid = model.view == View::Grid;
@@ -176,6 +177,7 @@ void LauncherScreen::openSettings() {
     };
     hooks.closed = [this](bool languageChanged) {
         if (languageChanged) reloadGames();
+        dateFmt = dateFormat();
         if (model.cur().hidden) model.tab = 0;   // a tab just hidden: All Games
     };
     app.push(std::make_unique<SettingsScreen>(app, model, hooks));
@@ -199,6 +201,20 @@ void LauncherScreen::reloadGames() {
     }
     lastTab = model.tab;
     tabOffset = 0.0f;
+}
+
+// "Played for 2 h 30 min · 10/21", or "" for a game never played
+std::string LauncherScreen::playedText(const Entry& e, bool withDay) const {
+    const PlayTime* p = model.played(e);
+    if (!p) return "";
+    const long long min = p->seconds / 60;
+    std::string time = trf("%s min", std::to_string(min % 60));
+    if (min >= 60) time = trf("%s h", std::to_string(min / 60)) + (min % 60 ? " " + time : "");
+    else if (min < 1) time = tr("< 1 min");
+    if (!withDay) return time;
+    std::string text = trf("Played for %s", time);
+    if (p->last > 0) text += " · " + dayText(dateFmt, (time_t)p->last);
+    return text;
 }
 
 void LauncherScreen::render(Ui& ui) {
@@ -288,7 +304,15 @@ void LauncherScreen::renderGrid(Ui& ui) {
     int textTop = bottom - 8 - descH - titleH;
     ui.gradient({0, textTop - 70, kScreenW, 70}, kClear);
     ui.fill(kClear, {0, textTop, kScreenW, bottom - textTop});
-    drawText(renderer, fonts.title, e->name, kMargin, textTop, kWhite, textW);
+    int titleW = textW;
+    const std::string played = playedText(*e, false);
+    if (!played.empty()) {
+        const int w = textWidth(fonts.small, played);
+        drawText(renderer, fonts.small, played, kScreenW - kMargin - w,
+                 textTop + TTF_FontAscent(fonts.title) - TTF_FontAscent(fonts.small), kGrey);
+        titleW -= w + 12;
+    }
+    drawText(renderer, fonts.title, e->name, kMargin, textTop, kWhite, titleW);
     drawText(renderer, fonts.desc, sub, kMargin, textTop + titleH, kGrey, textW);
 }
 
@@ -359,6 +383,11 @@ void LauncherScreen::renderList(Ui& ui) {
     y += ui.drawWrapped(fonts.ui, e->name, kPreviewX, y, kWhite, kPreviewW) + 4;
     if (!e->meta.empty()) {
         drawText(renderer, fonts.small, e->meta, kPreviewX, y, accent(), kPreviewW);
+        y += TTF_FontLineSkip(fonts.small) + 4;
+    }
+    const std::string played = playedText(*e, true);
+    if (!played.empty()) {
+        drawText(renderer, fonts.small, played, kPreviewX, y, kWhite, kPreviewW);
         y += TTF_FontLineSkip(fonts.small) + 4;
     }
     const int textBottom = kScreenH - kFooterH - TTF_FontHeight(fonts.small) - 10;   // above the "n / total"

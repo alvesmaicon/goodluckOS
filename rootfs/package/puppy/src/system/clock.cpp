@@ -29,6 +29,17 @@ void setClock(time_t when) {
     runScript("set-time.sh " + std::to_string((long long)when), false);
 }
 
+std::string dateFormat() {
+    return HudSettings::load().dateFormat;
+}
+
+std::string dayText(const std::string& fmt, time_t when) {
+    char text[32];
+    struct tm tm;
+    localtime_r(&when, &tm);
+    return strftime(text, sizeof(text), fmt.c_str(), &tm) ? text : "";
+}
+
 const std::vector<int>& timezones() {
     static const std::vector<int> offsets = {-720, -660, -600, -570, -540, -480, -420, -360, -300, -240, -210, -180,
                                              -120, -60, 0, 60, 120, 180, 210, 240, 270, 300, 330, 345, 360, 390,

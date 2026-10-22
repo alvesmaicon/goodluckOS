@@ -40,7 +40,7 @@ An uncompromisingly fast, small, modern, and feature-rich custom firmware for A2
 - Music and video player (mpv): Music and Videos tabs in the launcher, played full screen with the console's buttons, with speed (0.25x to 2x) and zoom (up to 4x, moved with the right stick) for videos
 - Comes stock with Retroarch and several optimized cores (PCSX-ReArmed, Snes9x, QuickNES, DOSbox, Genesis Plus GX, mGBA, etc)
 - Games perform very well. Metal Gear Solid 1 is completely playable at reasonable framerates
-- Comes with a custom, optimized launcher application, with tabs per system, search, favourites and game artwork/descriptions from `gamelist.xml`
+- Comes with a custom, optimized launcher application, with tabs per system, search, favourites, play time and game artwork/descriptions from `gamelist.xml`
 - System Settings, in the launcher: brightness, volume, audio output, launcher options, language, interface font, overlay, date and time, storage (second card, trash, Resize Home), power mode (Battery saver, Balanced, Performance), system info, a button tester and a restore of the default settings
 - Translatable interface, with English and Brazilian Portuguese included (see [Translations](#translations))
 - Autostart any application on boot, including games or a front-end like EmulationStation (coming soon)
@@ -128,7 +128,7 @@ Add a new entry by modifying the `apps.puppy` file in your HOME partition. Take 
 
 Works with scraped collections: point Skraper (or anything that writes EmulationStation's `gamelist.xml`) at your rom folders and Puppy shows the games' names, artwork, descriptions and year/genre/players, no conversion needed (see [How do I add games?](#how-do-i-add-games)).
 
-Each system and app category gets its own tab, plus an "All Games" tab with every system's games and the native ports of the Games tab (tagged "Ports"), a "My List" tab with your favourites and, once you've played something, a "Recent" tab with the last 30 games you opened, newest first. The strip at the top shows five tabs of the same width, the current one in the middle, and wraps around. Controls:
+Each system and app category gets its own tab, plus an "All Games" tab with every system's games and the native ports of the Games tab (tagged "Ports"), a "My List" tab with your favourites, the most played first, and, once you've played something, a "Recent" tab with the last 30 games you opened, newest first, and a "Most Played" tab. The time spent in each game shows with its name, and in list view the day it was last played. The strip at the top shows five tabs of the same width, the current one in the middle, and wraps around. Controls:
 
 | Button | Action |
 |---|---|

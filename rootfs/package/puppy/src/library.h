@@ -18,6 +18,8 @@ void addExternalTab(Model& m);
 void loadRecents(Model& m);
 void addRecentTab(Model& m);
 void addRecent(Model& m, const Entry& e);
+void loadPlayTime(Model& m);
+void addMostPlayedTab(Model& m);
 void toggleFavorite(Model& m);
 std::string renameEntry(Model& m, const Entry& e, const std::string& newName);
 std::string deleteEntry(Model& m, const Entry& e);
