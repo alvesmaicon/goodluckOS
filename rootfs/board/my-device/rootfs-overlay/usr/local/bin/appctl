@@ -40,6 +40,7 @@ CONSOLE=/dev/tty1                 # where the "loading" screen is drawn
 RUN_DIR=/run/appd                 # FIFO + pidfile (use /dev/shm/appd if no /run)
 LOG_DIR=/dev/shm/application
 APP_LOG=$LOG_DIR/application.log
+SESSIONS=/home/player/.local/state/sessions   # one line per app run, for the launcher's play time
 LAUNCHER_LOG=$LOG_DIR/launcher.log
 CG_MOUNT=/sys/fs/cgroup
 CG_ROOT=$CG_MOUNT/appd
@@ -67,6 +68,14 @@ init_timing() {
 nap() { sleep 0.1 2>/dev/null || sleep 1; }
 
 uptime_s() { read -r _up _ </proc/uptime; echo "${_up%%.*}"; }
+
+# the app that ran: "<start epoch> TAB <seconds> TAB <command>" (HOME may be read-only)
+end_session() {
+    [ "$APP_GEN" != 0 ] && [ -n "$SESSION_CMD" ] || return 0
+    mkdir -p "${SESSIONS%/*}" 2>/dev/null
+    printf '%s\t%s\t%s\n' "$SESSION_EPOCH" $(( $(uptime_s) - SESSION_T )) "$SESSION_CMD" 2>/dev/null >>"$SESSIONS"
+    SESSION_CMD=
+}
 
 daemon_running() {
     [ -r "$PIDFILE" ] || return 1
@@ -219,6 +228,7 @@ do_launch() {
     log "launching app: $_cmd"
 
     # Ignore exit events from whatever we are about to kill on purpose.
+    end_session
     LAUNCHER_GEN=0
     APP_GEN=0
     cg_stop "$CG_ROOT/launcher"
@@ -237,6 +247,7 @@ do_launch() {
     fi
 
     STATE=app
+    SESSION_CMD=$_cmd; SESSION_EPOCH=$(date +%s); SESSION_T=$(uptime_s)
     spawn app "$_cmd" "$_out" "$_term"
 }
 
@@ -267,6 +278,7 @@ on_exit() {                            # <role> <gen> <rc>
             ;;
         app)
             [ "$2" = "$APP_GEN" ] || return
+            end_session
             APP_GEN=0
             cg_stop "$CG_ROOT/app"           # app's main process is gone; reap helpers
             log "app exited (rc=$3), returning to launcher"
@@ -289,6 +301,7 @@ do_kill_app() {
 shutdown_all() {
     trap '' TERM INT HUP
     log "shutting down"
+    end_session
     LAUNCHER_GEN=0; APP_GEN=0
     cg_stop "$CG_ROOT/launcher"
     cg_stop "$CG_ROOT/app"
