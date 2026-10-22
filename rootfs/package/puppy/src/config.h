@@ -16,6 +16,7 @@ struct Config {
     std::string launchFile    = "/dev/shm/launch";
     std::string stateFile     = "/dev/shm/launcher_state";
     std::string autoStartFile = "/home/player/autolaunch";
+    std::string sessionsFile  = "/dev/shm/application/sessions";   // appctl's log of the apps run: the play time
     std::string configDir     = "/home/player/.config/puppy";   // settings, favorites
     std::string cacheDir      = "/home/player/.cache/puppy";    // downscaled covers
     std::string langDir       = "/usr/share/goodluck/lang";
@@ -39,6 +40,7 @@ struct Config {
     std::string settingsFile() const  { return configDir + "/settings"; }
     std::string favoritesFile() const { return configDir + "/favorites"; }   // "category<TAB>id" lines
     std::string recentsFile() const   { return configDir + "/recents"; }     // the same, most recent first
+    std::string playTimeFile() const  { return configDir + "/playtime"; }    // "category<TAB>id<TAB>seconds<TAB>last played" lines
     std::string thumbDir() const      { return cacheDir + "/thumbs"; }
 };
 extern Config cfg;
@@ -46,6 +48,7 @@ extern Config cfg;
 constexpr const char* kMyListName    = "My List";
 constexpr const char* kRecentName    = "Recent";
 constexpr int kMaxRecents            = 30;
+constexpr const char* kMostPlayedName = "Most Played";
 constexpr const char* kMenuCategory  = "System";   // apps.puppy category taken out of the tabs
 constexpr const char* kSettingsName  = "System Settings";   // entry of that category opened by START
 constexpr const char* kGamesCategory = "Games";    // apps.puppy category of native games: also in All Games, as ports

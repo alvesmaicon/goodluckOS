@@ -24,6 +24,7 @@ private:
     Keyboard kb;                // its cursor and case stay from one search to the next
     std::string renameText;     // the new name of a game, while it's typed
     int descMax = 0;            // lines the list preview's description can scroll, as last drawn
+    std::string dateFmt;        // the day a game was last played, as Date & Time shows it
     int lastTab = -1;           // tab drawn in the previous frame, to animate the strip
     float tabOffset = 0.0f;     // remaining slide of the tab strip, in pixels
 
@@ -38,6 +39,7 @@ private:
     bool builtinSettings() const;
     void openSettings();
     void reloadGames();
+    std::string playedText(const Entry& e, bool withDay) const;
 
     void renderEmpty(Ui& ui);
     void renderGrid(Ui& ui);

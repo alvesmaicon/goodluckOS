@@ -6,6 +6,8 @@
 # Return = A, Escape = B.
 # Tabs from the boot one (All Games): F2 My List, F2 F2 Terminal...; F1 Genesis, F1 F1 NES.
 # Return launches nothing here, but the game goes into Recent, a tab after My List from then on.
+# "restart" starts Puppy again on the same files, as after a game; with
+# conf:launch_command=/repo/dev/scenes/session.sh each Return is a 75 min session for the play time.
 #
 # name           view  tabs  language  keys
 grid             grid  on    en
@@ -85,3 +87,9 @@ status-off       grid  on    en        F5 Down Down Down Return Down Return Esca
 status-game      grid  on    en        F5 Down Down Down Return Return
 status-old-items grid  on    en        hud:HUD_STATUS_DATE=false hud:HUD_STATUS_TIME=false hud:HUD_STATUS_BATTERY=true hud:HUD_STATUS_AUDIO=false hud:HUD_STATUS_CPU_TEMP=false hud:HUD_STATUS_PMIC_TEMP=false F5 Down Down Down Return
 status-old-none  grid  on    en        hud:HUD_STATUS_DATE=false hud:HUD_STATUS_TIME=false hud:HUD_STATUS_BATTERY=false hud:HUD_STATUS_AUDIO=false hud:HUD_STATUS_CPU_TEMP=false hud:HUD_STATUS_PMIC_TEMP=false hud:HUD_24H=true F5 Down Down Down Return
+played-list    list  on    en        conf:launch_command=/repo/dev/scenes/session.sh F1 F1 Down Down Down Return Return Down Return restart Up
+played-grid    grid  on    en        conf:launch_command=/repo/dev/scenes/session.sh F1 F1 Right Right Right Return Return Right Return restart Left
+most-played    list  on    en        conf:launch_command=/repo/dev/scenes/session.sh F1 F1 Down Down Down Return Return Down Return restart F2 F2 F2 F2 F2
+my-list-played grid  on    en        conf:launch_command=/repo/dev/scenes/session.sh F1 F1 space Right Right Right space Return Return restart F2 F2 F2
+pt-most-played grid  on    pt-BR     conf:launch_command=/repo/dev/scenes/session.sh F1 F1 Right Right Right Return Return Right Return restart F2 F2 F2 F2 F2
+played-rename  list  on    en        conf:launch_command=/repo/dev/scenes/session.sh F1 F1 Down Down Down Return Return Down Return restart Up F7 Return x F5 restart Up

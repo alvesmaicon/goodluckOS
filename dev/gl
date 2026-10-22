@@ -157,6 +157,13 @@ scene_temps() {
     mount -t tmpfs none /sys/bus; mkdir -p /sys/bus/iio/devices; ln -s /media/axp20x-adc /sys/bus/iio/devices/iio:device0
 }
 
+# One Puppy of a scene; "restart" in the keys starts another on the same HOME, as after a game
+scene_puppy() {
+    DISPLAY=:98 SDL_VIDEODRIVER=x11 TZ=UTC0 FAKE_EPOCH=$epoch LD_PRELOAD=$WORK/scene-shim.so \
+        env ${conf:+PUPPY_CONFIG=/home/player/scene.conf} "$OUT/puppy.$ARCH" >>"$out/$name.log" 2>&1 & pid=$!
+    sleep 2
+}
+
 # Inside the namespace of scenes(): one fresh Puppy per line of dev/scenes/scenes.txt
 scenes_run() {
     local out=$1 epoch name view tabs lang keys k pid n=0 bat=/sys/class/power_supply/battery
@@ -186,11 +193,12 @@ scenes_run() {
         [ -n "$conf" ] && printf '%s' "$conf" >/home/player/scene.conf
         [ -n "$hud" ] && printf '%s' "$hud" >/home/player/.config/gallium_hud.conf
         [ -n "$temps" ] && scene_temps "${temps%:*}" "${temps#*:}"
-        DISPLAY=:98 SDL_VIDEODRIVER=x11 TZ=UTC0 FAKE_EPOCH=$epoch LD_PRELOAD=$WORK/scene-shim.so \
-            env ${conf:+PUPPY_CONFIG=/home/player/scene.conf} "$OUT/puppy.$ARCH" >"$out/$name.log" 2>&1 & pid=$!
-        sleep 2
+        : >"$out/$name.log"
+        scene_puppy
         for k in $press; do
-            if [ "$k" = _ ]; then sleep 1; else DISPLAY=:98 xdotool key "$k"; sleep 0.3; fi
+            if [ "$k" = _ ]; then sleep 1
+            elif [ "$k" = restart ]; then kill $pid 2>/dev/null; wait $pid 2>/dev/null; scene_puppy
+            else DISPLAY=:98 xdotool key "$k"; sleep 0.3; fi
         done
         sleep 0.6
         DISPLAY=:98 xwd -root -silent | convert xwd:- "$out/$name.png"
