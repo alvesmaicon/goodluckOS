@@ -179,6 +179,7 @@ scenes_run() {
             case $k in
                 conf:*) conf="$conf${k#conf:}"$'\n' ;;
                 hud:*) hud="$hud${k#hud:}"$'\n' ;;
+                set:*) echo "${k#set:}" >>/home/player/.config/puppy/settings ;;
                 temps:*) temps=${k#temps:} ;;
                 *) press="$press $k" ;;
             esac

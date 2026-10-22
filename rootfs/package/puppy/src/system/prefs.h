@@ -12,6 +12,7 @@ struct Prefs {
     std::string language;                   // a code of /usr/share/goodluck/lang ("" : not chosen)
     std::string font;                       // a fonts.h key ("": not chosen)
     std::string accent;                     // an accents.h key ("": not chosen)
+    std::string style;                      // a styles.h key ("": not chosen)
     bool loadingText = false;               // "Loading..." instead of the ASCII-art dog while an app starts
     bool confirmBottom = false;             // B (bottom) confirms and A (right) goes back
 

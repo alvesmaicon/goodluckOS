@@ -82,11 +82,13 @@ struct Fonts {
     TTF_Font* title = nullptr;
     TTF_Font* desc = nullptr;
     TTF_Font* small = nullptr;
+    TTF_Font* uiBold = nullptr;      // the modern style's titles and button names (retro: none)
+    TTF_Font* smallBold = nullptr;
 };
 
 class Ui {
 public:
-    Ui(const std::string& font, float scale);
+    Ui(const std::string& font, const std::string& bold, float scale);
     ~Ui();
 
     Ui(const Ui&) = delete;
@@ -97,7 +99,7 @@ public:
     const Fonts& font() const { return fonts; }
     IconCache& gridIcons() { return *gridCache; }
     IconCache& previewIcons() { return *previewCache; }
-    void setFont(const std::string& path, float scale);
+    void setFont(const std::string& path, const std::string& bold, float scale);   // bold: "" for none
 
     void begin();   // a new frame, cleared to the background colour
     void end();     // shows it
@@ -108,6 +110,19 @@ public:
     void footer(const Hints& hints);
     void notice(const std::string& text);
     void status(const std::string& text);
+
+    // The pieces each style draws its own way
+    SDL_Color selection(const SDL_Rect& r, bool focused);    // a selected row; returns its text's colour
+    void panel(const SDL_Rect& r, SDL_Color inside, SDL_Color border);  // a menu or the keyboard over the screen
+    void key(const SDL_Rect& r, bool lit);                   // a key of the keyboard or the button tester
+    void tabHighlight(const SDL_Rect& r);                    // the current tab's slot
+    void toggle(const SDL_Rect& r, bool on, bool enabled, bool selected);   // a switch, 40x20
+    void track(const SDL_Rect& r, SDL_Color c);              // a bar: a level, a scrollbar
+    void swatch(const SDL_Rect& r, SDL_Color c, bool selected);   // a colour to choose
+    SDL_Color accentOn(bool selected) const;                 // the accent, or what shows over a selected row
+    int keyWidth(const std::string& key);                    // a footer button as keyGlyph draws it
+    int keyGlyph(const std::string& key, int x, int cy, SDL_Color inside);   // modern: a button in an outline
+    void roundRect(const SDL_Rect& r, int radius, SDL_Color c);
 
     void setColor(SDL_Color c);
     void fill(SDL_Color c, const SDL_Rect& r);
@@ -141,6 +156,8 @@ private:
     std::string clipText;
     int clipWidth = 0, clipW = 0, clipH = 0;
     std::map<std::string, int> pillWidths;
+    SDL_Texture* circle = nullptr;      // the rounded corners' quarters, made the first time they're drawn
+    SDL_Texture* button = nullptr;      // a face button, the same way
 
     // The selected list row's name, when it doesn't fit, scrolls left to show the rest: it waits a
     // moment, scrolls to the end, waits again and starts over.

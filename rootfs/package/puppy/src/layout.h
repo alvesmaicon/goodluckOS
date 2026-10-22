@@ -51,14 +51,16 @@ inline int gridTop(bool showTabs)  { return bodyTop(showTabs) + 8; }
 inline int listTop(bool showTabs)  { return bodyTop(showTabs) + 6; }
 inline int listRows(bool showTabs) { return (kScreenH - kFooterH - listTop(showTabs) - 4) / kListRowH; }
 
-constexpr SDL_Color kWhite  {255, 255, 255, 255};
-constexpr SDL_Color kGrey   {170, 170, 170, 255};
-constexpr SDL_Color kBlack  {0, 0, 0, 255};
 constexpr SDL_Color kYellow {255, 205, 60, 255};
 constexpr SDL_Color kRed    {230, 60, 50, 255};
 constexpr SDL_Color kGreen  {80, 200, 90, 255};
-constexpr SDL_Color kTile   {40, 40, 44, 255};
-constexpr SDL_Color kRowSel {56, 56, 64, 255};
-constexpr SDL_Color kBar    {12, 12, 14, 255};
-constexpr SDL_Color kClear  {24, 24, 28, 255};
 SDL_Color accent();         // the highlight colour chosen in System Settings (accents.h); kYellow by default
+
+// The colours of the interface style (styles.h)
+struct Theme {
+    bool modern;
+    SDL_Color bg, bar, tile, rowSel;    // the screen, the top and bottom bars, tiles and tracks, a selected row
+    SDL_Color text, muted, item, dim;   // titles and values, secondary text, a list's other entries, a row not usable now
+    SDL_Color ink;                      // text on the accent colour
+};
+const Theme& theme();

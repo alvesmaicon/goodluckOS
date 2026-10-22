@@ -238,16 +238,16 @@ void LauncherScreen::renderEmpty(Ui& ui) {
     if (model.query.empty() && model.cur().name == kMyListName) {
         std::string s = tr("Your list is empty");
         std::string hint = tr("Press Y on any game to add it here");
-        drawText(renderer, fonts.ui, s, (kScreenW - textWidth(fonts.ui, s)) / 2, kScreenH / 2 - 40, kGrey);
-        drawText(renderer, fonts.small, hint, (kScreenW - textWidth(fonts.small, hint)) / 2, kScreenH / 2, kGrey);
+        drawText(renderer, fonts.ui, s, (kScreenW - textWidth(fonts.ui, s)) / 2, kScreenH / 2 - 40, theme().muted);
+        drawText(renderer, fonts.small, hint, (kScreenW - textWidth(fonts.small, hint)) / 2, kScreenH / 2, theme().muted);
         return;
     }
     std::string s = model.query.empty() ? tr("Nothing here") : tr("No matches for") + std::string(" \"") + model.query + "\"";
     int w = textWidth(fonts.ui, s);
-    drawText(renderer, fonts.ui, s, std::max(kMargin, (kScreenW - w) / 2), kScreenH / 2 - 40, kGrey, kScreenW - 2 * kMargin);
+    drawText(renderer, fonts.ui, s, std::max(kMargin, (kScreenW - w) / 2), kScreenH / 2 - 40, theme().muted, kScreenW - 2 * kMargin);
     if (!model.query.empty()) {
         std::string hint = tr("L1/R1 to search other tabs");
-        drawText(renderer, fonts.small, hint, (kScreenW - textWidth(fonts.small, hint)) / 2, kScreenH / 2, kGrey);
+        drawText(renderer, fonts.small, hint, (kScreenW - textWidth(fonts.small, hint)) / 2, kScreenH / 2, theme().muted);
     }
 }
 
@@ -270,10 +270,10 @@ void LauncherScreen::renderGrid(Ui& ui) {
         if (k == c.sel) ui.frame(accent(), cell, kBorder);
         const Entry& entry = c.entries[c.visible[k]];
         int pillX = cell.x;    // the system tag top left, clear of the cover's title art at the bottom
-        if (c.mixed) pillX += ui.pill(entry.tag, cell.x, cell.y, kBar, kGrey);
-        if (model.isAutoStart(entry)) ui.pill(tr("autolaunch"), pillX, cell.y, accent(), kBlack);
+        if (c.mixed) pillX += ui.pill(entry.tag, cell.x, cell.y, theme().bar, theme().muted);
+        if (model.isAutoStart(entry)) ui.pill(tr("autolaunch"), pillX, cell.y, accent(), theme().ink);
         if (model.isFavorite(entry)) {
-            ui.fill(kBar, {cell.x + cell.w - 26, cell.y + 2, 24, 24});
+            ui.fill(theme().bar, {cell.x + cell.w - 26, cell.y + 2, 24, 24});
             ui.star(cell.x + cell.w - 14, cell.y + 14, 9, accent());
         }
     }
@@ -286,10 +286,10 @@ void LauncherScreen::renderGrid(Ui& ui) {
     int descH = sub.empty() ? 0 : TTF_FontHeight(fonts.desc);
     int titleH = TTF_FontHeight(fonts.title);
     int textTop = bottom - 8 - descH - titleH;
-    ui.gradient({0, textTop - 70, kScreenW, 70}, kClear);
-    ui.fill(kClear, {0, textTop, kScreenW, bottom - textTop});
-    drawText(renderer, fonts.title, e->name, kMargin, textTop, kWhite, textW);
-    drawText(renderer, fonts.desc, sub, kMargin, textTop + titleH, kGrey, textW);
+    ui.gradient({0, textTop - 70, kScreenW, 70}, theme().bg);
+    ui.fill(theme().bg, {0, textTop, kScreenW, bottom - textTop});
+    drawText(renderer, fonts.title, e->name, kMargin, textTop, theme().text, textW);
+    drawText(renderer, fonts.desc, sub, kMargin, textTop + titleH, theme().muted, textW);
 }
 
 void LauncherScreen::renderList(Ui& ui) {
@@ -314,30 +314,27 @@ void LauncherScreen::renderList(Ui& ui) {
         int k = c.scroll + row;
         const Entry& e = c.entries[c.visible[k]];
         SDL_Rect r{kMargin, top + row * kListRowH, kListWidth, kListRowH - 2};
-        if (k == c.sel) {
-            ui.fill(kRowSel, r);
-            ui.fill(accent(), {r.x, r.y, 4, r.h});
-        }
+        const SDL_Color nameColor = k == c.sel ? ui.selection(r, true) : theme().item;
         const int tagY = r.y + (r.h - TTF_FontHeight(fonts.small) - 4) / 2;
         const int nameX = r.x + 12 + starW;
         int right = r.x + r.w - 4;      // the name ends before this
         if (c.mixed) {
             right -= tagColW;
-            ui.pill(e.tag, right, tagY, kTile, kGrey);
+            ui.pill(e.tag, right, tagY, theme().tile, theme().muted);
             right -= 8;
         }
         if (model.isAutoStart(e)) {
             right -= ui.pillWidth(tr("auto"));
-            ui.pill(tr("auto"), right, tagY, accent(), kBlack);
+            ui.pill(tr("auto"), right, tagY, ui.accentOn(k == c.sel), k == c.sel && theme().modern ? accent() : theme().ink);
             right -= 8;
         }
-        if (model.isFavorite(e)) ui.star(r.x + 12 + starW / 2, r.y + r.h / 2, 7, accent());
+        if (model.isFavorite(e)) ui.star(r.x + 12 + starW / 2, r.y + r.h / 2, 7, ui.accentOn(k == c.sel));
         int scrollX = 0;
         if (k == c.sel) {
             const int overflow = textWidth(fonts.desc, e.name) - (right - nameX);
             if (overflow > 0) scrollX = ui.marqueeOffset(c.name + "\x1f" + e.category + "\x1f" + e.id, overflow);
         }
-        drawText(renderer, fonts.desc, e.name, nameX, r.y + (r.h - fontH) / 2, k == c.sel ? kWhite : kGrey,
+        drawText(renderer, fonts.desc, e.name, nameX, r.y + (r.h - fontH) / 2, nameColor,
                  right - nameX, scrollX);
     }
 
@@ -345,10 +342,10 @@ void LauncherScreen::renderList(Ui& ui) {
     int total = (int)c.visible.size();
     if (total > rows) {
         SDL_Rect track{kMargin + kListWidth + 4, top, 4, rows * kListRowH - 2};
-        ui.fill(kTile, track);
+        ui.track(track, theme().tile);
         int thumbH = std::max(16, track.h * rows / total);
         int thumbY = track.y + (track.h - thumbH) * c.scroll / std::max(1, total - rows);
-        ui.fill(kGrey, {track.x, thumbY, track.w, thumbH});
+        ui.track({track.x, thumbY, track.w, thumbH}, theme().muted);
     }
 
     const Entry* e = model.selected();
@@ -356,18 +353,18 @@ void LauncherScreen::renderList(Ui& ui) {
     SDL_Rect box{kPreviewX, top, kPreviewW, kPreviewH};
     ui.drawIcon(ui.previewIcons(), e->iconPath, box);
     int y = box.y + box.h + 10;
-    y += ui.drawWrapped(fonts.ui, e->name, kPreviewX, y, kWhite, kPreviewW) + 4;
+    y += ui.drawWrapped(fonts.ui, e->name, kPreviewX, y, theme().text, kPreviewW) + 4;
     if (!e->meta.empty()) {
         drawText(renderer, fonts.small, e->meta, kPreviewX, y, accent(), kPreviewW);
         y += TTF_FontLineSkip(fonts.small) + 4;
     }
     const int textBottom = kScreenH - kFooterH - TTF_FontHeight(fonts.small) - 10;   // above the "n / total"
     descMax = ui.drawWrappedClipped(fonts.small, e->synopsis.empty() ? tr(e->description) : e->synopsis,
-                                 kPreviewX, y, kGrey, kPreviewW - 16, textBottom - y, model.descScroll);
+                                 kPreviewX, y, theme().muted, kPreviewW - 16, textBottom - y, model.descScroll);
 
     std::string pos = std::to_string(c.sel + 1) + " / " + std::to_string(total);
     drawText(renderer, fonts.small, pos, kScreenW - kMargin - textWidth(fonts.small, pos),
-             kScreenH - kFooterH - TTF_FontHeight(fonts.small) - 6, kGrey);
+             kScreenH - kFooterH - TTF_FontHeight(fonts.small) - 6, theme().muted);
 }
 
 // Strip with the neighbouring tabs around the current one (L1/R1 are listed in the footer hints).
@@ -375,16 +372,22 @@ void LauncherScreen::renderTabs(Ui& ui) {
     SDL_Renderer* renderer = ui.sdl();
     const Fonts& fonts = ui.font();
     const int top = kHeaderH;
-    ui.fill(kClear, {0, top, kScreenW, kTabsH});
-    ui.fill(kTile, {0, top + kTabsH - 1, kScreenW, 1});
+    ui.fill(theme().bg, {0, top, kScreenW, kTabsH});
+    ui.fill(theme().tile, {0, top + kTabsH - 1, kScreenW, 1});
     const int pillH = TTF_FontHeight(fonts.small) + 4;
     const int pillY = top + (kTabsH - pillH) / 2;
 
-    // Arrows at the ends: the tabs wrap around in both directions
-    const int arrowW = 12;
-    ui.sideTriangle(kMargin + 4, top + kTabsH / 2, 4, true, kGrey);
-    ui.sideTriangle(kScreenW - kMargin - 4, top + kTabsH / 2, 4, false, kGrey);
-    const int left = kMargin + arrowW + 6, right = kScreenW - kMargin - arrowW - 6;
+    // Arrows at the ends, as the tabs wrap around in both directions; the modern style shows L1 and R1
+    const bool modern = theme().modern;
+    const int endW = modern ? ui.keyWidth("L1") : 12;
+    if (modern) {
+        ui.keyGlyph("L1", kMargin, top + kTabsH / 2, theme().bg);
+        ui.keyGlyph("R1", kScreenW - kMargin - endW, top + kTabsH / 2, theme().bg);
+    } else {
+        ui.sideTriangle(kMargin + 4, top + kTabsH / 2, 4, true, theme().muted);
+        ui.sideTriangle(kScreenW - kMargin - 4, top + kTabsH / 2, 4, false, theme().muted);
+    }
+    const int left = kMargin + endW + 6, right = kScreenW - kMargin - endW - 6;
 
     // The ring holds the tabs that aren't hidden (System Settings -> Launcher tabs)
     std::vector<int> order;
@@ -399,8 +402,7 @@ void LauncherScreen::renderTabs(Ui& ui) {
     // Slots of the same width: the current tab in the middle one, under a fixed highlight
     const int slots = 5, slotW = (right - left) / slots, pad = 8;
     const int cx = (left + right) / 2;
-    ui.fill(kRowSel, {cx - slotW / 2, pillY - 2, slotW, pillH + 4});
-    ui.fill(accent(), {cx - slotW / 2, pillY + pillH + 1, slotW, 2});
+    ui.tabHighlight({cx - slotW / 2, pillY - 2, slotW, pillH + 4});
 
     // Slide: the strip moves one slot and eases back, so the new tab glides into the highlight
     if (lastTab >= 0 && lastTab != model.tab && lastTab < (int)model.categories.size()) {
@@ -417,9 +419,10 @@ void LauncherScreen::renderTabs(Ui& ui) {
     for (int k = -reach; k <= reach; ++k) {
         if (n < slots && (k < -(n - 1) / 2 || k > n / 2)) continue;
         const int t = at(k);
-        const std::string label = elided(fonts.small, tr(model.categories[t].label), slotW - 2 * pad);
-        const int x = cx + k * slotW + (int)std::lround(tabOffset) - textWidth(fonts.small, label) / 2;
-        drawText(renderer, fonts.small, label, x, pillY + 2, k == 0 ? kWhite : kGrey);
+        TTF_Font* f = modern && k == 0 ? fonts.smallBold : fonts.small;
+        const std::string label = elided(f, tr(model.categories[t].label), slotW - 2 * pad);
+        const int x = cx + k * slotW + (int)std::lround(tabOffset) - textWidth(f, label) / 2;
+        drawText(renderer, f, label, x, pillY + 2, k == 0 ? theme().text : theme().muted);
     }
     SDL_RenderSetClipRect(renderer, nullptr);
 

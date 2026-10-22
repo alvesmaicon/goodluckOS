@@ -16,6 +16,7 @@
 #include "launcher.h"
 #include "library.h"
 #include "model.h"
+#include "styles.h"
 #include "system/prefs.h"
 #include "system/retroarch.h"
 #include "ui.h"
@@ -32,13 +33,14 @@ int main(int argc, char** argv) {
     restoreCursor(model);
     if (model.cur().hidden) model.tab = 0;   // All Games
 
-    std::string font;
+    styles::choose(prefs.style);
+    std::string font, bold;
     float fontScale;
-    fonts::choose(prefs.font, font, fontScale);
+    fonts::choose(prefs.font, theme().modern, font, bold, fontScale);
     accents::choose(prefs.accent);
     setConfirmBottom(nullptr, prefs.confirmBottom);    // sdl_controller.sh already mapped the pad
     if (prefs.confirmBottom) addRetroArchSwap();       // cards set to B before RetroArch followed it
-    Ui ui(font, fontScale);
+    Ui ui(font, bold, fontScale);
     if (!ui.ok()) return 1;
 
     SDL_GameController* pad = nullptr;

@@ -9,6 +9,7 @@
 #include "fonts.h"
 #include "overlays.h"
 #include "settings.h"
+#include "styles.h"
 #include "system/clock.h"
 #include "system/device.h"
 #include "system/retroarch.h"
@@ -254,6 +255,15 @@ std::vector<Row> SettingsScreen::interfacePage() {
     accentRow.swatches = accentColors;
     rows.push_back(accentRow);
 
+    std::vector<std::string> styleNames;
+    for (const styles::Style& s : styles::all()) styleNames.push_back(s.name);
+    rows.push_back(Row::choice("Style", styleNames, styles::find(prefs.style), [this](int i) {
+        prefs.style = styles::all()[i].key;
+        prefs.save();
+        styles::choose(prefs.style);
+        applyFont();    // the modern style has its own default font
+    }));
+
     rows.push_back(Row::toggle("Show Puppy on loading screens", !prefs.loadingText, [this](int on) {
         prefs.loadingText = !on;
         prefs.save();
@@ -479,6 +489,7 @@ void SettingsScreen::restoreDefaults() {
     prefs = fresh;
     prefs.save();
     accents::choose(prefs.accent);
+    styles::choose(prefs.style);
     launcher.view = View::Grid;
     launcher.showTabs = true;
     for (Category& c : launcher.categories) c.hidden = false;
