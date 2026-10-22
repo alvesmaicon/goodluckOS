@@ -1,0 +1,137 @@
+From: alvesmaicon <alvesmaiconn@gmail.com>
+Subject: [PATCH] power: supply: axp20x_battery: AXP22x battery resistance
+
+The AXP22x fuel gauge works out the open circuit voltage from the
+battery voltage, the current and the battery's internal resistance
+(0xba-0xbb), and corrects its coulomb count with it. The driver never
+sets that resistance, so the gauge uses whatever the bootloader left
+there, a factory value that a worn battery can exceed twice over: the
+gauge then reads the battery emptier than it is under load and fuller
+while charging.
+
+Write factory-internal-resistance-micro-ohms from the battery node at
+probe, as the BSP kernel does with its battery_rdc, unless the gauge
+has measured one itself. Batteries wear differently, so also expose it
+as a resistance attribute, in uOhm, that userspace can set to the value
+it measures on the console.
+
+diff --git a/drivers/power/supply/axp20x_battery.c b/drivers/power/supply/axp20x_battery.c
+--- a/drivers/power/supply/axp20x_battery.c
++++ b/drivers/power/supply/axp20x_battery.c
+@@ -51,6 +51,9 @@
+ #define AXP209_FG_PERCENT		GENMASK(6, 0)
+ #define AXP22X_FG_VALID			BIT(7)
+ #define AXP22X_FG_CAP_SET		BIT(7)
++#define AXP22X_RDC_SET			BIT(7)
++#define AXP22X_RDC_MEASURED		BIT(6)
++#define AXP22X_RDC_H_MASK		GENMASK(4, 0)
+ 
+ #define AXP20X_CHRG_CTRL1_ENABLE	BIT(7)
+ #define AXP20X_CHRG_CTRL1_TGT_VOLT	GENMASK(6, 5)
+@@ -101,6 +104,7 @@ struct axp_data {
+ 	unsigned int	ccc_reg;
+ 	unsigned int	ccc_mask;
+ 	bool		has_fg_valid;
++	bool		has_rdc;
+ 	const struct	power_supply_desc *bat_ps_desc;
+ 	int	(*get_max_voltage)(struct axp20x_batt_ps *batt, int *val);
+ 	int	(*set_max_voltage)(struct axp20x_batt_ps *batt, int val);
+@@ -988,6 +992,74 @@ static void axp209_set_battery_info(struct platform_device *pdev,
+ 	}
+ }
+ 
++static void axp22x_write_rdc(struct axp20x_batt_ps *axp_batt, unsigned int uohm)
++{
++	unsigned int rdc = DIV_ROUND_CLOSEST(uohm * 10, 10742);	/* 1.0742 mOhm a step */
++
++	regmap_write(axp_batt->regmap, AXP20X_RDC_H,
++		     AXP22X_RDC_SET | ((rdc >> 8) & AXP22X_RDC_H_MASK));
++	regmap_write(axp_batt->regmap, AXP20X_RDC_L, rdc & 0xff);
++}
++
++static void axp22x_set_battery_info(struct platform_device *pdev,
++				    struct axp20x_batt_ps *axp_batt,
++				    struct power_supply_battery_info *info)
++{
++	int rdc = info->factory_internal_resistance_uohm;
++	unsigned int reg;
++
++	axp209_set_battery_info(pdev, axp_batt, info);
++
++	/* keep a resistance the gauge measured itself */
++	if (rdc <= 0 || regmap_read(axp_batt->regmap, AXP20X_RDC_H, &reg) ||
++	    (reg & AXP22X_RDC_MEASURED))
++		return;
++
++	axp22x_write_rdc(axp_batt, rdc);
++}
++
++/* batteries wear differently: userspace can set the one it measured, in uOhm */
++static ssize_t resistance_show(struct device *dev, struct device_attribute *attr,
++			       char *buf)
++{
++	struct axp20x_batt_ps *axp_batt = power_supply_get_drvdata(dev_to_psy(dev));
++	unsigned int h, l, rdc;
++
++	if (regmap_read(axp_batt->regmap, AXP20X_RDC_H, &h) ||
++	    regmap_read(axp_batt->regmap, AXP20X_RDC_L, &l))
++		return -EIO;
++
++	rdc = (h & AXP22X_RDC_H_MASK) << 8 | l;
++
++	return sysfs_emit(buf, "%u\n", rdc * 10742 / 10);
++}
++
++static ssize_t resistance_store(struct device *dev, struct device_attribute *attr,
++				const char *buf, size_t count)
++{
++	struct axp20x_batt_ps *axp_batt = power_supply_get_drvdata(dev_to_psy(dev));
++	unsigned int uohm;
++	int ret;
++
++	ret = kstrtouint(buf, 0, &uohm);
++	if (ret)
++		return ret;
++
++	if (uohm < 10000 || uohm > 5000000)
++		return -EINVAL;
++
++	axp22x_write_rdc(axp_batt, uohm);
++
++	return count;
++}
++static DEVICE_ATTR_RW(resistance);
++
++static struct attribute *axp22x_batt_attrs[] = {
++	&dev_attr_resistance.attr,
++	NULL,
++};
++ATTRIBUTE_GROUPS(axp22x_batt);
++
+ /* the gauge's count doesn't follow the charger to full: set it to the capacity */
+ static irqreturn_t axp22x_battery_charge_done(int irq, void *devid)
+ {
+@@ -1069,11 +1141,12 @@ static const struct axp_data axp221_data = {
+ 	.ccc_reg = AXP20X_CHRG_CTRL1,
+ 	.ccc_mask = AXP20X_CHRG_CTRL1_TGT_CURR,
+ 	.has_fg_valid = true,
++	.has_rdc = true,
+ 	.bat_ps_desc = &axp209_batt_ps_desc,
+ 	.get_max_voltage = axp22x_battery_get_max_voltage,
+ 	.set_max_voltage = axp22x_battery_set_max_voltage,
+ 	.cfg_iio_chan = axp209_bat_cfg_iio_channels,
+-	.set_bat_info = axp209_set_battery_info,
++	.set_bat_info = axp22x_set_battery_info,
+ };
+ 
+ static const struct axp_data axp717_data = {
+@@ -1148,6 +1221,9 @@ static int axp20x_power_probe(struct platform_device *pdev)
+ 	if (ret)
+ 		return ret;
+ 
++	if (axp20x_batt->data->has_rdc)
++		psy_cfg.attr_grp = axp22x_batt_groups;
++
+ 	axp20x_batt->batt = devm_power_supply_register(&pdev->dev,
+ 						       axp20x_batt->data->bat_ps_desc,
+ 						       &psy_cfg);
