@@ -191,7 +191,8 @@ System Settings
 ├── Interface
 │   ├── Language
 │   ├── Font
-│   ├── Accent color ─ the highlight colour, from a list of 8
+│   ├── Accent color ─ the highlight colour, from a list of 9
+│   ├── Style: Retro / Modern
 │   └── Show Puppy on loading screens (off: a plain "Loading..." while a game starts)
 ├── Overlay
 │   ├── Status bar: In game, In the launcher
@@ -230,8 +231,9 @@ System Settings
 ```
 
 - **Launcher tabs**: hidden tabs' games still appear in All Games and My List.
-- **Font**: Default (Inter), VT323, Pixelify Sans or ProggyClean.
-- **Accent color**: the colour of the selection, the buttons in the hints and the bars, and of the volume and brightness feedback in games (from the next game on): yellow (the default), orange, red, pink, purple, blue, cyan or green.
+- **Font**: Default (Inter, or Atkinson Hyperlegible in the modern style), VT323, Pixelify Sans or ProggyClean.
+- **Accent color**: the colour of the selection, the buttons in the hints and the bars, and of the volume and brightness feedback in games (from the next game on): yellow (the default), orange, red, pink, purple, blue, cyan, green or white.
+- **Style**: Retro, Puppy's own look, or Modern, after the Vitrine launcher by Jeferson Lopes: a dark blue screen, bold titles, the selection as a rounded pill in the accent color, and the face buttons in the hints as their letter in its colour on a grey button.
 - **Status bar**: the CPU temperature, the power chip (AXP223) temperature, the date, the time, the battery and the volume and audio output, each one on or off. In game puts them in the top right corner of every game, over a background whose opacity you set; it is off by default, so nothing covers the game. In the launcher puts the same items in the launcher's top bar (on by default). The time, the battery and the audio are on by default. A temperature turns yellow from 75 °C, where the A33 starts to slow down, and red from 90 °C.
 - **Performance**: the Gallium HUD graphs that FN + D-pad up shows in game. Text only goes at the top.
 - Overlay changes apply from the next game on.
@@ -245,7 +247,7 @@ System Settings
 
 UP / DOWN pick a section and A or RIGHT opens its page; there, LEFT / RIGHT change the selected setting (A opens the list of choices, or turns a switch on or off), B goes back, and L1 / R1 go to the previous / next section from anywhere. START closes System Settings, and POWER opens the power options here too. A change applies and is saved right away, the language and the font included. A page scrolls with the d-pad when it doesn't fit the screen.
 
-VT323 and Pixelify Sans are under the SIL Open Font License and ProggyClean under the MIT License; their license files are next to them in `/usr/share/fonts`.
+VT323, Pixelify Sans and Atkinson Hyperlegible are under the SIL Open Font License and ProggyClean under the MIT License; their license files are next to them in `/usr/share/fonts`.
 
 | Sections, with Display & Audio | Launcher tabs |
 | --- | --- |

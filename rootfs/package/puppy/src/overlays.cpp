@@ -83,12 +83,11 @@ void KeyboardScreen::render(Ui& ui) {
     const int panelW = (int)(Keyboard::kRowUnits * unit) - gap + 2 * pad;
     const int panelH = queryH + Keyboard::kRows * keyH + (Keyboard::kRows - 1) * gap + 2 * pad;
     SDL_Rect panel{(kScreenW - panelW) / 2, kScreenH - kFooterH - panelH - 6, panelW, panelH};
-    ui.fill({12, 12, 14, 240}, panel);
-    ui.frame(kTile, panel, 2);
+    ui.panel(panel, {12, 12, 14, 240}, theme().tile);
 
     // What is typed: the search, or the new name of a game's file; a long name shows its end
     const std::string prompt = tr(rename ? "Rename:" : "Search:");
-    drawText(renderer, fonts.ui, prompt, panel.x + pad, panel.y + pad, kGrey);
+    drawText(renderer, fonts.ui, prompt, panel.x + pad, panel.y + pad, theme().muted);
     const int textX = panel.x + pad + textWidth(fonts.ui, prompt) + 8;
     const int textMax = panel.x + panelW - pad - textX;
     if (rename) {
@@ -96,11 +95,11 @@ void KeyboardScreen::render(Ui& ui) {
         const size_t at = std::min(cursor, text.size());
         const int caretX = textWidth(fonts.ui, text.substr(0, at));
         const int scroll = std::max(0, caretX + 4 - textMax);
-        drawText(renderer, fonts.ui, text, textX, panel.y + pad, kWhite, textMax, scroll);
+        drawText(renderer, fonts.ui, text, textX, panel.y + pad, theme().text, textMax, scroll);
         ui.fill(accent(), {textX + caretX - scroll, panel.y + pad, 2, TTF_FontHeight(fonts.ui)});
     } else {
         const std::string shown = text + "_";
-        drawText(renderer, fonts.ui, shown, textX, panel.y + pad, kWhite, textMax, std::max(0, textWidth(fonts.ui, shown) - textMax));
+        drawText(renderer, fonts.ui, shown, textX, panel.y + pad, theme().text, textMax, std::max(0, textWidth(fonts.ui, shown) - textMax));
     }
 
     for (int r = 0; r < Keyboard::kRows; ++r) {
@@ -110,14 +109,14 @@ void KeyboardScreen::render(Ui& ui) {
             SDL_Rect k{panel.x + pad + (int)(key.x * unit), panel.y + pad + queryH + r * (keyH + gap),
                        (int)(key.w * unit) - gap, keyH};
             bool sel = r == kb.row && c == kb.col;
-            ui.fill(sel ? accent() : kTile, k);
-            if (key.label == "shift" && kb.caps) ui.frame(sel ? kBlack : accent(), k, 2);   // case switch on
+            ui.key(k, sel);
+            if (key.label == "shift" && kb.caps) ui.frame(sel ? theme().ink : accent(), k, 2);   // case switch on
             std::string label = key.label == "shift" ? (kb.caps ? "aA" : "Aa")
                               : key.label.size() > 1 ? tr(key.label) : key.label;   // space / del / ok
             TTF_Font* f = key.label.size() > 1 ? fonts.small : fonts.ui;
             if (key.label.size() == 1) label = kb.caps ? upper(label) : label;
             drawText(renderer, f, label, k.x + (k.w - textWidth(f, label)) / 2,
-                     k.y + (k.h - TTF_FontHeight(f)) / 2, sel ? kBlack : kWhite);
+                     k.y + (k.h - TTF_FontHeight(f)) / 2, sel ? theme().ink : theme().text);
         }
     }
 }
@@ -176,13 +175,12 @@ void DialogScreen::render(Ui& ui) {
     const int panelH = titleH + subH + msgH + shown * rowH + 2 * pad;
     SDL_Rect panel{(kScreenW - panelW) / 2, d.bodyY + (kScreenH - kFooterH - d.bodyY - panelH) / 2, panelW, panelH};
     ui.fill({0, 0, 0, 150}, {0, kHeaderH, kScreenW, kScreenH - kFooterH - kHeaderH});   // dim the screen behind
-    ui.fill(kBar, panel);
-    ui.frame(kTile, panel, 2);
-    drawText(renderer, fonts.ui, tr(d.title), panel.x + pad + 4, panel.y + pad, kWhite, textW);
+    ui.panel(panel, theme().bar, theme().tile);
+    drawText(renderer, theme().modern ? fonts.uiBold : fonts.ui, tr(d.title), panel.x + pad + 4, panel.y + pad, theme().text, textW);
     if (!d.subtitle.empty())
-        drawText(renderer, fonts.small, d.subtitle, panel.x + pad + 4, panel.y + pad + titleH - 4, kGrey, textW);
+        drawText(renderer, fonts.small, d.subtitle, panel.x + pad + 4, panel.y + pad + titleH - 4, theme().muted, textW);
     if (!message.empty())
-        ui.drawWrapped(fonts.small, message, panel.x + pad + 4, panel.y + pad + titleH + subH - 4, kGrey, textW);
+        ui.drawWrapped(fonts.small, message, panel.x + pad + 4, panel.y + pad + titleH + subH - 4, theme().muted, textW);
 
     const int fontH = TTF_FontHeight(fonts.desc);
     const int top = panel.y + pad + titleH + subH + msgH;
@@ -190,20 +188,17 @@ void DialogScreen::render(Ui& ui) {
         const int k = scroll + i;
         SDL_Rect r{panel.x + pad, top + i * rowH, panelW - 2 * pad, rowH - 4};
         bool selected = k == sel;
-        if (selected) {
-            ui.fill(kRowSel, r);
-            ui.fill(accent(), {r.x, r.y, 4, r.h});
-        }
+        const SDL_Color text = selected ? ui.selection(r, true) : theme().item;
         int labelX = r.x + 16;
         if (k < (int)d.swatches.size()) {
-            ui.fill(d.swatches[k], {labelX, r.y + (r.h - 16) / 2, 28, 16});
+            ui.swatch({labelX, r.y + (r.h - 16) / 2, 28, 16}, d.swatches[k], selected);
             labelX += 28 + 12;
         }
         const int labelW = r.x + r.w - 8 - labelX;
         const std::string label = d.raw ? d.choices[k] : tr(d.choices[k]);
         const int overflow = textWidth(fonts.desc, label) - labelW;
         const int scrollX = selected && overflow > 0 ? ui.marqueeOffset("dialog\x1f" + label, overflow) : 0;
-        drawText(renderer, fonts.desc, label, labelX, r.y + (r.h - fontH) / 2, selected ? kWhite : kGrey, labelW,
+        drawText(renderer, fonts.desc, label, labelX, r.y + (r.h - fontH) / 2, text, labelW,
                  scrollX);
     }
     // more choices above / below

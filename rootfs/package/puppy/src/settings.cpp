@@ -24,7 +24,6 @@ constexpr int kValueW     = 168;                    // the value at the right of
 constexpr int kSwatchW    = 64;                     // a colour choice's block
 constexpr int kHintLines  = 2;
 constexpr Uint32 kSaveDelayMs = 800;                // holding the d-pad on a level saves once, after it
-constexpr SDL_Color kDim  {100, 100, 104, 255};     // a row that can't be used now
 
 int Row::height() const {
     switch (kind) {
@@ -341,10 +340,10 @@ void SettingsScreen::levelsChanged() {
 }
 
 void SettingsScreen::applyFont() {
-    std::string path;
+    std::string path, bold;
     float scale;
-    fonts::choose(prefs.font, path, scale);
-    app.painter().setFont(path, scale);
+    fonts::choose(prefs.font, theme().modern, path, bold, scale);
+    app.painter().setFont(path, bold, scale);
     if (hooks.fontChanged) hooks.fontChanged();
 }
 
@@ -382,15 +381,10 @@ void SettingsScreen::renderSections(Ui& ui) {
     const int fontH = TTF_FontHeight(fonts.desc);
     for (int i = 0; i < (int)sections().size(); ++i) {
         SDL_Rect r{kMargin / 2, kTop + i * kRowH, kSectionsW - kMargin / 2, kRowH - 2};
-        const bool sel = i == section;
-        if (sel) {
-            ui.fill(kRowSel, r);
-            if (!inPage) ui.fill(accent(), {r.x, r.y, 4, r.h});
-        }
-        drawText(renderer, fonts.desc, tr(sections()[i].second), r.x + 14, r.y + (r.h - fontH) / 2,
-                 sel ? kWhite : kGrey, r.w - 18);
+        const SDL_Color text = i == section ? ui.selection(r, !inPage) : theme().item;
+        drawText(renderer, fonts.desc, tr(sections()[i].second), r.x + 14, r.y + (r.h - fontH) / 2, text, r.w - 18);
     }
-    ui.fill(kTile, {kSectionsW + 7, kTop, 1, kBottom - kTop});
+    ui.fill(theme().tile, {kSectionsW + 7, kTop, 1, kBottom - kTop});
 }
 
 static int rowsHeight(const std::vector<Row>& rows, int from, int to) {
@@ -409,7 +403,7 @@ void SettingsScreen::renderPage(Ui& ui) {
     const int n = (int)list.size();
     if (p == Page::DateTime) clockDrawn = SDL_GetTicks();
 
-    drawText(renderer, fonts.ui, title(p), kPageX, kTop, kWhite, width);
+    drawText(renderer, theme().modern ? fonts.uiBold : fonts.ui, title(p), kPageX, kTop, theme().text, width);
     const int top = kTop + TTF_FontHeight(fonts.ui) + 8;
 
     // the selected row's hint, else the page's, in the lines under the rows (on pages that have any)
@@ -420,7 +414,7 @@ void SettingsScreen::renderPage(Ui& ui) {
     const Row* selected = inPage && c.sel >= 0 && c.sel < n ? &list[c.sel] : nullptr;
     shownKind = selected ? selected->kind : Row::Kind::Info;
     const std::string hint = selected && !selected->hint.empty() ? tr(selected->hint) : page;
-    if (!hint.empty()) ui.drawWrappedClipped(fonts.small, hint, kPageX, hintTop, kGrey, width - 16, kHintLines * lineH);
+    if (!hint.empty()) ui.drawWrappedClipped(fonts.small, hint, kPageX, hintTop, theme().muted, width - 16, kHintLines * lineH);
     const int bottom = hints ? hintTop - 6 : kBottom;
     const int room = bottom - top;
 
@@ -446,27 +440,24 @@ void SettingsScreen::renderPage(Ui& ui) {
         if (row.kind == Row::Kind::Section) {
             const int ty = y + h - TTF_FontHeight(fonts.small) - 4;
             const int lw = textWidth(fonts.small, label);
-            drawText(renderer, fonts.small, label, kPageX + 4, ty, kGrey);
-            ui.fill(kTile, {kPageX + 4 + lw + 8, ty + TTF_FontHeight(fonts.small) / 2, width - lw - 16, 1});
+            drawText(renderer, fonts.small, label, kPageX + 4, ty, theme().muted);
+            ui.fill(theme().tile, {kPageX + 4 + lw + 8, ty + TTF_FontHeight(fonts.small) / 2, width - lw - 16, 1});
             y += h;
             continue;
         }
         if (row.kind == Row::Kind::Info) {
             const int ty = y + (h - TTF_FontHeight(fonts.small)) / 2;
             const int lw = std::min(textWidth(fonts.small, label), width / 2);
-            drawText(renderer, fonts.small, label, kPageX + 16, ty, kGrey, width / 2);
+            drawText(renderer, fonts.small, label, kPageX + 16, ty, theme().muted, width / 2);
             const int valueX = std::max(kPageX + 16 + lw + 16, kPageRight - 8 - textWidth(fonts.small, row.value));
-            drawText(renderer, fonts.small, row.value, valueX, ty, kWhite, kPageRight - 8 - valueX);
+            drawText(renderer, fonts.small, row.value, valueX, ty, theme().text, kPageRight - 8 - valueX);
             y += h;
             continue;
         }
 
         SDL_Rect r{kPageX, y, width, h - 2};
-        if (sel) {
-            ui.fill(kRowSel, r);
-            ui.fill(accent(), {r.x, r.y, 4, r.h});
-        }
-        const SDL_Color text = !row.enabled ? kDim : sel ? kWhite : kGrey;
+        const SDL_Color picked = sel ? ui.selection(r, true) : theme().item;
+        const SDL_Color text = !row.enabled ? theme().dim : picked;
         const int right = r.x + r.w - 8;
         const int mid = r.y + r.h / 2;
         const int fontH = TTF_FontHeight(fonts.desc);
@@ -475,9 +466,7 @@ void SettingsScreen::renderPage(Ui& ui) {
         switch (row.kind) {
             case Row::Kind::Toggle: {
                 valueW = 40;
-                SDL_Rect track{right - 40, mid - 10, 40, 20};
-                ui.fill(row.on ? (row.enabled ? accent() : kDim) : kTile, track);
-                ui.fill(row.on ? kBar : kGrey, {row.on ? track.x + track.w - 18 : track.x + 2, track.y + 2, 16, 16});
+                ui.toggle({right - 40, mid - 10, 40, 20}, row.on, row.enabled, sel);
                 break;
             }
             case Row::Kind::Choice:
@@ -485,14 +474,14 @@ void SettingsScreen::renderPage(Ui& ui) {
                 valueW = kValueW;
                 const int left = right - kValueW;
                 if (row.index < (int)row.swatches.size())
-                    ui.fill(row.swatches[row.index], {left + (kValueW - kSwatchW) / 2, mid - 9, kSwatchW, 18});
+                    ui.swatch({left + (kValueW - kSwatchW) / 2, mid - 9, kSwatchW, 18}, row.swatches[row.index], sel);
                 else
                     choice = row.kind == Row::Kind::Number ? row.value
                            : row.choices.empty() ? std::string()
                            : row.rawChoices ? row.choices[row.index] : tr(row.choices[row.index]);
                 if (sel && row.enabled) {
-                    ui.sideTriangle(left + 6, mid, 5, true, accent());
-                    ui.sideTriangle(right - 6, mid, 5, false, accent());
+                    ui.sideTriangle(left + 6, mid, 5, true, ui.accentOn(true));
+                    ui.sideTriangle(right - 6, mid, 5, false, ui.accentOn(true));
                 }
                 break;
             }
@@ -501,23 +490,23 @@ void SettingsScreen::renderPage(Ui& ui) {
                 const std::string pct = std::to_string(row.max > 0 ? row.current * 100 / row.max : 0) + "%";
                 const int pctW = textWidth(fonts.small, "100%");
                 SDL_Rect bar{right - kValueW, mid - 6, kValueW - pctW - 10, 12};
-                ui.fill(kTile, bar);
+                ui.track(bar, theme().tile);
                 const int filled = row.max > 0 ? bar.w * std::clamp(row.current, 0, row.max) / row.max : 0;
-                if (filled > 0) ui.fill(sel ? accent() : kGrey, {bar.x, bar.y, filled, bar.h});
+                if (filled > 0) ui.track({bar.x, bar.y, filled, bar.h}, sel ? ui.accentOn(true) : theme().muted);
                 drawText(renderer, fonts.small, pct, right - textWidth(fonts.small, pct), mid - TTF_FontHeight(fonts.small) / 2, text);
                 break;
             }
             case Row::Kind::Link: {
-                ui.sideTriangle(right - 4, mid, 5, false, row.enabled ? (sel ? accent() : kGrey) : kDim);
+                ui.sideTriangle(right - 4, mid, 5, false, row.enabled ? (sel ? ui.accentOn(true) : theme().muted) : theme().dim);
                 const int vw = textWidth(fonts.small, row.value);
                 valueW = 16 + (vw ? vw + 8 : 0);
-                drawText(renderer, fonts.small, row.value, right - valueW + 4, mid - TTF_FontHeight(fonts.small) / 2, kGrey);
+                drawText(renderer, fonts.small, row.value, right - valueW + 4, mid - TTF_FontHeight(fonts.small) / 2, theme().muted);
                 break;
             }
             case Row::Kind::Action: {
                 const int vw = textWidth(fonts.small, row.value);
                 valueW = vw;
-                drawText(renderer, fonts.small, row.value, right - vw, mid - TTF_FontHeight(fonts.small) / 2, kGrey);
+                drawText(renderer, fonts.small, row.value, right - vw, mid - TTF_FontHeight(fonts.small) / 2, theme().muted);
                 break;
             }
             default: break;
@@ -545,9 +534,9 @@ void SettingsScreen::renderPage(Ui& ui) {
     const int total = rowsHeight(list, 0, n);
     if (total > room) {
         SDL_Rect track{kScreenW - 10, top, 3, room};
-        ui.fill(kTile, track);
+        ui.track(track, theme().tile);
         const int thumbH = std::max(16, room * room / total);
         const int thumbY = track.y + (room - thumbH) * rowsHeight(list, 0, c.scroll) / std::max(1, total - room);
-        ui.fill(kGrey, {track.x, std::min(thumbY, track.y + room - thumbH), track.w, thumbH});
+        ui.track({track.x, std::min(thumbY, track.y + room - thumbH), track.w, thumbH}, theme().muted);
     }
 }
