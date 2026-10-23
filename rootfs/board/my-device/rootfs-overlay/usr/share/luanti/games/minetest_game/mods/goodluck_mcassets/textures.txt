@@ -274,6 +274,13 @@ goodluck_food_pumpkin_seeds.png	{item/pumpkin_seeds}
 goodluck_food_melon_seeds.png	{item/melon_seeds}
 goodluck_food_melon_slice.png	{item/melon_slice}
 goodluck_food_pumpkin_pie.png	{item/pumpkin_pie}
+goodluck_food_cocoa_beans.png	{item/cocoa_beans}
+goodluck_food_cookie.png	{item/cookie}
+goodluck_food_cake.png	{item/cake}
+goodluck_food_cake_top.png	{block/cake_top}
+goodluck_food_cake_side.png	{block/cake_side}
+goodluck_food_cake_inner.png	{block/cake_inner}
+goodluck_food_cake_bottom.png	{block/cake_bottom}
 
 # Materials
 default_stick.png	{item/stick}

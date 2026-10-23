@@ -26,7 +26,8 @@ local function matches(name, ...)
 end
 
 local function natural(name, def, g)
-	return matches(name, "^goodluck_food:[%a_]*seeds$", "^goodluck_food:pumpkin$", "^goodluck_food:melon$") or
+	return matches(name, "^goodluck_food:[%a_]*seeds$", "^goodluck_food:pumpkin$", "^goodluck_food:melon$",
+		"^goodluck_food:cocoa_beans$") or
 		def.type == "node" and (any_group(g, "soil", "sand", "leaves", "sapling", "flora", "flower", "grass",
 		"mushroom", "tree", "seed", "snowy", "catchable") or matches(name, "^default:ice$", "^default:stone_with_",
 		"^default:[%a_]*stone$", "^default:gravel$", "^default:clay$", "^default:obsidian$", "^default:cactus$",
@@ -92,7 +93,7 @@ local CATEGORIES = {
 		"^flint_and_steel$", "^shears$", "rail$", "^cart$", "^boat$"}},
 	{"combat", S("Combat"), "default:sword_diamond", 2, 2, combat},
 	{"food_drinks", S("Food & Drinks"), "default:apple", 2, 3, food, {"^apple$", "^golden_apple$", "^melon_slice$", "^blueberries$", "^carrot$",
-		"^golden_carrot$", "^potato$", "^baked_potato$", "^poisonous_potato$", "^beetroot$", "^bread$", "^pumpkin_pie$", "^mushroom_stew$",
+		"^golden_carrot$", "^potato$", "^baked_potato$", "^poisonous_potato$", "^beetroot$", "^bread$", "^cookie$", "^cake$", "^pumpkin_pie$", "^mushroom_stew$",
 		"^beetroot_soup$"}},
 	{"ingredients", S("Ingredients"), "default:steel_ingot", 2, 4, ingredients, {"^coal_lump$", "_lump$", "_ingot$", "_nugget$",
 		"^emerald$", "^diamond$", "^mese_crystal", "^amethyst_shard$", "^flint$", "^stick$", "^clay", "^paper$", "^book$", "^string$", "^cotton$",

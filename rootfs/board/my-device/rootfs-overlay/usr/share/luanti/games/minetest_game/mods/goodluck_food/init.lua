@@ -216,4 +216,7 @@ core.register_craft({
 	recipe = {{N, N, N}, {N, "goodluck_food:carrot", N}, {N, N, N}},
 })
 
-dofile(core.get_modpath("goodluck_food") .. "/stems.lua")
+local path = core.get_modpath("goodluck_food")
+dofile(path .. "/stems.lua")
+dofile(path .. "/cocoa.lua")
+dofile(path .. "/cake.lua")
