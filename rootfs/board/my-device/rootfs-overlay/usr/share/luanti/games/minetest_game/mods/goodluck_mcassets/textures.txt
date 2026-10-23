@@ -140,12 +140,14 @@ default_mineral_copper.png	{block/copper_ore}
 default_mineral_gold.png	{block/gold_ore}
 default_mineral_diamond.png	{block/diamond_ore}
 goodluck_lapis_mineral.png	{block/lapis_ore}
+goodluck_emerald_mineral.png	{block/emerald_ore}
 default_coal_block.png	{block/coal_block}
 default_steel_block.png	{block/iron_block}
 default_copper_block.png	{block/copper_block}
 default_gold_block.png	{block/gold_block}
 default_diamond_block.png	{block/diamond_block}
 goodluck_lapis_block.png	{block/lapis_block}
+goodluck_emerald_block.png	{block/emerald_block}
 goodluck_amethyst_block.png	{block/amethyst_block}
 goodluck_amethyst_calcite.png	{block/calcite}
 goodluck_amethyst_cluster.png	{block/amethyst_cluster}
@@ -248,6 +250,7 @@ default_paper.png	{item/paper}
 default_book.png	{item/book}
 default_snowball.png	{item/snowball}
 goodluck_lapis.png	{item/lapis_lazuli}
+goodluck_emerald.png	{item/emerald}
 goodluck_amethyst_shard.png	{item/amethyst_shard}
 goodluck_monsters_bone.png	{item/bone}
 goodluck_monsters_rotten_flesh.png	{item/rotten_flesh}

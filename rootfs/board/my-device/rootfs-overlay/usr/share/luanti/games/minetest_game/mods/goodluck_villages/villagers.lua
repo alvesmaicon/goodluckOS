@@ -1,6 +1,6 @@
 -- Villagers: mobs_npc's NPC, one a bed (sleep.lua), and its trader with one of Minecraft's trades at the blacksmith
--- (armorer, toolsmith), the church (cleric), the library (librarian) and the fields (farmer). Paid in gold ingots, as
--- Minetest Game has no emeralds; every trader also buys something, as Minecraft's do, and that is how gold is earned.
+-- (armorer, toolsmith), the church (cleric), the library (librarian) and the fields (farmer). Paid in emeralds at
+-- Minecraft's prices; every trader also buys something, as Minecraft's do, and that is how emeralds are earned.
 local S = core.get_translator("goodluck_villages")
 
 if not core.get_modpath("mobs_npc") then
@@ -8,10 +8,10 @@ if not core.get_modpath("mobs_npc") then
 	return
 end
 
-local GOLD = "default:gold_ingot"
+local EMERALD = "goodluck_emerald:emerald"
 
-local function gold(n)
-	return GOLD .. " " .. n
+local function emerald(n)
+	return EMERALD .. " " .. n
 end
 
 -- an enchanted tool, drawn when the trader first shows its goods and kept with it
@@ -24,56 +24,56 @@ end
 local jobs = {
 	armorer = {
 		title = S("Armorer"),
-		{"3d_armor:helmet_steel", gold(5)},
-		{"3d_armor:chestplate_steel", gold(9)},
-		{"3d_armor:leggings_steel", gold(7)},
-		{"3d_armor:boots_steel", gold(4)},
-		{"shields:shield_steel", gold(5)},
-		{"3d_armor:helmet_diamond", gold(12)},
-		{"3d_armor:chestplate_diamond", gold(20)},
-		{"3d_armor:leggings_diamond", gold(16)},
-		{"3d_armor:boots_diamond", gold(10)},
-		{GOLD, "default:coal_lump 15"},
+		{"3d_armor:helmet_steel", emerald(5)},
+		{"3d_armor:chestplate_steel", emerald(9)},
+		{"3d_armor:leggings_steel", emerald(7)},
+		{"3d_armor:boots_steel", emerald(4)},
+		{"shields:shield_steel", emerald(5)},
+		{"3d_armor:helmet_diamond", emerald(12)},
+		{"3d_armor:chestplate_diamond", emerald(20)},
+		{"3d_armor:leggings_diamond", emerald(16)},
+		{"3d_armor:boots_diamond", emerald(10)},
+		{EMERALD, "default:coal_lump 15"},
 	},
 	toolsmith = {
 		title = S("Toolsmith"),
-		{enchanted("default:pick_steel", 8), gold(8)},
-		{enchanted("default:axe_steel", 8), gold(7)},
-		{enchanted("default:shovel_steel", 8), gold(5)},
-		{enchanted("default:sword_steel", 8), gold(7)},
-		{enchanted("default:pick_diamond", 15), gold(18)},
-		{enchanted("default:axe_diamond", 15), gold(16)},
-		{enchanted("default:sword_diamond", 15), gold(16)},
-		{"default:pick_steel", gold(3)},
-		{GOLD, "default:coal_lump 15"},
-		{GOLD, "default:steel_ingot 4"},
+		{enchanted("default:pick_steel", 8), emerald(8)},
+		{enchanted("default:axe_steel", 8), emerald(7)},
+		{enchanted("default:shovel_steel", 8), emerald(5)},
+		{enchanted("default:sword_steel", 8), emerald(7)},
+		{enchanted("default:pick_diamond", 15), emerald(18)},
+		{enchanted("default:axe_diamond", 15), emerald(16)},
+		{enchanted("default:sword_diamond", 15), emerald(16)},
+		{"default:pick_steel", emerald(3)},
+		{EMERALD, "default:coal_lump 15"},
+		{EMERALD, "default:steel_ingot 4"},
 	},
 	cleric = {
 		title = S("Cleric"),
-		{"goodluck_lapis:lapis 4", gold(1)},
-		{"goodluck_lapis:block", gold(8)},
-		{"default:mese_crystal", gold(3)},
-		{"default:obsidian 2", gold(2)},
-		{GOLD, "vessels:glass_bottle 9"},
-		{GOLD, "default:papyrus 16"},
+		{"goodluck_lapis:lapis 4", emerald(1)},
+		{"goodluck_lapis:block", emerald(8)},
+		{"default:mese_crystal", emerald(3)},
+		{"default:obsidian 2", emerald(2)},
+		{EMERALD, "vessels:glass_bottle 9"},
+		{EMERALD, "default:papyrus 16"},
 	},
 	librarian = {
 		title = S("Librarian"),
-		{"default:bookshelf", gold(3)},
-		{"default:book 3", gold(1)},
-		{"default:glass 4", gold(1)},
-		{"default:torch 16", gold(1)},
-		{GOLD, "default:paper 24"},
-		{GOLD, "default:book 4"},
+		{"default:bookshelf", emerald(3)},
+		{"default:book 3", emerald(1)},
+		{"default:glass 4", emerald(1)},
+		{"default:torch 16", emerald(1)},
+		{EMERALD, "default:paper 24"},
+		{EMERALD, "default:book 4"},
 	},
 	farmer = {
 		title = S("Farmer"),
-		{"farming:bread 6", gold(1)},
-		{"default:apple 4", gold(1)},
-		{"farming:seed_cotton 8", gold(1)},
-		{GOLD, "farming:wheat 20"},
-		{GOLD, "farming:cotton 20"},
-		{GOLD, "default:papyrus 24"},
+		{"farming:bread 6", emerald(1)},
+		{"default:apple 4", emerald(1)},
+		{"farming:seed_cotton 8", emerald(1)},
+		{EMERALD, "farming:wheat 20"},
+		{EMERALD, "farming:cotton 20"},
+		{EMERALD, "default:papyrus 24"},
 	},
 }
 
@@ -195,7 +195,7 @@ end
 -- what the villagers say, in the player's language
 local lines = {S("Hello"), S("Hi there"), S("What a lovely day"), S("Is it lunch time yet?"),
 	S("Diamonds are a villager's best friend."), S("Will you come to my block party?"),
-	S("If you got any gold, the traders have a few things to sell you."), S("Watch out for monsters at night!")}
+	S("If you got any emeralds, the traders have a few things to sell you."), S("Watch out for monsters at night!")}
 function mobs_npc.npc_talk(self, player)
 	local msg = self.state == "attack" and S("I'm kinda busy!") or lines[math.random(#lines)]
 	local who = self.nametag and self.nametag ~= "" and self.nametag or S("Villager")
