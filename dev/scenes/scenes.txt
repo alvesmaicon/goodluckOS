@@ -52,40 +52,40 @@ list-scroll      list  on    en        F1 F1 Down Down Down Next Next
 settings         grid  on    en        F5
 settings-display grid  on    en        F5 Return
 settings-volume  grid  on    en        F5 Return Down Right
-settings-launcher grid on    en        F5 Down Return
-settings-tabs    grid  on    en        F5 Down Return Down Down Return
-settings-interface grid on   en        F5 Down Down Return
-settings-overlay grid  on    en        F5 Down Down Down Return
-settings-overlay-end grid on en        F5 Down Down Down Return Down Down Down Down Down Down Down Down Down Down Down
-settings-datetime grid on    en        F5 Down Down Down Down Return
-settings-timezone grid on    en        F5 Down Down Down Down Return Down Down Down Down Down Down Down Down Return
-settings-storage grid  on    en        F5 Down Down Down Down Down Return
-settings-resize  grid  on    en        F5 Down Down Down Down Down Return Return
-settings-system  grid  on    en        F5 Down Down Down Down Down Down Return
-settings-info    grid  on    en        F5 Down Down Down Down Down Down Return Down Return
-settings-restore grid  on    en        F5 Down Down Down Down Down Down Return Down Down Return
-settings-input   grid  on    en        F5 Down Down Down Down Down Down Down Return
-settings-shortcuts grid on   en        F5 Down Down Down Down Down Down Down Return Down Return
-settings-tester  grid  on    en        F5 Down Down Down Down Down Down Down Return Down Down Return
-settings-confirm-b grid on   en        F5 Down Down Down Down Down Down Down Return Right
-settings-credits grid  on    en        F5 Down Down Down Down Down Down Down Down Return
+settings-launcher grid on    en        F5 Down Return Down Down
+settings-tabs    grid  on    en        F5 Down Return Down Down Down Down Down Down Down Return
+settings-interface grid on   en        F5 Down Return
+settings-overlay grid  on    en        F5 Down Down Return
+settings-overlay-end grid on en        F5 Down Down Return Down Down Down Down Down Down Down Down Down Down Down
+settings-datetime grid on    en        F5 Down Down Down Return
+settings-timezone grid on    en        F5 Down Down Down Return Down Down Down Down Down Down Down Down Return
+settings-storage grid  on    en        F5 Down Down Down Down Return
+settings-resize  grid  on    en        F5 Down Down Down Down Return Return
+settings-system  grid  on    en        F5 Down Down Down Down Down Return
+settings-info    grid  on    en        F5 Down Down Down Down Down Return Down Return
+settings-restore grid  on    en        F5 Down Down Down Down Down Return Down Down Return
+settings-input   grid  on    en        F5 Down Down Down Down Down Down Return
+settings-shortcuts grid on   en        F5 Down Down Down Down Down Down Return Down Return
+settings-tester  grid  on    en        F5 Down Down Down Down Down Down Return Down Down Return
+settings-confirm-b grid on   en        F5 Down Down Down Down Down Down Return Right
+settings-credits grid  on    en        F5 Down Down Down Down Down Down Down Return
 settings-power   grid  on    en        F5 F6
-settings-pt      grid  on    pt-BR     F5 Down Down Down Return
-settings-list-view grid on   en        F5 Down Return Down Right Escape Escape
-settings-font    grid  on    en        F5 Down Down Return Down Right Escape Escape
-settings-language grid on    en        F5 Down Down Return Right Escape Escape
-settings-accent  grid  on    en        F5 Down Down Return Down Down Right Right Right Right Right
-settings-accent-list grid on en        F5 Down Down Return Down Down Return Down
-accent-launcher  list  on    en        F5 Down Down Return Down Down Right Right Right Right Right Escape Escape
+settings-pt      grid  on    pt-BR     F5 Down Down Return
+settings-list-view grid on   en        F5 Down Return Down Down Right Escape Escape
+settings-font    grid  on    en        F5 Down Return Down Down Down Right Escape Escape
+settings-language grid on    en        F5 Down Return Right Escape Escape
+settings-accent  grid  on    en        F5 Down Return Down Down Down Down Right Right Right Right Right
+settings-accent-list grid on en        F5 Down Return Down Down Down Down Return Down
+accent-launcher  list  on    en        F5 Down Return Down Down Down Down Right Right Right Right Right Escape Escape
 power-restart    grid  on    en        F6 Down Return
 power-shutdown   list  on    en        F6 Down Down Return
-status-temps     grid  on    en        temps:52:78 F5 Down Down Down Return Down Down Down Down Down Down Return Down Return Escape Escape
-status-hot       grid  on    en        temps:91:60 F5 Down Down Down Return Down Down Down Down Down Down Return Down Return
-status-all       grid  on    en        temps:52:78 F5 Down Down Down Return Down Down Return Down Down Down Down Return Down Return Escape Escape F1 F1
-status-off       grid  on    en        F5 Down Down Down Return Down Return Escape Escape
-status-game      grid  on    en        F5 Down Down Down Return Return
-status-old-items grid  on    en        hud:HUD_STATUS_DATE=false hud:HUD_STATUS_TIME=false hud:HUD_STATUS_BATTERY=true hud:HUD_STATUS_AUDIO=false hud:HUD_STATUS_CPU_TEMP=false hud:HUD_STATUS_PMIC_TEMP=false F5 Down Down Down Return
-status-old-none  grid  on    en        hud:HUD_STATUS_DATE=false hud:HUD_STATUS_TIME=false hud:HUD_STATUS_BATTERY=false hud:HUD_STATUS_AUDIO=false hud:HUD_STATUS_CPU_TEMP=false hud:HUD_STATUS_PMIC_TEMP=false hud:HUD_24H=true F5 Down Down Down Return
+status-temps     grid  on    en        temps:52:78 F5 Down Down Return Down Down Down Down Down Down Return Down Return Escape Escape
+status-hot       grid  on    en        temps:91:60 F5 Down Down Return Down Down Down Down Down Down Return Down Return
+status-all       grid  on    en        temps:52:78 F5 Down Down Return Down Down Return Down Down Down Down Return Down Return Escape Escape F1 F1
+status-off       grid  on    en        F5 Down Down Return Down Return Escape Escape
+status-game      grid  on    en        F5 Down Down Return Return
+status-old-items grid  on    en        hud:HUD_STATUS_DATE=false hud:HUD_STATUS_TIME=false hud:HUD_STATUS_BATTERY=true hud:HUD_STATUS_AUDIO=false hud:HUD_STATUS_CPU_TEMP=false hud:HUD_STATUS_PMIC_TEMP=false F5 Down Down Return
+status-old-none  grid  on    en        hud:HUD_STATUS_DATE=false hud:HUD_STATUS_TIME=false hud:HUD_STATUS_BATTERY=false hud:HUD_STATUS_AUDIO=false hud:HUD_STATUS_CPU_TEMP=false hud:HUD_STATUS_PMIC_TEMP=false hud:HUD_24H=true F5 Down Down Return
 modern-grid      grid  on    en        set:style=modern
 modern-grid-nes  grid  on    en        set:style=modern F1 F1 Right
 modern-list      list  on    en        set:style=modern Down Down Down Down Down
@@ -94,12 +94,12 @@ modern-list-sel-marks list on en       set:style=modern F1 F1 Down space F3
 modern-autolaunch grid on    en        set:style=modern Right F3
 modern-settings  grid  on    en        set:style=modern F5
 modern-settings-display grid on en     set:style=modern F5 Return
-modern-settings-overlay grid on en     set:style=modern F5 Down Down Down Return Down
-modern-settings-accent grid on en      set:style=modern F5 Down Down Return Down Down Return
+modern-settings-overlay grid on en     set:style=modern F5 Down Down Return Down
+modern-settings-accent grid on en      set:style=modern F5 Down Return Down Down Down Down Return
 modern-power     grid  on    en        set:style=modern F6
 modern-search    grid  on    en        set:style=modern F4 c r a
 modern-rename-notice grid on en        set:style=modern F1 F1 F7 Return x F5
-modern-tester    grid  on    en        set:style=modern F5 Down Down Down Down Down Down Down Return Down Down Return
+modern-tester    grid  on    en        set:style=modern F5 Down Down Down Down Down Down Return Down Down Return
 modern-pt-grid   grid  on    pt-BR     set:style=modern F1 F1
-modern-pt-settings grid on   pt-BR     set:style=modern F5 Down Down Return
-modern-white     list  on    en        set:style=modern set:accent=white F1 F1 Down space F5 Down Down Return Down Down
+modern-pt-settings grid on   pt-BR     set:style=modern F5 Down Return
+modern-white     list  on    en        set:style=modern set:accent=white F1 F1 Down space F5 Down Return Down Down Down Down

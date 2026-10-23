@@ -184,16 +184,15 @@ System Settings
 │   ├── Master Volume
 │   ├── Global Mute
 │   └── Audio output: Speaker / Headphones
-├── Launcher
-│   ├── Show launcher tabs
-│   ├── Launcher view: Grid / List
-│   └── Launcher tabs ─ which tabs to show
 ├── Interface
 │   ├── Language
+│   ├── Look: Style: Retro / Modern
+│   ├── View: Grid / List
 │   ├── Font
 │   ├── Accent color ─ the highlight colour, from a list of 9
-│   ├── Style: Retro / Modern
-│   └── Show Puppy on loading screens (off: a plain "Loading..." while a game starts)
+│   ├── Show Puppy on loading screens (off: a plain "Loading..." while a game starts)
+│   ├── Tabs: Show tabs
+│   └── Launcher tabs ─ which tabs to show
 ├── Overlay
 │   ├── Status bar: In game, In the launcher
 │   ├── Show date
