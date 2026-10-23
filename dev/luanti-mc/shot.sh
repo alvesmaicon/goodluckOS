@@ -1,0 +1,26 @@
+#!/bin/bash
+# Screenshots of every node (floor, wall) and item image, with goodluck_mcassets reading the pack in dev/out/luanti-mc/<pack>:
+#   docker run --rm -v goodluck-work:/work:ro -v luanti-native:/build:ro -v "$PWD":/repo luanti-native \
+#       bash /repo/dev/luanti-mc/shot.sh <pack>       (no pack: the game as it ships)
+set -euo pipefail
+L=/tmp/l; G=$L/games/mcdump_game; OUT=/repo/dev/out/luanti-mc; NAME=${1:-none}
+mkdir -p "$L" "$G" "$OUT" "$L/textures/server" "$L/worlds/show"
+for d in bin builtin client fonts textures locale; do [ -e /build/src/$d ] && cp -a /build/src/$d "$L/"; done
+cp -a /work/br/out/target/usr/share/luanti/games/minetest_game/. "$G"
+cp -a /repo/rootfs/board/my-device/rootfs-overlay/usr/share/luanti/games/minetest_game/. "$G"
+cp -a /repo/dev/luanti-mc/showcase "$G/mods/goodluck_showcase"
+[ "$NAME" != none ] && cp -a "$OUT/$NAME"/. "$L/textures/server/"
+cp /repo/rootfs/board/my-device/rootfs-overlay/usr/share/goodluck/defaults/luanti.conf "$L/minetest.conf"
+printf 'fullscreen = false\nmg_name = singlenode\nenable_fog = false\nviewing_range = 60\ngoodluck_mc_assets = %s\n' \
+    "$([ "$NAME" != none ] && echo true || echo false)" >> "$L/minetest.conf"
+printf 'gameid = mcdump\nbackend = sqlite3\n' > "$L/worlds/show/world.mt"
+Xvfb :99 -screen 0 640x480x24 -nolisten tcp >/dev/null 2>&1 & X=$!
+sleep 1
+(cd "$L" && DISPLAY=:99 SDL_VIDEODRIVER=x11 MESA_GLES_VERSION_OVERRIDE=2.0 LIBGL_ALWAYS_SOFTWARE=1 \
+    ./bin/luanti --go --world "$L/worlds/show" --name dev > "$OUT/shot-$NAME.log" 2>&1) & P=$!
+for v in floor wall items; do
+    for _ in $(seq 120); do grep -q "showcase: $v" "$OUT/shot-$NAME.log" && break; sleep 1; done
+    DISPLAY=:99 xwd -root -silent | convert xwd:- "$OUT/shot-$NAME-$v.png"; echo "dev/out/luanti-mc/shot-$NAME-$v.png"
+done
+kill $P $X 2>/dev/null || true
+grep -E "ERROR|WARNING" "$OUT/shot-$NAME.log" | grep -v "backend" | head -20 || true
