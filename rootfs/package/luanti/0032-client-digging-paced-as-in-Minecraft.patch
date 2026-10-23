@@ -1,0 +1,105 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Fri, 23 Oct 2026 13:18:12 -0300
+Subject: [PATCH 32/32] client: digging paced as in Minecraft
+
+The next node could be dug after the last one's dig time divided by the
+crack animation's frames, at most 0.3 s and 0.15 s after an instant one:
+0.03 s with a fast pick on stone, so a tunnel went by two or three times
+faster than in Minecraft. Minecraft waits 5 ticks, 0.25 s, after every
+block, in survival and creative alike; so does this now (repeat_dig_time
+still sets a longer minimum).
+
+Minecraft digs five times slower off the ground (jumping, flying, on a
+ladder) and five times slower again with the eyes in water. The dig time
+now runs at that pace, from the moment the player leaves the ground or
+puts the head under water, as Minecraft adds its progress tick by tick.
+Water is a node of the group water at the eye position.
+
+The hand's capabilities are used when they dig faster than the wielded
+item's, not only when the item can't dig: in Minecraft's creative mode a
+block breaks at once whatever is held, and a creative hand that does
+that is otherwise unused while a tool is in hand. The server's dig check
+does the same, so it doesn't count those digs as too fast. In survival
+the hand never wins with the handheld's Minecraft capabilities, where
+every tool digs a block at least as fast as the hand.
+
+Checked in the native build with a steel pick held on a stone wall:
+0.656 s from block to block (Minecraft 0.40 + 0.25); flying, 2.23 s
+(2.0 + 0.25); in creative with the pick, 0.25 to 0.29 s.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/src/client/game.cpp b/src/client/game.cpp
+index 7786487bc..8067461c2 100644
+--- a/src/client/game.cpp
++++ b/src/client/game.cpp
+@@ -3393,11 +3393,11 @@ void Game::handleDigging(const PointedThing &pointed, const v3s16 &nodepos,
+ 			&tool_item.getToolCapabilities(itemdef_manager, &hand_item),
+ 			tool_item.wear);
+ 
+-	// If can't dig, try hand
+-	if (!params.diggable) {
+-		params = getDigParams(features.groups,
+-				&hand_item.getToolCapabilities(itemdef_manager));
+-	}
++	// If can't dig, or the hand digs faster (a creative hand), use the hand
++	const DigParams hand_params = getDigParams(features.groups,
++			&hand_item.getToolCapabilities(itemdef_manager));
++	if (!params.diggable || (hand_params.diggable && hand_params.time < params.time))
++		params = hand_params;
+ 
+ 	if (!params.diggable) {
+ 		// I guess nobody will wait for this long
+@@ -3457,15 +3457,8 @@ void Game::handleDigging(const PointedThing &pointed, const v3s16 &nodepos,
+ 		if (g_settings->getBool("safe_dig_and_place"))
+ 			runData.digging_blocked = true;
+ 
+-		runData.nodig_delay_timer =
+-				runData.dig_time_complete / (float)crack_animation_length;
+-
+-		// We don't want a corresponding delay to very time consuming nodes
+-		// and nodes without digging time (e.g. torches) get a fixed delay.
+-		if (runData.nodig_delay_timer > 0.3f)
+-			runData.nodig_delay_timer = 0.3f;
+-		else if (runData.dig_instantly)
+-			runData.nodig_delay_timer = 0.15f;
++		// As in Minecraft, the next node is dug 0.25 s (5 ticks) after one breaks
++		runData.nodig_delay_timer = 0.25f;
+ 
+ 		// Ensure that the delay between breaking nodes
+ 		// (dig_time_complete + nodig_delay_timer) is at least the
+@@ -3497,7 +3490,12 @@ void Game::handleDigging(const PointedThing &pointed, const v3s16 &nodepos,
+ 	}
+ 
+ 	if (runData.dig_time_complete < 100000.0) {
+-		runData.dig_time += dtime;
++		// As in Minecraft, five times slower off the ground and five times slower with the head in water
++		f32 slowdown = player->touching_ground ? 1.0f : 5.0f;
++		const MapNode eye = map.getNode(floatToInt(player->getEyePosition(), BS));
++		if (itemgroup_get(nodedef_manager->get(eye).groups, "water") > 0)
++			slowdown *= 5.0f;
++		runData.dig_time += dtime / slowdown;
+ 	} else {
+ 		runData.dig_time = 0;
+ 		client->setCrack(-1, nodepos);
+diff --git a/src/network/serverpackethandler.cpp b/src/network/serverpackethandler.cpp
+index 13e7ac88e..d41d80996 100644
+--- a/src/network/serverpackethandler.cpp
++++ b/src/network/serverpackethandler.cpp
+@@ -1122,11 +1122,11 @@ void Server::handleCommand_Interact(NetworkPacket *pkt)
+ 			DigParams params = getDigParams(m_nodedef->get(n).groups,
+ 					&tool_item.getToolCapabilities(m_itemdef, &hand_item),
+ 					tool_item.wear);
+-			// If can't dig, try hand
+-			if (!params.diggable) {
+-				params = getDigParams(m_nodedef->get(n).groups,
++			// If can't dig, or the hand digs faster (a creative hand), use the hand
++			const DigParams hand_params = getDigParams(m_nodedef->get(n).groups,
+ 					&hand_item.getToolCapabilities(m_itemdef));
+-			}
++			if (!params.diggable || (hand_params.diggable && hand_params.time < params.time))
++				params = hand_params;
+ 			// If can't dig, ignore dig
+ 			if (!params.diggable) {
+ 				infostream << "Server: " << player->getName()
