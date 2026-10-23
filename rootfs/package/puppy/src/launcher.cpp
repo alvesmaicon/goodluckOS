@@ -222,11 +222,12 @@ Header LauncherScreen::header() const {
 
 Hints LauncherScreen::hints() const {
     const Entry* sel = model.selected();
+    const bool fav = sel && model.isFavorite(*sel);
     Hints hints = {{"L1/R1", tr("Tab")}, {"A", tr("Launch")},
-                   {"Y", tr(sel && model.isFavorite(*sel) ? "Remove" : "My List")}};
+                   {"Y", tr(fav ? "Remove" : "My List"), tr(fav ? "My List" : "Remove")}};
     // while searching, clearing the search is more useful than starting a new one
-    if (model.query.empty()) hints.push_back({"X", tr("Search")});
-    else hints.push_back({"B", tr("Clear")});
+    if (model.query.empty()) hints.push_back({"X", tr("Search"), tr("Clear")});
+    else hints.push_back({"B", tr("Clear"), tr("Search")});
     hints.push_back({"SELECT", tr("Autolaunch")});
     if (model.hasSettings || builtinSettings()) hints.push_back({"START", tr("Settings")});
     return hints;

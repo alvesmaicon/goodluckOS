@@ -189,16 +189,16 @@ Ui::~Ui() {
     if (clipTex) SDL_DestroyTexture(clipTex);
     if (circle) SDL_DestroyTexture(circle);
     if (button) SDL_DestroyTexture(button);
-    for (TTF_Font* f : {fonts.ui, fonts.title, fonts.desc, fonts.small, fonts.uiBold, fonts.smallBold}) if (f) TTF_CloseFont(f);
+    for (TTF_Font* f : {fonts.ui, fonts.title, fonts.desc, fonts.small, fonts.uiBold, fonts.smallBold, fonts.keyBold}) if (f) TTF_CloseFont(f);
     if (renderer) SDL_DestroyRenderer(renderer);
     if (window) SDL_DestroyWindow(window);
     if (sdlUp) { TTF_Quit(); IMG_Quit(); SDL_Quit(); }
 }
 
-// The four sizes of the interface font, and two of the bold one. What was measured or drawn with the
+// The four sizes of the interface font, and three of the bold one. What was measured or drawn with the
 // old ones is dropped.
 void Ui::setFont(const std::string& path, const std::string& bold, float scale) {
-    for (TTF_Font* f : {fonts.ui, fonts.title, fonts.desc, fonts.small, fonts.uiBold, fonts.smallBold}) if (f) TTF_CloseFont(f);
+    for (TTF_Font* f : {fonts.ui, fonts.title, fonts.desc, fonts.small, fonts.uiBold, fonts.smallBold, fonts.keyBold}) if (f) TTF_CloseFont(f);
     auto size = [&](int pt) { return (int)std::lround(pt * scale); };
     fonts.ui    = TTF_OpenFont(path.c_str(), size(22));
     fonts.title = TTF_OpenFont(path.c_str(), size(30));
@@ -206,6 +206,7 @@ void Ui::setFont(const std::string& path, const std::string& bold, float scale) 
     fonts.small = TTF_OpenFont(path.c_str(), size(15));
     fonts.uiBold    = bold.empty() ? nullptr : TTF_OpenFont(bold.c_str(), size(22));
     fonts.smallBold = bold.empty() ? nullptr : TTF_OpenFont(bold.c_str(), size(15));
+    fonts.keyBold   = bold.empty() ? nullptr : TTF_OpenFont(bold.c_str(), size(11));
     if (!fonts.ui || !fonts.title || !fonts.desc || !fonts.small)
         std::cerr << "Warning: could not load font " << path << "\n";
     pillWidths.clear();
@@ -276,28 +277,29 @@ void Ui::footer(const Hints& hints) {
 
     const int y = top + (kFooterH - TTF_FontHeight(fonts.small)) / 2;
     const int keyGap = 6;
+    auto labelW = [&](const Hint& h) { return std::max(textWidth(fonts.small, h.label), textWidth(fonts.small, h.room)); };
     int textW = 0;
-    for (const auto& h : hints) textW += textWidth(fonts.small, buttonLabel(h.first)) + keyGap + textWidth(fonts.small, h.second);
+    for (const auto& h : hints) textW += textWidth(fonts.small, buttonLabel(h.key)) + keyGap + labelW(h);
     const int slots = std::max(1, (int)hints.size() - 1);
     if (theme().modern) {   // Vitrine's: left to right, each button drawn, then what it does
         const int cy = top + kFooterH / 2;
         int w = 0;
-        for (const auto& h : hints) w += keyWidth(buttonLabel(h.first)) + keyGap + textWidth(fonts.small, h.second);
+        for (const auto& h : hints) w += keyWidth(buttonLabel(h.key)) + keyGap + labelW(h);
         const int gap = std::clamp((kScreenW - 2 * kMargin - w) / slots, 6, 18);
         int x = kMargin;
         for (const auto& h : hints) {
-            x += keyGlyph(buttonLabel(h.first), x, cy, theme().bar) + keyGap;
-            drawText(renderer, fonts.small, h.second, x, cy - TTF_FontHeight(fonts.small) / 2, theme().muted);
-            x += textWidth(fonts.small, h.second) + gap;
+            x += keyGlyph(buttonLabel(h.key), x, cy, theme().bar) + keyGap;
+            drawText(renderer, fonts.small, h.label, x, cy - TTF_FontHeight(fonts.small) / 2, theme().muted);
+            x += labelW(h) + gap;
         }
         return;
     }
     const int gap = std::clamp((kScreenW - 2 * kMargin - textW) / slots, 4, 16);
     int x = kScreenW - kMargin;
     for (auto it = hints.rbegin(); it != hints.rend(); ++it) {
-        x -= textWidth(fonts.small, it->second);
-        drawText(renderer, fonts.small, it->second, x, y, theme().muted);
-        const std::string key = buttonLabel(it->first);
+        x -= labelW(*it);
+        drawText(renderer, fonts.small, it->label, x, y, theme().muted);
+        const std::string key = buttonLabel(it->key);
         x -= keyGap + textWidth(fonts.small, key);
         drawText(renderer, fonts.small, key, x, y, accent());
         x -= gap;
@@ -436,7 +438,7 @@ static bool faceButton(const std::string& key) {
 }
 
 int Ui::keyWidth(const std::string& key) {
-    return faceButton(key) ? 22 : textWidth(fonts.smallBold, key) + 12;
+    return faceButton(key) ? 22 : textWidth(fonts.keyBold, key) + 10;
 }
 
 // A face button: a grey disc, a little concave like the pad's (lit from above, its dish is darker at
@@ -473,12 +475,12 @@ int Ui::keyGlyph(const std::string& key, int x, int cy, SDL_Color inside) {
                  cy - TTF_FontHeight(fonts.smallBold) / 2, buttonColor(key[0]));
         return w;
     }
-    const int h = TTF_FontHeight(fonts.smallBold) + 2;
+    const int h = TTF_FontHeight(fonts.keyBold) + 2;
     const SDL_Rect r{x, cy - h / 2, w, h};
-    roundRect(r, 5, theme().muted);
-    roundRect({r.x + 2, r.y + 2, r.w - 4, r.h - 4}, 3, inside);
-    drawText(renderer, fonts.smallBold, key, x + (w - textWidth(fonts.smallBold, key)) / 2,
-             cy - TTF_FontHeight(fonts.smallBold) / 2, theme().muted);
+    roundRect(r, 4, theme().muted);
+    roundRect({r.x + 1, r.y + 1, r.w - 2, r.h - 2}, 3, inside);
+    drawText(renderer, fonts.keyBold, key, x + (w - textWidth(fonts.keyBold, key)) / 2,
+             cy - TTF_FontHeight(fonts.keyBold) / 2, theme().muted);
     return w;
 }
 

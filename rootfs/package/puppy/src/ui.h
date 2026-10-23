@@ -74,8 +74,12 @@ struct TopBar {
     }
 };
 
-// The footer: each button with what it does.
-using Hints = std::vector<std::pair<std::string, std::string>>;
+// The footer: each button with what it does. room: the other text the slot shows at times (My List /
+// Remove), so its width stays and the hints after it don't move.
+struct Hint {
+    std::string key, label, room;
+};
+using Hints = std::vector<Hint>;
 
 struct Fonts {
     TTF_Font* ui = nullptr;
@@ -84,6 +88,7 @@ struct Fonts {
     TTF_Font* small = nullptr;
     TTF_Font* uiBold = nullptr;      // the modern style's titles and button names (retro: none)
     TTF_Font* smallBold = nullptr;
+    TTF_Font* keyBold = nullptr;     // the names in the footer's button outlines
 };
 
 class Ui {
