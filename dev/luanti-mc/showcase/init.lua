@@ -1,12 +1,13 @@
 -- Dev tool, not shipped: shot.sh takes a screenshot at each "showcase:" log line; showcase_first (a Lua pattern)
--- puts the matching nodes and items first, the ones the "close" view looks at
+-- puts the matching nodes and items first, hidden ones too, the ones the "close" view looks at
 local W = 24
 local FIRST = core.settings:get("showcase_first")
 
 local function list(t, skip)
 	local out = {}
 	for name, def in pairs(t) do
-		if name ~= "" and not skip[name] and not (def.groups or {}).not_in_creative_inventory then out[#out + 1] = name end
+		local hidden = (def.groups or {}).not_in_creative_inventory and not (FIRST and name:find(FIRST))
+		if name ~= "" and not skip[name] and not hidden then out[#out + 1] = name end
 	end
 	table.sort(out, function(a, b)
 		local fa, fb = FIRST and a:find(FIRST) and 0 or 1, FIRST and b:find(FIRST) and 0 or 1

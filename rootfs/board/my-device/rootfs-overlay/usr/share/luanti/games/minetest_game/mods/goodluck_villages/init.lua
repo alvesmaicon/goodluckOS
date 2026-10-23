@@ -134,6 +134,11 @@ local house_loot = {
 	{name = "farming:wheat", min = 4, max = 16, chance = 90},
 	{name = "farming:seed_wheat", min = 4, max = 12, chance = 85},
 	{name = "farming:seed_cotton", min = 2, max = 8, chance = 70},
+	-- as Minecraft's plains houses: potatoes, beetroot seeds, gold nuggets and emeralds
+	{name = "goodluck_food:potato", min = 1, max = 7, chance = 50},
+	{name = "goodluck_food:beetroot_seeds", min = 1, max = 5, chance = 40},
+	{name = "goodluck_food:gold_nugget", min = 1, max = 3, chance = 40},
+	{name = "goodluck_emerald:emerald", min = 1, max = 4, chance = 30},
 	{name = "default:coal_lump", min = 4, max = 16, chance = 90},
 	{name = "default:torch", min = 8, max = 24, chance = 95},
 	{name = "default:wood", min = 8, max = 24, chance = 85},
@@ -388,6 +393,12 @@ local function roads(a, vx, vy, vz, minp, maxp)
 	return along
 end
 
+-- a field grows wheat, or as in Minecraft's farms now and then carrots, potatoes or beetroots
+local function crops(pr)
+	local crop = core.get_modpath("goodluck_food") and ({"carrots", "potatoes", "beetroots"})[pr(1, 6)]
+	return crop and {["farming:wheat_8"] = "goodluck_food:" .. crop .. "_8"} or {}
+end
+
 local function build(vm, emin, emax, minp, maxp, vx, vy, vz, seed)
 	local a = VoxelArea:new({MinEdge = emin, MaxEdge = emax})
 	local pr = create_prng(seed)
@@ -395,7 +406,7 @@ local function build(vm, emin, emax, minp, maxp, vx, vy, vz, seed)
 	local placements, trees = layout(vx, vz, pr, minp, maxp, a, along)
 	vm:set_data(data)
 	for _, p in ipairs(placements) do
-		core.place_schematic_on_vmanip(vm, p.pos, p.path, p.rot, {}, true)
+		core.place_schematic_on_vmanip(vm, p.pos, p.path, p.rot, p.file:find("^cultivos") and crops(pr) or {}, true)
 	end
 	for _, t in ipairs(trees) do
 		core.place_schematic_on_vmanip(vm, t.pos, t.path, t.rot, {}, false)
