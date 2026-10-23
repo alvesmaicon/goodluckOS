@@ -82,7 +82,7 @@ static const char* const kShortcuts[][2] = {
 
 const std::vector<std::pair<SettingsScreen::Page, const char*>>& SettingsScreen::sections() const {
     static const std::vector<std::pair<Page, const char*>> list = {
-        {Page::Display, "Display & Audio"}, {Page::Launcher, "Launcher"}, {Page::Interface, "Interface"},
+        {Page::Display, "Display & Audio"}, {Page::Interface, "Interface"},
         {Page::Overlay, "Overlay"}, {Page::DateTime, "Date & Time"}, {Page::Storage, "Storage"},
         {Page::System, "System"}, {Page::Input, "Input Settings"}, {Page::Credits, "Credits"},
     };
@@ -121,7 +121,6 @@ std::string SettingsScreen::pageHint(Page p) const {
 std::vector<Row> SettingsScreen::rows(Page p) {
     switch (p) {
         case Page::Display:   return displayPage();
-        case Page::Launcher:  return launcherPage();
         case Page::Interface: return interfacePage();
         case Page::Overlay:   return overlayPage();
         case Page::DateTime:  return dateTimePage();
@@ -166,23 +165,6 @@ std::vector<Row> SettingsScreen::displayPage() {
     return rows;
 }
 
-std::vector<Row> SettingsScreen::launcherPage() {
-    std::vector<Row> rows;
-    rows.push_back(Row::toggle("Show launcher tabs", launcher.showTabs, [this](int on) {
-        launcher.showTabs = on;
-        prefs.showTabs = on;
-        prefs.save();
-    }));
-    rows.push_back(Row::choice("Launcher view", {"Grid", "List"}, launcher.view == View::List ? 1 : 0, [this](int i) {
-        launcher.view = i ? View::List : View::Grid;
-        prefs.listView = i;
-        prefs.save();
-    }));
-    if (std::any_of(launcher.categories.begin(), launcher.categories.end(), [](const Category& c) { return !c.mixed; }))
-        rows.push_back(Row::link("Launcher tabs", [this] { open(Page::Tabs); }));
-    return rows;
-}
-
 std::vector<Row> SettingsScreen::tabsPage() {
     std::vector<Row> rows;
     for (const Category& c : launcher.categories) {
@@ -221,6 +203,22 @@ std::vector<Row> SettingsScreen::interfacePage() {
     language.rawChoices = true;
     rows.push_back(language);
 
+    // The launcher's look: the style and the view first, as they change the most
+    rows.push_back(Row::section("Look"));
+    std::vector<std::string> styleNames;
+    for (const styles::Style& s : styles::all()) styleNames.push_back(s.name);
+    rows.push_back(Row::choice("Style", styleNames, styles::find(prefs.style), [this](int i) {
+        prefs.style = styles::all()[i].key;
+        prefs.save();
+        styles::choose(prefs.style);
+        applyFont();    // the modern style has its own default font
+    }));
+    rows.push_back(Row::choice("View", {"Grid", "List"}, launcher.view == View::List ? 1 : 0, [this](int i) {
+        launcher.view = i ? View::List : View::Grid;
+        prefs.listView = i;
+        prefs.save();
+    }));
+
     std::vector<std::string> fontNames, keys;
     int currentFont = 0;
     const int chosen = fonts::find(prefs.font);
@@ -255,19 +253,19 @@ std::vector<Row> SettingsScreen::interfacePage() {
     accentRow.swatches = accentColors;
     rows.push_back(accentRow);
 
-    std::vector<std::string> styleNames;
-    for (const styles::Style& s : styles::all()) styleNames.push_back(s.name);
-    rows.push_back(Row::choice("Style", styleNames, styles::find(prefs.style), [this](int i) {
-        prefs.style = styles::all()[i].key;
-        prefs.save();
-        styles::choose(prefs.style);
-        applyFont();    // the modern style has its own default font
-    }));
-
     rows.push_back(Row::toggle("Show Puppy on loading screens", !prefs.loadingText, [this](int on) {
         prefs.loadingText = !on;
         prefs.save();
     }));
+
+    rows.push_back(Row::section("Tabs"));
+    rows.push_back(Row::toggle("Show tabs", launcher.showTabs, [this](int on) {
+        launcher.showTabs = on;
+        prefs.showTabs = on;
+        prefs.save();
+    }));
+    if (std::any_of(launcher.categories.begin(), launcher.categories.end(), [](const Category& c) { return !c.mixed; }))
+        rows.push_back(Row::link("Launcher tabs", [this] { open(Page::Tabs); }));
     return rows;
 }
 

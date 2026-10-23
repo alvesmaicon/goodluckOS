@@ -64,7 +64,7 @@ public:
     void levelsChanged() override;
 
 private:
-    enum class Page { Display, Launcher, Interface, Overlay, DateTime, Storage, System, Input,
+    enum class Page { Display, Interface, Overlay, DateTime, Storage, System, Input,
                       Tabs, Shortcuts, Info, Resize, Credits };
     struct Cursor {
         int sel = -1;       // the selected row, -1 for none (a page with nothing to change scrolls)
@@ -123,7 +123,6 @@ private:
 
     // the pages (settings_pages.cpp)
     std::vector<Row> displayPage();
-    std::vector<Row> launcherPage();
     std::vector<Row> tabsPage();
     std::vector<Row> interfacePage();
     std::vector<Row> overlayPage();
