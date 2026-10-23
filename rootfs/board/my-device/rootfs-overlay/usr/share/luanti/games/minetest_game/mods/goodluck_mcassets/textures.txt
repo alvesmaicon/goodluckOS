@@ -281,6 +281,12 @@ goodluck_food_cake_top.png	{block/cake_top}
 goodluck_food_cake_side.png	{block/cake_side}
 goodluck_food_cake_inner.png	{block/cake_inner}
 goodluck_food_cake_bottom.png	{block/cake_bottom}
+goodluck_food_fishing_rod.png	{item/fishing_rod}
+goodluck_food_bobber.png	{entity/fishing/fishing_hook}
+goodluck_food_cod.png	{item/cod}
+goodluck_food_cooked_cod.png	{item/cooked_cod}
+goodluck_food_salmon.png	{item/salmon}
+goodluck_food_cooked_salmon.png	{item/cooked_salmon}
 
 # Materials
 default_stick.png	{item/stick}
