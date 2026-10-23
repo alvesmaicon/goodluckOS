@@ -17,8 +17,9 @@ end
 core.register_on_mods_loaded(function()
 	for name, def in pairs(core.registered_nodes) do
 		if def.on_timer == farming.grow_plant and def.minlight and core.get_item_group(name, "seed") == 0 then
-			-- can_grow checks the light now: MTG's own check reads the light of the moment
-			local over = {minlight = 0}
+			-- can_grow checks the light now: MTG's own check reads the light of the moment, and its top (14) kept
+			-- crops from growing in full sun (15)
+			local over = {minlight = 0, maxlight = 15}
 			local mod, plant = name:match("^(.-):(.-)_%d+$")
 			if def.next_plant and mod and core.registered_items[mod .. ":seed_" .. plant] then
 				over.drop = mod .. ":seed_" .. plant

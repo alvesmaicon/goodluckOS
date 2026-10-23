@@ -26,7 +26,8 @@ local function matches(name, ...)
 end
 
 local function natural(name, def, g)
-	return matches(name, "^goodluck_food:[%a_]*seeds$") or def.type == "node" and (any_group(g, "soil", "sand", "leaves", "sapling", "flora", "flower", "grass",
+	return matches(name, "^goodluck_food:[%a_]*seeds$", "^goodluck_food:pumpkin$", "^goodluck_food:melon$") or
+		def.type == "node" and (any_group(g, "soil", "sand", "leaves", "sapling", "flora", "flower", "grass",
 		"mushroom", "tree", "seed", "snowy", "catchable") or matches(name, "^default:ice$", "^default:stone_with_",
 		"^default:[%a_]*stone$", "^default:gravel$", "^default:clay$", "^default:obsidian$", "^default:cactus$",
 		"^default:large_cactus_seedling$", "^default:papyrus$", "^default:dry_shrub$", "^default:coral_",
@@ -39,7 +40,7 @@ local function functional(name)
 	return matches(name, "^goodluck_craft:crafting_table$", "^default:furnace$", "^default:chest", "^default:bookshelf$",
 		"^default:torch$", "^default:meselamp$", "^default:mese_post_light", "^default:ladder_", "^default:sign_wall_",
 		"^beds:", "^bones:", "^vessels:", "^fireflies:firefly_bottle$", "^mobs:spawner$", "^mobs:mob_repellent$",
-		"^fire:permanent_flame$") and name ~= "vessels:glass_fragments"
+		"^fire:permanent_flame$", "^goodluck_food:jack_o_lantern$") and name ~= "vessels:glass_fragments"
 end
 
 local function building(name, def, g)
@@ -90,8 +91,8 @@ local CATEGORIES = {
 	{"tools_utilities", S("Tools & Utilities"), "default:pick_diamond", 2, 1, tools, {"^0", "^bucket",
 		"^flint_and_steel$", "^shears$", "rail$", "^cart$", "^boat$"}},
 	{"combat", S("Combat"), "default:sword_diamond", 2, 2, combat},
-	{"food_drinks", S("Food & Drinks"), "default:apple", 2, 3, food, {"^apple$", "^golden_apple$", "^blueberries$", "^carrot$",
-		"^golden_carrot$", "^potato$", "^baked_potato$", "^poisonous_potato$", "^beetroot$", "^bread$", "^mushroom_stew$",
+	{"food_drinks", S("Food & Drinks"), "default:apple", 2, 3, food, {"^apple$", "^golden_apple$", "^melon_slice$", "^blueberries$", "^carrot$",
+		"^golden_carrot$", "^potato$", "^baked_potato$", "^poisonous_potato$", "^beetroot$", "^bread$", "^pumpkin_pie$", "^mushroom_stew$",
 		"^beetroot_soup$"}},
 	{"ingredients", S("Ingredients"), "default:steel_ingot", 2, 4, ingredients, {"^coal_lump$", "_lump$", "_ingot$", "_nugget$",
 		"^emerald$", "^diamond$", "^mese_crystal", "^amethyst_shard$", "^flint$", "^stick$", "^clay", "^paper$", "^book$", "^string$", "^cotton$",

@@ -1,6 +1,7 @@
 -- Minecraft's foods and crops. Hunger points are Minecraft's: stamina's bar is its 20
 local S = core.get_translator("goodluck_food")
 local stamina = core.global_exists("stamina") and stamina
+goodluck_food = {}
 
 -- a crop of Minecraft's 8 ages drawn in its 4 pictures, grown by Minetest Game's node timers with goodluck_farming's
 -- rules (dry farmland, light from the sky or a torch)
@@ -45,6 +46,8 @@ local function planting(plant)
 		return itemstack
 	end
 end
+
+goodluck_food.planting = planting
 
 -- Minecraft's ripe carrots and potatoes give 2 and then 3 more at a little over one in two each (2 to 5)
 local function ripe(item, extra)
@@ -212,3 +215,5 @@ core.register_craft({
 	output = "goodluck_food:golden_carrot",
 	recipe = {{N, N, N}, {N, "goodluck_food:carrot", N}, {N, N, N}},
 })
+
+dofile(core.get_modpath("goodluck_food") .. "/stems.lua")

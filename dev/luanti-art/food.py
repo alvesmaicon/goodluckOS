@@ -191,6 +191,67 @@ SPRITES = {
 ................
 """),
 }
+PSEED = {"D": "#8a7a40", "d": "#c8b878", "l": "#f4ecc0"}
+MSEED = {"D": "#1a1208", "d": "#3a2a10", "l": "#6a5030"}
+SLICE = {"G": "#2a5a12", "g": "#5a9a2a", "w": "#c8e0a0", "r": "#e0303a", "R": "#a81828", "p": "#f06a70", "s": "#1a1208"}
+PIE = {"D": "#6a3a10", "d": "#a8642a", "c": "#d8a058", "l": "#f0c880", "o": "#d86a10", "O": "#a84a08", "y": "#f0a040"}
+SPRITES.update({
+    "goodluck_food_pumpkin_seeds": (PSEED, """
+................
+................
+................
+....dd..........
+...dlld....dd...
+...dlld...dlld..
+...dlDd...dlld..
+....dD....dlDd..
+...........dD...
+.......dd.......
+......dlld......
+......dlld......
+......dlDd......
+.......dD.......
+................
+................
+"""),
+    "goodluck_food_melon_slice": (SLICE, """
+................
+................
+................
+.............GG.
+...........GGgG.
+.........GGgwgG.
+.......GGgwrrgG.
+.....GGgwrrprwG.
+....Ggwrrpsrrw..
+...Ggwrrprrrrw..
+..Ggwrsrrrsrw...
+..GgwrrrrrrRw...
+.GgwrrrsrrRw....
+.GgwwwwwwwRw....
+..GGGGGGGww.....
+................
+"""),
+    "goodluck_food_pumpkin_pie": (PIE, """
+................
+................
+................
+................
+................
+.......dddd.....
+.....ddoyoodd...
+....dooyyoooOd..
+...dcooooooOOcd.
+..dclcoooOOOclcd
+..DdcclcclcclcdD
+..DDddddddddddDD
+...DDDDDDDDDDDD.
+................
+................
+................
+"""),
+})
+SPRITES["goodluck_food_melon_seeds"] = (MSEED, SPRITES["goodluck_food_pumpkin_seeds"][1])
 SPRITES["goodluck_food_golden_carrot"] = (GOLDEN, SPRITES["goodluck_food_carrot"][1])
 SPRITES["goodluck_food_baked_potato"] = (BAKED, SPRITES["goodluck_food_potato"][1].replace(
     "..dmllmmmemmmd..", "..dmllmeeemmmd..").replace("..dmlmmmmmmmmd..", "..dmlmeeeeemmd.."))
@@ -244,10 +305,90 @@ def crop(leaf, root, stage):
     return img
 
 
+def ribbed(base, dark, light, top):
+    img = Image.new("RGBA", (16, 16))
+    for y in range(16):
+        for x in range(16):
+            if top:
+                import math
+                a = (math.atan2(y - 7.5, x - 7.5) + math.pi) / (2 * math.pi) * 8
+                r = math.hypot(x - 7.5, y - 7.5)
+                c = dark if abs(a - round(a)) < 0.12 and r > 2 else (light if (a % 1) < 0.35 and r < 6 else base)
+            else:
+                c = dark if x % 5 == 0 else (light if x % 5 == 2 and 2 < y < 13 else base)
+            img.putpixel((x, y), hexc(c) + (255,))
+    return img
+
+
+def pumpkin_top():
+    img = ribbed("#e38a1c", "#a8580c", "#f5a843", True)
+    for x, y in ((7, 7), (8, 7), (7, 8), (8, 8)):
+        img.putpixel((x, y), hexc("#5a3a10") + (255,))
+    img.putpixel((8, 6), hexc("#7a5a20") + (255,))
+    return img
+
+
+def face(side):
+    img = side.copy()
+    glow, inner = hexc("#ffd84a"), hexc("#e8a020")
+    eyes = [(3, 4), (4, 4), (3, 5), (4, 5), (5, 5), (11, 4), (12, 4), (10, 5), (11, 5), (12, 5)]
+    mouth = [(x, 10) for x in range(3, 13)] + [(x, 11) for x in range(4, 12)] + [(5, 9), (8, 9), (11, 9)]
+    for x, y in eyes + mouth:
+        img.putpixel((x, y), glow + (255,))
+    for x, y in ((4, 5), (11, 5), (6, 11), (9, 11)):
+        img.putpixel((x, y), inner + (255,))
+    return img
+
+
+def melon():
+    import random
+    rnd = random.Random(7)
+    img = Image.new("RGBA", (16, 16))
+    for y in range(16):
+        for x in range(16):
+            stripe = (x + (y // 4) % 2) % 4 == 0
+            c = "#2f6b1a" if stripe else ("#7ab040" if rnd.random() < 0.12 else "#5a9a2a")
+            img.putpixel((x, y), hexc(c) + (255,))
+    return img
+
+
+def mix(a, b, t):
+    return "#%02x%02x%02x" % tuple(round(p + (q - p) * t) for p, q in zip(hexc(a), hexc(b)))
+
+
+def stem(age, attached=False):
+    img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    c = mix("#5aa83a", "#c8a040", age / 7)
+    d = mix("#2f6b1f", "#8a6a20", age / 7)
+    h = 15 if attached else 2 + round(age * 11 / 7)
+    for y in range(16 - h, 16):
+        img.putpixel((7, y), hexc(c) + (255,))
+        img.putpixel((8, y), hexc(d) + (255,))
+    if attached:
+        # bends over to the right edge, where the fruit is
+        for i, (x, y) in enumerate(((9, 5), (10, 4), (11, 4), (12, 5), (13, 6), (14, 7), (15, 8))):
+            img.putpixel((x, y), hexc(c if i % 2 else d) + (255,))
+    for x, y in ((6, 13), (5, 12), (9, 12), (10, 11)) if h > 4 else ():
+        img.putpixel((x, y), hexc("#4fa83a") + (255,))
+    return img
+
+
 os.makedirs(OUT, exist_ok=True)
 for name, (palette, text) in SPRITES.items():
     grid(palette, text).save(f"{OUT}/{name}.png")
+side = ribbed("#e38a1c", "#a8580c", "#f5a843", False)
+side.save(f"{OUT}/goodluck_food_pumpkin_side.png")
+pumpkin_top().save(f"{OUT}/goodluck_food_pumpkin_top.png")
+face(side).save(f"{OUT}/goodluck_food_jack_o_lantern.png")
+melon().save(f"{OUT}/goodluck_food_melon_side.png")
+melon_top = ribbed("#5a9a2a", "#2f6b1a", "#7ab040", True)
+for x, y in ((7, 7), (8, 7), (7, 8), (8, 8)):
+    melon_top.putpixel((x, y), hexc("#a8c858") + (255,))
+melon_top.save(f"{OUT}/goodluck_food_melon_top.png")
+for age in range(8):
+    stem(age).save(f"{OUT}/goodluck_food_stem_{age + 1}.png")
+stem(7, True).save(f"{OUT}/goodluck_food_stem_attached.png")
 for name, (leaf, root) in CROPS.items():
     for s in range(4):
         crop(leaf, root, s).save(f"{OUT}/goodluck_food_{name}_{s + 1}.png")
-print(len(SPRITES) + 4 * len(CROPS), "textures in", os.path.relpath(OUT, ROOT))
+print(len(SPRITES) + 4 * len(CROPS) + 14, "textures in", os.path.relpath(OUT, ROOT))

@@ -2,7 +2,8 @@
 # Screenshots of every node (floor, wall) and item image, with goodluck_mcassets reading the pack in dev/out/luanti-mc/<pack>:
 #   docker run --rm -v goodluck-work:/work:ro -v luanti-native:/build:ro -v "$PWD":/repo luanti-native \
 #       bash /repo/dev/luanti-mc/shot.sh <pack>       (no pack: the game as it ships)
-# WORLD=<seed>: a normal world instead, looking around where the player spawns; FIRST=<pattern>: those first
+# WORLD=<seed>: a normal world instead, looking around where the player spawns; FIRST=<pattern>: those first;
+# EXTRA=<mod dir>: one more mod (a scene of its own)
 set -euo pipefail
 L=/tmp/l; G=$L/games/mcdump_game; OUT=/repo/dev/out/luanti-mc; NAME=${1:-none}
 mkdir -p "$L" "$G" "$OUT" "$L/textures/server" "$L/worlds/show"
@@ -10,6 +11,7 @@ for d in bin builtin client fonts textures locale; do [ -e /build/src/$d ] && cp
 cp -a /work/br/out/target/usr/share/luanti/games/minetest_game/. "$G"
 cp -a /repo/rootfs/board/my-device/rootfs-overlay/usr/share/luanti/games/minetest_game/. "$G"
 [ -z "${WORLD:-}" ] && cp -a /repo/dev/luanti-mc/showcase "$G/mods/goodluck_showcase"
+[ -n "${EXTRA:-}" ] && cp -a "$EXTRA" "$G/mods/"
 [ "$NAME" != none ] && cp -a "$OUT/$NAME"/. "$L/textures/server/"
 cp /repo/rootfs/board/my-device/rootfs-overlay/usr/share/goodluck/defaults/luanti.conf "$L/minetest.conf"
 printf 'fullscreen = false\nviewing_range = 60\ngoodluck_mc_assets = %s\n' \

@@ -69,12 +69,14 @@ local jobs = {
 	farmer = {
 		title = S("Farmer"),
 		{"farming:bread 6", emerald(1)},
-		{"default:apple 4", emerald(1)},
+		{"goodluck_food:pumpkin_pie 4", emerald(1)},
 		{"goodluck_food:golden_carrot 3", emerald(3)},
 		{EMERALD, "farming:wheat 20"},
 		{EMERALD, "goodluck_food:potato 26"},
 		{EMERALD, "goodluck_food:carrot 22"},
 		{EMERALD, "goodluck_food:beetroot 15"},
+		{EMERALD, "goodluck_food:pumpkin 6"},
+		{EMERALD, "goodluck_food:melon 4"},
 	},
 }
 
