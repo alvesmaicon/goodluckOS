@@ -9,6 +9,9 @@ if not core.get_modpath("mobs_npc") then
 end
 
 local EMERALD = "goodluck_emerald:emerald"
+-- a villager keeps the trades it drew (its enchanted goods); this goes up when the lists change, and villagers
+-- from before draw them again (2: emeralds and Minecraft's farmer)
+local TRADES = 2
 
 local function emerald(n)
 	return EMERALD .. " " .. n
@@ -69,11 +72,15 @@ local jobs = {
 	farmer = {
 		title = S("Farmer"),
 		{"farming:bread 6", emerald(1)},
-		{"default:apple 4", emerald(1)},
-		{"farming:seed_cotton 8", emerald(1)},
+		{"goodluck_food:pumpkin_pie 4", emerald(1)},
+		{"goodluck_food:cookie 18", emerald(3)},
+		{"goodluck_food:cake", emerald(1)},
 		{EMERALD, "farming:wheat 20"},
-		{EMERALD, "farming:cotton 20"},
-		{EMERALD, "default:papyrus 24"},
+		{EMERALD, "goodluck_food:potato 26"},
+		{EMERALD, "goodluck_food:carrot 22"},
+		{EMERALD, "goodluck_food:beetroot 15"},
+		{EMERALD, "goodluck_food:pumpkin 6"},
+		{EMERALD, "goodluck_food:melon 4"},
 	},
 }
 
@@ -154,11 +161,12 @@ function mobs_npc.shop_trade(self, clicker, race)
 	if not job then
 		return shop_trade(self, clicker, race)
 	end
-	if not self.trades then
+	if not self.trades or self.goodluck_trades ~= TRADES then
 		self.trades = {}
 		for i, t in ipairs(job) do
 			self.trades[i] = {type(t[1]) == "function" and t[1]() or t[1], t[2]}
 		end
+		self.goodluck_trades = TRADES
 	end
 	-- goods enchanted before get the moving glint
 	for _, t in ipairs(self.trades) do

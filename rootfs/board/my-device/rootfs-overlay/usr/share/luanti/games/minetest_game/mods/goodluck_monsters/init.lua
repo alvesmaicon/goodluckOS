@@ -8,6 +8,7 @@ local armor_model = core.get_modpath("3d_armor") ~= nil
 local MESH = armor_model and "3d_armor_character.b3d" or "character.b3d"
 local bows = core.get_modpath("x_bows") ~= nil
 local tnt_mod = core.get_modpath("tnt") ~= nil
+local food = core.get_modpath("goodluck_food") ~= nil
 
 -- the given drops that exist (an optional mod's may not)
 local function drops(...)
@@ -103,7 +104,10 @@ mobs:register_mob(MOD .. "zombie", {
 	floats = 1,
 	drops = drops(
 		{name = MOD .. "rotten_flesh", chance = 1, min = 0, max = 2},
-		{name = "default:steel_ingot", chance = 40, min = 1, max = 1}
+		-- Minecraft's rare drop, one in 40 shared by iron, a carrot and a potato
+		{name = "default:steel_ingot", chance = 120, min = 1, max = 1},
+		food and {name = "goodluck_food:carrot", chance = 120, min = 1, max = 1},
+		food and {name = "goodluck_food:potato", chance = 120, min = 1, max = 1}
 	),
 	water_damage = 0, lava_damage = 4,
 	fear_height = 4,
