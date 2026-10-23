@@ -28,13 +28,14 @@ blocks({"default:obsidian", "default:obsidianbrick", "default:obsidian_block"}, 
 blocks({"default:stone_with_coal"}, {3, PICK, 0})
 blocks({"default:stone_with_iron", "default:stone_with_copper", "default:stone_with_tin",
 	"goodluck_lapis:stone_with_lapis"}, {3, PICK, 1})
-blocks({"default:stone_with_gold", "default:stone_with_diamond", "default:stone_with_mese"}, {3, PICK, 2})
+blocks({"default:stone_with_gold", "default:stone_with_diamond", "default:stone_with_mese",
+	"goodluck_emerald:stone_with_emerald"}, {3, PICK, 2})
 blocks({"default:coalblock"}, {5, PICK, 0})
 blocks({"default:furnace", "default:furnace_active"}, {3.5, PICK, 0})
 blocks({"default:steelblock", "default:bronzeblock"}, {5, PICK, 1})
 blocks({"default:copperblock", "default:tinblock", "goodluck_lapis:block"}, {3, PICK, 1})
 blocks({"default:goldblock"}, {3, PICK, 2})
-blocks({"default:diamondblock", "default:mese"}, {5, PICK, 2})
+blocks({"default:diamondblock", "default:mese", "goodluck_emerald:block"}, {5, PICK, 2})
 blocks({"default:ice", "default:cave_ice"}, {0.5, PICK})
 blocks({"goodluck_amethyst:amethyst_cluster"}, {1.5, PICK})
 blocks({"goodluck_amethyst:calcite"}, {0.75, PICK, 0})
