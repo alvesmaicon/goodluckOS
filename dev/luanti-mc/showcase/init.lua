@@ -1,12 +1,17 @@
--- Dev tool, not shipped: shot.sh takes a screenshot at each "showcase:" log line
+-- Dev tool, not shipped: shot.sh takes a screenshot at each "showcase:" log line; showcase_first (a Lua pattern)
+-- puts the matching nodes and items first, the ones the "close" view looks at
 local W = 24
+local FIRST = core.settings:get("showcase_first")
 
 local function list(t, skip)
 	local out = {}
 	for name, def in pairs(t) do
 		if name ~= "" and not skip[name] and not (def.groups or {}).not_in_creative_inventory then out[#out + 1] = name end
 	end
-	table.sort(out)
+	table.sort(out, function(a, b)
+		local fa, fb = FIRST and a:find(FIRST) and 0 or 1, FIRST and b:find(FIRST) and 0 or 1
+		return fa ~= fb and fa < fb or (fa == fb and a < b)
+	end)
 	return out
 end
 
@@ -41,6 +46,10 @@ core.register_on_joinplayer(function(player)
 			end
 			core.show_formspec(player:get_player_name(), "showcase", table.concat(fs))
 			core.after(3, core.log, "action", "showcase: items")
+		end)
+		core.after(24, function()
+			core.close_formspec(player:get_player_name(), "showcase")
+			look(player, {x = 2, y = rows - 1.5, z = rows + 1}, 0, 0, "close")
 		end)
 	end)
 end)

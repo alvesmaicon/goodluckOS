@@ -92,7 +92,7 @@ local CATEGORIES = {
 	{"combat", S("Combat"), "default:sword_diamond", 2, 2, combat},
 	{"food_drinks", S("Food & Drinks"), "default:apple", 2, 3, food, {"^apple$", "^blueberries$", "^bread$"}},
 	{"ingredients", S("Ingredients"), "default:steel_ingot", 2, 4, ingredients, {"^coal_lump$", "_lump$", "_ingot$",
-		"^diamond$", "^mese_crystal", "^amethyst_shard$", "^flint$", "^stick$", "^clay", "^paper$", "^book$", "^string$", "^cotton$",
+		"^emerald$", "^diamond$", "^mese_crystal", "^amethyst_shard$", "^flint$", "^stick$", "^clay", "^paper$", "^book$", "^string$", "^cotton$",
 		"^wheat$", "^flour$"}},
 	{"spawn_eggs", S("Spawn Eggs"), "goodluck_craft_spawn_egg.png", 2, 5, function(name, def, g)
 		return any_group(g, "spawn_egg")
