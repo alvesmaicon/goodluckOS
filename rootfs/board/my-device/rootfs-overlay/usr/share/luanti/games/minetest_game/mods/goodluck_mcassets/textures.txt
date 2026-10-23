@@ -1,6 +1,7 @@
 # Luanti texture   what draws it instead: {path} = assets/minecraft/textures/<path>.png in the player's own client jar
 # The importer copies each {path} as mc_<path with _>.png. "length=" sets a tile animation's length, "file" makes
-# the importer copy the image under the Luanti name (for images the game draws from code).
+# the importer copy the image under the Luanti name (for images the game draws from code), "leaves" puts a dark
+# shade behind the holes when leaves are opaque.
 # Biome colours are Minecraft's plains/forest ones: grass #91bd59, leaves #77ab2f, water #3f76e4.
 
 # Ground
@@ -23,7 +24,7 @@ default_rainforest_litter.png	{block/podzol_top}
 default_rainforest_litter_side.png	{block/podzol_side}
 default_moss.png	{block/moss_block}
 default_sand.png	{block/sand}
-default_desert_sand.png	{block/red_sand}
+default_desert_sand.png	{block/sand}
 default_gravel.png	{block/gravel}
 default_clay.png	{block/clay}
 default_sandstone.png	{block/sandstone}
@@ -32,8 +33,9 @@ default_sandstone_block.png	{block/sandstone_top}
 default_desert_sandstone.png	{block/red_sandstone}
 default_desert_sandstone_brick.png	{block/cut_red_sandstone}
 default_desert_sandstone_block.png	{block/red_sandstone_top}
-default_desert_stone.png	{block/granite}
-default_desert_stone_block.png	{block/polished_granite}
+default_desert_stone.png	{block/sandstone}
+default_desert_stone_block.png	{block/sandstone_top}
+default_desert_stone_brick.png	{block/cut_sandstone}
 default_obsidian.png	{block/obsidian}
 default_obsidian_block.png	{block/obsidian}
 default_ice.png	{block/ice}
@@ -48,8 +50,8 @@ default_tree_top.png	{block/oak_log_top}
 default_wood.png	{block/oak_planks}
 default_fence_wood.png	{block/oak_planks}
 default_fence_rail_wood.png	{block/oak_planks}
-default_leaves.png	{block/oak_leaves}^[multiply:#77ab2f
-default_leaves_simple.png	{block/oak_leaves}^[multiply:#77ab2f
+default_leaves.png	{block/oak_leaves}^[multiply:#77ab2f	leaves
+default_leaves_simple.png	{block/oak_leaves}^[multiply:#77ab2f	leaves
 default_sapling.png	{block/oak_sapling}
 default_apple.png	{item/apple}
 default_bush_stem.png	{block/oak_log}
@@ -58,8 +60,8 @@ default_jungletree_top.png	{block/jungle_log_top}
 default_junglewood.png	{block/jungle_planks}
 default_fence_junglewood.png	{block/jungle_planks}
 default_fence_rail_junglewood.png	{block/jungle_planks}
-default_jungleleaves.png	{block/jungle_leaves}^[multiply:#30bb0b
-default_jungleleaves_simple.png	{block/jungle_leaves}^[multiply:#30bb0b
+default_jungleleaves.png	{block/jungle_leaves}^[multiply:#30bb0b	leaves
+default_jungleleaves_simple.png	{block/jungle_leaves}^[multiply:#30bb0b	leaves
 default_junglesapling.png	{block/jungle_sapling}
 default_emergent_jungle_sapling.png	{block/jungle_sapling}
 default_pine_tree.png	{block/spruce_log}
@@ -67,7 +69,7 @@ default_pine_tree_top.png	{block/spruce_log_top}
 default_pine_wood.png	{block/spruce_planks}
 default_fence_pine_wood.png	{block/spruce_planks}
 default_fence_rail_pine_wood.png	{block/spruce_planks}
-default_pine_needles.png	{block/spruce_leaves}^[multiply:#619961
+default_pine_needles.png	{block/spruce_leaves}^[multiply:#619961	leaves
 default_pine_sapling.png	{block/spruce_sapling}
 default_pine_bush_stem.png	{block/spruce_log}
 default_acacia_tree.png	{block/acacia_log}
@@ -75,8 +77,8 @@ default_acacia_tree_top.png	{block/acacia_log_top}
 default_acacia_wood.png	{block/acacia_planks}
 default_fence_acacia_wood.png	{block/acacia_planks}
 default_fence_rail_acacia_wood.png	{block/acacia_planks}
-default_acacia_leaves.png	{block/acacia_leaves}^[multiply:#aea42a
-default_acacia_leaves_simple.png	{block/acacia_leaves}^[multiply:#aea42a
+default_acacia_leaves.png	{block/acacia_leaves}^[multiply:#aea42a	leaves
+default_acacia_leaves_simple.png	{block/acacia_leaves}^[multiply:#aea42a	leaves
 default_acacia_sapling.png	{block/acacia_sapling}
 default_acacia_bush_stem.png	{block/acacia_log}
 default_aspen_tree.png	{block/birch_log}
@@ -84,7 +86,7 @@ default_aspen_tree_top.png	{block/birch_log_top}
 default_aspen_wood.png	{block/birch_planks}
 default_fence_aspen_wood.png	{block/birch_planks}
 default_fence_rail_aspen_wood.png	{block/birch_planks}
-default_aspen_leaves.png	{block/birch_leaves}^[multiply:#80a755
+default_aspen_leaves.png	{block/birch_leaves}^[multiply:#80a755	leaves
 default_aspen_sapling.png	{block/birch_sapling}
 
 # Plants
@@ -120,15 +122,15 @@ flowers_waterlily_bottom.png	{block/lily_pad}^[multiply:#208030
 
 # Liquids and fire
 default_water_source_animated.png	{block/water_still}^[multiply:#3f76e4	length=3.2
-default_water_flowing_animated.png	{block/water_flow}^[multiply:#3f76e4	length=3.2
+default_water_flowing_animated.png	{block/water_flow}^[multiply:#3f76e4	length=1.6
 default_water.png	{block/water_still}^[verticalframe:32:0^[multiply:#3f76e4
 default_river_water_source_animated.png	{block/water_still}^[multiply:#3f76e4	length=3.2
-default_river_water_flowing_animated.png	{block/water_flow}^[multiply:#3f76e4	length=3.2
+default_river_water_flowing_animated.png	{block/water_flow}^[multiply:#3f76e4	length=1.6
 default_river_water.png	{block/water_still}^[verticalframe:32:0^[multiply:#3f76e4
 default_lava_source_animated.png	{block/lava_still}
 default_lava_flowing_animated.png	{block/lava_flow}
 default_lava.png	{block/lava_still}^[verticalframe:20:0
-fire_basic_flame_animated.png	{block/fire_0}	length=3.2
+fire_basic_flame_animated.png	{block/fire_0}	length=1.6
 fire_basic_flame.png	{block/fire_0}^[verticalframe:32:0
 
 # Ores and metal

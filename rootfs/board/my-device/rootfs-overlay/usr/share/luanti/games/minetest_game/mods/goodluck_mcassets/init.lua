@@ -1,11 +1,22 @@
 -- The files come from the player's own game (luanti-mc-import.sh); nothing of Minecraft ships with goodluckOS
 if not core.settings:get_bool("goodluck_mc_assets", false) then return end
 
+local opaque_leaves = core.settings:get("leaves_style") == "opaque"
+
+-- Minecraft's leaf holes are black; opaque leaves get a dark shade of the leaf behind them instead
+local function backed(expr)
+	local r, g, b = expr:match("%[multiply:#(%x%x)(%x%x)(%x%x)")
+	local dark = ("#%02x%02x%02x"):format(tonumber(r, 16) * 0.35, tonumber(g, 16) * 0.35, tonumber(b, 16) * 0.35)
+	return "[fill:16x16:0,0:" .. dark .. "^(" .. expr .. ")"
+end
+
 local map, length = {}, {}
 for line in io.lines(core.get_modpath("goodluck_mcassets") .. "/textures.txt") do
 	local from, to, rest = line:match("^([^#%s]%S*)%s+(%S+)%s*(.*)$")
 	if from and not rest:find("file") then
-		map[from] = to:gsub("{([^}]+)}", function(p) return "mc_" .. p:gsub("/", "_") .. ".png" end)
+		to = to:gsub("{([^}]+)}", function(p) return "mc_" .. p:gsub("/", "_") .. ".png" end)
+		if rest:find("leaves") and (opaque_leaves or from:find("_simple%.png$")) then to = backed(to) end
+		map[from] = to
 		length[from] = tonumber(rest:match("length=([%d.]+)"))
 	end
 end
