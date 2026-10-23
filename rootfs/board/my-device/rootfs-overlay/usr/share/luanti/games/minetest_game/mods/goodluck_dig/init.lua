@@ -47,6 +47,10 @@ blocks({"default:ladder_steel"}, {0.4, PICK})
 blocks({"default:sign_wall_steel"}, {1, PICK})
 blocks({"default:glass", "default:obsidian_glass", "default:meselamp", "xpanes:pane", "xpanes:pane_flat",
 	"xpanes:obsidian_pane", "xpanes:obsidian_pane_flat"}, {0.3})
+blocks({"goodluck_food:pumpkin", "goodluck_food:melon", "goodluck_food:jack_o_lantern"}, {1, AXE})
+blocks({"goodluck_food:cocoa_1", "goodluck_food:cocoa_2", "goodluck_food:cocoa_3"}, {0.2, AXE})
+blocks({"goodluck_food:cake", "goodluck_food:cake_1", "goodluck_food:cake_2", "goodluck_food:cake_3",
+	"goodluck_food:cake_4", "goodluck_food:cake_5", "goodluck_food:cake_6"}, {0.5})
 blocks({"default:dirt", "default:dry_dirt", "default:dirt_with_rainforest_litter",
 	"default:dirt_with_coniferous_litter", "default:sand", "default:desert_sand", "default:silver_sand",
 	"mobs:fallback_node"}, {0.5, SHOVEL})
@@ -102,6 +106,7 @@ local FAMILIES = {
 	{"^farming:cotton_", {0}},
 	{"^farming:wheat_", {0}},
 	{"^farming:seed_", {0}},
+	{"^goodluck_food:", {0}},
 	{"^fire:", {0}},
 	{"^vessels:", {0}},
 }
