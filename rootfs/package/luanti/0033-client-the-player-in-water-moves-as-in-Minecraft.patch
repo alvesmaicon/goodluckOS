@@ -1,0 +1,507 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Sat, 24 Oct 2026 01:03:39 -0300
+Subject: [PATCH 33/34] client: the player in water moves as in Minecraft
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Water only braked the player: under water the walk still accelerated at
+30 m/s² toward its speed, and the player counted as in a liquid only with
+the feet 0.5 under the surface, out again at 0.1, so jump held at the
+surface left the water at every bob and the air accelerated with nothing
+to brake it. Walking and running on the water went at 3.4 and 5.8 m/s,
+under water at 2.7 (Minecraft: 2.3 at the surface, 1.95 under water).
+
+Nodes of the group water now move the player as Minecraft 26.3's
+LivingEntity.travelInWater, Player.travel and LocalPlayer.aiStep do. The
+player is in the water while any part of the box is under its surface
+(as drawn, flowing water by its level). Each tick (20 Hz) the input
+pushes 0.02, jump 0.04 up, sneak 0.04 down, sinking 0.005, then 80 % of
+the speed is kept. This is the same approach in continuous time, so the
+speeds and how fast they come are the same at any frame rate. Sneaking
+moves at 30 %; speed overrides only slow down here (an item in use), as
+Minecraft's speed doesn't swim faster; jump is a ground jump only where
+the water is at most 0.4 deep.
+
+The new physics override swim is Minecraft's swimming, for the game to
+set (goodluckOS sets it while the player runs with the head under water):
+no sinking, 90 % of the speed kept, and up or down toward where the
+player looks.
+
+Pushing on a wall in the water lifts the player at 0.3 a tick unless
+something is 0.6 above it, so a ledge is climbed out of the water as in
+Minecraft. Airborne between bobs at the surface, the player steers with
+Minecraft's air (0.02 a tick, 91 % kept) until it touches the ground:
+with the engine's air control, much stronger, the surface still went at
+3.8 m/s.
+
+Flowing water pushes the player as Minecraft's FlowingFluid.getFlow and
+applyCurrentTo do: 0.014 a tick along the average flow of the nodes it is
+in (weaker in water shallower than 0.4), at least 0.0045 on a player at
+rest; a fall of flowing water along a wall pushes down.
+
+Checked in the native build with keys pressed by xdotool in a deep pool,
+at 60 and 15 FPS (Minecraft in brackets, m/s): walking under water 1.94
+(1.95), swimming 3.88 (3.90), swimming and looking 45° down 3.89 and
+-4.46 (3.90, -4.46), up 3.89 and +3.40 (3.90, +3.40), jump held +3.47
+(+3.48), sneak -4.50 (-4.48), idle -0.50 (-0.50), jump and forward at
+the surface 2.57 (2.33); at 15 FPS within 2 %. On a stream: 0.84 m/s
+downstream at rest, 1.45 walking upstream (1.95 in still water).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/doc/lua_api.md b/doc/lua_api.md
+index 9cb3ff178..20ec6d025 100644
+--- a/doc/lua_api.md
++++ b/doc/lua_api.md
+@@ -9354,6 +9354,8 @@ You **must not** mix names and track numbers to refer to the same animation.
+           (default: `false`)
+         * `new_move`: use new move/sneak code. When `false` the exact old code
+           is used for the specific old sneak behavior (default: `true`)
++        * `swim`: Minecraft's swimming in nodes of the group `water`: faster,
++          without sinking, up or down where the player looks (default: `false`)
+     * Note: All numeric fields above modify a corresponding `movement_*` setting.
+     * For games, we recommend for simpler code to first modify the `movement_*`
+       settings (e.g. via the game's `minetest.conf`) to set a global base value
+diff --git a/src/client/clientenvironment.cpp b/src/client/clientenvironment.cpp
+index 9726335a9..51b50206c 100644
+--- a/src/client/clientenvironment.cpp
++++ b/src/client/clientenvironment.cpp
+@@ -124,9 +124,9 @@ void ClientEnvironment::step(float dtime)
+ 		// Control local player
+ 		lplayer->applyControl(dtime_part, this);
+ 
+-		// Apply physics
++		// Apply physics (Minecraft's water has its own, in applyControl)
+ 		lplayer->gravity = 0;
+-		if (!free_move) {
++		if (!free_move && !lplayer->water_move) {
+ 			// Gravity
+ 			if (!is_climbing && !lplayer->in_liquid)
+ 				// HACK the factor 2 for gravity is arbitrary and should be removed eventually
+diff --git a/src/client/content_cao.cpp b/src/client/content_cao.cpp
+index 2847def93..d651021f8 100644
+--- a/src/client/content_cao.cpp
++++ b/src/client/content_cao.cpp
+@@ -1738,6 +1738,10 @@ void GenericCAO::processMessage(const std::string &data)
+ 			phys.speed_walk        = readF32(is);
+ 		}
+ 
++		// handheld fork
++		if (canRead(is))
++			phys.swim = readU8(is);
++
+ 		if (m_is_local_player) {
+ 			m_env->getLocalPlayer()->physics_override = phys;
+ 		}
+diff --git a/src/client/localplayer.cpp b/src/client/localplayer.cpp
+index a3ba7f740..afacd2a6a 100644
+--- a/src/client/localplayer.cpp
++++ b/src/client/localplayer.cpp
+@@ -208,6 +208,104 @@ bool LocalPlayer::updateSneakNode(Map *map, const v3f &position,
+ 	return true;
+ }
+ 
++static bool is_water(const ContentFeatures &f)
++{
++	return f.liquid_type != LIQUID_NONE && itemgroup_get(f.groups, "water") > 0;
++}
++
++// The water's own height in its node (0 to 1)
++static f32 water_own_level(MapNode n, const ContentFeatures &f)
++{
++	if (f.liquid_type == LIQUID_SOURCE)
++		return 1.0f;
++	u8 range = rangelim(f.liquid_range, 1, 8);
++	u8 level = n.param2 & LIQUID_LEVEL_MASK;
++	level = level <= LIQUID_LEVEL_MAX + 1 - range ? 0 : level - (LIQUID_LEVEL_MAX + 1 - range);
++	return (level + 0.5f) / range;
++}
++
++// As drawn: full under more water
++static f32 water_level(Map *map, const NodeDefManager *nodemgr, v3s16 p, MapNode n,
++		const ContentFeatures &f)
++{
++	if (is_water(nodemgr->get(map->getNode(p + v3s16(0, 1, 0)))))
++		return 1.0f;
++	return water_own_level(n, f);
++}
++
++// Where the water runs, as Minecraft's FlowingFluid.getFlow: down the heights to its four sides,
++// over an edge to water below, and down a fall along a wall
++static v3f water_flow(Map *map, const NodeDefManager *nodemgr, v3s16 p, MapNode n,
++		const ContentFeatures &f)
++{
++	static const v3s16 sides[4] = {v3s16(1, 0, 0), v3s16(-1, 0, 0), v3s16(0, 0, 1), v3s16(0, 0, -1)};
++	const f32 own = water_own_level(n, f);
++	v3f flow;
++	for (const v3s16 &side : sides) {
++		const MapNode n2 = map->getNode(p + side);
++		const ContentFeatures &f2 = nodemgr->get(n2);
++		f32 drop = 0.0f;
++		if (is_water(f2)) {
++			drop = own - water_own_level(n2, f2);
++		} else if (f2.liquid_type == LIQUID_NONE && !f2.walkable) {
++			const MapNode n3 = map->getNode(p + side - v3s16(0, 1, 0));
++			const ContentFeatures &f3 = nodemgr->get(n3);
++			if (is_water(f3))
++				drop = own - (water_own_level(n3, f3) - 1.0f);
++		}
++		flow += v3f(side.X, 0.0f, side.Z) * drop;
++	}
++	if (f.liquid_type == LIQUID_FLOWING && (n.param2 & LIQUID_FLOW_DOWN_MASK)) {
++		for (const v3s16 &side : sides) {
++			if (nodemgr->get(map->getNode(p + side)).walkable ||
++					nodemgr->get(map->getNode(p + side + v3s16(0, 1, 0))).walkable) {
++				if (flow.getLengthSQ() > 0.0f)
++					flow.normalize();
++				flow.Y -= 6.0f;
++				break;
++			}
++		}
++	}
++	if (flow.getLengthSQ() > 0.0f)
++		flow.normalize();
++	return flow;
++}
++
++void LocalPlayer::updateWater(Map *map, const NodeDefManager *nodemgr, const v3f &position)
++{
++	water_depth = 0.0f;
++	m_water_current = v3f(0.0f);
++	const v3f min = position + m_collisionbox.MinEdge + 0.001f * BS;
++	const v3f max = position + m_collisionbox.MaxEdge - 0.001f * BS;
++	const v3s16 p0 = floatToInt(min, BS), p1 = floatToInt(max, BS);
++	v3f flow;
++	u32 count = 0;
++	v3s16 p;
++	for (p.X = p0.X; p.X <= p1.X; p.X++)
++	for (p.Y = p0.Y; p.Y <= p1.Y; p.Y++)
++	for (p.Z = p0.Z; p.Z <= p1.Z; p.Z++) {
++		const MapNode n = map->getNode(p);
++		const ContentFeatures &f = nodemgr->get(n);
++		if (!is_water(f))
++			continue;
++		const f32 top = (p.Y - 0.5f + water_level(map, nodemgr, p, n, f)) * BS;
++		if (top < min.Y)
++			continue;
++		water_depth = std::max(water_depth, (top - min.Y) / BS);
++		// Minecraft weakens the flow of water shallower than 0.4 by its depth
++		const v3f here = water_flow(map, nodemgr, p, n, f);
++		flow += water_depth < 0.4f ? here * water_depth : here;
++		count++;
++	}
++	// The current pushes 0.014 a tick on average, at least 0.0045 on a player at rest
++	if (count > 0 && flow.getLengthSQ() > 1e-5f) {
++		m_water_current = flow * (0.014f / count);
++		if (std::fabs(m_speed.X) < 0.003f * 20.0f * BS && std::fabs(m_speed.Z) < 0.003f * 20.0f * BS &&
++				m_water_current.getLength() < 0.0045f)
++			m_water_current = m_water_current.normalize() * 0.0045f;
++	}
++}
++
+ void LocalPlayer::move(f32 dtime, Environment *env,
+ 		std::vector<CollisionInfo> *collision_info)
+ {
+@@ -217,6 +315,7 @@ void LocalPlayer::move(f32 dtime, Environment *env,
+ 
+ 	// Temporary option for old move code
+ 	if (!physics_override.new_move) {
++		water_move = m_water_air = false;
+ 		old_move(dtime, env, collision_info);
+ 		return;
+ 	}
+@@ -260,18 +359,24 @@ void LocalPlayer::move(f32 dtime, Environment *env,
+ 	MapNode node;
+ 	v3s16 pp;
+ 
++	// Minecraft's water decides alone for its nodes: in it while any part of the box is
++	updateWater(map, nodemgr, position);
++
+ 	/*
+ 		Check if player is in liquid (the oscillating value)
+ 	*/
+ 
+ 	// If in liquid, the threshold of coming out is at higher y
+-	if (in_liquid)
++	if (water_depth > 0.0f) {
++		in_liquid = true;
++		move_resistance = 0;
++	} else if (in_liquid)
+ 	{
+ 		pp = floatToInt(position + v3f(0.0f, BS * 0.1f, 0.0f), BS);
+ 		node = map->getNode(pp, &is_valid_position);
+ 		if (is_valid_position) {
+ 			const ContentFeatures &cf = nodemgr->get(node.getContent());
+-			in_liquid = cf.liquid_move_physics;
++			in_liquid = cf.liquid_move_physics && !is_water(cf);
+ 			move_resistance = cf.move_resistance;
+ 		} else {
+ 			in_liquid = false;
+@@ -283,7 +388,7 @@ void LocalPlayer::move(f32 dtime, Environment *env,
+ 		node = map->getNode(pp, &is_valid_position);
+ 		if (is_valid_position) {
+ 			const ContentFeatures &cf = nodemgr->get(node.getContent());
+-			in_liquid = cf.liquid_move_physics;
++			in_liquid = cf.liquid_move_physics && !is_water(cf);
+ 			move_resistance = cf.move_resistance;
+ 		} else {
+ 			in_liquid = false;
+@@ -296,8 +401,11 @@ void LocalPlayer::move(f32 dtime, Environment *env,
+ 	*/
+ 	pp = floatToInt(position + v3f(0.0f), BS);
+ 	node = map->getNode(pp, &is_valid_position);
+-	if (is_valid_position) {
+-		in_liquid_stable = nodemgr->get(node.getContent()).liquid_move_physics;
++	if (water_depth > 0.0f) {
++		in_liquid_stable = true;
++	} else if (is_valid_position) {
++		const ContentFeatures &cf = nodemgr->get(node.getContent());
++		in_liquid_stable = cf.liquid_move_physics && !is_water(cf);
+ 	} else {
+ 		in_liquid_stable = false;
+ 	}
+@@ -319,6 +427,8 @@ void LocalPlayer::move(f32 dtime, Environment *env,
+ 			nodemgr->get(node2.getContent()).climbable) && !free_move;
+ 	}
+ 
++	water_move = water_depth > 0.0f && !free_move && !is_climbing;
++
+ 	// Player object property step height is multiplied by BS in
+ 	// /src/script/common/c_content.cpp and /src/content_sao.cpp
+ 	float player_stepheight = (m_cao == nullptr) ? 0.0f :
+@@ -341,6 +451,16 @@ void LocalPlayer::move(f32 dtime, Environment *env,
+ 		m_collisionbox, player_stepheight, dtime,
+ 		&position, &m_speed, accel_f, m_cao, true, step_up_mode);
+ 
++	// As in Minecraft, pushing on a wall in the water lifts the player, unless something is above
++	if (water_move) {
++		bool wall = false;
++		for (const auto &colinfo : result.collisions)
++			wall |= colinfo.type == COLLISION_NODE && colinfo.axis != COLLISION_AXIS_Y;
++		if (wall && !collision_check_intersection(env, m_client, m_collisionbox,
++				position + v3f(0.0f, 0.6f * BS, 0.0f), m_cao))
++			m_speed.Y = 0.3f * 20.0f * BS;
++	}
++
+ 	bool could_sneak = control.sneak && !free_move && !in_liquid &&
+ 		!is_climbing && physics_override.sneak;
+ 
+@@ -381,6 +501,11 @@ void LocalPlayer::move(f32 dtime, Environment *env,
+ 	touching_ground = result.touching_ground;
+ 	bool sneak_can_jump = false;
+ 
++	if (water_move)
++		m_water_air = true;
++	else if (touching_ground || free_move || is_climbing || in_liquid)
++		m_water_air = false;
++
+ 	// Max. distance (X, Z) over border for sneaking determined by collision box
+ 	// * 0.49 to keep the center just barely on the node
+ 	v3f sneak_max = m_collisionbox.getExtent() * 0.49f;
+@@ -547,6 +672,15 @@ void LocalPlayer::applyControl(float dtime, Environment *env)
+ 		return;
+ 	}
+ 
++	if (water_move) {
++		applyWaterControl(dtime, env);
++		return;
++	}
++	if (m_water_air && !touching_ground) {
++		applyWaterAirControl(dtime);
++		return;
++	}
++
+ 	PlayerSettings &player_settings = getPlayerSettings();
+ 
+ 	// All vectors are relative to the player's yaw,
+@@ -822,6 +956,70 @@ void LocalPlayer::accelerate(const v3f &target_speed, const f32 max_increase_H,
+ 	m_speed += d;
+ }
+ 
++// Minecraft's water: each 20 Hz tick adds a push, then keeps a part of the speed.
++// Done here as the same approach in continuous time, so any frame rate moves alike.
++void LocalPlayer::applyWaterControl(float dtime, Environment *env)
++{
++	const bool swim = physics_override.swim;
++	const f32 ticks = 20.0f * dtime;
++	swimming_vertical = false;
++
++	// Speed overrides only slow down in water (an item in use), as in Minecraft
++	f32 input = control.movement_speed * std::min(physics_override.speed, 1.0f);
++	if (control.sneak && !swim)
++		input *= 0.3f;
++
++	// v = (v + 0.02 * 0.98 * input + current) * keep: the speed goes to 20 * push / (1 - keep)
++	const f32 keep_h = swim ? 0.9f : 0.8f;
++	v3f target(std::sin(control.movement_direction), 0.0f, std::cos(control.movement_direction));
++	target *= 0.0196f * input;
++	target.rotateXZBy(getYaw());
++	target += v3f(m_water_current.X, 0.0f, m_water_current.Z);
++	target *= 20.0f / (1.0f - keep_h) * BS;
++	const f32 left_h = std::pow(keep_h, ticks);
++	m_speed.X = target.X + (m_speed.X - target.X) * left_h;
++	m_speed.Z = target.Z + (m_speed.Z - target.Z) * left_h;
++
++	// v = (v + steer * (look - v) + push) * 0.8 - sink
++	f32 push = m_water_current.Y;
++	if (control.jump && !m_disable_jump && (!touching_ground || water_depth > 0.4f)) {
++		push += 0.04f;
++		swimming_vertical = true;
++	} else if (control.jump && m_can_jump) {
++		m_speed.Y = movement_speed_jump * physics_override.jump;
++		m_client->getEventManager()->put(new SimpleTriggerEvent(MtEvent::PLAYER_JUMP));
++	}
++	if (control.sneak && !m_disable_descend) {
++		push -= 0.04f;
++		swimming_vertical = true;
++	}
++	f32 steer = 0.0f, look = 0.0f;
++	if (swim) {
++		look = -std::sin(getPitch() * core::DEGTORAD);
++		const MapNode n = env->getMap().getNode(floatToInt(m_position + v3f(0.0f, 0.9f * BS, 0.0f), BS));
++		if (look <= 0.0f || control.jump || is_water(m_client->ndef()->get(n)))
++			steer = look < -0.2f ? 0.085f : 0.06f;
++		swimming_vertical = true;
++	}
++	const f32 sink = swim ? 0.0f : 0.005f;
++	const f32 keep_v = 0.8f * (1.0f - steer);
++	const f32 after = (0.8f * (steer * look + push) - sink) / (1.0f - keep_v);
++	const f32 target_v = (after + sink) / 0.8f * 20.0f * BS;
++	m_speed.Y = target_v + (m_speed.Y - target_v) * std::pow(keep_v, ticks);
++}
++
++// Airborne out of the water (bobbing at the surface): Minecraft's air, v = (v + 0.02 * input) * 0.91
++void LocalPlayer::applyWaterAirControl(float dtime)
++{
++	const f32 input = control.movement_speed * std::min(physics_override.speed, 1.0f);
++	v3f target(std::sin(control.movement_direction), 0.0f, std::cos(control.movement_direction));
++	target *= 20.0f * 0.0196f * input / (1.0f - 0.91f) * BS;
++	target.rotateXZBy(getYaw());
++	const f32 left = std::pow(0.91f, 20.0f * dtime);
++	m_speed.X = target.X + (m_speed.X - target.X) * left;
++	m_speed.Z = target.Z + (m_speed.Z - target.Z) * left;
++}
++
+ // Temporary option for old move code
+ void LocalPlayer::old_move(f32 dtime, Environment *env,
+ 	std::vector<CollisionInfo> *collision_info)
+diff --git a/src/client/localplayer.h b/src/client/localplayer.h
+index 0b97e3349..cdea8af87 100644
+--- a/src/client/localplayer.h
++++ b/src/client/localplayer.h
+@@ -14,6 +14,7 @@ class ClientActiveObject;
+ class Environment;
+ class GenericCAO;
+ class Map;
++class NodeDefManager;
+ struct CollisionInfo;
+ struct CollisionMoveResult;
+ 
+@@ -56,6 +57,10 @@ class LocalPlayer : public Player
+ 	bool is_climbing = false;
+ 	bool swimming_vertical = false;
+ 	bool swimming_pitch = false;
++	// Minecraft's water (nodes of the group water): how deep the box is in it,
++	// and whether it moves the player (not flying or climbing)
++	f32 water_depth = 0.0f;
++	bool water_move = false;
+ 
+ 	f32 gravity = 0; // total downwards acceleration
+ 
+@@ -164,6 +169,9 @@ class LocalPlayer : public Player
+ 		const f32 max_increase_V, const bool use_pitch);
+ 	bool updateSneakNode(Map *map, const v3f &position, const v3f &sneak_max);
+ 	float getSlipFactor(Environment *env, const v3f &speedH);
++	void updateWater(Map *map, const NodeDefManager *nodemgr, const v3f &position);
++	void applyWaterControl(float dtime, Environment *env);
++	void applyWaterAirControl(float dtime);
+ 	void old_move(f32 dtime, Environment *env,
+ 			std::vector<CollisionInfo> *collision_info);
+ 	void handleAutojump(f32 dtime, Environment *env,
+@@ -194,6 +202,10 @@ class LocalPlayer : public Player
+ 	// ***** End of variables for temporary option *****
+ 
+ 	bool m_can_jump = false;
++	// Airborne since the water moved the player
++	bool m_water_air = false;
++	// The water's current, a push per Minecraft tick
++	v3f m_water_current;
+ 	bool m_disable_jump = false;
+ 	bool m_disable_descend = false;
+ 	u16 m_breath = PLAYER_MAX_BREATH_DEFAULT;
+diff --git a/src/player.cpp b/src/player.cpp
+index 6f7ee9ffb..0f331dd22 100644
+--- a/src/player.cpp
++++ b/src/player.cpp
+@@ -212,7 +212,7 @@ static auto tie(const PlayerPhysicsOverride &o)
+ 	o.speed, o.jump, o.gravity, o.sneak, o.sneak_glitch, o.new_move, o.speed_climb,
+ 	o.speed_crouch, o.liquid_fluidity, o.liquid_fluidity_smooth, o.liquid_sink,
+ 	o.acceleration_default, o.acceleration_air, o.speed_fast, o.acceleration_fast,
+-	o.speed_walk
++	o.speed_walk, o.swim
+ 	);
+ }
+ 
+diff --git a/src/player.h b/src/player.h
+index b5a1da17a..d4ec0b891 100644
+--- a/src/player.h
++++ b/src/player.h
+@@ -118,6 +118,8 @@ struct PlayerPhysicsOverride
+ 	float speed_fast = 1.f;
+ 	float acceleration_fast = 1.f;
+ 	float speed_walk = 1.f;
++	// Minecraft's swimming in nodes of the group water
++	bool swim = false;
+ 
+ 	bool operator==(const PlayerPhysicsOverride &other) const;
+ 	bool operator!=(const PlayerPhysicsOverride &other) const {
+diff --git a/src/script/lua_api/l_localplayer.cpp b/src/script/lua_api/l_localplayer.cpp
+index bfab9a5a7..089443ce3 100644
+--- a/src/script/lua_api/l_localplayer.cpp
++++ b/src/script/lua_api/l_localplayer.cpp
+@@ -192,6 +192,9 @@ int LuaLocalPlayer::l_get_physics_override(lua_State *L)
+ 	lua_pushnumber(L, phys.speed_walk);
+ 	lua_setfield(L, -2, "speed_walk");
+ 
++	lua_pushboolean(L, phys.swim);
++	lua_setfield(L, -2, "swim");
++
+ 	return 1;
+ }
+ 
+diff --git a/src/script/lua_api/l_object.cpp b/src/script/lua_api/l_object.cpp
+index d381c392e..d21ea6c94 100644
+--- a/src/script/lua_api/l_object.cpp
++++ b/src/script/lua_api/l_object.cpp
+@@ -1912,6 +1912,7 @@ int ObjectRef::l_set_physics_override(lua_State *L)
+ 	getfloatfield(L, 2, "speed_fast", phys.speed_fast);
+ 	getfloatfield(L, 2, "acceleration_fast", phys.acceleration_fast);
+ 	getfloatfield(L, 2, "speed_walk", phys.speed_walk);
++	getboolfield(L, 2, "swim", phys.swim);
+ 
+ 	if (phys != old)
+ 		playersao->m_physics_override_sent = false;
+@@ -1961,6 +1962,8 @@ int ObjectRef::l_get_physics_override(lua_State *L)
+ 	lua_setfield(L, -2, "acceleration_fast");
+ 	lua_pushnumber(L, phys.speed_walk);
+ 	lua_setfield(L, -2, "speed_walk");
++	lua_pushboolean(L, phys.swim);
++	lua_setfield(L, -2, "swim");
+ 	return 1;
+ }
+ 
+diff --git a/src/server/player_sao.cpp b/src/server/player_sao.cpp
+index c73cf8170..9d3d27f11 100644
+--- a/src/server/player_sao.cpp
++++ b/src/server/player_sao.cpp
+@@ -337,6 +337,8 @@ std::string PlayerSAO::generateUpdatePhysicsOverrideCommand() const
+ 	writeF32(os, phys.speed_fast);
+ 	writeF32(os, phys.acceleration_fast);
+ 	writeF32(os, phys.speed_walk);
++	// handheld fork
++	writeU8(os, phys.swim);
+ 	return os.str();
+ }
+ 

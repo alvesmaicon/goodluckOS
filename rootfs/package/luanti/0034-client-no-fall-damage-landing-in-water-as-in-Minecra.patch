@@ -1,0 +1,31 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Sat, 24 Oct 2026 01:03:53 -0300
+Subject: [PATCH 34/34] client: no fall damage landing in water, as in
+ Minecraft
+
+A fall onto the bottom of shallow water hurt as on land, less what the
+water braked: 20 m into water 2 deep took 11 HP. Minecraft ends the fall
+in water. Now a landing while any part of the box is in a node of the
+group water does no damage.
+
+Checked in the native build, a fall of 20 m: on land 14 HP, into water
+1 or 2 deep none.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/src/client/clientenvironment.cpp b/src/client/clientenvironment.cpp
+index 51b50206c..89bf7d3c9 100644
+--- a/src/client/clientenvironment.cpp
++++ b/src/client/clientenvironment.cpp
+@@ -178,6 +178,10 @@ void ClientEnvironment::step(float dtime)
+ 		*/
+ 
+ 		lplayer->move(dtime_part, this, &player_collisions);
++
++		// As in Minecraft, water ends a fall: landing in it does no damage
++		if (lplayer->water_depth > 0.0f)
++			player_collisions.clear();
+ 	}
+ 
+ 	bool player_immortal = false;
