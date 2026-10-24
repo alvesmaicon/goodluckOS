@@ -45,6 +45,10 @@ local function set_running(player, name, on)
 	end
 end
 
+function goodluck_sprint.running(player)
+	return running[player:get_player_name()] or false
+end
+
 -- another mod (the shield, the binoculars) ends the run and keeps a new one from starting until every one lets go
 function goodluck_sprint.stop(player, on, by)
 	local name = player:get_player_name()
@@ -70,7 +74,9 @@ core.register_globalstep(function(dtime)
 		end
 		held[name] = ctrl.aux1
 		if drain and running[name] and hungry(name) then
-			hunger.change_saturation(player, -hunger.SPRINT_DRAIN * DRAIN_TICK)
+			-- swimming tires a tenth of running, as in Minecraft
+			local swim = player:get_physics_override().swim and 0.1 or 1
+			hunger.change_saturation(player, -hunger.SPRINT_DRAIN * DRAIN_TICK * swim)
 		end
 	end
 end)
