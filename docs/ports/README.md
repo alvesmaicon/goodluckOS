@@ -146,7 +146,7 @@ The PC build from Steam's "compatibility" branch (1.6.15) is a .NET Framework pr
 
 ```sh
 dev/stardew/build.sh          # the port in dev/out/stardew/stardewvalley, its patches built against your game
-dev/stardew/build.sh game     # your game's files in dev/out/stardew/gamedata
+dev/stardew/build.sh game     # your game's files in dev/out/stardew/gamedata, the .xnb ones recompressed as LZ4
 dev/stardew/build.sh xmlgen   # the save serializers, into gamedata
 mkdir -p /Volumes/HOME/ports
 cp -R dev/out/stardew/stardewvalley /Volumes/HOME/ports/

@@ -37,6 +37,7 @@ public static class StardewPatches
 	// are skipped and the generated serializers take their place; on any failure the game's own are built instead.
 	public static void Early()
 	{
+		SpeedPatches.InstallEarly();
 		string path = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "StardewValley.XmlSerializers.dll");
 		if (!System.IO.File.Exists(path))
 			return;
@@ -69,15 +70,31 @@ public static class StardewPatches
 				f.SetValue(null, new System.Xml.Serialization.XmlSerializer(types[0], extra));
 			}
 		}
-		// SaveSerializer's one-type serializers (SerializableDictionary keys and values, Options, ...)
-		string list = System.IO.Path.ChangeExtension(path, ".txt");
-		if (EarlySerializers.Contract != null && System.IO.File.Exists(list)) {
-			var lookup = (Dictionary<Type, System.Xml.Serialization.XmlSerializer>)typeof(StardewValley.SaveSerialization.SaveSerializer)
-				.GetField("_serializerLookup", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
+		// SaveSerializer's one-type serializers (SerializableDictionary keys and values, Options, ...), the game's types in
+		// that assembly and the others' in StardewValley.XmlSerializers.<their assembly>.dll
+		var lookup = (Dictionary<Type, System.Xml.Serialization.XmlSerializer>)typeof(StardewValley.SaveSerialization.SaveSerializer)
+			.GetField("_serializerLookup", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
+		List<string> dlls = new List<string> { path };
+		foreach (string f in System.IO.Directory.GetFiles(System.IO.Path.GetDirectoryName(path), "StardewValley.XmlSerializers.*.dll"))
+			if (f.EndsWith(".dll"))
+				dlls.Add(f);
+		foreach (string dll in dlls) {
+			string list = System.IO.Path.ChangeExtension(dll, ".txt");
+			System.Xml.Serialization.XmlSerializerImplementation contract = EarlySerializers.Contract;
+			try {
+				if (dll != path)
+					contract = (System.Xml.Serialization.XmlSerializerImplementation)Activator.CreateInstance(
+						Assembly.LoadFrom(dll).GetType("Microsoft.Xml.Serialization.GeneratedAssembly.XmlSerializerContract", true));
+			} catch (Exception e) {
+				Console.WriteLine("Early: {0}: {1}", System.IO.Path.GetFileName(dll), e.Message);
+				continue;
+			}
+			if (contract == null || !System.IO.File.Exists(list))
+				continue;
 			foreach (string name in System.IO.File.ReadAllLines(list)) {
 				Type t = Type.GetType(name);
-				if (t != null && EarlySerializers.Contract.CanSerialize(t) && !lookup.ContainsKey(t)) {
-					lookup[t] = EarlySerializers.Contract.GetSerializer(t);
+				if (t != null && contract.CanSerialize(t) && !lookup.ContainsKey(t)) {
+					lookup[t] = contract.GetSerializer(t);
 					n++;
 				}
 			}
@@ -693,6 +710,15 @@ public static class StardewPatches
 			string save = System.IO.Path.Combine(Program.GetSavesFolder(), slot);
 			Dump("SaveGame", System.IO.Path.Combine(save, slot), SaveGame.serializer, dir);
 			Dump("Farmer", System.IO.Path.Combine(save, "SaveGameInfo"), SaveGame.farmerSerializer, dir);
+			// the NPC schedules the load computed (their routes come from the pathfinder)
+			using (var w = new System.IO.StreamWriter(System.IO.Path.Combine(dir, "schedules.txt")))
+				Utility.ForEachCharacter(npc => {
+					if (npc.Schedule != null)
+						foreach (var e in npc.Schedule)
+							w.WriteLine("{0} {1} {2} {3},{4} {5} [{6}]", npc.Name, e.Key, e.Value.targetLocationName, e.Value.targetTile.X,
+								e.Value.targetTile.Y, e.Value.facingDirection, string.Join(" ", e.Value.route ?? new Stack<Point>()));
+					return true;
+				});
 		}
 
 		static void Dump(string name, string file, System.Xml.Serialization.XmlSerializer s, string dir)
@@ -745,6 +771,11 @@ public static class StardewPatches
 			return (DateTime.Now - Process.GetCurrentProcess().StartTime).TotalSeconds;
 		}
 
+		static string Gcs()
+		{
+			return string.Format("gc0 {0} gc1 {1} heap {2} MB", GC.CollectionCount(0), GC.CollectionCount(1), GC.GetTotalMemory(false) >> 20);
+		}
+
 		static void Log(string what)
 		{
 			Console.WriteLine("bench {0:HH:mm:ss} {1}", DateTime.Now, what);
@@ -767,7 +798,7 @@ public static class StardewPatches
 				if (Game1.gameMode != Game1.titleScreenGameMode || !(Game1.activeClickableMenu is TitleMenu))
 					t = DateTime.Now;
 				else if (s > 3) {
-					Log(string.Format("title after {0:F0} s ({1:F0} s CPU), loading {2}", Uptime(), CpuTime(), Slot));
+					Log(string.Format("title after {0:F1} s ({1:F1} s CPU, {2}), loading {3}", Uptime(), CpuTime(), Gcs(), Slot));
 					Stats.Paused = true;
 					SaveGame.Load(Slot);
 					Game1.exitActiveMenu();
@@ -784,7 +815,8 @@ public static class StardewPatches
 					if (float.TryParse(Environment.GetEnvironmentVariable("SDV_UI"), System.Globalization.NumberStyles.Float,
 							System.Globalization.CultureInfo.InvariantCulture, out zoom))
 						Game1.options.desiredUIScale = zoom;
-					Log(string.Format("loaded after {0:F0} s ({1:F0} s CPU), warp to Farm {2},{3}", Uptime(), CpuTime(), door.X, door.Y));
+					Log(string.Format("loaded after {0:F1} s ({1:F1} s CPU, {2}), warp to Farm {3},{4}", Uptime(), CpuTime(), Gcs(),
+						door.X, door.Y));
 					Probe.Totals("loadprobe");
 					XmlDump.Run(Slot);
 					Game1.warpFarmer("Farm", door.X, door.Y, 2);

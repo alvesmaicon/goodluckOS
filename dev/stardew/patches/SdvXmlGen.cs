@@ -3,8 +3,9 @@
 // of the emitted code). This takes the mappings SaveGame's static constructor builds and has Mono write and
 // compile C# serializers for them (needs mcs, so it runs on the PC). Also the serializers SaveSerializer builds one
 // type at a time (key and value types of every SerializableDictionary, Options, StartupPreferences), listed in
-// StardewValley.XmlSerializers.txt for StardewPatches.Early to put in SaveSerializer's cache.
-//   mono SdvXmlGen.exe <out dir>      from the game folder; writes <out dir>/StardewValley.XmlSerializers.dll and .txt
+// StardewValley.XmlSerializers.txt for StardewPatches.Early to put in SaveSerializer's cache. A generated assembly only
+// takes the types of one assembly: those of others (Vector2, bool[]...) go in StardewValley.XmlSerializers.<assembly>.dll.
+//   mono SdvXmlGen.exe <out dir>      from the game folder; writes <out dir>/StardewValley.XmlSerializers*.dll and .txt
 using System;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
@@ -34,7 +35,10 @@ public static class SdvXmlGen
 			types.Add(t);
 			mappings.Add(m);
 		}
-		List<string> single = new List<string>();
+		Dictionary<Assembly, List<string>> single = new Dictionary<Assembly, List<string>>();
+		Dictionary<Assembly, List<Type>> others = new Dictionary<Assembly, List<Type>>();
+		Dictionary<Assembly, List<XmlMapping>> otherMappings = new Dictionary<Assembly, List<XmlMapping>>();
+		single[game] = new List<string>();
 		foreach (Type t in SingleTypes(game, types)) {
 			XmlMapping m;
 			try {
@@ -44,13 +48,26 @@ public static class SdvXmlGen
 				continue;
 			}
 			Console.WriteLine("single: {0}", t.FullName);
-			types.Add(t);
-			mappings.Add(m);
-			single.Add(t.AssemblyQualifiedName);
+			if (!single.ContainsKey(t.Assembly)) {
+				single[t.Assembly] = new List<string>();
+				others[t.Assembly] = new List<Type>();
+				otherMappings[t.Assembly] = new List<XmlMapping>();
+			}
+			(t.Assembly == game ? types : others[t.Assembly]).Add(t);
+			(t.Assembly == game ? mappings : otherMappings[t.Assembly]).Add(m);
+			single[t.Assembly].Add(t.AssemblyQualifiedName);
 		}
-		File.WriteAllLines(Path.Combine(args[0], "StardewValley.XmlSerializers.txt"), single.ToArray());
+		int failed = Generate(args[0], "StardewValley.XmlSerializers", types, mappings, single[game]);
+		foreach (Assembly a in others.Keys)
+			failed += Generate(args[0], "StardewValley.XmlSerializers." + a.GetName().Name, others[a], otherMappings[a], single[a]);
+		return failed;
+	}
+
+	static int Generate(string dir, string name, List<Type> types, List<XmlMapping> mappings, List<string> single)
+	{
+		File.WriteAllLines(Path.Combine(dir, name + ".txt"), single.ToArray());
 		CompilerParameters p = new CompilerParameters();
-		p.OutputAssembly = Path.GetFullPath(Path.Combine(args[0], "StardewValley.XmlSerializers.dll"));
+		p.OutputAssembly = Path.GetFullPath(Path.Combine(dir, name + ".dll"));
 		p.GenerateInMemory = false;
 		Assembly a = XmlSerializer.GenerateSerializer(types.ToArray(), mappings.ToArray(), p);
 		Console.WriteLine(a == null ? "nothing generated" : p.OutputAssembly);
@@ -59,8 +76,9 @@ public static class SdvXmlGen
 
 	// The types SaveSerializer.GetSerializer makes plain XmlSerializers for: key and value types of SerializableDictionary
 	// (found in every field and property type of the game), Options, StartupPreferences and Item (generic
-	// SaveSerializer.Deserialize<T> calls). Only the game's own types:
-	// a pregenerated assembly serves one assembly, and primitives take a fast path anyway.
+	// SaveSerializer.Deserialize<T> calls). Besides the game's own types that is Vector2, Point and arrays of primitives
+	// (Early puts them in SaveSerializer's cache, so their assembly does not matter); primitives and strings take a fast
+	// path anyway.
 	static IEnumerable<Type> SingleTypes(Assembly game, List<Type> roots)
 	{
 		Type dictionary = game.GetType("StardewValley.SerializableDictionary`2", true);
@@ -83,7 +101,7 @@ public static class SdvXmlGen
 		}
 		List<Type> result = new List<Type>();
 		foreach (Type t in found)
-			if (t.Assembly == game && !t.ContainsGenericParameters && !roots.Contains(t) && !t.IsEnum)
+			if (Type.GetTypeCode(t) == TypeCode.Object && !t.ContainsGenericParameters && !roots.Contains(t) && !t.IsEnum)
 				result.Add(t);
 		result.Sort((a, b) => string.CompareOrdinal(a.FullName, b.FullName));
 		return result;

@@ -86,11 +86,12 @@ run() {
     cmp -s "$P/SdvLoader.exe" "$G/SdvLoader.exe" || cp "$P/SdvLoader.exe" "$G/"
     cd "$G"
     : > "$log"
-    # PERF_WINDOW=load records from the title to the loaded save instead of the measured minute
+    # PERF_WINDOW=load records from the title to the loaded save instead of the measured minute, title from the start
     [ -z "${PERF:-}" ] || (
-        sleep 5
-        from='^bench .* measuring' to=; [ "${PERF_WINDOW:-}" = load ] && from='^bench .*title after' to='loaded after'
-        until grep -q "$from" "$log"; do pgrep -x mono > "$PERF.pid" || exit 0; sleep 0.2; done
+        from='^bench .* measuring' to=
+        case ${PERF_WINDOW:-} in load) from='^bench .*title after' to='loaded after' ;; title) from='^mac ' to='title after' ;; esac
+        until pgrep -x mono > "$PERF.pid"; do sleep 0.1; done
+        until grep -q "$from" "$log"; do kill -0 "$(cat "$PERF.pid")" 2>/dev/null || exit 0; sleep 0.1; done
         if [ -n "$to" ]; then
             perf record -q -e cpu-clock -F 1000 -g -p "$(cat "$PERF.pid")" -o "$PERF.data" &
             until grep -q "$to" "$log"; do sleep 0.2; done
@@ -116,14 +117,24 @@ run() {
 perf_run() {
     local out=$R/mac-$1
     PERF=$out MONO_ENV_OPTIONS=--jitmap run "$@"
-    perf script -i "$out.data" --tid="$(cat "$out.pid")" -F ip,sym 2>/dev/null | awk '
-        function name(s) { sub(/^[ \t]*[0-9a-f]+ ?/, "", s); if (s == "") s = "?"; sub(/^\(wrapper [a-z-]+\) /, "", s); sub(/ \(.*$/, "", s)
-            gsub(/;/, ",", s); return s }
-        NF == 0 { if (n) { k = f[n]; for (i = n - 1; i > 0; i--) k = k ";" f[i]; c[k]++ } n = 0; next }
-        { f[++n] = name($0) }
-        END { for (k in c) print k, c[k] }' > "$out.folded"
+    perf script -i "$out.data" --tid="$(cat "$out.pid")" -F ip,sym,dso 2>/dev/null | fold_stacks > "$out.folded"
+    # the load also runs on other threads (the save is read on a Task): every thread, its name as the root frame
+    [ -z "${PERF_WINDOW:-}" ] ||
+        perf script -i "$out.data" -F comm,ip,sym,dso 2>/dev/null | fold_stacks > "$out.all.folded"
     rm -f "$out.data" "$out.data.old" "$out.pid"
     echo "$(awk '{s += $NF} END {print s}' "$out.folded") main-thread samples in $out.folded"
+}
+
+# perf script's stacks as root;...;leaf count; a line that is not an address and a symbol names the thread
+fold_stacks() {
+    awk '
+        function name(s,  d) { sub(/^[ \t]*[0-9a-f]+ ?/, "", s); if (s == "") s = "?"; sub(/^\(wrapper [a-z-]+\) /, "", s)
+            if (s ~ /^\[unknown\] \(/) { d = s; sub(/^.*\//, "", d); sub(/[)].*$/, "", d); s = "[unknown " d "]" }; sub(/ \(.*$/, "", s)
+            gsub(/;/, ",", s); return s }
+        NF == 0 { if (n) { k = f[n]; for (i = n - 1; i > 0; i--) k = k ";" f[i]; c[(t == "" ? "" : t ";") k]++ } n = 0; t = ""; next }
+        !/^[ \t]*[0-9a-f]+ / { t = $0; gsub(/^[ \t]+|[ \t]+$/, "", t); gsub(/[ ;]/, "_", t); next }
+        { f[++n] = name($0) }
+        END { for (k in c) print k, c[k] }'
 }
 
 # AOT images sit next to their assemblies (<name>.so), so the bench gets its own copy of every assembly
