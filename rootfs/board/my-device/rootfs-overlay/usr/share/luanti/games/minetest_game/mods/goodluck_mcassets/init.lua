@@ -71,3 +71,20 @@ core.register_on_mods_loaded(function()
 		end
 	end
 end)
+
+-- entities given their textures as they run (mobs_redo's animals, from what each keeps in the world): a world saves
+-- the game's names, Minecraft's are only drawn
+core.register_on_joinplayer(function(player)
+	local methods = getmetatable(player)
+	if type(methods) ~= "table" or methods.goodluck_mcassets then return end
+	local set_properties = methods.set_properties
+	methods.set_properties = function(self, props)
+		local t = type(props) == "table" and tiles(props.textures)
+		if t then
+			props = table.copy(props)
+			props.textures = t
+		end
+		return set_properties(self, props)
+	end
+	methods.goodluck_mcassets = true
+end)
