@@ -52,7 +52,7 @@ send() {
     # one tar rooted at the port folder: the port's own files and gamedata side by side
     mkdir -p "$tmp/root"
     ln -s "$OUT/stardewvalley/dlls" "$OUT/stardewvalley/SdvXmlGen.exe" "$OUT/stardewvalley/SdvXnb.exe" "$OUT/gamedata" "$tmp/root/"
-    COPYFILE_DISABLE=1 tar -chf "$tmp/sdv-send.tar" -C "$tmp/root" -T "$tmp/list"
+    COPYFILE_DISABLE=1 tar --no-xattrs -chf "$tmp/sdv-send.tar" -C "$tmp/root" -T "$tmp/list"
     check_console
     echo "== $n files ($(($(wc -c < "$tmp/sdv-send.tar") / 1048576)) MB) to HOME over MTP, ~10 MB/s"
     if [ "$(uname)" = Darwin ]; then killall ptpcamerad 2>/dev/null || true; fi
