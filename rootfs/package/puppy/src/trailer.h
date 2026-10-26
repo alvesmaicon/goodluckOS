@@ -1,8 +1,8 @@
 #pragma once
 // A game's trailer, the clip a scraper puts in its gamelist.xml (<video>). ffmpeg decodes it at its
 // own pace (-re), scaled and cropped to the box, into a pipe; each whole frame goes to a texture. Its
-// sound, when asked for, goes straight to ALSA. Stopping, or the clip ending, kills ffmpeg. What Puppy starts dies with it when a game
-// starts (appd), so nothing is left behind.
+// sound, when asked for, goes through a second pipe to aplay. Stopping, or the clip ending, kills
+// both. What Puppy starts dies with it when a game starts (appd), so nothing is left behind.
 #include <SDL2/SDL.h>
 #include <sys/types.h>
 
@@ -28,6 +28,7 @@ private:
     void spawn(bool withSound);
 
     pid_t pid = -1;
+    pid_t player = -1;          // aplay, with the sound
     int fd = -1;
     SDL_Texture* tex = nullptr;
     int w = 0, h = 0;
