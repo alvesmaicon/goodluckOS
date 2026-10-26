@@ -1,5 +1,5 @@
 -- Minecraft's compass: its needle points at the world's spawn, whatever bed you sleep in, in the inventory as in the
--- hand; held, it shows where you are. Four steel ingots around a mese fragment, as Minetest Game has no redstone.
+-- hand; held, it shows where you are. Four steel ingots around redstone dust.
 -- The needle is the stack's own image (16 of them), set when it turns
 local S = core.get_translator("goodluck_compass")
 local ITEM = "goodluck_compass:compass"
@@ -43,7 +43,7 @@ core.register_craft({
 	output = ITEM,
 	recipe = {
 		{"", "default:steel_ingot", ""},
-		{"default:steel_ingot", "default:mese_crystal_fragment", "default:steel_ingot"},
+		{"default:steel_ingot", "goodluck_redstone:redstone", "default:steel_ingot"},
 		{"", "default:steel_ingot", ""},
 	},
 })

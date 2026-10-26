@@ -102,7 +102,6 @@ end
 -- saddles and horse armor
 local blacksmith_loot = {
 	{name = "default:diamond", min = 1, max = 2, chance = 8},
-	{name = "default:mese_crystal", min = 1, max = 2, chance = 10},
 	{name = "default:gold_ingot", min = 1, max = 4, chance = 40},
 	{name = "default:pick_steel", min = 1, max = 1, chance = 50},
 	{name = "default:sword_steel", min = 1, max = 1, chance = 45},
@@ -111,7 +110,6 @@ local blacksmith_loot = {
 	{name = "default:steel_ingot", min = 3, max = 8, chance = 80},
 	{name = "default:coal_lump", min = 8, max = 16, chance = 85},
 	{name = "default:copper_ingot", min = 3, max = 6, chance = 60},
-	{name = "default:bronze_ingot", min = 2, max = 5, chance = 50},
 	{name = "default:obsidian", min = 1, max = 3, chance = 30},
 	{name = "bucket:bucket_empty", min = 1, max = 1, chance = 50},
 	{name = "bucket:bucket_water", min = 1, max = 1, chance = 35},
@@ -126,7 +124,6 @@ local blacksmith_loot = {
 
 local house_loot = {
 	{name = "goodluck_lapis:lapis", min = 1, max = 4, chance = 30},
-	{name = "default:mese_crystal_fragment", min = 1, max = 4, chance = 30},
 	{name = "default:steel_ingot", min = 1, max = 5, chance = 50},
 	{name = "default:gold_ingot", min = 1, max = 3, chance = 30},
 	{name = "farming:bread", min = 3, max = 10, chance = 95},

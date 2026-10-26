@@ -141,6 +141,7 @@ default_mineral_gold.png	{block/gold_ore}
 default_mineral_diamond.png	{block/diamond_ore}
 goodluck_lapis_mineral.png	{block/lapis_ore}
 goodluck_emerald_mineral.png	{block/emerald_ore}
+goodluck_redstone_mineral.png	{block/redstone_ore}
 default_coal_block.png	{block/coal_block}
 default_steel_block.png	{block/iron_block}
 default_copper_block.png	{block/copper_block}
@@ -148,6 +149,9 @@ default_gold_block.png	{block/gold_block}
 default_diamond_block.png	{block/diamond_block}
 goodluck_lapis_block.png	{block/lapis_block}
 goodluck_emerald_block.png	{block/emerald_block}
+goodluck_redstone_block.png	{block/redstone_block}
+goodluck_redstone_lamp.png	{block/redstone_lamp}
+goodluck_redstone_lamp_on.png	{block/redstone_lamp_on}
 goodluck_amethyst_block.png	{block/amethyst_block}
 goodluck_amethyst_calcite.png	{block/calcite}
 goodluck_amethyst_cluster.png	{block/amethyst_cluster}
@@ -297,6 +301,7 @@ default_gold_lump.png	{item/raw_gold}
 default_steel_ingot.png	{item/iron_ingot}
 default_copper_ingot.png	{item/copper_ingot}
 default_gold_ingot.png	{item/gold_ingot}
+goodluck_metals_copper_nugget.png	{item/copper_nugget}
 default_diamond.png	{item/diamond}
 default_flint.png	{item/flint}
 default_clay_lump.png	{item/clay_ball}
@@ -306,6 +311,7 @@ default_book.png	{item/book}
 default_snowball.png	{item/snowball}
 goodluck_lapis.png	{item/lapis_lazuli}
 goodluck_emerald.png	{item/emerald}
+goodluck_redstone_dust.png	{item/redstone}
 goodluck_amethyst_shard.png	{item/amethyst_shard}
 goodluck_monsters_bone.png	{item/bone}
 goodluck_monsters_rotten_flesh.png	{item/rotten_flesh}
@@ -346,6 +352,16 @@ default_tool_diamondpick.png	{item/diamond_pickaxe}
 default_tool_diamondaxe.png	{item/diamond_axe}
 default_tool_diamondshovel.png	{item/diamond_shovel}
 default_tool_diamondsword.png	{item/diamond_sword}
+goodluck_metals_pick_copper.png	{item/copper_pickaxe}
+goodluck_metals_shovel_copper.png	{item/copper_shovel}
+goodluck_metals_axe_copper.png	{item/copper_axe}
+goodluck_metals_sword_copper.png	{item/copper_sword}
+goodluck_metals_hoe_copper.png	{item/copper_hoe}
+goodluck_metals_pick_gold.png	{item/golden_pickaxe}
+goodluck_metals_shovel_gold.png	{item/golden_shovel}
+goodluck_metals_axe_gold.png	{item/golden_axe}
+goodluck_metals_sword_gold.png	{item/golden_sword}
+goodluck_metals_hoe_gold.png	{item/golden_hoe}
 farming_tool_woodhoe.png	{item/wooden_hoe}
 farming_tool_stonehoe.png	{item/stone_hoe}
 farming_tool_steelhoe.png	{item/iron_hoe}
@@ -375,6 +391,10 @@ goodluck_horse_armor_diamond_item.png	{item/diamond_horse_armor}
 3d_armor_inv_chestplate_steel.png	{item/iron_chestplate}
 3d_armor_inv_leggings_steel.png	{item/iron_leggings}
 3d_armor_inv_boots_steel.png	{item/iron_boots}
+3d_armor_inv_helmet_copper.png	{item/copper_helmet}
+3d_armor_inv_chestplate_copper.png	{item/copper_chestplate}
+3d_armor_inv_leggings_copper.png	{item/copper_leggings}
+3d_armor_inv_boots_copper.png	{item/copper_boots}
 3d_armor_inv_helmet_gold.png	{item/golden_helmet}
 3d_armor_inv_chestplate_gold.png	{item/golden_chestplate}
 3d_armor_inv_leggings_gold.png	{item/golden_leggings}
