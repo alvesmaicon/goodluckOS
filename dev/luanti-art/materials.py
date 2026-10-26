@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-# goodluck_redstone's and goodluck_metals' textures, goodluckOS's own pixel art in Minetest Game's style (16x16, a
-# dark outline, lit from the top left): redstone, copper and golden tools, copper armor and the copper nugget.
+# goodluck_redstone's, goodluck_metals' and goodluck_armor's textures, goodluckOS's own pixel art in Minetest Game's
+# style (16x16, a dark outline, lit from the top left): redstone, copper and golden tools, copper and leather armor
+# and the copper nugget.
 # Shapes are silhouettes, one letter a material; the shades and the outline come from the shape
 #   python3 dev/luanti-art/materials.py [out dir]
 import os, random, sys
@@ -25,6 +26,7 @@ COPPER = ["#4a1e0a", "#934526", "#c96a3a", "#e88e52", "#ffc390"]
 GOLD = ["#5a3c04", "#b07a0a", "#e0aa1c", "#f8dc50", "#fffbd0"]
 STICK = ["#2e1c0a", "#5e3c1c", "#8a5a2c", "#a87440", "#c8945a"]
 RED = ["#3a0404", "#7a0c08", "#b81810", "#f03020", "#ff8a6a"]
+LEATHER = ["#3a2412", "#6e4424", "#a06540", "#c08458", "#e0aa80"]
 
 
 def shaded(text, palettes, outline=True, size=(16, 16)):
@@ -218,9 +220,11 @@ metals = out("goodluck_metals")
 for metal, palette in (("copper", COPPER), ("gold", GOLD)):
     for kind, shape in TOOLS.items():
         shaded(shape, {"M": palette, "H": STICK}).save(f"{metals}/goodluck_metals_{kind}_{metal}.png")
-for piece, shape in ARMOR.items():
-    shaded(shape, {"M": COPPER}).save(f"{metals}/3d_armor_inv_{piece}_copper.png")
-    plates(WORN[piece], (64, 32), COPPER).save(f"{metals}/3d_armor_{piece}_copper.png")
-    plates(PREVIEW[piece], (32, 64), COPPER).save(f"{metals}/3d_armor_{piece}_copper_preview.png")
+for mod, metal, palette in (("goodluck_metals", "copper", COPPER), ("goodluck_armor", "leather", LEATHER)):
+    d = out(mod)
+    for piece, shape in ARMOR.items():
+        shaded(shape, {"M": palette}).save(f"{d}/3d_armor_inv_{piece}_{metal}.png")
+        plates(WORN[piece], (64, 32), palette).save(f"{d}/3d_armor_{piece}_{metal}.png")
+        plates(PREVIEW[piece], (32, 64), palette).save(f"{d}/3d_armor_{piece}_{metal}_preview.png")
 shaded(NUGGET, {"M": COPPER}).save(f"{metals}/goodluck_metals_copper_nugget.png")
-print("textures in", os.path.relpath(red, ROOT), "and", os.path.relpath(metals, ROOT))
+print("textures in", os.path.relpath(red, ROOT), os.path.relpath(metals, ROOT), "and", os.path.relpath(out("goodluck_armor"), ROOT))
