@@ -65,7 +65,8 @@ send() {
 }
 
 bench() {
-    local name=$1 save=$2 log=$OUT/results/console-$name.log out i
+    local name=$1 save=$2 log out i
+    log=$OUT/results/console-$name.log
     shift 2
     check_console
     mkdir -p "$OUT/results"
