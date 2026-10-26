@@ -15,7 +15,7 @@ Trailer::~Trailer() {
     if (tex) SDL_DestroyTexture(tex);
 }
 
-void Trailer::start(SDL_Renderer* r, const std::string& path, int width, int height) {
+void Trailer::start(SDL_Renderer* r, const std::string& path, int width, int height, bool withSound) {
     stop();
     clip = path;
     if (!tex || w != width || h != height) {
@@ -25,22 +25,26 @@ void Trailer::start(SDL_Renderer* r, const std::string& path, int width, int hei
         tex = SDL_CreateTexture(r, SDL_PIXELFORMAT_IYUV, SDL_TEXTUREACCESS_STREAMING, w, h);
         buf.assign((size_t)w * h * 3 / 2, 0);
     }
-    if (!tex) return;
+    if (tex) spawn(withSound);
+}
 
+void Trailer::spawn(bool withSound) {
     int fds[2];
     if (pipe2(fds, O_CLOEXEC) != 0) return;
     fcntl(fds[0], F_SETPIPE_SZ, (int)buf.size() * 2);   // two whole frames, or the clip slows down
     const std::string vf = "scale=" + std::to_string(w) + ":" + std::to_string(h) +
                            ":force_original_aspect_ratio=increase:flags=bilinear,crop=" + std::to_string(w) + ":" + std::to_string(h);
-    const char* argv[] = {"ffmpeg", "-nostdin", "-loglevel", "quiet", "-threads", "2", "-re", "-i", path.c_str(),
-                          "-an", "-vf", vf.c_str(), "-pix_fmt", "yuv420p", "-f", "rawvideo", "-", nullptr};
+    std::vector<const char*> argv = {"ffmpeg", "-nostdin", "-loglevel", "quiet", "-threads", "2", "-re", "-i", clip.c_str(),
+                                     "-map", "0:v:0", "-vf", vf.c_str(), "-pix_fmt", "yuv420p", "-f", "rawvideo", "-"};
+    if (withSound) argv.insert(argv.end(), {"-map", "0:a:0?", "-f", "alsa", "default"});
+    argv.push_back(nullptr);
     posix_spawn_file_actions_t fa;
     posix_spawn_file_actions_init(&fa);
     posix_spawn_file_actions_adddup2(&fa, fds[1], STDOUT_FILENO);
     posix_spawn_file_actions_addopen(&fa, STDIN_FILENO, "/dev/null", O_RDONLY, 0);
     posix_spawn_file_actions_addopen(&fa, STDERR_FILENO, "/dev/null", O_WRONLY, 0);
     pid_t child = -1;
-    const int err = posix_spawnp(&child, "ffmpeg", &fa, nullptr, (char* const*)argv, environ);
+    const int err = posix_spawnp(&child, "ffmpeg", &fa, nullptr, (char* const*)argv.data(), environ);
     posix_spawn_file_actions_destroy(&fa);
     close(fds[1]);
     if (err != 0) {
@@ -49,6 +53,7 @@ void Trailer::start(SDL_Renderer* r, const std::string& path, int width, int hei
     }
     pid = child;
     fd = fds[0];
+    sound = withSound;
     fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
 }
 
@@ -81,6 +86,10 @@ int Trailer::update() {
             continue;
         } else if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
             return got;
+        } else if (sound && !shown) {   // ffmpeg won't open a clip with no sound to play: again without
+            stop();
+            spawn(false);
+            if (fd < 0) return -1;
         } else {    // the end of the clip, or ffmpeg failed
             stop();
             return -1;

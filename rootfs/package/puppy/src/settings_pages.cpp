@@ -257,6 +257,13 @@ std::vector<Row> SettingsScreen::interfacePage() {
         prefs.loadingText = !on;
         prefs.save();
     }));
+    Row sound = Row::toggle("Trailer sound", prefs.trailerSound, [this](int on) {
+        launcher.trailerSound = on;
+        prefs.trailerSound = on;
+        prefs.save();
+    });
+    sound.hint = "In the Vitrine style, a game's trailer plays with its sound, at the system volume.";
+    rows.push_back(sound);
 
     rows.push_back(Row::section("Tabs"));
     rows.push_back(Row::toggle("Show tabs", launcher.showTabs, [this](int on) {
@@ -490,6 +497,7 @@ void SettingsScreen::restoreDefaults() {
     styles::choose(prefs.style);
     launcher.view = View::Grid;
     launcher.showTabs = true;
+    launcher.trailerSound = false;
     for (Category& c : launcher.categories) c.hidden = false;
     applyFont();
     profile = defaultPowerProfile();

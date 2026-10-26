@@ -1,7 +1,7 @@
 #pragma once
 // A game's trailer, the clip a scraper puts in its gamelist.xml (<video>). ffmpeg decodes it at its
-// own pace (-re), scaled and cropped to the box, without sound, into a pipe; each whole frame goes to
-// a texture. Stopping, or the clip ending, kills ffmpeg. What Puppy starts dies with it when a game
+// own pace (-re), scaled and cropped to the box, into a pipe; each whole frame goes to a texture. Its
+// sound, when asked for, goes straight to ALSA. Stopping, or the clip ending, kills ffmpeg. What Puppy starts dies with it when a game
 // starts (appd), so nothing is left behind.
 #include <SDL2/SDL.h>
 #include <sys/types.h>
@@ -17,7 +17,7 @@ public:
     Trailer(const Trailer&) = delete;
     Trailer& operator=(const Trailer&) = delete;
 
-    void start(SDL_Renderer* r, const std::string& path, int w, int h);
+    void start(SDL_Renderer* r, const std::string& path, int w, int h, bool sound);
     void stop();
     int update();                           // reads what ffmpeg wrote: 1 a new frame, 0 none, -1 the clip ended
     bool running() const { return pid > 0; }
@@ -25,6 +25,8 @@ public:
     const std::string& path() const { return clip; }
 
 private:
+    void spawn(bool withSound);
+
     pid_t pid = -1;
     int fd = -1;
     SDL_Texture* tex = nullptr;
@@ -32,5 +34,6 @@ private:
     std::vector<Uint8> buf;     // one frame, as it comes in
     size_t have = 0;
     bool shown = false;
+    bool sound = false;         // this run plays the clip's sound
     std::string clip;
 };

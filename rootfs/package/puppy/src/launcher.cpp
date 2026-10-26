@@ -264,7 +264,7 @@ void LauncherScreen::tick(Uint32 now) {
         }
         const SDL_Rect box = trailerBox();
         std::error_code ec;
-        if (screenOn() && fs::is_regular_file(clip, ec)) trailer.start(app.painter().sdl(), clip, box.w, box.h);
+        if (screenOn() && fs::is_regular_file(clip, ec)) trailer.start(app.painter().sdl(), clip, box.w, box.h, model.trailerSound);
         if (!trailer.running()) {   // no screen, no clip (a gamelist kept without its videos) or no ffmpeg
             played = clip;
             return;

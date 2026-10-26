@@ -634,6 +634,7 @@ void loadSettings(Model& m) {
     const Prefs p = Prefs::load();
     m.view = p.listView ? View::List : View::Grid;
     m.showTabs = p.showTabs;
+    m.trailerSound = p.trailerSound;
     for (const std::string& name : p.hiddenTabs)
         for (auto& c : m.categories)
             if (!c.mixed && c.name == name) c.hidden = true;

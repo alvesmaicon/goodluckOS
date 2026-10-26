@@ -31,6 +31,7 @@ struct Model {
     int tab = 0;
     View view = View::Grid;
     bool showTabs = true;
+    bool trailerSound = false;
     std::string query;
     std::string autoCategory, autoName;   // the autolaunch entry
     std::set<std::string> favorites;      // "category<TAB>name" of the entries in My List
