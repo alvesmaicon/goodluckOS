@@ -42,6 +42,7 @@ constexpr int kCardGap              = 10;
 constexpr int kRowsTop              = 268;
 constexpr int kRowLabelH            = 24;
 constexpr int kRowPitch             = kRowLabelH + kCardH + 12;
+constexpr int kRowSkip              = 10;   // covers L1/R1 jump along a row
 
 constexpr int kMaxQueryLength       = 32;
 constexpr int kMaxNameLength        = 96;   // renaming a game's file

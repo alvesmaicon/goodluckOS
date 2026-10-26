@@ -133,7 +133,7 @@ Each system and app category gets its own tab, plus an "All Games" tab with ever
 
 | Button | Action |
 |---|---|
-| L1 / R1 | Previous / next tab |
+| L1 / R1 | Previous / next tab (in the Vitrine style's grid: skip 10 games along the row) |
 | D-pad / left stick | Move (hold to scroll). In list view, left/right jump a page |
 | Right stick up/down | Scroll the game's description (list view) |
 | A | Launch |
@@ -233,7 +233,7 @@ System Settings
 - **Launcher tabs**: hidden tabs' games still appear in All Games and My List.
 - **Font**: Default (Inter, or Atkinson Hyperlegible in the modern style), VT323, Pixelify Sans or ProggyClean.
 - **Accent color**: the colour of the selection, the buttons in the hints and the bars, and of the volume and brightness feedback in games (from the next game on): yellow (the default), orange, red, pink, purple, blue, cyan, green or white.
-- **Style**: Retro, Puppy's own look, or Modern, after the Vitrine launcher by Jeferson Lopes: a dark blue screen, bold titles, the selection as a rounded pill in the accent color, and the face buttons in the hints as their letter in its colour on a grey button. Vitrine is Modern in that launcher's layouts. Its list is Shelf: a narrower list, the picture with rounded corners over the game's name, system, data and description, and an A-Z rail lighting the selected game's letter. Its grid is Streaming: the selected game's picture fills the top right and fades into the screen behind its name and data, with a row of covers per tab under it. Left/right move along the row, up/down go to the previous/next tab (like L1/R1), and the next tab's row shows under the current one.
+- **Style**: Retro, Puppy's own look, or Modern, after the Vitrine launcher by Jeferson Lopes: a dark blue screen, bold titles, the selection as a rounded pill in the accent color, and the face buttons in the hints as their letter in its colour on a grey button. Vitrine is Modern in that launcher's layouts. Its list is Shelf: a narrower list, the picture with rounded corners over the game's name, system, data and description, and an A-Z rail lighting the selected game's letter. Its grid is Streaming: the selected game's picture fills the top right and fades into the screen behind its name and data, with a row of covers per tab under it. Left/right move along the row and L1/R1 skip 10 games along it; up/down go to the previous/next tab's row and stop at the first and the last. The next tab's row shows under the current one.
 - **Status bar**: the CPU temperature, the power chip (AXP223) temperature, the date, the time, the battery and the volume and audio output, each one on or off. In game puts them in the top right corner of every game, over a background whose opacity you set; it is off by default, so nothing covers the game. In the launcher puts the same items in the launcher's top bar (on by default). The time, the battery and the audio are on by default. A temperature turns yellow from 75 °C, where the A33 starts to slow down, and red from 90 °C.
 - **Performance**: the Gallium HUD graphs that FN + D-pad up shows in game. Text only goes at the top.
 - Overlay changes apply from the next game on.

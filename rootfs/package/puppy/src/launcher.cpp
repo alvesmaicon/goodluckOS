@@ -44,15 +44,25 @@ void LauncherScreen::onAction(Action a) {
         return;
     }
 
+    // Streaming's rows stop at the first and the last tab instead of wrapping around
+    auto row = [this](int delta) {
+        if ((model.neighbour(delta) - model.tab) * delta > 0) model.switchTab(delta);
+    };
     switch (a) {
-        case Action::PrevTab: model.switchTab(-1); break;
-        case Action::NextTab: model.switchTab(1);  break;
+        case Action::PrevTab:
+            if (streaming) model.moveSel(-kRowSkip);
+            else model.switchTab(-1);
+            break;
+        case Action::NextTab:
+            if (streaming) model.moveSel(kRowSkip);
+            else model.switchTab(1);
+            break;
         case Action::Up:
-            if (streaming) model.switchTab(-1);
+            if (streaming) row(-1);
             else model.moveSel(grid ? -kGridCols : -1);
             break;
         case Action::Down:
-            if (streaming) model.switchTab(1);
+            if (streaming) row(1);
             else model.moveSel(grid ? kGridCols : 1);
             break;
         case Action::Left:  model.moveSel(grid ? -1 : -listRows(model.showTabs)); break;
@@ -253,7 +263,8 @@ Header LauncherScreen::header() const {
 Hints LauncherScreen::hints() const {
     const Entry* sel = model.selected();
     const bool fav = sel && model.isFavorite(*sel);
-    Hints hints = {{"L1/R1", tr("Tab")}, {"A", tr("Launch")},
+    const bool streaming = model.view == View::Grid && theme().vitrine;
+    Hints hints = {{"L1/R1", tr(streaming ? "Skip 10" : "Tab")}, {"A", tr("Launch")},
                    {"Y", tr(fav ? "Remove" : "My List"), tr(fav ? "My List" : "Remove")}};
     // while searching, clearing the search is more useful than starting a new one
     if (model.query.empty()) hints.push_back({"X", tr("Search"), tr("Clear")});
@@ -507,7 +518,7 @@ void LauncherScreen::renderStreaming(Ui& ui) {
     }
     renderRow(ui, model.tab, kRowsTop, true);
     const int next = model.neighbour(1);
-    if (next != model.tab) renderRow(ui, next, kRowsTop + kRowPitch, false);
+    if (next > model.tab) renderRow(ui, next, kRowsTop + kRowPitch, false);
 }
 
 // A tab's name and its covers from the first one on screen, which keeps the tab's selection in view;
