@@ -1,0 +1,38 @@
+From: alvesmaicon <alvesmaiconn@gmail.com>
+Subject: [PATCH] ASoC: simple-amplifier: power up after the output driver feeding it
+
+The amplifier's DRV widget and the output driver feeding it are often
+both out_drv widgets, so DAPM sorts them by register: DRV has none
+(SND_SOC_NOPM) and comes first. On the A33 that driver is the codec's
+Headphone Amp, which sleeps 700 ms when it powers up so its output can
+settle. With the speaker amplifier already on, the speaker plays that
+whole ramp as hiss and a pop before every sound.
+
+Give DRV a subsequence of 1: it now powers up after the other out_drv
+widgets and down before them.
+
+diff --git a/sound/soc/codecs/simple-amplifier.c b/sound/soc/codecs/simple-amplifier.c
+index ca53b08..6342e02 100644
+--- a/sound/soc/codecs/simple-amplifier.c
++++ b/sound/soc/codecs/simple-amplifier.c
+@@ -117,8 +117,18 @@ static int simple_amp_power_event(struct snd_soc_dapm_widget *w,
+ static const struct snd_soc_dapm_widget simple_amp_dapm_widgets[] = {
+ 	SND_SOC_DAPM_INPUT("INL"),
+ 	SND_SOC_DAPM_INPUT("INR"),
+-	SND_SOC_DAPM_OUT_DRV_E("DRV", SND_SOC_NOPM, 0, 0, NULL, 0, simple_amp_power_event,
+-			       (SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD)),
++	/*
++	 * The output driver feeding the amplifier is often an out_drv too:
++	 * sequence after it on power up and before it on power down, so the
++	 * speaker doesn't play that driver ramping up or down.
++	 */
++	{
++		.id = snd_soc_dapm_out_drv, .name = "DRV",
++		SND_SOC_DAPM_INIT_REG_VAL(SND_SOC_NOPM, 0, 0),
++		.event = simple_amp_power_event,
++		.event_flags = SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD,
++		.subseq = 1,
++	},
+ 	SND_SOC_DAPM_OUTPUT("OUTL"),
+ 	SND_SOC_DAPM_OUTPUT("OUTR"),
+ 	SND_SOC_DAPM_REGULATOR_SUPPLY("VCC", 20, 0),
