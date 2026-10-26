@@ -17,8 +17,10 @@ mobs (mobs_redo)
 mobs_animal
   https://codeberg.org/tenplus1/mobs_animal, commit @MOBS_ANIMAL_VERSION@
   Code MIT; media CC0, WTFPL, MIT, CC BY-SA 3.0: mods/mobs_animal/license.txt
-  Replaced by goodluckOS's own (see goodluck_* below): the sheep's four
-  textures, CC BY-NC-SA 4.0 (non-commercial use only); the rat's model and
+  Replaced by Pixel Perfection's (see goodluck_models below): the cow's, the
+  warthog's, the chickens' and the sheep's textures, for goodluck_models'
+  meshes (the sheep's own four were CC BY-NC-SA 4.0, non-commercial use only).
+  Replaced by goodluckOS's own (see goodluck_* below): the rat's model and
   textures, credited only as "CCPL" with no version; and every file its
   credits don't name: the black and killer bunnies and the black kitten
   (recoloured from the credited grey and white bunnies, CC0, and the striped
@@ -129,7 +131,16 @@ goodluck_models
   goodluck_models_minecart.png and _minecart_item.png are XSSheep's minecart and
   its item from the same checkout (mods/ENTITIES/mcl_minecarts, CC BY-SA 3.0 by
   its README), unchanged. The bed's and the signs' textures are goodluckOS's own
-  (dev/luanti-art/furniture.py, see goodluck_* below).
+  (dev/luanti-art/furniture.py, see goodluck_* below). The farm animals' meshes
+  are goodluckOS's own too (dev/luanti-art/animals.py); their textures, under
+  mobs_animal's names (mods/mobs_animal/textures: mobs_cow, mobs_cow2,
+  mobs_pumba, mobs_chicken, _brown, _black, mobs_chick and mobs_sheep_base,
+  _wool, _shaved, _horns), are Pixel Perfection's cow, pig, sheep, sheared
+  sheep and wool by XSSheep and its chicken by kingoscargames, CC BY-SA 4.0, as
+  the same checkout carries them (mods/ENTITIES/mobs_mc, its
+  LICENSE-media.md), moved to Minecraft 26.x's layouts by
+  dev/luanti-art/pixelperfection.py (the cow's muzzle taken from its nose, the
+  wool made grey), and so under CC BY-SA 4.0; the horns are an empty image.
 
 goodluck_villages
   Built on villages_mtg 1.0.3 by Drix03,
@@ -142,7 +153,7 @@ screenshot.jpg, made on textstudio.com, whose terms are unclear. The game
 doesn't use them.
 
 goodluck_* mods (but goodluck_villages' buildings, goodluck_monsters' spider,
-goodluck_chest's halves and goodluck_models' chests and minecart, above), and the stamina, mobs_animal, mobs_monster, x_enchanting, mobs_npc and
+goodluck_chest's halves and goodluck_models' chests, minecart and farm animals' textures, above), and the stamina, mobs_animal, mobs_monster, x_enchanting, mobs_npc and
 x_bows media above (but the half-drawn bow, CC BY-SA 4.0)
   Code, pixel art (goodluck_horse's coats, markings, saddle and horse armor
   are painted by a script on mob_horse's model), the rat's and the bomb

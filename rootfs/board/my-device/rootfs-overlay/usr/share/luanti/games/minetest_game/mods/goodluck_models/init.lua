@@ -1,6 +1,6 @@
--- Minecraft's shapes for the chest, the bed, the sign and the minecart, so that its textures fit them: the player's
--- own through goodluck_mcassets, else Pixel Perfection's (chest, minecart) and goodluckOS' own (bed, sign). Meshes
--- drawn by dev/luanti-art/models.py
+-- Minecraft's shapes for the chest, the bed, the sign, the minecart and the farm animals (animals.lua), so that its
+-- textures fit them: the player's own through goodluck_mcassets, else Pixel Perfection's (chest, minecart, animals)
+-- and goodluckOS' own (bed, sign). Meshes drawn by dev/luanti-art/models.py and animals.py
 local M = "goodluck_models_"
 
 -- chests: a pixel in from every side and 14 high; open, the lid stands up on its hinge at the back
@@ -90,4 +90,8 @@ if cart then
 	cart.initial_properties.mesh = M .. "minecart.obj"
 	cart.initial_properties.textures = {M .. "minecart.png"}
 	core.override_item("carts:cart", {inventory_image = M .. "minecart_item.png", wield_image = M .. "minecart_item.png"})
+end
+
+if core.get_modpath("mobs_animal") then
+	dofile(core.get_modpath("goodluck_models") .. "/animals.lua")
 end

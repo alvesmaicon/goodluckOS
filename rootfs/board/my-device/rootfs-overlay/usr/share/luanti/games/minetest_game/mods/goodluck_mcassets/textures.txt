@@ -229,6 +229,19 @@ doors_door_steel.png	[combine:38x32:16,0={block/iron_door_top}:16,16={block/iron
 doors_trapdoor_side.png	{block/oak_trapdoor}
 doors_trapdoor_steel_side.png	{block/iron_trapdoor}
 
+# The farm animals (goodluck_models' meshes, mobs_animal's names): the plains' kind of each, the sheep's body over its
+# wool on one texture (the wool tinted as the sheep is), nothing over a sheared sheep
+mobs_cow.png	{entity/cow/cow_temperate}
+mobs_cow2.png	{entity/cow/cow_temperate}
+mobs_pumba.png	{entity/pig/pig_temperate}
+mobs_chicken.png	{entity/chicken/chicken_temperate}
+mobs_chicken_brown.png	{entity/chicken/chicken_temperate}
+mobs_chicken_black.png	{entity/chicken/chicken_temperate}
+mobs_chick.png	{entity/chicken/chicken_temperate}
+mobs_sheep_base.png	[combine:64x64:0,0={entity/sheep/sheep}
+mobs_sheep_wool.png	[combine:64x64:0,32={entity/sheep/sheep_wool}
+mobs_sheep_shaved.png	[combine:64x64
+
 # Wool and dye
 wool_white.png	{block/white_wool}
 wool_grey.png	{block/light_gray_wool}
