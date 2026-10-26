@@ -182,7 +182,7 @@ Ui::Ui(const std::string& font, const std::string& bold, float scale) {
     gridCache    = std::make_unique<IconCache>(renderer, cfg.fallbackIcon, kCellWidth, kCellHeight, false, kMaxCachedIcons);
     previewCache = std::make_unique<IconCache>(renderer, cfg.fallbackIcon, kPreviewW, kPreviewH, true, kMaxCachedIcons);
     cardCache    = std::make_unique<IconCache>(renderer, cfg.fallbackIcon, kCardW, kCardH, false, kMaxCachedIcons);
-    heroCache    = std::make_unique<IconCache>(renderer, cfg.fallbackIcon, kHeroW, kHeroH, true, 4);   // 470 KB each
+    heroCache    = std::make_unique<IconCache>(renderer, cfg.fallbackIcon, kHeroW, kHeroH, true, 4);   // 300 KB each
     ok_ = true;
 }
 

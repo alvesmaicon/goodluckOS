@@ -280,7 +280,7 @@ void LauncherScreen::tick(Uint32 now) {
 
 // Where the trailer plays: over the Streaming picture, or the Shelf one
 SDL_Rect LauncherScreen::trailerBox() const {
-    if (model.view == View::Grid) return {kScreenW - kHeroW, 0, kHeroW, kHeroH};
+    if (model.view == View::Grid) return {kScreenW - kHeroW, kHeroY, kHeroW, kHeroH};
     return {kShelfCardX, listTop(model.showTabs), kPreviewW, kPreviewH};
 }
 
@@ -539,13 +539,12 @@ void LauncherScreen::renderStreaming(Ui& ui) {
     const Fonts& fonts = ui.font();
     const Entry* e = model.selected();
     if (e) {
-        SDL_Rect clip{0, 0, kScreenW, kRowsTop};
+        SDL_Rect clip{0, 0, kScreenW, kRowsTop + kRowLabelH};   // beside the row's name, down to its covers
         SDL_RenderSetClipRect(renderer, &clip);
         const SDL_Rect hero = trailerBox();
         if (ui.drawFrame(trailer.frame(), hero) || ui.drawCover(ui.heroIcons(), e->iconPath, hero)) {
-            ui.shade({hero.x, kHeaderH, kHeroW, 24}, theme().bg, kBarShade, 0);   // the top bar's shade, so its edge doesn't show
-            ui.sideGradient({hero.x, hero.y, kHeroW * 3 / 5, kHeroH}, theme().bg);
-            ui.gradient({hero.x, kRowsTop - 90, kHeroW, 90}, theme().bg);
+            ui.sideGradient({hero.x, hero.y, kHeroFadeW, kHeroH}, theme().bg);
+            ui.gradient({hero.x, hero.y + hero.h - kHeroFadeH, kHeroW, kHeroFadeH}, theme().bg);
         }
         SDL_RenderSetClipRect(renderer, nullptr);
 
