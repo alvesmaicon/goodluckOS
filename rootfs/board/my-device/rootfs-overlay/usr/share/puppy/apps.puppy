@@ -175,6 +175,7 @@ COMMAND=mpv %s
 NAME=Videos
 TAB=Videos
 MEDIA=1
+EXCERPT=1
 Description=Videos and series
 ENTRY_DIRECTORIES=/home/player/media/videos;/media/external/media/videos
 ENTRY_EXTENSIONS=mp4;mkv;avi;webm;mov;m4v;mpg;mpeg;wmv;flv;3gp

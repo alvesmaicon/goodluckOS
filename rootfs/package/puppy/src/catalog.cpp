@@ -16,6 +16,7 @@ struct Archive {
     std::vector<std::string> dirs, exts, iconDirs;
     bool es = false;    // from es_systems.cfg: the command uses %ROM%-style placeholders
     bool media = false; // MEDIA=1: folders with matching files (albums, series) are entries too
+    bool excerpt = false;   // EXCERPT=1: videos, each one's trailer a part of itself
     std::string system, emulator, core;     // for %SYSTEM%, %EMULATOR% and %CORE%
 };
 
@@ -82,6 +83,7 @@ static void parseAppsFile(const std::string& path, std::vector<Record>& records)
             a.iconDirs    = splitList(get("ENTRY_ICONS_DIRECTORIES"));
             a.tab         = get("TAB");
             a.media       = !get("MEDIA").empty() && get("MEDIA") != "0";
+            a.excerpt     = !get("EXCERPT").empty() && get("EXCERPT") != "0";
             if (!a.name.empty() && !a.dirs.empty()) upsert(records, rec);
         }
         kv.clear();
@@ -386,6 +388,17 @@ static std::vector<Entry> expandArchive(const Archive& a) {
         }
         return false;
     };
+    // a series' first episode, by name
+    auto firstFile = [&](const fs::path& d) {
+        std::string first;
+        std::error_code ec;
+        for (fs::directory_iterator it(d, ec), end; !ec && it != end; it.increment(ec)) {
+            std::error_code ec2;
+            const std::string f = it->path().string();
+            if (it->is_regular_file(ec2) && matches(it->path()) && (first.empty() || f < first)) first = f;
+        }
+        return first;
+    };
 
     std::vector<Entry> out;
     for (const auto& dir : a.dirs) {
@@ -421,6 +434,10 @@ static std::vector<Entry> expandArchive(const Archive& a) {
                 if (e.iconPath.empty() && !g.image.empty() && fs::is_regular_file(g.image, ec3)) e.iconPath = g.image;
             }
             if (e.iconPath.empty()) e.iconPath = a.defaultIcon;
+            if (a.excerpt && e.video.empty()) {
+                e.video = folder ? firstFile(p) : p.string();
+                e.excerpt = true;
+            }
             out.push_back(std::move(e));
         }
     }

@@ -1,8 +1,8 @@
 #pragma once
-// A game's trailer, the clip a scraper puts in its gamelist.xml (<video>). ffmpeg decodes it at its
-// own pace (-re), scaled and cropped to the box, into a pipe; each whole frame goes to a texture. Its
-// sound, when asked for, goes through a second pipe to aplay. Stopping, or the clip ending, kills
-// both. What Puppy starts dies with it when a game starts (appd), so nothing is left behind.
+// A game's trailer, the clip a scraper puts in its gamelist.xml (<video>), or for a video 30 s of itself
+// from a fifth of the way in. ffmpeg decodes it at its own pace (-re), scaled and cropped to the box,
+// into a pipe; each whole frame goes to a texture. Its sound, when asked for, goes through a second
+// pipe to aplay. Stopping, or the clip ending, kills both. What Puppy starts dies with it when a game starts (appd), so nothing is left behind.
 #include <SDL2/SDL.h>
 #include <sys/types.h>
 
@@ -17,7 +17,7 @@ public:
     Trailer(const Trailer&) = delete;
     Trailer& operator=(const Trailer&) = delete;
 
-    void start(SDL_Renderer* r, const std::string& path, int w, int h, bool sound);
+    void start(SDL_Renderer* r, const std::string& path, int w, int h, bool sound, bool excerpt);
     void stop();
     int update();                           // reads what ffmpeg wrote: 1 a new frame, 0 none, -1 the clip ended
     bool running() const { return pid > 0; }
@@ -36,5 +36,6 @@ private:
     size_t have = 0;
     bool shown = false;
     bool sound = false;         // this run plays the clip's sound
+    bool part = false;          // only a part of the video plays
     std::string clip;
 };

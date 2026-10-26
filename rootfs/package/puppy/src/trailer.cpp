@@ -15,9 +15,10 @@ Trailer::~Trailer() {
     if (tex) SDL_DestroyTexture(tex);
 }
 
-void Trailer::start(SDL_Renderer* r, const std::string& path, int width, int height, bool withSound) {
+void Trailer::start(SDL_Renderer* r, const std::string& path, int width, int height, bool withSound, bool excerpt) {
     stop();
     clip = path;
+    part = excerpt;
     if (!tex || w != width || h != height) {
         if (tex) SDL_DestroyTexture(tex);
         w = width;
@@ -62,6 +63,13 @@ void Trailer::spawn(bool withSound) {
     std::vector<const char*> argv = {"ffmpeg", "-nostdin", "-loglevel", "quiet", "-threads", "2", "-re", "-i", clip.c_str(),
                                      "-map", "0:v:0", "-vf", vf.c_str(), "-pix_fmt", "yuv420p", "-f", "rawvideo", "-"};
     if (withSound) argv.insert(argv.end(), {"-map", "0:a:0?", "-ar", "48000", "-ac", "2", "-f", "s16le", "pipe:3"});
+    if (part) {     // the duration from ffmpeg's header (there's no ffprobe), then 30 s from a fifth of it
+        static const char* kExcerpt =
+            "o=$(ffmpeg -nostdin -hide_banner -i \"$1\" 2>&1 | sed -n 's/.*Duration: \\([0-9:]*\\)\\..*/\\1/p' |"
+            " awk -F: '{ print int(($1 * 3600 + $2 * 60 + $3) / 5); exit }'); shift; exec ffmpeg -ss \"${o:-0}\" -t 30 \"$@\"";
+        argv[0] = clip.c_str();
+        argv.insert(argv.begin(), {"sh", "-c", kExcerpt, "trailer"});
+    }
     argv.push_back(nullptr);
     pid = run(argv.data(), -1, fds[1], snd[1]);
     close(fds[1]);
