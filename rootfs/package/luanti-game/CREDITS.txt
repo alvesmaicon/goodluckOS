@@ -118,6 +118,19 @@ goodluck_chest
   under CC BY-SA 3.0. Its page numbers, goodluck_chest_page_1 and _2.png, are
   goodluckOS's own (see goodluck_* below).
 
+goodluck_models
+  Its meshes are goodluckOS's own, drawn by dev/luanti-art/models.py in the
+  shapes Minecraft's textures take. goodluck_models_chest.png,
+  _chest_left.png and _chest_right.png are Pixel Perfection by XSSheep, CC BY-SA
+  4.0, as Mineclonia carries them (https://codeberg.org/mineclonia/mineclonia,
+  commit 7410cf1, mods/ITEMS/mcl_chests; its LEGAL.md), turned to Minecraft's
+  chest layout since 1.15 and the double one split into its halves by
+  dev/luanti-art/pixelperfection.py, and so under CC BY-SA 4.0;
+  goodluck_models_minecart.png and _minecart_item.png are XSSheep's minecart and
+  its item from the same checkout (mods/ENTITIES/mcl_minecarts, CC BY-SA 3.0 by
+  its README), unchanged. The bed's and the signs' textures are goodluckOS's own
+  (dev/luanti-art/furniture.py, see goodluck_* below).
+
 goodluck_villages
   Built on villages_mtg 1.0.3 by Drix03,
   https://content.luanti.org/packages/Drix03/villages_mtg/, MIT:
@@ -128,8 +141,8 @@ Left out of mobs, mobs_animal, mobs_monster, stamina, mobs_npc and mob_horse:
 screenshot.jpg, made on textstudio.com, whose terms are unclear. The game
 doesn't use them.
 
-goodluck_* mods (but goodluck_villages' buildings, goodluck_monsters' spider and
-goodluck_chest's halves, above), and the stamina, mobs_animal, mobs_monster, x_enchanting, mobs_npc and
+goodluck_* mods (but goodluck_villages' buildings, goodluck_monsters' spider,
+goodluck_chest's halves and goodluck_models' chests and minecart, above), and the stamina, mobs_animal, mobs_monster, x_enchanting, mobs_npc and
 x_bows media above (but the half-drawn bow, CC BY-SA 4.0)
   Code, pixel art (goodluck_horse's coats, markings, saddle and horse armor
   are painted by a script on mob_horse's model), the rat's and the bomb

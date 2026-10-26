@@ -1,7 +1,8 @@
 -- No text with the crosshair on a block or a thing, as in Minecraft: bookshelves, chests, furnaces, the enchanting
 -- table, locked doors, arrows and the like keep their infotext empty; signs keep theirs, the only way Minetest Game
 -- shows what is written on them
-local SIGNS = {"default:sign_wall_wood", "default:sign_wall_steel"}
+local SIGNS = {"default:sign_wall_wood", "default:sign_wall_steel", "goodluck_models:sign_standing_wood",
+	"goodluck_models:sign_standing_steel"}
 local allow = false
 
 -- every node's metadata goes through NodeMetaRef, whose methods are one table (reachable once the map is, at the

@@ -198,6 +198,37 @@ mobs_cobweb.png	{block/cobweb}
 mob_spawner.png	{block/spawner}
 mobs_honey_block.png	{block/honey_block_side}
 
+# Minecraft's shapes (goodluck_models): chests from its entity textures (its left half is the right one seen from
+# the front), beds and signs from its block faces, doors put together from its two halves in the door mesh's layout
+# (front, edge, back mirrored, edge)
+goodluck_models_chest.png	{entity/chest/normal}
+goodluck_models_chest_left.png	{entity/chest/normal_right}
+goodluck_models_chest_right.png	{entity/chest/normal_left}
+goodluck_models_minecart.png	{entity/minecart/minecart}
+goodluck_models_minecart_item.png	{item/minecart}
+goodluck_models_bed_red_head_up.png	{block/red_bed_head_up}
+goodluck_models_bed_red_head_east.png	{block/red_bed_head_east}
+goodluck_models_bed_red_head_west.png	{block/red_bed_head_west}
+goodluck_models_bed_red_foot_up.png	{block/red_bed_foot_up}
+goodluck_models_bed_red_foot_east.png	{block/red_bed_foot_east}
+goodluck_models_bed_red_foot_west.png	{block/red_bed_foot_west}
+goodluck_models_bed_red_foot_south.png	{block/red_bed_foot_south}
+goodluck_models_bed_blue_head_up.png	{block/blue_bed_head_up}
+goodluck_models_bed_blue_head_east.png	{block/blue_bed_head_east}
+goodluck_models_bed_blue_head_west.png	{block/blue_bed_head_west}
+goodluck_models_bed_blue_foot_up.png	{block/blue_bed_foot_up}
+goodluck_models_bed_blue_foot_east.png	{block/blue_bed_foot_east}
+goodluck_models_bed_blue_foot_west.png	{block/blue_bed_foot_west}
+goodluck_models_bed_blue_foot_south.png	{block/blue_bed_foot_south}
+goodluck_models_bed_head_north.png	{block/bed_head_north}
+goodluck_models_bed_down.png	{block/bed_down}
+goodluck_models_sign_wood.png	{block/oak_sign}
+default_sign_wood.png	{item/oak_sign}
+doors_door_wood.png	[combine:38x32:16,0={block/oak_door_top}:16,16={block/oak_door_bottom}:35,0={block/oak_door_top}:35,16={block/oak_door_bottom}:0,0={block/oak_door_top}:0,16={block/oak_door_bottom}:19,0={block/oak_door_top}\^[transformFX:19,16={block/oak_door_bottom}\^[transformFX
+doors_door_steel.png	[combine:38x32:16,0={block/iron_door_top}:16,16={block/iron_door_bottom}:35,0={block/iron_door_top}:35,16={block/iron_door_bottom}:0,0={block/iron_door_top}:0,16={block/iron_door_bottom}:19,0={block/iron_door_top}\^[transformFX:19,16={block/iron_door_bottom}\^[transformFX
+doors_trapdoor_side.png	{block/oak_trapdoor}
+doors_trapdoor_steel_side.png	{block/iron_trapdoor}
+
 # Wool and dye
 wool_white.png	{block/white_wool}
 wool_grey.png	{block/light_gray_wool}
