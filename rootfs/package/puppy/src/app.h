@@ -50,6 +50,8 @@ public:
     void topBarChanged();                       // its items, the clock's format, 12/24 hours or time zone
     void audioChanged();                        // the top bar reads the mixer again
     SDL_GameController* gamepad() const { return pad; }
+    bool onTop(const Screen* s) const { return !stack.empty() && stack.back().get() == s; }
+    void redraw() { dirty = true; }             // a screen's picture changed without input (a trailer's frame)
     Ui& painter() { return ui; }
     int run();
 

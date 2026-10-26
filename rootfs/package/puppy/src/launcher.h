@@ -6,6 +6,7 @@
 #include "app.h"
 #include "keyboard.h"
 #include "model.h"
+#include "trailer.h"
 
 class KeyboardScreen;
 
@@ -18,6 +19,8 @@ public:
     Header header() const override;
     Hints hints() const override;
     bool animating() const override { return tabOffset != 0.0f; }
+    Uint32 wakeAt() const override { return trailer.running() ? frameDue : trailerAt; }
+    void tick(Uint32 now) override;
 
 private:
     Model model;
@@ -27,6 +30,11 @@ private:
     std::string dateFmt;        // the day a game was last played, as Date & Time shows it
     int lastTab = -1;           // tab drawn in the previous frame, to animate the strip
     float tabOffset = 0.0f;     // remaining slide of the tab strip, in pixels
+    Trailer trailer;            // the selected game's clip, in the Vitrine style
+    Uint32 stillSince = 0;      // the last button press (or the launcher back on top)
+    Uint32 trailerAt = 0;       // when the selected game's trailer starts (0: none to start)
+    Uint32 frameDue = 0;        // when the playing trailer's frames are read next
+    std::string played;         // the clip that played to its end, not started again until a button
 
     void openSearch();
     void openRename(const Entry& e);
@@ -40,6 +48,7 @@ private:
     void openSettings();
     void reloadGames();
     std::string playedText(const Entry& e, bool withDay) const;
+    SDL_Rect trailerBox() const;
 
     void renderEmpty(Ui& ui);
     void renderGrid(Ui& ui);

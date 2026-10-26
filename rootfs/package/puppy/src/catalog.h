@@ -13,6 +13,7 @@ struct Entry {
     std::string meta;           // "year · genre · players", from gamelist.xml
     std::string command;
     std::string iconPath;
+    std::string video;      // the gamelist's clip, played as a trailer in the Vitrine style
     std::string searchKey;  // lowercase name, filled once the catalog is loaded
     std::string tag;        // short system name, shown next to the entry in the "All Games" tab
     std::string file;       // the ROM file (archive entries): what Rename and Delete act on

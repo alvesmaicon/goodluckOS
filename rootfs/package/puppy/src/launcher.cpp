@@ -15,9 +15,15 @@
 #include "settings.h"
 #include "util.h"
 
-LauncherScreen::LauncherScreen(App& app, Model model) : Screen(app), model(std::move(model)), dateFmt(dateFormat()) {}
+LauncherScreen::LauncherScreen(App& app, Model model)
+    : Screen(app), model(std::move(model)), dateFmt(dateFormat()), stillSince(SDL_GetTicks()) {}
 
 void LauncherScreen::onAction(Action a) {
+    // any button stops the trailer; the next one waits for the selection to stay still again
+    trailer.stop();
+    stillSince = SDL_GetTicks();
+    played.clear();
+
     const bool grid = model.view == View::Grid;
     const bool streaming = grid && theme().vitrine;    // a row per tab: up and down change the tab
 
@@ -233,6 +239,48 @@ std::string LauncherScreen::playedText(const Entry& e, bool withDay) const {
     std::string text = trf("Played for %s", time);
     if (p->last > 0) text += " · " + dayText(dateFmt, (time_t)p->last);
     return text;
+}
+
+// The selected game's trailer, in the Vitrine style: it starts once the launcher has been on top
+// with no button pressed for kTrailerDelayMs, and plays once. Without the screen it waits for a button.
+void LauncherScreen::tick(Uint32 now) {
+    const Entry* e = theme().vitrine ? model.selected() : nullptr;
+    if (!app.onTop(this)) {
+        stillSince = now;
+        e = nullptr;
+    }
+    const std::string clip = e ? e->video : "";
+    if (trailer.running() && trailer.path() != clip) {
+        trailer.stop();
+        app.redraw();
+    }
+    trailerAt = 0;
+    if (clip.empty() || clip == played) return;
+    if (!trailer.running()) {
+        const Uint32 at = std::max<Uint32>(1, stillSince + kTrailerDelayMs);
+        if ((Sint32)(now - at) < 0) {
+            trailerAt = at;
+            return;
+        }
+        const SDL_Rect box = trailerBox();
+        if (screenOn()) trailer.start(app.painter().sdl(), clip, box.w, box.h);
+        if (!trailer.running()) {   // no screen, or no ffmpeg
+            played = clip;
+            return;
+        }
+        frameDue = now;
+    }
+    if ((Sint32)(now - frameDue) < 0) return;
+    frameDue = now + kTrailerFrameMs;
+    const int got = trailer.update();
+    if (got < 0) played = clip;     // to its end: the picture again
+    if (got != 0) app.redraw();
+}
+
+// Where the trailer plays: over the Streaming picture, or the Shelf one
+SDL_Rect LauncherScreen::trailerBox() const {
+    if (model.view == View::Grid) return {kScreenW - kHeroW, 0, kHeroW, kHeroH};
+    return {kShelfCardX, listTop(model.showTabs), kPreviewW, kPreviewH};
 }
 
 void LauncherScreen::render(Ui& ui) {
@@ -459,9 +507,9 @@ void LauncherScreen::renderShelf(Ui& ui) {
     }
 
     const int x = kShelfCardX, w = kPreviewW;
-    SDL_Rect box{x, top, w, kPreviewH};
+    const SDL_Rect box = trailerBox();
     ui.roundRect(box, 10, theme().tile);
-    ui.drawIcon(ui.previewIcons(), e->iconPath, box);
+    if (!ui.drawFrame(trailer.frame(), box)) ui.drawIcon(ui.previewIcons(), e->iconPath, box);
     ui.roundCorners(box, 10, theme().bg);
     int y = box.y + box.h + 10;
     y += ui.drawWrapped(fonts.uiBold, e->name, x, y, theme().text, w);
@@ -492,8 +540,8 @@ void LauncherScreen::renderStreaming(Ui& ui) {
     if (e) {
         SDL_Rect clip{0, 0, kScreenW, kRowsTop};
         SDL_RenderSetClipRect(renderer, &clip);
-        SDL_Rect hero{kScreenW - kHeroW, 0, kHeroW, kHeroH};
-        if (ui.drawCover(ui.heroIcons(), e->iconPath, hero)) {
+        const SDL_Rect hero = trailerBox();
+        if (ui.drawFrame(trailer.frame(), hero) || ui.drawCover(ui.heroIcons(), e->iconPath, hero)) {
             ui.shade({hero.x, kHeaderH, kHeroW, 24}, theme().bg, kBarShade, 0);   // the top bar's shade, so its edge doesn't show
             ui.sideGradient({hero.x, hero.y, kHeroW * 3 / 5, kHeroH}, theme().bg);
             ui.gradient({hero.x, kRowsTop - 90, kHeroW, 90}, theme().bg);

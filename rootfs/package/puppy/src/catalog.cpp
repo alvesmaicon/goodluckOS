@@ -248,7 +248,7 @@ static std::string findFolderCover(const fs::path& dir) {
 
 // What an EmulationStation/Skraper gamelist.xml says about one ROM.
 struct GameInfo {
-    std::string name, synopsis, image, meta;
+    std::string name, synopsis, image, video, meta;
 };
 
 static void appendUtf8(std::string& out, unsigned long cp) {
@@ -325,6 +325,8 @@ static std::map<std::string, GameInfo> readGamelistFile(const fs::path& dir, con
         g.synopsis = xmlTag(block, "desc");
         const std::string image = stripDotSlash(xmlTag(block, "image"));
         if (!image.empty()) g.image = (image[0] == '/' ? fs::path(image) : dir / image).string();
+        const std::string video = stripDotSlash(xmlTag(block, "video"));
+        if (!video.empty()) g.video = (video[0] == '/' ? fs::path(video) : dir / video).string();
 
         std::vector<std::string> meta;
         const std::string date = xmlTag(block, "releasedate");
@@ -342,7 +344,7 @@ static std::map<std::string, GameInfo> readGamelistFile(const fs::path& dir, con
 
 // dir/gamelist.xml, with names, descriptions and metadata replaced by the ones in the gamelist for the
 // interface language when there is one: gamelist.<code>.xml (e.g. gamelist.pt-BR.xml), or
-// gamelist.<language>.xml (gamelist.pt.xml). Images and anything it lacks come from gamelist.xml.
+// gamelist.<language>.xml (gamelist.pt.xml). Images, videos and anything it lacks come from gamelist.xml.
 static std::map<std::string, GameInfo> loadGamelist(const fs::path& dir) {
     auto out = readGamelistFile(dir, "gamelist.xml");
     const std::string code = i18n::current();
@@ -357,6 +359,7 @@ static std::map<std::string, GameInfo> loadGamelist(const fs::path& dir) {
         if (!l.synopsis.empty()) g.synopsis = l.synopsis;
         if (!l.meta.empty()) g.meta = l.meta;
         if (g.image.empty()) g.image = l.image;
+        if (g.video.empty()) g.video = l.video;
     }
     return out;
 }
@@ -412,6 +415,7 @@ static std::vector<Entry> expandArchive(const Archive& a) {
                 if (!g.name.empty()) e.name = g.name;
                 e.synopsis = g.synopsis;
                 e.meta = g.meta;
+                e.video = g.video;
                 std::error_code ec3;
                 if (e.iconPath.empty() && !g.image.empty() && fs::is_regular_file(g.image, ec3)) e.iconPath = g.image;
             }

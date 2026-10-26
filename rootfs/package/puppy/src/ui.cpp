@@ -529,6 +529,13 @@ void Ui::shade(const SDL_Rect& r, SDL_Color c, Uint8 top, Uint8 bottom) {
     SDL_RenderGeometry(renderer, nullptr, v, 4, idx, 6);
 }
 
+// A frame made elsewhere (a trailer's), stretched to the box; false when there is none.
+bool Ui::drawFrame(SDL_Texture* frame, const SDL_Rect& box) {
+    if (!frame) return false;
+    SDL_RenderCopy(renderer, frame, nullptr, &box);
+    return true;
+}
+
 // Horizontal fade from the colour (left) to transparent (right).
 void Ui::sideGradient(const SDL_Rect& r, SDL_Color c) {
     SDL_Vertex v[4];

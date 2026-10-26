@@ -149,6 +149,7 @@ public:
     int pillWidth(const std::string& text);
     void drawIcon(IconCache& cache, const std::string& path, const SDL_Rect& box);
     bool drawCover(IconCache& cache, const std::string& path, const SDL_Rect& box);
+    bool drawFrame(SDL_Texture* frame, const SDL_Rect& box);
     int drawWrapped(TTF_Font* font, const std::string& text, int x, int y, SDL_Color color, int width);
     int wrappedHeight(TTF_Font* font, const std::string& text, int width);
     int drawWrappedClipped(TTF_Font* font, const std::string& text, int x, int y, SDL_Color color, int width, int maxH,

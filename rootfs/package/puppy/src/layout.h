@@ -45,6 +45,8 @@ constexpr Uint8 kBarShade           = 110;  // the see-through top bar's opacity
 constexpr int kRowLabelH            = 24;
 constexpr int kRowPitch             = kRowLabelH + kCardH + 12;
 constexpr int kRowSkip              = 10;   // covers L1/R1 jump along a row
+constexpr Uint32 kTrailerDelayMs    = 2000; // still on a game this long: its trailer plays
+constexpr Uint32 kTrailerFrameMs    = 33;   // its frames are read this often
 
 constexpr int kMaxQueryLength       = 32;
 constexpr int kMaxNameLength        = 96;   // renaming a game's file
