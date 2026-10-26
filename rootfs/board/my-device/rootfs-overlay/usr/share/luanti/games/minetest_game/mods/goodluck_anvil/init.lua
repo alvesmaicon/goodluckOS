@@ -22,7 +22,7 @@ local has_ench = core.get_modpath("x_enchanting") and XEnchanting
 -- Minecraft repairs a tool or armor with the material of its tier: here the last word of its name
 local MATERIALS = {
 	wood = "group:wood", stone = "group:stone", steel = "default:steel_ingot", bronze = "default:bronze_ingot",
-	mese = "default:mese_crystal", diamond = "default:diamond", gold = "default:gold_ingot", cactus = "default:cactus",
+	diamond = "default:diamond", gold = "default:gold_ingot", cactus = "default:cactus",
 }
 local REPAIRABLE = {default = true, farming = true, ["3d_armor"] = true, shields = true}
 

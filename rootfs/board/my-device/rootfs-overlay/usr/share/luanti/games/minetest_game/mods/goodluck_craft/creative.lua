@@ -1,4 +1,4 @@
--- Minecraft's creative tabs (Java Edition since 1.19.3, without Redstone Blocks: this game has no redstone) in place of
+-- Minecraft's creative tabs (Java Edition since 1.19.3, without Redstone Blocks: no circuits yet) in place of
 -- minetest_game's All/Nodes/Tools/Items. An item shows in every tab whose test it passes, as in Minecraft; one that
 -- passes none goes to Building Blocks (nodes), Tools & Utilities (tools) or Ingredients (the rest)
 local S = core.get_translator("goodluck_craft")
@@ -29,7 +29,7 @@ local function natural(name, def, g)
 	return matches(name, "^goodluck_food:[%a_]*seeds$", "^goodluck_food:pumpkin$", "^goodluck_food:melon$",
 		"^goodluck_food:cocoa_beans$") or
 		def.type == "node" and (any_group(g, "soil", "sand", "leaves", "sapling", "flora", "flower", "grass",
-		"mushroom", "tree", "seed", "snowy", "catchable") or matches(name, "^default:ice$", "^default:stone_with_",
+		"mushroom", "tree", "seed", "snowy", "catchable") or matches(name, "^default:ice$", ":stone_with_",
 		"^default:[%a_]*stone$", "^default:gravel$", "^default:clay$", "^default:obsidian$", "^default:cactus$",
 		"^default:large_cactus_seedling$", "^default:papyrus$", "^default:dry_shrub$", "^default:coral_",
 		"^default:sand_with_kelp$", "^default:permafrost", "bush_stem$", "^default:[%a_]*_source$",
@@ -39,7 +39,7 @@ end
 
 local function functional(name)
 	return matches(name, "^goodluck_craft:crafting_table$", "^default:furnace$", "^default:chest", "^default:bookshelf$",
-		"^default:torch$", "^default:meselamp$", "^default:mese_post_light", "^default:ladder_", "^default:sign_wall_",
+		"^default:torch$", "^goodluck_redstone:lamp$", "^default:ladder_", "^default:sign_wall_",
 		"^beds:", "^bones:", "^vessels:", "^fireflies:firefly_bottle$", "^mobs:spawner$", "^mobs:mob_repellent$",
 		"^fire:permanent_flame$", "^goodluck_food:jack_o_lantern$") and name ~= "vessels:glass_fragments"
 end
@@ -47,7 +47,7 @@ end
 local function building(name, def, g)
 	return def.type == "node" and (any_group(g, "stone", "wood", "tree", "stair", "slab", "wall", "fence", "pane",
 		"door") or matches(name, "brick$", "_block$", "^default:%a+block$", "^default:[%a_]*sandstone$",
-		"^default:[%a_]*cobble$", "^default:obsidian", "^default:glass$", "^default:mese$", "^mobs:cheeseblock$",
+		"^default:[%a_]*cobble$", "^default:obsidian", "^default:glass$", "^goodluck_redstone:block$", "^mobs:cheeseblock$",
 		"^mobs:honey_block$", "^farming:straw$") and name ~= "default:snowblock") or
 		matches(name, "^doors:door_", "^xpanes:door_")
 end
@@ -97,7 +97,7 @@ local CATEGORIES = {
 		"^bread$", "^cookie$", "^cake$", "^pumpkin_pie$", "^cod$", "^cooked_cod$", "^salmon$", "^cooked_salmon$",
 		"^mushroom_stew$", "^beetroot_soup$"}},
 	{"ingredients", S("Ingredients"), "default:steel_ingot", 2, 4, ingredients, {"^coal_lump$", "_lump$", "_ingot$", "_nugget$",
-		"^emerald$", "^diamond$", "^mese_crystal", "^amethyst_shard$", "^flint$", "^stick$", "^clay", "^paper$", "^book$", "^string$", "^cotton$",
+		"^emerald$", "^diamond$", "^redstone$", "^amethyst_shard$", "^flint$", "^stick$", "^clay", "^paper$", "^book$", "^string$", "^cotton$",
 		"^wheat$", "^flour$", "^sugar$", "^bowl$"}},
 	{"spawn_eggs", S("Spawn Eggs"), "goodluck_craft_spawn_egg.png", 2, 5, function(name, def, g)
 		return any_group(g, "spawn_egg")
@@ -114,7 +114,7 @@ local COLORS = {white = 1, grey = 2, dark_grey = 3, black = 4, brown = 5, red = 
 local GEAR = {shovel = 11, pick = 12, axe = 13, hoe = 14, sword = 15, shield = 21, helmet = 31, chestplate = 32,
 	leggings = 33, boots = 34}
 local MATERIALS = {wood = 1, enhanced_wood = 2, cactus = 3, enhanced_cactus = 4, stone = 5, bronze = 6, steel = 7,
-	gold = 8, mese = 9, diamond = 10, mithril = 11, crystal = 12, nether = 13, lava = 14}
+	gold = 8, diamond = 10, mithril = 11, crystal = 12, nether = 13, lava = 14}
 local function material(name)
 	for i, prefix in ipairs(VARIANTS) do
 		local base = name:match(prefix .. "(.*)")

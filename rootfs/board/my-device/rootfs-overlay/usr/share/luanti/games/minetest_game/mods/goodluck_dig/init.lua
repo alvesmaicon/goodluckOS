@@ -28,14 +28,15 @@ blocks({"default:obsidian", "default:obsidianbrick", "default:obsidian_block"}, 
 blocks({"default:stone_with_coal"}, {3, PICK, 0})
 blocks({"default:stone_with_iron", "default:stone_with_copper", "default:stone_with_tin",
 	"goodluck_lapis:stone_with_lapis"}, {3, PICK, 1})
-blocks({"default:stone_with_gold", "default:stone_with_diamond", "default:stone_with_mese",
-	"goodluck_emerald:stone_with_emerald"}, {3, PICK, 2})
+blocks({"default:stone_with_gold", "default:stone_with_diamond", "goodluck_redstone:stone_with_redstone",
+	"goodluck_redstone:stone_with_redstone_lit", "goodluck_emerald:stone_with_emerald"}, {3, PICK, 2})
 blocks({"default:coalblock"}, {5, PICK, 0})
 blocks({"default:furnace", "default:furnace_active"}, {3.5, PICK, 0})
 blocks({"default:steelblock", "default:bronzeblock"}, {5, PICK, 1})
 blocks({"default:copperblock", "default:tinblock", "goodluck_lapis:block"}, {3, PICK, 1})
 blocks({"default:goldblock"}, {3, PICK, 2})
-blocks({"default:diamondblock", "default:mese", "goodluck_emerald:block"}, {5, PICK, 2})
+blocks({"default:diamondblock", "goodluck_emerald:block"}, {5, PICK, 2})
+blocks({"goodluck_redstone:block"}, {5, PICK, 0})
 blocks({"default:ice", "default:cave_ice"}, {0.5, PICK})
 blocks({"goodluck_amethyst:amethyst_cluster"}, {1.5, PICK})
 blocks({"goodluck_amethyst:calcite"}, {0.75, PICK, 0})
@@ -45,8 +46,8 @@ blocks({"goodluck_anvil:anvil", "goodluck_anvil:anvil_chipped", "goodluck_anvil:
 blocks({"carts:rail", "carts:powerrail", "carts:brakerail"}, {0.7, PICK})
 blocks({"default:ladder_steel"}, {0.4, PICK})
 blocks({"default:sign_wall_steel"}, {1, PICK})
-blocks({"default:glass", "default:obsidian_glass", "default:meselamp", "xpanes:pane", "xpanes:pane_flat",
-	"xpanes:obsidian_pane", "xpanes:obsidian_pane_flat"}, {0.3})
+blocks({"default:glass", "default:obsidian_glass", "goodluck_redstone:lamp", "goodluck_redstone:lamp_on",
+	"xpanes:pane", "xpanes:pane_flat", "xpanes:obsidian_pane", "xpanes:obsidian_pane_flat"}, {0.3})
 blocks({"goodluck_food:pumpkin", "goodluck_food:melon", "goodluck_food:jack_o_lantern"}, {1, AXE})
 blocks({"goodluck_food:cocoa_1", "goodluck_food:cocoa_2", "goodluck_food:cocoa_3"}, {0.2, AXE})
 blocks({"goodluck_food:cake", "goodluck_food:cake_1", "goodluck_food:cake_2", "goodluck_food:cake_3",
@@ -95,7 +96,6 @@ local FAMILIES = {
 	{"^doors:door_obsidian_glass_", {0.3}},
 	{"^doors:gate_", {2, AXE}},
 	{"^default:fence_", {2, AXE}},
-	{"^default:mese_post_light", {2, AXE}},
 	{"leaves", {0.2, LEAVES}},
 	{"needles$", {0.2, LEAVES}},
 	{"sapling$", {0}},
@@ -158,11 +158,11 @@ local function block(name, def)
 	return by_groups(def)
 end
 
--- category, speed, tier, durability; minetest_game's bronze and mese aren't in Minecraft: between stone and iron,
--- and iron and diamond; the lava pick is netherite
+-- category, speed, tier, durability; minetest_game's bronze isn't in Minecraft: between stone and iron; the lava
+-- pick is netherite
 local TOOLS = {["mobs:pick_lava"] = {PICK, 9, 4, 2031}}
 local MATERIALS = {wood = {2, 0, 59}, stone = {4, 1, 131}, bronze = {5, 2, 200}, steel = {6, 2, 250},
-	mese = {7, 3, 1000}, diamond = {8, 3, 1561}}
+	diamond = {8, 3, 1561}}
 for material, m in pairs(MATERIALS) do
 	TOOLS["default:pick_" .. material] = {PICK, m[1], m[2], m[3]}
 	TOOLS["default:shovel_" .. material] = {SHOVEL, m[1], m[2], m[3]}

@@ -10,8 +10,8 @@ end
 
 local EMERALD = "goodluck_emerald:emerald"
 -- a villager keeps the trades it drew (its enchanted goods); this goes up when the lists change, and villagers
--- from before draw them again (2: emeralds and Minecraft's farmer)
-local TRADES = 2
+-- from before draw them again (2: emeralds and Minecraft's farmer, 3: redstone at the cleric's)
+local TRADES = 3
 
 local function emerald(n)
 	return EMERALD .. " " .. n
@@ -55,7 +55,7 @@ local jobs = {
 		title = S("Cleric"),
 		{"goodluck_lapis:lapis 4", emerald(1)},
 		{"goodluck_lapis:block", emerald(8)},
-		{"default:mese_crystal", emerald(3)},
+		{"goodluck_redstone:redstone 2", emerald(1)},
 		{"default:obsidian 2", emerald(2)},
 		{EMERALD, "vessels:glass_bottle 9"},
 		{EMERALD, "default:papyrus 16"},
