@@ -2,17 +2,18 @@
 -- (its sea level, 63, is ours at 1: y here = Minecraft's - 62), and on down below, where a Minecraft world ends at
 -- bedrock (Minetest Game had iron from y -128, gold from -256, diamonds from -1024). A Minecraft vein, spheres along
 -- a line, is matched by a scatter cluster of the same mean size that shows as many ores on a wall: coal (size 17,
--- ~22 ores) 22 in 3x3x3, iron and gold (9, ~7) 7 in 2x2x2, diamond (8, ~6) 6 in 2x2x2. Lapis is goodluck_lapis',
--- redstone goodluck_redstone's. The floatlands' ores stay, and so do tin and copper, which Minecraft didn't have;
--- mese goes (goodluck_redstone)
+-- ~22 ores) 22 in 3x3x3, iron and gold (9, ~7) 7 in 2x2x2, diamond (8, ~6) 6 in 2x2x2, and copper as in 1.17,
+-- its only year before 1.18 (10, ~9) 9 in 3x3x3. Lapis is goodluck_lapis', redstone goodluck_redstone's. The
+-- floatlands' ores stay; tin and mese go (goodluck_metals, goodluck_redstone)
 local SEA = 62
 local CLASSIC = {
 	["default:stone_with_coal"] = {size = 3, ores = 22, veins = 20, top = 128},
 	["default:stone_with_iron"] = {size = 2, ores = 7, veins = 20, top = 64},
 	["default:stone_with_gold"] = {size = 2, ores = 7, veins = 2, top = 32},
 	["default:stone_with_diamond"] = {size = 2, ores = 6, veins = 1, top = 16},
+	["default:stone_with_copper"] = {size = 3, ores = 9, veins = 6, top = 96},
 }
-local GONE = {["default:stone_with_mese"] = true, ["default:mese"] = true}
+local GONE = {["default:stone_with_mese"] = true, ["default:mese"] = true, ["default:stone_with_tin"] = true}
 local FLOATLANDS = 1025
 
 -- Ores can't be changed once registered: all of them go again, in order (the list is keyed by handle: its low 18

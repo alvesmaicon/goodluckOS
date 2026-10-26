@@ -113,7 +113,7 @@ local COLORS = {white = 1, grey = 2, dark_grey = 3, black = 4, brown = 5, red = 
 -- tools and weapons by material, each material's set together; then shields, then armor
 local GEAR = {shovel = 11, pick = 12, axe = 13, hoe = 14, sword = 15, shield = 21, helmet = 31, chestplate = 32,
 	leggings = 33, boots = 34}
-local MATERIALS = {wood = 1, enhanced_wood = 2, cactus = 3, enhanced_cactus = 4, stone = 5, bronze = 6, steel = 7,
+local MATERIALS = {wood = 1, enhanced_wood = 2, cactus = 3, enhanced_cactus = 4, stone = 5, copper = 6, steel = 7,
 	gold = 8, diamond = 10, mithril = 11, crystal = 12, nether = 13, lava = 14}
 local function material(name)
 	for i, prefix in ipairs(VARIANTS) do

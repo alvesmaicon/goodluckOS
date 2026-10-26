@@ -26,14 +26,13 @@ blocks({"default:sandstone", "default:desert_sandstone", "default:silver_sandsto
 	"default:desert_sandstone_brick", "default:silver_sandstone_brick"}, {0.8, PICK, 0})
 blocks({"default:obsidian", "default:obsidianbrick", "default:obsidian_block"}, {50, PICK, 3})
 blocks({"default:stone_with_coal"}, {3, PICK, 0})
-blocks({"default:stone_with_iron", "default:stone_with_copper", "default:stone_with_tin",
-	"goodluck_lapis:stone_with_lapis"}, {3, PICK, 1})
+blocks({"default:stone_with_iron", "default:stone_with_copper", "goodluck_lapis:stone_with_lapis"}, {3, PICK, 1})
 blocks({"default:stone_with_gold", "default:stone_with_diamond", "goodluck_redstone:stone_with_redstone",
 	"goodluck_redstone:stone_with_redstone_lit", "goodluck_emerald:stone_with_emerald"}, {3, PICK, 2})
 blocks({"default:coalblock"}, {5, PICK, 0})
 blocks({"default:furnace", "default:furnace_active"}, {3.5, PICK, 0})
-blocks({"default:steelblock", "default:bronzeblock"}, {5, PICK, 1})
-blocks({"default:copperblock", "default:tinblock", "goodluck_lapis:block"}, {3, PICK, 1})
+blocks({"default:steelblock"}, {5, PICK, 1})
+blocks({"default:copperblock", "goodluck_lapis:block"}, {3, PICK, 1})
 blocks({"default:goldblock"}, {3, PICK, 2})
 blocks({"default:diamondblock", "goodluck_emerald:block"}, {5, PICK, 2})
 blocks({"goodluck_redstone:block"}, {5, PICK, 0})
@@ -158,11 +157,10 @@ local function block(name, def)
 	return by_groups(def)
 end
 
--- category, speed, tier, durability; minetest_game's bronze isn't in Minecraft: between stone and iron; the lava
--- pick is netherite
+-- category, speed, tier, durability; the lava pick is netherite
 local TOOLS = {["mobs:pick_lava"] = {PICK, 9, 4, 2031}}
-local MATERIALS = {wood = {2, 0, 59}, stone = {4, 1, 131}, bronze = {5, 2, 200}, steel = {6, 2, 250},
-	diamond = {8, 3, 1561}}
+local MATERIALS = {wood = {2, 0, 59}, stone = {4, 1, 131}, copper = {5, 1, 190}, steel = {6, 2, 250},
+	gold = {12, 0, 32}, diamond = {8, 3, 1561}}
 for material, m in pairs(MATERIALS) do
 	TOOLS["default:pick_" .. material] = {PICK, m[1], m[2], m[3]}
 	TOOLS["default:shovel_" .. material] = {SHOVEL, m[1], m[2], m[3]}

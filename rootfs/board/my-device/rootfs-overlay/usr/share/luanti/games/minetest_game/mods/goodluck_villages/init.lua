@@ -110,7 +110,6 @@ local blacksmith_loot = {
 	{name = "default:steel_ingot", min = 3, max = 8, chance = 80},
 	{name = "default:coal_lump", min = 8, max = 16, chance = 85},
 	{name = "default:copper_ingot", min = 3, max = 6, chance = 60},
-	{name = "default:bronze_ingot", min = 2, max = 5, chance = 50},
 	{name = "default:obsidian", min = 1, max = 3, chance = 30},
 	{name = "bucket:bucket_empty", min = 1, max = 1, chance = 50},
 	{name = "bucket:bucket_water", min = 1, max = 1, chance = 35},
