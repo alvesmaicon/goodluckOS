@@ -53,8 +53,8 @@ std::string elided(TTF_Font* font, const std::string& text, int maxW) {
     return "";
 }
 
-IconCache::IconCache(SDL_Renderer* r, const std::string& fallbackPath, int boxW, int boxH, bool fit)
-    : renderer(r), boxW(boxW), boxH(boxH), fit(fit) {
+IconCache::IconCache(SDL_Renderer* r, const std::string& fallbackPath, int boxW, int boxH, bool fit, size_t maxIcons)
+    : renderer(r), boxW(boxW), boxH(boxH), maxIcons(maxIcons), fit(fit) {
     fallback = load(fallbackPath);
     if (!fallback.tex) std::cerr << "Warning: missing fallback icon: " << fallbackPath << "\n";
 }
@@ -64,22 +64,23 @@ IconCache::~IconCache() {
     if (fallback.tex) SDL_DestroyTexture(fallback.tex);
 }
 
-IconCache::Icon IconCache::get(const std::string& path) {
-    if (path.empty()) return fallback;
+IconCache::Icon IconCache::get(const std::string& path, bool orFallback) {
+    const Icon none = orFallback ? fallback : Icon{};
+    if (path.empty()) return none;
 
     auto it = slots.find(path);
     if (it != slots.end()) {
         it->second.lastUsed = ++clock;
-        return it->second.icon.tex ? it->second.icon : fallback;
+        return it->second.icon.tex ? it->second.icon : none;
     }
 
-    if (slots.size() >= kMaxCachedIcons) evictOldest();
+    if (slots.size() >= maxIcons) evictOldest();
 
     Slot slot;
     slot.icon = load(path);
     slot.lastUsed = ++clock;
     slots[path] = slot;
-    return slot.icon.tex ? slot.icon : fallback;
+    return slot.icon.tex ? slot.icon : none;
 }
 
 // Name of the scaled copy of an image for this cache's box; changes when the image does.
@@ -178,33 +179,39 @@ Ui::Ui(const std::string& font, const std::string& bold, float scale) {
 
     setFont(font, bold, scale);
 
-    gridCache    = std::make_unique<IconCache>(renderer, cfg.fallbackIcon, kCellWidth, kCellHeight, false);
-    previewCache = std::make_unique<IconCache>(renderer, cfg.fallbackIcon, kPreviewW, kPreviewH, true);
+    gridCache    = std::make_unique<IconCache>(renderer, cfg.fallbackIcon, kCellWidth, kCellHeight, false, kMaxCachedIcons);
+    previewCache = std::make_unique<IconCache>(renderer, cfg.fallbackIcon, kPreviewW, kPreviewH, true, kMaxCachedIcons);
+    cardCache    = std::make_unique<IconCache>(renderer, cfg.fallbackIcon, kCardW, kCardH, false, kMaxCachedIcons);
+    heroCache    = std::make_unique<IconCache>(renderer, cfg.fallbackIcon, kHeroW, kHeroH, true, 4);   // 470 KB each
     ok_ = true;
 }
 
 Ui::~Ui() {
     gridCache.reset();
     previewCache.reset();
+    cardCache.reset();
+    heroCache.reset();
     if (clipTex) SDL_DestroyTexture(clipTex);
     if (circle) SDL_DestroyTexture(circle);
+    if (corner) SDL_DestroyTexture(corner);
     if (button) SDL_DestroyTexture(button);
-    for (TTF_Font* f : {fonts.ui, fonts.title, fonts.desc, fonts.small, fonts.uiBold, fonts.smallBold, fonts.keyBold}) if (f) TTF_CloseFont(f);
+    for (TTF_Font* f : {fonts.ui, fonts.title, fonts.desc, fonts.small, fonts.uiBold, fonts.titleBold, fonts.smallBold, fonts.keyBold}) if (f) TTF_CloseFont(f);
     if (renderer) SDL_DestroyRenderer(renderer);
     if (window) SDL_DestroyWindow(window);
     if (sdlUp) { TTF_Quit(); IMG_Quit(); SDL_Quit(); }
 }
 
-// The four sizes of the interface font, and three of the bold one. What was measured or drawn with the
+// The four sizes of the interface font, and four of the bold one. What was measured or drawn with the
 // old ones is dropped.
 void Ui::setFont(const std::string& path, const std::string& bold, float scale) {
-    for (TTF_Font* f : {fonts.ui, fonts.title, fonts.desc, fonts.small, fonts.uiBold, fonts.smallBold, fonts.keyBold}) if (f) TTF_CloseFont(f);
+    for (TTF_Font* f : {fonts.ui, fonts.title, fonts.desc, fonts.small, fonts.uiBold, fonts.titleBold, fonts.smallBold, fonts.keyBold}) if (f) TTF_CloseFont(f);
     auto size = [&](int pt) { return (int)std::lround(pt * scale); };
     fonts.ui    = TTF_OpenFont(path.c_str(), size(22));
     fonts.title = TTF_OpenFont(path.c_str(), size(30));
     fonts.desc  = TTF_OpenFont(path.c_str(), size(20));
     fonts.small = TTF_OpenFont(path.c_str(), size(15));
     fonts.uiBold    = bold.empty() ? nullptr : TTF_OpenFont(bold.c_str(), size(22));
+    fonts.titleBold = bold.empty() ? nullptr : TTF_OpenFont(bold.c_str(), size(30));
     fonts.smallBold = bold.empty() ? nullptr : TTF_OpenFont(bold.c_str(), size(15));
     fonts.keyBold   = bold.empty() ? nullptr : TTF_OpenFont(bold.c_str(), size(11));
     if (!fonts.ui || !fonts.title || !fonts.desc || !fonts.small)
@@ -516,6 +523,46 @@ void Ui::gradient(const SDL_Rect& r, SDL_Color c) {
     SDL_RenderGeometry(renderer, nullptr, v, 4, idx, 6);
 }
 
+// Horizontal fade from the colour (left) to transparent (right).
+void Ui::sideGradient(const SDL_Rect& r, SDL_Color c) {
+    SDL_Vertex v[4];
+    const float xs[2] = {(float)r.x, (float)(r.x + r.w)};
+    const float ys[2] = {(float)r.y, (float)(r.y + r.h)};
+    for (int i = 0; i < 4; ++i) {
+        v[i].position = {xs[i % 2], ys[i / 2]};
+        v[i].color = {c.r, c.g, c.b, (Uint8)(i % 2 ? 0 : 255)};
+        v[i].tex_coord = {0, 0};
+    }
+    const int idx[6] = {0, 1, 2, 1, 3, 2};
+    SDL_RenderGeometry(renderer, nullptr, v, 4, idx, 6);
+}
+
+// Paints what lies outside rounded corners, so a picture under it looks rounded (Vitrine's way).
+void Ui::roundCorners(const SDL_Rect& r, int radius, SDL_Color outside) {
+    if (!corner) {
+        const int size = 64;
+        SDL_Surface* s = SDL_CreateRGBSurfaceWithFormat(0, size, size, 32, SDL_PIXELFORMAT_RGBA32);
+        if (!s) return;
+        Uint32* px = (Uint32*)s->pixels;
+        for (int y = 0; y < size; ++y)
+            for (int x = 0; x < size; ++x) {   // the top left quarter: opaque outside the circle
+                const float dx = size - (x + 0.5f), dy = size - (y + 0.5f);
+                const float a = std::clamp(std::sqrt(dx * dx + dy * dy) - (size - 0.5f), 0.0f, 1.0f);
+                px[y * (s->pitch / 4) + x] = SDL_MapRGBA(s->format, 255, 255, 255, (Uint8)(a * 255));
+            }
+        corner = SDL_CreateTextureFromSurface(renderer, s);
+        SDL_FreeSurface(s);
+        if (!corner) return;
+        SDL_SetTextureBlendMode(corner, SDL_BLENDMODE_BLEND);
+    }
+    SDL_SetTextureColorMod(corner, outside.r, outside.g, outside.b);
+    const SDL_Rect dst[4] = {{r.x, r.y, radius, radius}, {r.x + r.w - radius, r.y, radius, radius},
+                             {r.x, r.y + r.h - radius, radius, radius}, {r.x + r.w - radius, r.y + r.h - radius, radius, radius}};
+    const SDL_RendererFlip flip[4] = {SDL_FLIP_NONE, SDL_FLIP_HORIZONTAL, SDL_FLIP_VERTICAL,
+                                      (SDL_RendererFlip)(SDL_FLIP_HORIZONTAL | SDL_FLIP_VERTICAL)};
+    for (int i = 0; i < 4; ++i) SDL_RenderCopyEx(renderer, corner, nullptr, &dst[i], 0, nullptr, flip[i]);
+}
+
 // Filled five-pointed star centred on (cx, cy), the My List badge.
 void Ui::star(int cx, int cy, int r, SDL_Color c) {
     SDL_Vertex v[11];
@@ -550,6 +597,20 @@ void Ui::drawIcon(IconCache& cache, const std::string& path, const SDL_Rect& box
     if (!icon.tex) return;
     SDL_Rect dst{box.x + (box.w - icon.w) / 2, box.y + (box.h - icon.h) / 2, icon.w, icon.h};
     SDL_RenderCopy(renderer, icon.tex, nullptr, &dst);
+}
+
+// The image scaled to cover the box, its edges cropped; false when there is no image.
+bool Ui::drawCover(IconCache& cache, const std::string& path, const SDL_Rect& box) {
+    IconCache::Icon icon = cache.get(path, false);
+    if (!icon.tex) return false;
+    const float scale = std::max((float)box.w / icon.w, (float)box.h / icon.h);
+    SDL_Rect src;
+    src.w = std::min(icon.w, (int)std::lround(box.w / scale));
+    src.h = std::min(icon.h, (int)std::lround(box.h / scale));
+    src.x = (icon.w - src.w) / 2;
+    src.y = (icon.h - src.h) / 2;
+    SDL_RenderCopy(renderer, icon.tex, &src, &box);
+    return true;
 }
 
 // Draws wrapped text and returns its height.

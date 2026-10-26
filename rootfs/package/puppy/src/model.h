@@ -81,13 +81,19 @@ struct Model {
         }
     }
 
+    // The tab delta steps away from the current one, skipping hidden tabs
+    int neighbour(int delta) const {
+        int n = (int)categories.size(), t = tab;
+        for (int i = 0; i < n; ++i) {
+            t = ((t + delta) % n + n) % n;
+            if (!categories[t].hidden) break;
+        }
+        return t;
+    }
+
     void switchTab(int delta) {
         descScroll = 0;
-        int n = (int)categories.size();
-        for (int i = 0; i < n; ++i) {   // skipping hidden tabs
-            tab = ((tab + delta) % n + n) % n;
-            if (!categories[tab].hidden) break;
-        }
+        tab = neighbour(delta);
     }
 
     void moveSel(int delta) {

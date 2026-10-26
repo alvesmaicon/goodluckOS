@@ -1,6 +1,7 @@
 #include "launcher.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <memory>
 #include <vector>
@@ -18,6 +19,7 @@ LauncherScreen::LauncherScreen(App& app, Model model) : Screen(app), model(std::
 
 void LauncherScreen::onAction(Action a) {
     const bool grid = model.view == View::Grid;
+    const bool streaming = grid && theme().vitrine;    // a row per tab: up and down change the tab
 
     if (a == Action::GameMenu) {   // L2 + R2: rename or delete the selected game
         openGameMenu();
@@ -45,8 +47,14 @@ void LauncherScreen::onAction(Action a) {
     switch (a) {
         case Action::PrevTab: model.switchTab(-1); break;
         case Action::NextTab: model.switchTab(1);  break;
-        case Action::Up:    model.moveSel(grid ? -kGridCols : -1); break;
-        case Action::Down:  model.moveSel(grid ? kGridCols : 1);   break;
+        case Action::Up:
+            if (streaming) model.switchTab(-1);
+            else model.moveSel(grid ? -kGridCols : -1);
+            break;
+        case Action::Down:
+            if (streaming) model.switchTab(1);
+            else model.moveSel(grid ? kGridCols : 1);
+            break;
         case Action::Left:  model.moveSel(grid ? -1 : -listRows(model.showTabs)); break;
         case Action::Right: model.moveSel(grid ? 1 : listRows(model.showTabs));   break;
         case Action::Search: openSearch(); break;
@@ -218,8 +226,14 @@ std::string LauncherScreen::playedText(const Entry& e, bool withDay) const {
 }
 
 void LauncherScreen::render(Ui& ui) {
+    const bool grid = model.view == View::Grid;
+    if (grid && theme().vitrine) {
+        renderStreaming(ui);    // its rows take the place of the tab strip
+        return;
+    }
     if (model.cur().visible.empty()) renderEmpty(ui);
-    else if (model.view == View::Grid) renderGrid(ui);
+    else if (grid) renderGrid(ui);
+    else if (theme().vitrine) renderShelf(ui);
     else renderList(ui);
     if (model.showTabs) renderTabs(ui);
 }
@@ -321,47 +335,8 @@ void LauncherScreen::renderList(Ui& ui) {
     SDL_Renderer* renderer = ui.sdl();
     const Fonts& fonts = ui.font();
     const Category& c = model.cur();
-    if (c.sel < c.scroll) c.scroll = c.sel;
     const int rows = listRows(model.showTabs), top = listTop(model.showTabs);
-    if (c.sel >= c.scroll + rows) c.scroll = c.sel - rows + 1;
-
-    // Rows are laid out in columns, like a table: [star] name ... [auto] [system]. The star has a
-    // fixed slot before the name, and the system column is as wide as the widest tag in the tab,
-    // with the tags at its left edge, so both line up from row to row.
-    const int fontH = TTF_FontHeight(fonts.desc);
-    const int starW = 20;
-    if (c.mixed && c.tagColumn < 0) {
-        c.tagColumn = 0;
-        for (const Entry& e : c.entries) c.tagColumn = std::max(c.tagColumn, ui.pillWidth(e.tag));
-    }
-    const int tagColW = c.mixed ? c.tagColumn : 0;
-    for (int row = 0; row < rows && c.scroll + row < (int)c.visible.size(); ++row) {
-        int k = c.scroll + row;
-        const Entry& e = c.entries[c.visible[k]];
-        SDL_Rect r{kMargin, top + row * kListRowH, kListWidth, kListRowH - 2};
-        const SDL_Color nameColor = k == c.sel ? ui.selection(r, true) : theme().item;
-        const int tagY = r.y + (r.h - TTF_FontHeight(fonts.small) - 4) / 2;
-        const int nameX = r.x + 12 + starW;
-        int right = r.x + r.w - 4;      // the name ends before this
-        if (c.mixed) {
-            right -= tagColW;
-            ui.pill(e.tag, right, tagY, theme().tile, theme().muted);
-            right -= 8;
-        }
-        if (model.isAutoStart(e)) {
-            right -= ui.pillWidth(tr("auto"));
-            ui.pill(tr("auto"), right, tagY, ui.accentOn(k == c.sel), k == c.sel && theme().modern ? accent() : theme().ink);
-            right -= 8;
-        }
-        if (model.isFavorite(e)) ui.star(r.x + 12 + starW / 2, r.y + r.h / 2, 7, ui.accentOn(k == c.sel));
-        int scrollX = 0;
-        if (k == c.sel) {
-            const int overflow = textWidth(fonts.desc, e.name) - (right - nameX);
-            if (overflow > 0) scrollX = ui.marqueeOffset(c.name + "\x1f" + e.category + "\x1f" + e.id, overflow);
-        }
-        drawText(renderer, fonts.desc, e.name, nameX, r.y + (r.h - fontH) / 2, nameColor,
-                 right - nameX, scrollX);
-    }
+    renderRows(ui, kListWidth);
 
     // Scrollbar, only when the tab doesn't fit on one screen
     int total = (int)c.visible.size();
@@ -395,6 +370,177 @@ void LauncherScreen::renderList(Ui& ui) {
     std::string pos = std::to_string(c.sel + 1) + " / " + std::to_string(total);
     drawText(renderer, fonts.small, pos, kScreenW - kMargin - textWidth(fonts.small, pos),
              kScreenH - kFooterH - TTF_FontHeight(fonts.small) - 6, theme().muted);
+}
+
+// The list's rows, width wide from the left margin
+void LauncherScreen::renderRows(Ui& ui, int width) {
+    SDL_Renderer* renderer = ui.sdl();
+    const Fonts& fonts = ui.font();
+    const Category& c = model.cur();
+    if (c.sel < c.scroll) c.scroll = c.sel;
+    const int rows = listRows(model.showTabs), top = listTop(model.showTabs);
+    if (c.sel >= c.scroll + rows) c.scroll = c.sel - rows + 1;
+
+    // Rows are laid out in columns, like a table: [star] name ... [auto] [system]. The star has a
+    // fixed slot before the name, and the system column is as wide as the widest tag in the tab,
+    // with the tags at its left edge, so both line up from row to row.
+    const int fontH = TTF_FontHeight(fonts.desc);
+    const int starW = 20;
+    if (c.mixed && c.tagColumn < 0) {
+        c.tagColumn = 0;
+        for (const Entry& e : c.entries) c.tagColumn = std::max(c.tagColumn, ui.pillWidth(e.tag));
+    }
+    const int tagColW = c.mixed ? c.tagColumn : 0;
+    for (int row = 0; row < rows && c.scroll + row < (int)c.visible.size(); ++row) {
+        int k = c.scroll + row;
+        const Entry& e = c.entries[c.visible[k]];
+        SDL_Rect r{kMargin, top + row * kListRowH, width, kListRowH - 2};
+        const SDL_Color nameColor = k == c.sel ? ui.selection(r, true) : theme().item;
+        const int tagY = r.y + (r.h - TTF_FontHeight(fonts.small) - 4) / 2;
+        const int nameX = r.x + 12 + starW;
+        int right = r.x + r.w - 4;      // the name ends before this
+        if (c.mixed) {
+            right -= tagColW;
+            ui.pill(e.tag, right, tagY, theme().tile, theme().muted);
+            right -= 8;
+        }
+        if (model.isAutoStart(e)) {
+            right -= ui.pillWidth(tr("auto"));
+            ui.pill(tr("auto"), right, tagY, ui.accentOn(k == c.sel), k == c.sel && theme().modern ? accent() : theme().ink);
+            right -= 8;
+        }
+        if (model.isFavorite(e)) ui.star(r.x + 12 + starW / 2, r.y + r.h / 2, 7, ui.accentOn(k == c.sel));
+        int scrollX = 0;
+        if (k == c.sel) {
+            const int overflow = textWidth(fonts.desc, e.name) - (right - nameX);
+            if (overflow > 0) scrollX = ui.marqueeOffset(c.name + "\x1f" + e.category + "\x1f" + e.id, overflow);
+        }
+        drawText(renderer, fonts.desc, e.name, nameX, r.y + (r.h - fontH) / 2, nameColor,
+                 right - nameX, scrollX);
+    }
+}
+
+// The Vitrine style's list (Shelf): the rows, an A-Z rail on the right, and between them the picture
+// over the game's name, system, data, play time and description.
+void LauncherScreen::renderShelf(Ui& ui) {
+    SDL_Renderer* renderer = ui.sdl();
+    const Fonts& fonts = ui.font();
+    const Category& c = model.cur();
+    const int top = listTop(model.showTabs);
+    renderRows(ui, kShelfListW);
+    const Entry* e = model.selected();
+    if (!e) return;
+
+    // The rail lights the selected game's letter, in the tabs sorted by name
+    if (c.name != kMyListName && c.name != kRecentName && c.name != kMostPlayedName) {
+        const char* letters = "#ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        char cur = e->name.empty() ? '#' : (char)std::toupper((unsigned char)e->name[0]);
+        if (cur < 'A' || cur > 'Z') cur = '#';
+        const int step = (kScreenH - kFooterH - 8 - top) / 27, cx = kScreenW - kMargin - 10;
+        const int h = TTF_FontHeight(fonts.keyBold);
+        for (int i = 0; i < 27; ++i) {
+            const std::string l(1, letters[i]);
+            const int cy = top + i * step + step / 2;
+            if (letters[i] == cur) ui.roundRect({cx - 8, cy - 7, 16, 14}, 4, accent());
+            drawText(renderer, fonts.keyBold, l, cx - textWidth(fonts.keyBold, l) / 2, cy - h / 2,
+                     letters[i] == cur ? theme().ink : theme().dim);
+        }
+    }
+
+    const int x = kShelfCardX, w = kPreviewW;
+    SDL_Rect box{x, top, w, kPreviewH};
+    ui.roundRect(box, 10, theme().tile);
+    ui.drawIcon(ui.previewIcons(), e->iconPath, box);
+    ui.roundCorners(box, 10, theme().bg);
+    int y = box.y + box.h + 10;
+    y += ui.drawWrapped(fonts.uiBold, e->name, x, y, theme().text, w);
+    drawText(renderer, fonts.small, c.mixed ? e->tag : tr(c.label), x, y, theme().muted, w);
+    y += TTF_FontLineSkip(fonts.small) + 6;
+    if (!e->meta.empty()) {
+        drawText(renderer, fonts.small, e->meta, x, y, theme().text, w);
+        y += TTF_FontLineSkip(fonts.small);
+    }
+    const std::string played = playedText(*e, true);
+    if (!played.empty()) {
+        drawText(renderer, fonts.small, played, x, y, theme().text, w);
+        y += TTF_FontLineSkip(fonts.small);
+    }
+    const std::string pos = std::to_string(c.sel + 1) + " / " + std::to_string(c.visible.size());
+    const int posY = kScreenH - kFooterH - TTF_FontHeight(fonts.small) - 6;
+    descMax = ui.drawWrappedClipped(fonts.small, e->synopsis.empty() ? tr(e->description) : e->synopsis,
+                                 x, y + 6, theme().muted, w - 16, posY - 4 - (y + 6), model.descScroll);
+    drawText(renderer, fonts.small, pos, x + w - textWidth(fonts.small, pos), posY, theme().dim);
+}
+
+// The Vitrine style's grid (Streaming): the selected game's picture fading into the screen behind its
+// name and data, and under them the current tab's row of covers with the next tab's below it.
+void LauncherScreen::renderStreaming(Ui& ui) {
+    SDL_Renderer* renderer = ui.sdl();
+    const Fonts& fonts = ui.font();
+    const Entry* e = model.selected();
+    if (e) {
+        SDL_Rect clip{0, kHeaderH, kScreenW, kRowsTop - kHeaderH};
+        SDL_RenderSetClipRect(renderer, &clip);
+        SDL_Rect hero{kScreenW - kHeroW, kHeaderH, kHeroW, kHeroH};
+        if (ui.drawCover(ui.heroIcons(), e->iconPath, hero)) {
+            ui.sideGradient({hero.x, hero.y, kHeroW * 3 / 5, kHeroH}, theme().bg);
+            ui.gradient({hero.x, kRowsTop - 90, kHeroW, 90}, theme().bg);
+        }
+        SDL_RenderSetClipRect(renderer, nullptr);
+
+        const int x = kMargin, w = 300;
+        int y = kHeaderH + 10;
+        y += ui.drawWrapped(fonts.titleBold ? fonts.titleBold : fonts.title, e->name, x, y, theme().text, w) + 2;
+        if (!e->meta.empty()) {
+            drawText(renderer, fonts.small, e->meta, x, y, theme().muted, w);
+            y += TTF_FontLineSkip(fonts.small);
+        }
+        const std::string played = playedText(*e, true);
+        if (!played.empty()) {
+            drawText(renderer, fonts.small, played, x, y, theme().text, w);
+            y += TTF_FontLineSkip(fonts.small);
+        }
+        descMax = ui.drawWrappedClipped(fonts.small, e->synopsis.empty() ? tr(e->description) : e->synopsis,
+                                     x, y + 6, theme().muted, w - 16, kRowsTop - 8 - (y + 6), model.descScroll);
+    } else {
+        renderEmpty(ui);
+    }
+    renderRow(ui, model.tab, kRowsTop, true);
+    const int next = model.neighbour(1);
+    if (next != model.tab) renderRow(ui, next, kRowsTop + kRowPitch, false);
+}
+
+// A tab's name and its covers from the first one on screen, which keeps the tab's selection in view;
+// the current tab's selection is framed.
+void LauncherScreen::renderRow(Ui& ui, int tab, int y, bool current) {
+    const Fonts& fonts = ui.font();
+    const Category& c = model.categories[tab];
+    drawText(ui.sdl(), fonts.smallBold ? fonts.smallBold : fonts.small, tr(c.label), kMargin, y,
+             current ? theme().text : theme().muted, kScreenW - 2 * kMargin);
+    const int pitch = kCardW + kCardGap, full = (kScreenW - kMargin) / pitch;
+    if (c.sel < c.scroll) c.scroll = c.sel;
+    if (c.sel >= c.scroll + full) c.scroll = c.sel - full + 1;
+    if (c.visible.empty()) {    // the current tab says so above its row
+        if (!current) drawText(ui.sdl(), fonts.small, tr("Nothing here"), kMargin, y + kRowLabelH + 4, theme().dim);
+        return;
+    }
+    for (int k = c.scroll; k < (int)c.visible.size(); ++k) {
+        SDL_Rect card{kMargin + (k - c.scroll) * pitch, y + kRowLabelH, kCardW, kCardH};
+        if (card.x >= kScreenW) break;
+        const bool sel = current && k == c.sel;
+        if (sel) ui.roundRect({card.x - 3, card.y - 3, card.w + 6, card.h + 6}, 11, accent());
+        ui.roundRect(card, 8, theme().tile);
+        const Entry& entry = c.entries[c.visible[k]];
+        ui.drawIcon(ui.cardIcons(), entry.iconPath, card);
+        ui.roundCorners(card, 8, sel ? accent() : theme().bg);
+        int pillX = card.x + 4;
+        if (c.mixed) pillX += ui.pill(entry.tag, pillX, card.y + 4, theme().bar, theme().muted) + 4;
+        if (model.isAutoStart(entry)) ui.pill(tr("autolaunch"), pillX, card.y + 4, accent(), theme().ink);
+        if (model.isFavorite(entry)) {
+            ui.star(card.x + card.w - 16, card.y + 16, 13, theme().ink);
+            ui.star(card.x + card.w - 16, card.y + 16, 9, accent());
+        }
+    }
 }
 
 // Strip with the neighbouring tabs around the current one (L1/R1 are listed in the footer hints).

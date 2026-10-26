@@ -44,5 +44,9 @@ private:
     void renderEmpty(Ui& ui);
     void renderGrid(Ui& ui);
     void renderList(Ui& ui);
+    void renderRows(Ui& ui, int width);
+    void renderShelf(Ui& ui);
+    void renderStreaming(Ui& ui);
+    void renderRow(Ui& ui, int tab, int y, bool current);
     void renderTabs(Ui& ui);
 };

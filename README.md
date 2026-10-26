@@ -187,7 +187,7 @@ System Settings
 │   └── Audio output: Speaker / Headphones
 ├── Interface
 │   ├── Language
-│   ├── Look: Style: Retro / Modern
+│   ├── Look: Style: Retro / Modern / Vitrine
 │   ├── View: Grid / List
 │   ├── Font
 │   ├── Accent color ─ the highlight colour, from a list of 9
@@ -233,7 +233,7 @@ System Settings
 - **Launcher tabs**: hidden tabs' games still appear in All Games and My List.
 - **Font**: Default (Inter, or Atkinson Hyperlegible in the modern style), VT323, Pixelify Sans or ProggyClean.
 - **Accent color**: the colour of the selection, the buttons in the hints and the bars, and of the volume and brightness feedback in games (from the next game on): yellow (the default), orange, red, pink, purple, blue, cyan, green or white.
-- **Style**: Retro, Puppy's own look, or Modern, after the Vitrine launcher by Jeferson Lopes: a dark blue screen, bold titles, the selection as a rounded pill in the accent color, and the face buttons in the hints as their letter in its colour on a grey button.
+- **Style**: Retro, Puppy's own look, or Modern, after the Vitrine launcher by Jeferson Lopes: a dark blue screen, bold titles, the selection as a rounded pill in the accent color, and the face buttons in the hints as their letter in its colour on a grey button. Vitrine is Modern in that launcher's layouts. Its list is Shelf: a narrower list, the picture with rounded corners over the game's name, system, data and description, and an A-Z rail lighting the selected game's letter. Its grid is Streaming: the selected game's picture fills the top right and fades into the screen behind its name and data, with a row of covers per tab under it. Left/right move along the row, up/down go to the previous/next tab (like L1/R1), and the next tab's row shows under the current one.
 - **Status bar**: the CPU temperature, the power chip (AXP223) temperature, the date, the time, the battery and the volume and audio output, each one on or off. In game puts them in the top right corner of every game, over a background whose opacity you set; it is off by default, so nothing covers the game. In the launcher puts the same items in the launcher's top bar (on by default). The time, the battery and the audio are on by default. A temperature turns yellow from 75 °C, where the A33 starts to slow down, and red from 90 °C.
 - **Performance**: the Gallium HUD graphs that FN + D-pad up shows in game. Text only goes at the top.
 - Overlay changes apply from the next game on.

@@ -30,13 +30,14 @@ public:
     // Images larger than boxW x boxH are scaled down: cropped to cover the box, or with 'fit' shrunk
     // to fit inside it. Smaller images are kept at their size. Scaled images are saved in
     // cfg.thumbDir(), so big covers (e.g. 800x600 scraper images) are only decoded and scaled once.
-    IconCache(SDL_Renderer* r, const std::string& fallbackPath, int boxW, int boxH, bool fit);
+    // At most maxIcons stay in memory.
+    IconCache(SDL_Renderer* r, const std::string& fallbackPath, int boxW, int boxH, bool fit, size_t maxIcons);
     ~IconCache();
 
     IconCache(const IconCache&) = delete;
     IconCache& operator=(const IconCache&) = delete;
 
-    Icon get(const std::string& path);
+    Icon get(const std::string& path, bool orFallback = true);   // orFallback false: no texture when there is no image
 
 private:
     struct Slot {
@@ -46,6 +47,7 @@ private:
 
     SDL_Renderer* renderer;
     int boxW, boxH;
+    size_t maxIcons;
     bool fit;
     Icon fallback;
     std::map<std::string, Slot> slots;
@@ -87,6 +89,7 @@ struct Fonts {
     TTF_Font* desc = nullptr;
     TTF_Font* small = nullptr;
     TTF_Font* uiBold = nullptr;      // the modern style's titles and button names (retro: none)
+    TTF_Font* titleBold = nullptr;
     TTF_Font* smallBold = nullptr;
     TTF_Font* keyBold = nullptr;     // the names in the footer's button outlines
 };
@@ -104,6 +107,8 @@ public:
     const Fonts& font() const { return fonts; }
     IconCache& gridIcons() { return *gridCache; }
     IconCache& previewIcons() { return *previewCache; }
+    IconCache& cardIcons() { return *cardCache; }       // the Vitrine style's rows of covers
+    IconCache& heroIcons() { return *heroCache; }       // and the big picture above them
     void setFont(const std::string& path, const std::string& bold, float scale);   // bold: "" for none
 
     void begin();   // a new frame, cleared to the background colour
@@ -133,12 +138,15 @@ public:
     void fill(SDL_Color c, const SDL_Rect& r);
     void frame(SDL_Color c, const SDL_Rect& r, int t);
     void gradient(const SDL_Rect& r, SDL_Color c);
+    void sideGradient(const SDL_Rect& r, SDL_Color c);
+    void roundCorners(const SDL_Rect& r, int radius, SDL_Color outside);
     void star(int cx, int cy, int r, SDL_Color c);
     void triangle(int cx, int cy, int r, bool up, SDL_Color c);
     void sideTriangle(int cx, int cy, int r, bool left, SDL_Color c);
     int pill(const std::string& text, int x, int y, SDL_Color bg, SDL_Color fg);
     int pillWidth(const std::string& text);
     void drawIcon(IconCache& cache, const std::string& path, const SDL_Rect& box);
+    bool drawCover(IconCache& cache, const std::string& path, const SDL_Rect& box);
     int drawWrapped(TTF_Font* font, const std::string& text, int x, int y, SDL_Color color, int width);
     int wrappedHeight(TTF_Font* font, const std::string& text, int width);
     int drawWrappedClipped(TTF_Font* font, const std::string& text, int x, int y, SDL_Color color, int width, int maxH,
@@ -156,12 +164,13 @@ private:
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
     Fonts fonts;
-    std::unique_ptr<IconCache> gridCache, previewCache;
+    std::unique_ptr<IconCache> gridCache, previewCache, cardCache, heroCache;
     SDL_Texture* clipTex = nullptr;     // drawWrappedClipped's last text
     std::string clipText;
     int clipWidth = 0, clipW = 0, clipH = 0;
     std::map<std::string, int> pillWidths;
     SDL_Texture* circle = nullptr;      // the rounded corners' quarters, made the first time they're drawn
+    SDL_Texture* corner = nullptr;      // what lies outside such a quarter, to round a picture's corners
     SDL_Texture* button = nullptr;      // a face button, the same way
 
     // The selected list row's name, when it doesn't fit, scrolls left to show the rest: it waits a
