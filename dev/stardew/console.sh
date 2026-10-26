@@ -4,8 +4,8 @@
 # first checks that the console holds the card named (HOME/.card-name) with no app open.
 #   dev/stardew/console.sh saves <card>                      the save folders on the card
 #   dev/stardew/console.sh send <card> [content]             StardewPatches.dll and the pregenerated serializers
-#                                                            (content: also the LZ4 .xnb files) over MTP; what they
-#                                                            replace goes first to <port>/.backup-<date>.tar
+#                                                            (content: also the LZ4 .xnb files) over MTP, over the
+#                                                            port's files (no backup: build.sh makes them again)
 #   dev/stardew/console.sh bench <card> <name> <save> [VAR=value...]
 #                                                            one run with SDV_BENCH=<save>,1,1 and the variables in
 #                                                            <port>/env (the old env comes back after it), its log in
@@ -42,7 +42,7 @@ check_console() {
 }
 
 send() {
-    local what=${1:-} tmp stamp n
+    local what=${1:-} tmp n
     command -v mtp-sendfile >/dev/null || die "no mtp-sendfile (libmtp)"
     tmp=$(mktemp -d)
     (cd "$OUT/stardewvalley" && ls dlls/StardewPatches.dll SdvXmlGen.exe SdvXnb.exe) > "$tmp/list"
@@ -54,14 +54,13 @@ send() {
     ln -s "$OUT/stardewvalley/dlls" "$OUT/stardewvalley/SdvXmlGen.exe" "$OUT/stardewvalley/SdvXnb.exe" "$OUT/gamedata" "$tmp/root/"
     COPYFILE_DISABLE=1 tar -chf "$tmp/sdv-send.tar" -C "$tmp/root" -T "$tmp/list"
     check_console
-    stamp=$(date +%Y%m%d-%H%M%S)
     echo "== $n files ($(($(wc -c < "$tmp/sdv-send.tar") / 1048576)) MB) to HOME over MTP, ~10 MB/s"
     if [ "$(uname)" = Darwin ]; then killall ptpcamerad 2>/dev/null || true; fi
     mtp-sendfile "$tmp/sdv-send.tar" sdv-send.tar > "$tmp/mtp.log" 2>&1 || { cat "$tmp/mtp.log"; die "MTP failed: nothing was installed"; }
-    echo "== backup of the files it replaces, then unpacking on the console (FAT: a minute or two for the content)"
-    g "cd $PORT && tar -tf $H/sdv-send.tar > /tmp/sdv-list && while read -r f; do [ -f \"\$f\" ] && echo \"\$f\"; done < /tmp/sdv-list > /tmp/sdv-have; tar -cf .backup-$stamp.tar -T /tmp/sdv-have && tar --no-same-owner -xf $H/sdv-send.tar && rm $H/sdv-send.tar && sync && echo unpacked \$(wc -l < /tmp/sdv-list) backup \$(wc -l < /tmp/sdv-have)" --timeout 600
+    echo "== unpacking on the console (FAT: a minute or two for the content)"
+    g "cd $PORT && tar --no-same-owner -xf $H/sdv-send.tar && echo unpacked \$(tar -tf $H/sdv-send.tar | wc -l) && rm $H/sdv-send.tar && sync" --timeout 600
     rm -rf "$tmp"
-    echo "OK: $card has them; the old files are in $PORT/.backup-$stamp.tar"
+    echo "OK: $card has them"
 }
 
 bench() {
