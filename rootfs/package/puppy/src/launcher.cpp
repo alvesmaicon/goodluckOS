@@ -257,7 +257,7 @@ Header LauncherScreen::header() const {
     count += std::string(" ") + tr(c.media ? (one ? "item" : "items")
                                  : c.isArchive ? (one ? "game" : "games") : (one ? "app" : "apps"));
     if (!model.query.empty()) count += "  ·  \"" + model.query + "\"";
-    return {tr(c.name), count, !model.query.empty()};
+    return {tr(c.name), count, !model.query.empty(), model.view == View::Grid && theme().vitrine};
 }
 
 Hints LauncherScreen::hints() const {
@@ -490,17 +490,18 @@ void LauncherScreen::renderStreaming(Ui& ui) {
     const Fonts& fonts = ui.font();
     const Entry* e = model.selected();
     if (e) {
-        SDL_Rect clip{0, kHeaderH, kScreenW, kRowsTop - kHeaderH};
+        SDL_Rect clip{0, 0, kScreenW, kRowsTop};
         SDL_RenderSetClipRect(renderer, &clip);
-        SDL_Rect hero{kScreenW - kHeroW, kHeaderH, kHeroW, kHeroH};
+        SDL_Rect hero{kScreenW - kHeroW, 0, kHeroW, kHeroH};
         if (ui.drawCover(ui.heroIcons(), e->iconPath, hero)) {
+            ui.shade({hero.x, kHeaderH, kHeroW, 24}, theme().bg, kBarShade, 0);   // the top bar's shade, so its edge doesn't show
             ui.sideGradient({hero.x, hero.y, kHeroW * 3 / 5, kHeroH}, theme().bg);
             ui.gradient({hero.x, kRowsTop - 90, kHeroW, 90}, theme().bg);
         }
         SDL_RenderSetClipRect(renderer, nullptr);
 
         const int x = kMargin, w = 300;
-        int y = kHeaderH + 10;
+        int y = kHeaderH + 2;
         y += ui.drawWrapped(fonts.titleBold ? fonts.titleBold : fonts.title, e->name, x, y, theme().text, w) + 2;
         if (!e->meta.empty()) {
             drawText(renderer, fonts.small, e->meta, x, y, theme().muted, w);

@@ -33,13 +33,15 @@ constexpr int kShelfListW           = 312;
 constexpr int kShelfCardX           = kScreenW - kMargin - 28 - kPreviewW;     // the rail's 28 px on its right
 
 // The Vitrine style's grid (Streaming): the selected game's picture behind its data, one row of covers
-// per tab under it, the next tab's row peeking out at the bottom.
+// per tab under it, the next tab's row peeking out at the bottom. The top bar is see-through over the
+// picture, so everything sits its height higher.
 constexpr int kHeroW                = 400;
 constexpr int kHeroH                = 300;
 constexpr int kCardW                = 136;
 constexpr int kCardH                = 102;
 constexpr int kCardGap              = 10;
-constexpr int kRowsTop              = 268;
+constexpr int kRowsTop              = 224;
+constexpr Uint8 kBarShade           = 110;  // the see-through top bar's opacity at its bottom edge
 constexpr int kRowLabelH            = 24;
 constexpr int kRowPitch             = kRowLabelH + kCardH + 12;
 constexpr int kRowSkip              = 10;   // covers L1/R1 jump along a row

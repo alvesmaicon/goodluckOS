@@ -234,7 +234,8 @@ void Ui::end() {
 }
 
 void Ui::header(const Header& h, const TopBar& bar) {
-    fill(theme().modern ? theme().bg : theme().bar, {0, 0, kScreenW, kHeaderH});
+    if (h.clear) shade({0, 0, kScreenW, kHeaderH}, theme().bg, 230, kBarShade);
+    else fill(theme().modern ? theme().bg : theme().bar, {0, 0, kScreenW, kHeaderH});
     const int nameY = (kHeaderH - TTF_FontHeight(fonts.ui)) / 2;
 
     // Right to left, 14 px apart: each item's text, then its icon (returns where the icon goes)
@@ -511,12 +512,17 @@ void Ui::frame(SDL_Color c, const SDL_Rect& r, int t) {
 
 // Vertical fade from transparent (top) to the colour (bottom).
 void Ui::gradient(const SDL_Rect& r, SDL_Color c) {
+    shade(r, c, 0, 255);
+}
+
+// The colour with one opacity at the top and another at the bottom.
+void Ui::shade(const SDL_Rect& r, SDL_Color c, Uint8 top, Uint8 bottom) {
     SDL_Vertex v[4];
     const float xs[2] = {(float)r.x, (float)(r.x + r.w)};
     const float ys[2] = {(float)r.y, (float)(r.y + r.h)};
     for (int i = 0; i < 4; ++i) {
         v[i].position = {xs[i % 2], ys[i / 2]};
-        v[i].color = {c.r, c.g, c.b, (Uint8)(i < 2 ? 0 : 255)};
+        v[i].color = {c.r, c.g, c.b, i < 2 ? top : bottom};
         v[i].tex_coord = {0, 0};
     }
     const int idx[6] = {0, 1, 2, 1, 3, 2};

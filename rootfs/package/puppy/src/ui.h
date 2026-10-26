@@ -62,6 +62,7 @@ private:
 struct Header {
     std::string title, count;
     bool highlight = false;
+    bool clear = false;     // see-through, over the screen's picture (the Vitrine style's grid)
 };
 
 // The top bar's items right of the title, the ones System Settings -> Overlay turns on for the launcher.
@@ -138,6 +139,7 @@ public:
     void fill(SDL_Color c, const SDL_Rect& r);
     void frame(SDL_Color c, const SDL_Rect& r, int t);
     void gradient(const SDL_Rect& r, SDL_Color c);
+    void shade(const SDL_Rect& r, SDL_Color c, Uint8 top, Uint8 bottom);
     void sideGradient(const SDL_Rect& r, SDL_Color c);
     void roundCorners(const SDL_Rect& r, int radius, SDL_Color outside);
     void star(int cx, int cy, int r, SDL_Color c);
