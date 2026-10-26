@@ -24,6 +24,7 @@ An uncompromisingly fast, small, modern, and feature-rich custom firmware for A2
 - Hardware accelerated graphics
 - Speaker and headphone audio. The speaker gets a high-pass filter, so it stays clean instead of distorting on bass it can't play
 - Great battery life
+- A low battery warning over any game at 15% and 5%. At 2% the game is closed, saving as when you quit it, and the console shuts down cleanly before the battery cuts out
 - No swap on SD card (massively improves the life of your card over the stock f/w)
 - `Resize Home` (System Settings -> Storage) grows your HOME partition to fill all the available space on your microSD card.
 - Volume buttons change the volume and FN+Vol the screen brightness from anywhere, with a level bar shown over whatever is on screen: the launcher, the settings or any game
@@ -290,6 +291,8 @@ GA36-MB consoles (sold as R36S) come with an Allwinner A23 or A33, and goodluckO
 Plug the console into your PC with a USB cable and open `goodluckOS -> HOME` (Windows: This PC; Linux: your file manager; macOS needs an MTP app such as [OpenMTP](https://openmtp.ganeshrvel.com/)). Or plug the SD card into your PC and open up the HOME partition. In there you'll find a `roms` folder with a few subfolders for each system. Add your roms to those.
 
 If the console was connected to a charger when it booted (no PC), restart it before plugging it into a PC to get MTP; the serial console works either way. Games copied while Puppy is open show up after you reopen it.
+
+On a PC's USB the battery charges up to 90% and then rests, so a console left plugged in for days doesn't wear its battery out. It charges again once the cable comes out and goes back in, or at 50% if a game drains it while plugged in. A charger with no PC behind it charges to full.
 
 Already have a scraped collection (e.g. made with [Skraper](https://www.skraper.net/) for EmulationStation)? Copy it as it is, `gamelist.xml` and `media` folder included: Puppy reads them.
 

@@ -289,9 +289,9 @@ void LauncherScreen::renderGrid(Ui& ui) {
         int pillX = cell.x;    // the system tag top left, clear of the cover's title art at the bottom
         if (c.mixed) pillX += ui.pill(entry.tag, cell.x, cell.y, theme().bar, theme().muted);
         if (model.isAutoStart(entry)) ui.pill(tr("autolaunch"), pillX, cell.y, accent(), theme().ink);
-        if (model.isFavorite(entry)) {
-            ui.fill(theme().bar, {cell.x + cell.w - 26, cell.y + 2, 24, 24});
-            ui.star(cell.x + cell.w - 14, cell.y + 14, 9, accent());
+        if (model.isFavorite(entry)) {    // a bigger dark star underneath outlines it on any cover
+            ui.star(cell.x + cell.w - 16, cell.y + 16, 13, theme().ink);
+            ui.star(cell.x + cell.w - 16, cell.y + 16, 9, accent());
         }
     }
 
