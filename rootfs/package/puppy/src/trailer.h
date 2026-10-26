@@ -2,7 +2,7 @@
 // A game's trailer, the clip a scraper puts in its gamelist.xml (<video>), or for a video 30 s of itself
 // from a fifth of the way in. ffmpeg decodes it at its own pace (-re), scaled and cropped to the box,
 // into a pipe; each whole frame goes to a texture. Its sound, when asked for, goes through a second
-// pipe to aplay. Stopping, or the clip ending, kills both. What Puppy starts dies with it when a game starts (appd), so nothing is left behind.
+// pipe to aplay, whose pace then holds ffmpeg back. Stopping, or the clip ending, kills both. What Puppy starts dies with it when a game starts (appd), so nothing is left behind.
 #include <SDL2/SDL.h>
 #include <sys/types.h>
 

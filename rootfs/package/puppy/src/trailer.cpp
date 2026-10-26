@@ -58,10 +58,14 @@ void Trailer::spawn(bool withSound) {
     if (pipe2(fds, O_CLOEXEC) != 0) return;
     if (withSound && pipe2(snd, O_CLOEXEC) != 0) withSound = false;
     fcntl(fds[0], F_SETPIPE_SZ, (int)buf.size() * 2);   // two whole frames, or the clip slows down
+    if (withSound) fcntl(snd[1], F_SETPIPE_SZ, 4096);   // the least: ffmpeg runs only as far ahead as aplay plays
     const std::string vf = "scale=" + std::to_string(w) + ":" + std::to_string(h) +
                            ":force_original_aspect_ratio=increase:flags=bilinear,crop=" + std::to_string(w) + ":" + std::to_string(h);
-    std::vector<const char*> argv = {"ffmpeg", "-nostdin", "-loglevel", "quiet", "-threads", "2", "-re", "-i", clip.c_str(),
-                                     "-map", "0:v:0", "-vf", vf.c_str(), "-pix_fmt", "yuv420p", "-f", "rawvideo", "-"};
+    // -re makes up for its slow start with a burst, which the sound would keep as a lag: with sound,
+    // aplay paces ffmpeg instead
+    std::vector<const char*> argv = {"ffmpeg", "-nostdin", "-loglevel", "quiet", "-threads", "2"};
+    if (!withSound) argv.push_back("-re");
+    argv.insert(argv.end(), {"-i", clip.c_str(), "-map", "0:v:0", "-vf", vf.c_str(), "-pix_fmt", "yuv420p", "-f", "rawvideo", "-"});
     if (withSound) argv.insert(argv.end(), {"-map", "0:a:0?", "-ar", "48000", "-ac", "2", "-f", "s16le", "pipe:3"});
     if (part) {     // the duration from ffmpeg's header (there's no ffprobe), then 30 s from a fifth of it
         static const char* kExcerpt =
@@ -76,7 +80,7 @@ void Trailer::spawn(bool withSound) {
     if (withSound) {
         // ffmpeg's own ALSA output asks for the smallest period, and the codec stalls on it
         const char* play[] = {"aplay", "-q", "-D", "default", "-t", "raw", "-f", "S16_LE", "-r", "48000", "-c", "2",
-                              "--buffer-time=200000", "--period-time=50000", nullptr};
+                              "--buffer-time=80000", "--period-time=20000", nullptr};
         if (pid > 0) player = run(play, snd[0], -1);
         close(snd[0]);
         close(snd[1]);
