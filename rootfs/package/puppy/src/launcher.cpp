@@ -543,6 +543,7 @@ void LauncherScreen::renderStreaming(Ui& ui) {
         SDL_RenderSetClipRect(renderer, &clip);
         const SDL_Rect hero = trailerBox();
         if (ui.drawFrame(trailer.frame(), hero) || ui.drawCover(ui.heroIcons(), e->iconPath, hero)) {
+            ui.shade({hero.x, kHeaderH, kHeroW, 24}, theme().bg, kBarShade, 0);   // the top bar's shade, so its edge doesn't show
             ui.sideGradient({hero.x, hero.y, kHeroFadeW, kHeroH}, theme().bg);
             ui.gradient({hero.x, hero.y + hero.h - kHeroFadeH, kHeroW, kHeroFadeH}, theme().bg);
         }

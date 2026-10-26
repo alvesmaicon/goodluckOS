@@ -32,14 +32,14 @@ constexpr int kPreviewH             = kPreviewW * 3 / 4;
 constexpr int kShelfListW           = 312;
 constexpr int kShelfCardX           = kScreenW - kMargin - 28 - kPreviewW;     // the rail's 28 px on its right
 
-// The Vitrine style's grid (Streaming): the selected game's picture whole at the top right, under the
-// top bar and down beside the row's name, at the size of a scraper's clip; one row of covers per tab
-// under it, the next tab's row peeking out at the bottom.
-constexpr int kHeroW                = 320;
-constexpr int kHeroH                = 240;
-constexpr int kHeroY                = kHeaderH;
+// The Vitrine style's grid (Streaming): the selected game's picture whole at the top right, from under
+// the see-through top bar down beside the row's name; one row of covers per tab under it, the next
+// tab's row peeking out at the bottom.
+constexpr int kHeroW                = 376;
+constexpr int kHeroH                = 282;
+constexpr int kHeroY                = 0;
 constexpr int kHeroFadeW            = 48;   // the picture's left edge fading into the screen
-constexpr int kHeroFadeH            = 24;   // and its bottom one
+constexpr int kHeroFadeH            = 40;   // and its bottom one
 constexpr int kCardW                = 136;
 constexpr int kCardH                = 102;
 constexpr int kCardGap              = 10;
