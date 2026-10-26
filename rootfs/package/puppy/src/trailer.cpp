@@ -66,7 +66,8 @@ void Trailer::spawn(bool withSound) {
     std::vector<const char*> argv = {"ffmpeg", "-nostdin", "-loglevel", "quiet", "-threads", "2"};
     if (!withSound) argv.push_back("-re");
     argv.insert(argv.end(), {"-i", clip.c_str(), "-map", "0:v:0", "-vf", vf.c_str(), "-pix_fmt", "yuv420p", "-f", "rawvideo", "-"});
-    if (withSound) argv.insert(argv.end(), {"-map", "0:a:0?", "-ar", "48000", "-ac", "2", "-f", "s16le", "pipe:3"});
+    if (withSound)  // a 100 ms fade-in: no click from a clip that starts mid-wave
+        argv.insert(argv.end(), {"-map", "0:a:0?", "-af", "afade=t=in:d=0.1", "-ar", "48000", "-ac", "2", "-f", "s16le", "pipe:3"});
     if (part) {     // the duration from ffmpeg's header (there's no ffprobe), then 30 s from a fifth of it
         static const char* kExcerpt =
             "o=$(ffmpeg -nostdin -hide_banner -i \"$1\" 2>&1 | sed -n 's/.*Duration: \\([0-9:]*\\)\\..*/\\1/p' |"
