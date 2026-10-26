@@ -38,9 +38,12 @@ end
 -- animals born later only top up a place that has fewer than this many (most come with the land, below)
 local ANIMALS = 6
 
+-- rats and penguins aren't Minecraft's: none spawn and those in a world leave (end of the file)
+local GONE = {["mobs_animal:rat"] = true, ["mobs_animal:penguin"] = true}
+
 local spawn_abm_check = mobs.spawn_abm_check
 function mobs:spawn_abm_check(pos, node, name)
-	if spawn_abm_check(self, pos, node, name) then return true end
+	if GONE[name] or spawn_abm_check(self, pos, node, name) then return true end
 	local def = core.registered_entities[name]
 	if def and def.type == "animal" then
 		local n = 0
@@ -174,3 +177,31 @@ core.register_lbm({
 	run_at_every_load = false,
 	bulk_action = herd,
 })
+
+local mob_activate = mobs.mob_class.mob_activate
+function mobs.mob_class.mob_activate(self, staticdata, def, dtime)
+	if GONE[self.name] then
+		self.object:remove()
+		return
+	end
+	return mob_activate(self, staticdata, def, dtime)
+end
+
+-- their items, and butter, become what is nearest (a penguin dropped raw chicken)
+local ITEMS = {
+	["mobs_animal:rat"] = "mobs:chicken_raw",
+	["mobs_animal:rat_set"] = "mobs:chicken_raw",
+	["mobs_animal:penguin"] = "mobs:chicken_raw",
+	["mobs_animal:penguin_set"] = "mobs:chicken_raw",
+	["mobs:rat_cooked"] = "mobs:chicken_cooked",
+	["mobs:butter"] = "mobs:cheese",
+}
+for old, new in pairs(ITEMS) do
+	if core.registered_items[old] then
+		if core.get_all_craft_recipes(old) then
+			core.clear_craft({output = old})
+		end
+		core.unregister_item(old)
+	end
+	core.register_alias(old, new)
+end

@@ -59,7 +59,7 @@ end
 
 local function tools(name, def, g)
 	return not combat(name, def, g) and (def.type == "tool" or any_group(g, "tool", "rail") or
-		matches(name, "^boats:", "^carts:", "^keys:", "^mobs:saddle$", "^mobs:nametag$", "^mobs:protector"))
+		matches(name, "^boats:", "^carts:", "^mobs:saddle$", "^mobs:nametag$", "^mobs:protector"))
 end
 
 local function food(name, def, g)

@@ -303,3 +303,20 @@ core.register_lbm({
 		end
 	end,
 })
+
+-- no keys, as in Minecraft: a locked chest or door opens for its owner, the only player here; a key from before is
+-- the gold ingot it was made of
+if core.get_modpath("keys") then
+	for _, key in ipairs({"keys:key", "keys:skeleton_key"}) do
+		if core.registered_items[key] then
+			if core.get_craft_result({method = "cooking", width = 1, items = {key}}).time > 0 then
+				core.clear_craft({type = "cooking", recipe = key})
+			end
+			if core.get_all_craft_recipes(key) then
+				core.clear_craft({output = key})
+			end
+			core.unregister_item(key)
+		end
+		core.register_alias(key, "default:gold_ingot")
+	end
+end
