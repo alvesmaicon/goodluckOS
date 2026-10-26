@@ -29,6 +29,7 @@ void Trailer::start(SDL_Renderer* r, const std::string& path, int width, int hei
 
     int fds[2];
     if (pipe2(fds, O_CLOEXEC) != 0) return;
+    fcntl(fds[0], F_SETPIPE_SZ, (int)buf.size() * 2);   // two whole frames, or the clip slows down
     const std::string vf = "scale=" + std::to_string(w) + ":" + std::to_string(h) +
                            ":force_original_aspect_ratio=increase:flags=bilinear,crop=" + std::to_string(w) + ":" + std::to_string(h);
     const char* argv[] = {"ffmpeg", "-nostdin", "-loglevel", "quiet", "-threads", "2", "-re", "-i", path.c_str(),
