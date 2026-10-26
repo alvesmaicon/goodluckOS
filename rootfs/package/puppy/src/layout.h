@@ -32,20 +32,20 @@ constexpr int kPreviewH             = kPreviewW * 3 / 4;
 constexpr int kShelfListW           = 312;
 constexpr int kShelfCardX           = kScreenW - kMargin - 28 - kPreviewW;     // the rail's 28 px on its right
 
-// The Vitrine style's grid (Streaming): the selected game's picture whole at the top right, from under
-// the see-through top bar down beside the row's name; one row of covers per tab under it, the next
-// tab's row peeking out at the bottom.
-constexpr int kHeroW                = 376;
-constexpr int kHeroH                = 282;
-constexpr int kHeroY                = 0;
+// The Vitrine style's grid (Streaming): the selected game's picture at the top right, under the
+// see-through top bar, its base down beside the row's name and its top cut when it doesn't fit; one
+// row of covers per tab under it, the next tab's row peeking out at the bottom.
+constexpr int kHeroW                = 400;
+constexpr int kHeroH                = 300;
 constexpr int kHeroFadeW            = 64;   // the picture's left edge fading into the screen
 constexpr int kHeroFadeH            = 56;   // and its bottom one
 constexpr int kCardW                = 136;
 constexpr int kCardH                = 102;
 constexpr int kCardGap              = 10;
-constexpr int kRowsTop              = 264;
+constexpr int kRowsTop              = 224;
 constexpr Uint8 kBarShade           = 110;  // the see-through top bar's opacity at its bottom edge
 constexpr int kRowLabelH            = 24;
+constexpr int kHeroY                = kRowsTop + kRowLabelH - 4 - kHeroH;  // the base 4 px above the covers
 constexpr int kRowPitch             = kRowLabelH + kCardH + 12;
 constexpr int kRowSkip              = 10;   // covers L1/R1 jump along a row
 constexpr Uint32 kTrailerDelayMs    = 2000; // still on a game this long: its trailer plays
