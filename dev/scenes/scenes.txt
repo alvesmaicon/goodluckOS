@@ -125,3 +125,4 @@ vitrine-list-recent list on  en        set:style=vitrine Down Return F2 F2
 vitrine-list-no-tabs list off en       set:style=vitrine F1 F1 Down Down Down Down Down Down Down Down
 vitrine-pt-grid  grid  on    pt-BR     set:style=vitrine F1 F1
 vitrine-settings grid  on    en        set:style=vitrine F5 Down Return
+recent-app       list  on    en        Return F2 F2 F2 F2 Return F1 F1

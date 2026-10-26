@@ -83,8 +83,10 @@ void restoreCursor(Model& m) {
 }
 
 // The tag of an entry in the mixed tabs: its system, or "Ports" for the native games.
+// An app's category can be long ("Emulators/Frontends") and would widen the tag column of the whole tab
 static std::string systemTag(const Category& c) {
-    return !c.isArchive && c.name == kGamesCategory ? "Ports" : c.label;
+    if (c.isArchive) return c.label;
+    return c.name == kGamesCategory ? "Ports" : "App";
 }
 
 // Prepends an "All Games" tab with the games of every system and the native ones, sorted by name.
