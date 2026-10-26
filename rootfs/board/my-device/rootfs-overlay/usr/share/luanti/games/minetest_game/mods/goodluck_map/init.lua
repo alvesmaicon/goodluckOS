@@ -461,7 +461,6 @@ local function hide(player)
 			player:hud_remove(id)
 		end
 		held[player:get_player_name()] = nil
-		player:hud_set_flags({wielditem = true})
 		save(maps[st.id])
 	end
 end
@@ -474,36 +473,39 @@ local function show(player, m, now)
 	end
 	if not st then
 		redraw(m, now)
+		-- named held_map, the engine draws them on the map in the player's hands (patch 0036), and flat
+		-- in the middle of the screen when it doesn't draw the hands
 		local at = {x = 0.5, y = 0.5}
 		st = {id = m.id, new = 0, old = 0, saved = now, shown = {}, hud = {}}
-		st.hud.frame = player:hud_add({type = "image", text = "goodluck_map_frame.png", position = at,
-			alignment = {x = 0, y = 0}, scale = {x = SCALE, y = SCALE}, z_index = 20})
+		st.hud.frame = player:hud_add({type = "image", name = "held_map", text = "goodluck_map_frame.png",
+			position = at, alignment = {x = 0, y = 0}, scale = {x = SCALE, y = SCALE}, z_index = 20})
 		for t = 1, TILES * TILES do
 			local ox, oy = (t - 1) % TILES * TILE, floor((t - 1) / TILES) * TILE
-			st.hud[t] = player:hud_add({type = "image", text = m.img[t], position = at, alignment = {x = 1, y = 1},
-				offset = {x = (ox - PIXELS / 2) * SCALE, y = (oy - PIXELS / 2) * SCALE},
+			st.hud[t] = player:hud_add({type = "image", name = "held_map", text = m.img[t], position = at,
+				alignment = {x = 1, y = 1}, offset = {x = (ox - PIXELS / 2) * SCALE, y = (oy - PIXELS / 2) * SCALE},
 				scale = {x = SCALE, y = SCALE}, z_index = 21})
 			st.shown[t] = m.img[t]
 		end
 		st.tex, st.off = marker(m, player)
-		st.hud.marker = player:hud_add({type = "image", text = st.tex, position = at, offset = st.off,
-			alignment = {x = 0, y = 0}, scale = {x = MARKER, y = MARKER}, z_index = 22})
+		st.hud.marker = player:hud_add({type = "image", name = "held_map", text = st.tex, position = at,
+			offset = st.off, alignment = {x = 0, y = 0}, scale = {x = MARKER, y = MARKER}, z_index = 22})
 		held[player:get_player_name()] = st
-		player:hud_set_flags({wielditem = false})
 	end
 	return st
 end
 
 core.register_globalstep(function(dtime)
 	timer = timer + dtime
-	if timer < TICK then
-		return
+	local tick = timer >= TICK
+	if tick then
+		timer = 0
 	end
-	timer = 0
 	for _, player in ipairs(core.get_connected_players()) do
 		local stack = player:get_wielded_item()
 		local m = stack:get_name() == MAP and load(stack:get_meta():get_int("goodluck_map:id"))
-		if m then
+		local st = held[player:get_player_name()]
+		-- shown at once when taken in hand, before the hands come up with it, then drawn on each tick
+		if m and (tick or not st or st.id ~= m.id) then
 			local now = core.get_us_time()
 			clock, loads, busy = now, 0, false
 			local st = show(player, m, now)
@@ -528,7 +530,7 @@ core.register_globalstep(function(dtime)
 				st.saved = now
 				save(m)
 			end
-		else
+		elseif not m then
 			hide(player)
 		end
 	end
@@ -571,7 +573,8 @@ core.register_craftitem(MAP, {
 	description = S("Map"),
 	inventory_image = "goodluck_map_map.png",
 	stack_max = 1,
-	groups = {not_in_creative_inventory = 1},
+	-- held in the hands as Minecraft holds a map (patch 0036)
+	groups = {not_in_creative_inventory = 1, held_map = 1},
 })
 
 core.register_craft({
