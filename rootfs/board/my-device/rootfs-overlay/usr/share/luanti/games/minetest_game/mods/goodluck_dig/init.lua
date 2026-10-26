@@ -44,7 +44,7 @@ blocks({"goodluck_anvil:anvil", "goodluck_anvil:anvil_chipped", "goodluck_anvil:
 	"xpanes:bar_flat", "xpanes:trapdoor_steel_bar", "xpanes:trapdoor_steel_bar_open"}, {5, PICK, 0})
 blocks({"carts:rail", "carts:powerrail", "carts:brakerail"}, {0.7, PICK})
 blocks({"default:ladder_steel"}, {0.4, PICK})
-blocks({"default:sign_wall_steel"}, {1, PICK})
+blocks({"default:sign_wall_steel", "goodluck_models:sign_standing_steel"}, {1, PICK})
 blocks({"default:glass", "default:obsidian_glass", "goodluck_redstone:lamp", "goodluck_redstone:lamp_on",
 	"xpanes:pane", "xpanes:pane_flat", "xpanes:obsidian_pane", "xpanes:obsidian_pane_flat"}, {0.3})
 blocks({"goodluck_food:pumpkin", "goodluck_food:melon", "goodluck_food:jack_o_lantern"}, {1, AXE})
@@ -70,7 +70,7 @@ blocks({"default:chest", "default:chest_open", "default:chest_locked", "default:
 	"goodluck_craft:crafting_table"}, {2.5, AXE})
 blocks({"doors:trapdoor", "doors:trapdoor_open"}, {3, AXE})
 blocks({"default:ladder_wood"}, {0.4, AXE})
-blocks({"default:sign_wall_wood"}, {1, AXE})
+blocks({"default:sign_wall_wood", "goodluck_models:sign_standing_wood"}, {1, AXE})
 blocks({"mobs:beehive"}, {0.6, AXE})
 blocks({"default:cactus"}, {0.4})
 blocks({"wool:white", "wool:grey", "wool:dark_grey", "wool:black", "wool:violet", "wool:blue", "wool:cyan",
