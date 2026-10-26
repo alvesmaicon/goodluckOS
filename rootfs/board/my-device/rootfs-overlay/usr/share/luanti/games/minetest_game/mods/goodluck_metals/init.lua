@@ -114,7 +114,8 @@ core.override_item("default:stone_with_copper", {drop = {max_items = 1, items = 
 	{items = {"default:copper_lump 2"}},
 }}})
 
--- tin and bronze go (other mods' recipes and drops that name them get copper through the aliases)
+-- tin and bronze go (other mods' recipes and drops that name them get copper through the aliases; the bronze shield
+-- goes with goodluck_armor's)
 local GONE = {
 	["default:stone_with_tin"] = "default:stone_with_copper",
 	["default:tin_lump"] = "default:copper_lump",
@@ -123,7 +124,6 @@ local GONE = {
 	["default:tinblock"] = "default:copperblock",
 	["default:bronzeblock"] = "default:copperblock",
 	["farming:hoe_bronze"] = "farming:hoe_copper",
-	["shields:shield_bronze"] = "shields:shield_steel",
 }
 for _, kind in ipairs({"pick", "shovel", "axe", "sword"}) do
 	GONE["default:" .. kind .. "_bronze"] = "default:" .. kind .. "_copper"

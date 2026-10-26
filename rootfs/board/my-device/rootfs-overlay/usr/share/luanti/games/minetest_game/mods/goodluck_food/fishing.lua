@@ -6,7 +6,7 @@ local ROD = "goodluck_food:fishing_rod"
 local BITE = 1.2
 -- Minecraft's weights, without what this game lacks
 local FISH = {{"goodluck_food:cod", 60}, {"goodluck_food:salmon", 25}}
-local JUNK = {{"flowers:waterlily", 17}, {"goodluck_food:bowl", 10}, {"mobs:leather", 10}, {"3d_armor:boots_wood", 10},
+local JUNK = {{"flowers:waterlily", 17}, {"goodluck_food:bowl", 10}, {"mobs:leather", 10}, {"3d_armor:boots_leather", 10},
 	{"goodluck_monsters:rotten_flesh", 10}, {"vessels:glass_bottle", 10}, {"goodluck_monsters:bone", 10},
 	{"default:stick", 5}, {"farming:string", 5}}
 local TREASURE = {{"x_bows:bow_wood", 1}, {"mobs:nametag", 1}, {"mobs:saddle", 1}, {ROD, 1}}

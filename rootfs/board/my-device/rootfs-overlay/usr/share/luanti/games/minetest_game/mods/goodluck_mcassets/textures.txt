@@ -25,6 +25,8 @@ default_rainforest_litter_side.png	{block/podzol_side}
 default_moss.png	{block/moss_block}
 default_sand.png	{block/sand}
 default_desert_sand.png	{block/sand}
+default_silver_sand.png	{block/sand}^[hsl:0:-70:12
+default_permafrost.png	{block/coarse_dirt}^[hsl:0:-45:-8
 default_gravel.png	{block/gravel}
 default_clay.png	{block/clay}
 default_sandstone.png	{block/sandstone}
@@ -36,12 +38,17 @@ default_desert_sandstone_block.png	{block/red_sandstone_top}
 default_desert_stone.png	{block/sandstone}
 default_desert_stone_block.png	{block/sandstone_top}
 default_desert_stone_brick.png	{block/cut_sandstone}
+default_silver_sandstone.png	{block/sandstone}^[hsl:0:-70:12
+default_silver_sandstone_brick.png	{block/cut_sandstone}^[hsl:0:-70:12
+default_silver_sandstone_block.png	{block/sandstone_top}^[hsl:0:-70:12
 default_obsidian.png	{block/obsidian}
 default_obsidian_block.png	{block/obsidian}
 default_ice.png	{block/ice}
 default_brick.png	{block/bricks}
 default_glass.png	{block/glass}
 default_glass_detail.png	blank.png
+default_obsidian_glass.png	{block/tinted_glass}
+default_obsidian_glass_detail.png	blank.png
 default_bookshelf.png	{block/bookshelf}
 
 # Trees
@@ -395,6 +402,10 @@ goodluck_horse_armor_diamond_item.png	{item/diamond_horse_armor}
 3d_armor_inv_chestplate_copper.png	{item/copper_chestplate}
 3d_armor_inv_leggings_copper.png	{item/copper_leggings}
 3d_armor_inv_boots_copper.png	{item/copper_boots}
+3d_armor_inv_helmet_leather.png	{item/leather_helmet}^[multiply:#a06540^{item/leather_helmet_overlay}
+3d_armor_inv_chestplate_leather.png	{item/leather_chestplate}^[multiply:#a06540^{item/leather_chestplate_overlay}
+3d_armor_inv_leggings_leather.png	{item/leather_leggings}^[multiply:#a06540^{item/leather_leggings_overlay}
+3d_armor_inv_boots_leather.png	{item/leather_boots}^[multiply:#a06540^{item/leather_boots_overlay}
 3d_armor_inv_helmet_gold.png	{item/golden_helmet}
 3d_armor_inv_chestplate_gold.png	{item/golden_chestplate}
 3d_armor_inv_leggings_gold.png	{item/golden_leggings}
