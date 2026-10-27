@@ -67,6 +67,7 @@ end
 
 -- every image a formspec names, the window and the slot colours with it; the window's labels dark, as Minecraft's
 local LISTCOLORS = "listcolors[#00000069;#5A5A5A;#141318;#30434C;#FFF]"
+local HEADER = {formspec_version = true, size = true, position = true, anchor = true, padding = true, no_prepend = true}
 local WINDOWS = {["gui_formbg.png"] = true, ["x_enchanting_gui_formbg.png"] = true}
 local function formspec(fs)
 	if type(fs) ~= "string" then return fs end
@@ -81,8 +82,20 @@ local function formspec(fs)
 		return m and m:find("[%^%[]") and core.formspec_escape(m) or m
 	end)
 	if windowed then
-		fs = fs:gsub(LISTCOLORS:gsub("%p", "%%%0"), "listcolors[#8b8b8b;#c6c6c6;#373737;#100010f0;#fff]")
-		fs = fs:gsub("^([^%]]*%])", "%1style_type[label;textcolor=#404040]", 1)
+		-- slot, hover, border and tooltip colours of our own, near the window's greys
+		fs = fs:gsub(LISTCOLORS:gsub("%p", "%%%0"), "listcolors[#919191;#d4d4d4;#3e3e3e;#1c1430f0;#fff]")
+		-- after the leading elements: no_prepend[] only counts right after them
+		local at = 0
+		for first, element in fs:gmatch("()([%w_]+)%[") do
+			if first ~= at or not HEADER[element] then break end
+			at = fs:find("]", first, true) + 1
+		end
+		fs = fs:sub(1, at - 1) .. "style_type[label;textcolor=#404040]" .. fs:sub(at)
+		-- the selected tab's bottom rows are the window's top border: 2 px less into the window than the game's own tab
+		fs = fs:gsub("image%[([%d%.%-]+),([%d%.%-]+);([%d%.]+),([%d%.]+);([^;]*tab_top_selected[^;]*);4%]", function(x, y, w, h, img)
+			local flipped = img:find("transformFY", 1, true)
+			return ("image[%s,%g;%s,%g;%s;4]"):format(x, tonumber(y) + (flipped and 0.04 or 0), w, tonumber(h) - 0.04, img)
+		end)
 	end
 	return fs
 end
@@ -213,6 +226,8 @@ core.register_on_joinplayer(function(player)
 	methods.hud_set_hotbar_selected_image = function(self, img) return set_selected(self, swap(img)) end
 	local set_inventory_formspec = methods.set_inventory_formspec
 	methods.set_inventory_formspec = function(self, fs) return set_inventory_formspec(self, formspec(fs)) end
+	local set_formspec_prepend = methods.set_formspec_prepend
+	methods.set_formspec_prepend = function(self, fs) return set_formspec_prepend(self, formspec(fs)) end
 	methods.goodluck_mcassets = true
 end)
 
@@ -224,6 +239,7 @@ core.register_on_joinplayer(function(player)
 		player:hud_set_hotbar_image(player:hud_get_hotbar_image())
 		player:hud_set_hotbar_selected_image(player:hud_get_hotbar_selected_image())
 		player:set_inventory_formspec(player:get_inventory_formspec())
+		player:set_formspec_prepend(player:get_formspec_prepend())
 		for id, def in pairs(player:hud_get_all() or {}) do
 			for _, f in ipairs({"text", "text2"}) do
 				if type(def[f]) == "string" and swap(def[f]) ~= def[f] then player:hud_change(id, f, def[f]) end
