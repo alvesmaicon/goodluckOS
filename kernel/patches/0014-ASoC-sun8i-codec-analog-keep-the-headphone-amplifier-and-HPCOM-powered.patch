@@ -1,0 +1,35 @@
+From: alvesmaicon <alvesmaiconn@gmail.com>
+Subject: [PATCH] ASoC: sun8i-codec-analog: keep the headphone amplifier and HPCOM powered
+
+DAPM powers the headphone amplifier, HPCOM and its protection up for
+every stream and down after it. Powering up sleeps 700 ms, which every
+sound waits for, and the headphones hear the output ramp. Powering down
+with headphones on the jack, their return on HPCOM, pops loudly and
+resets the whole analog block to its defaults (headphone volume to 0,
+the PA muted, every gain back to 0 dB).
+
+The vendor driver never powers them down: HPPAEN is set once at probe,
+HPCOM_FC and COMPTEN once at init, and a stream only mutes and ramps the
+volume. Do the same with force_enable_pin on the three widgets: the
+speaker amplifier, the DAC and the mixer still follow the streams.
+
+diff --git a/sound/soc/sunxi/sun8i-codec-analog.c b/sound/soc/sunxi/sun8i-codec-analog.c
+--- a/sound/soc/sunxi/sun8i-codec-analog.c
++++ b/sound/soc/sunxi/sun8i-codec-analog.c
+@@ -422,6 +422,16 @@
+ 		dev_err(dev, "Failed to add Headphone DAPM routes: %d\n", ret);
+ 		return ret;
+ 	}
++
++	/*
++	 * Powering the amplifier up takes 700 ms and is heard on the
++	 * headphones, and powering it down with the jack's return on HPCOM
++	 * pops and resets the analog block to its defaults. The vendor
++	 * driver never powers it down: keep it, HPCOM and its protection on.
++	 */
++	snd_soc_dapm_force_enable_pin(dapm, "Headphone Amp");
++	snd_soc_dapm_force_enable_pin(dapm, "HPCOM");
++	snd_soc_dapm_force_enable_pin(dapm, "HPCOM Protection");
+ 
+ 	return 0;
+ }
