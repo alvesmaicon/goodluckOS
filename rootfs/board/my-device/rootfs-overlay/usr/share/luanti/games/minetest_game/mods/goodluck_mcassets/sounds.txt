@@ -1,0 +1,102 @@
+# Luanti sound   Minecraft files (minecraft/sounds/<name>.ogg, found by the asset index), played at random as Minecraft does
+# Update Luanti (luanti-update.sh) copies them under the game's file names (name.ogg, name.1.ogg...), so they play in
+# place of the game's; when Minecraft has more, the rest go on as name.<n>.ogg. Luanti's gains stay as they are.
+
+# Blocks: Minecraft walks on and hits a block with its step/* files, breaks and places it with dig/*
+default_hard_footstep	step/stone1 step/stone2 step/stone3 step/stone4 step/stone5 step/stone6
+default_dig_cracky	step/stone1 step/stone2 step/stone3 step/stone4 step/stone5 step/stone6
+default_place_node_hard	dig/stone1 dig/stone2 dig/stone3 dig/stone4
+default_dug_node	dig/stone1 dig/stone2 dig/stone3 dig/stone4
+default_metal_footstep	step/stone1 step/stone2 step/stone3 step/stone4 step/stone5 step/stone6
+default_dig_metal	step/stone1 step/stone2 step/stone3 step/stone4 step/stone5 step/stone6
+default_dug_metal	dig/stone1 dig/stone2 dig/stone3 dig/stone4
+default_place_node_metal	dig/stone1 dig/stone2 dig/stone3 dig/stone4
+default_glass_footstep	step/stone1 step/stone2 step/stone3 step/stone4 step/stone5 step/stone6
+default_break_glass	random/glass1 random/glass2 random/glass3
+default_ice_footstep	step/stone1 step/stone2 step/stone3 step/stone4 step/stone5 step/stone6
+default_ice_dig	step/stone1 step/stone2 step/stone3 step/stone4 step/stone5 step/stone6
+default_ice_dug	random/glass1 random/glass2 random/glass3
+default_dirt_footstep	step/gravel1 step/gravel2 step/gravel3 step/gravel4
+default_dig_crumbly	step/gravel1 step/gravel2 step/gravel3 step/gravel4
+default_place_node	dig/gravel1 dig/gravel2 dig/gravel3 dig/gravel4
+default_gravel_footstep	step/gravel1 step/gravel2 step/gravel3 step/gravel4
+default_gravel_dig	step/gravel1 step/gravel2 step/gravel3 step/gravel4
+default_gravel_dug	dig/gravel1 dig/gravel2 dig/gravel3 dig/gravel4
+default_sand_footstep	step/sand1 step/sand2 step/sand3 step/sand4 step/sand5
+default_grass_footstep	step/grass1 step/grass2 step/grass3 step/grass4 step/grass5 step/grass6
+default_dig_snappy	step/grass1 step/grass2 step/grass3 step/grass4 step/grass5 step/grass6
+default_dig_oddly_breakable_by_hand	step/grass1 step/grass2 step/grass3 step/grass4 step/grass5 step/grass6
+default_dig_dig_immediate	step/grass1 step/grass2 step/grass3 step/grass4 step/grass5 step/grass6
+default_wood_footstep	step/wood1 step/wood2 step/wood3 step/wood4 step/wood5 step/wood6
+default_dig_choppy	step/wood1 step/wood2 step/wood3 step/wood4 step/wood5 step/wood6
+default_snow_footstep	step/snow1 step/snow2 step/snow3 step/snow4
+default_water_footstep	liquid/swim1 liquid/swim2 liquid/swim3 liquid/swim4
+x_enchanting_wood_footstep	step/wood1 step/wood2 step/wood3 step/wood4 step/wood5 step/wood6
+x_enchanting_wood_hit	step/wood1 step/wood2 step/wood3 step/wood4 step/wood5 step/wood6
+x_enchanting_wood_place	dig/wood1 dig/wood2 dig/wood3 dig/wood4
+
+# Chests, doors, furnace, fire, carts
+default_chest_open	block/chest/open
+default_chest_close	block/chest/close1 block/chest/close2 block/chest/close3
+doors_door_open	block/wooden_door/open1 block/wooden_door/open2
+doors_door_close	block/wooden_door/close1 block/wooden_door/close2 block/wooden_door/close3
+doors_glass_door_open	block/wooden_door/open1 block/wooden_door/open2
+doors_glass_door_close	block/wooden_door/close1 block/wooden_door/close2 block/wooden_door/close3
+doors_steel_door_open	block/iron_door/open1 block/iron_door/open2 block/iron_door/open3 block/iron_door/open4
+doors_steel_door_close	block/iron_door/close1 block/iron_door/close2 block/iron_door/close3 block/iron_door/close4
+xpanes_steel_bar_door_open	block/iron_door/open1 block/iron_door/open2 block/iron_door/open3 block/iron_door/open4
+xpanes_steel_bar_door_close	block/iron_door/close1 block/iron_door/close2 block/iron_door/close3 block/iron_door/close4
+doors_fencegate_open	block/fence_gate/open1 block/fence_gate/open2
+doors_fencegate_close	block/fence_gate/close1 block/fence_gate/close2
+default_furnace_active	fire/fire
+default_cool_lava	random/fizz
+default_item_smoke	random/fizz
+default_tool_breaks	random/break
+env_sounds_water	liquid/water
+env_sounds_lava	liquid/lava
+fire_fire	fire/fire
+fire_small	fire/fire
+fire_large	fire/fire
+fire_extinguish_flame	random/fizz
+fire_flint_and_steel	fire/ignite
+tnt_explode	random/explode1 random/explode2 random/explode3 random/explode4
+tnt_ignite	random/fuse
+tnt_gunpowder_burning	random/fuse
+carts_cart_moving	minecart/base
+
+# The player
+player_damage	damage/hit1 damage/hit2 damage/hit3
+player_falling_damage	damage/fallbig
+stamina_eat	random/eat1 random/eat2 random/eat3
+stamina_sip	random/drink
+goodluck_xp_orb	random/orb
+goodluck_xp_levelup	random/levelup
+goodluck_item_drop_pop	random/pop
+goodluck_anvil_use	random/anvil_use
+goodluck_anvil_land	random/anvil_land
+goodluck_anvil_destroy	random/anvil_break
+x_enchanting_enchant	block/enchantment_table/enchant1 block/enchantment_table/enchant2 block/enchantment_table/enchant3
+x_enchanting_disenchant	block/grindstone/grindstone1 block/grindstone/grindstone2 block/grindstone/grindstone3
+x_enchanting_scroll	item/book/open_flip1 item/book/open_flip2 item/book/open_flip3
+x_bows_bow_shoot	random/bow
+x_bows_bow_shoot_crit	random/bow
+x_bows_arrow_hit	random/bowhit1 random/bowhit2 random/bowhit3 random/bowhit4
+x_bows_arrow_successful_hit	random/successful_hit
+mobs_punch	entity/player/attack/strong1 entity/player/attack/strong2 entity/player/attack/strong3 entity/player/attack/strong4 entity/player/attack/strong5 entity/player/attack/strong6
+
+# Animals and monsters
+mobs_cow	mob/cow/say1 mob/cow/say2 mob/cow/say3 mob/cow/say4
+mobs_pig	mob/pig/say1 mob/pig/say2 mob/pig/say3
+mobs_sheep	mob/sheep/say1 mob/sheep/say2 mob/sheep/say3
+mobs_chicken	mob/chicken/say1 mob/chicken/say2 mob/chicken/say3
+mobs_kitten	mob/cat/meow1 mob/cat/meow2 mob/cat/meow3 mob/cat/meow4
+mobs_panda	mob/panda/idle1 mob/panda/idle2 mob/panda/idle3 mob/panda/idle4
+mobs_bee	mob/bee/loop1 mob/bee/loop2 mob/bee/loop3 mob/bee/loop4 mob/bee/loop5
+mob_horse	mob/horse/idle1 mob/horse/idle2 mob/horse/idle3
+mob_horse_whinny	mob/horse/hit1 mob/horse/hit2 mob/horse/hit3 mob/horse/hit4
+goodluck_horse_equip	mob/horse/leather
+goodluck_monsters_zombie	mob/zombie/say1 mob/zombie/say2 mob/zombie/say3
+goodluck_monsters_zombie_hurt	mob/zombie/hurt1 mob/zombie/hurt2
+goodluck_monsters_skeleton	mob/skeleton/say1 mob/skeleton/say2 mob/skeleton/say3
+mobs_spider	mob/spider/say1 mob/spider/say2 mob/spider/say3 mob/spider/say4
+goodluck_monsters_mushroom_fuse	random/fuse

@@ -18,6 +18,7 @@ NEEDED="usr/bin/luanti $TREE/builtin/init.lua $TREE/games/minetest_game/game.con
 # the player's Minecraft: goodluck_mcassets names the textures, Luanti reads textures/server, the mod reads the list
 MINETEST=$HOMEDIR/.minetest
 TABLE=/$TREE/games/minetest_game/mods/goodluck_mcassets/textures.txt
+SOUNDS=/$TREE/games/minetest_game/mods/goodluck_mcassets/sounds.txt
 MC_DEST=$MINETEST/textures/server/minecraft
 MC_LIST=$MINETEST/mod_data/goodluck_mcassets/imported.txt
 MC_STAGE=/tmp/luanti-minecraft
@@ -51,6 +52,8 @@ No Minecraft: Java Edition client (versions/<version>/<version>.jar) in the copy
 None of Luanti's textures is in Minecraft %s: nothing was taken = Nenhuma textura do Luanti está no Minecraft %s: nada foi pego
 Could not write to HOME: Luanti's own textures are back = Não deu para gravar na HOME: as texturas do próprio Luanti voltaram
 %s of the %s textures Luanti can take are Minecraft %s's now = %s das %s texturas que o Luanti pode pegar agora são as do Minecraft %s
+%s sounds came from Minecraft %s too = %s sons também vieram do Minecraft %s
+The copy has no assets folder: Luanti keeps its own sounds = A cópia não tem a pasta assets: o Luanti fica com os sons dele
 The Minecraft copy is gone from HOME: Luanti's own textures are back = A cópia do Minecraft saiu da HOME: as texturas do próprio Luanti voltaram
 Back to the menu in %s s = Voltando ao menu em %s s
 LANG
@@ -187,10 +190,11 @@ apply() {
     say "Luanti updated to %s" "$version"
 }
 
-# Luanti's look from the player's own Minecraft, a copy of its .minecraft folder in HOME: the textures textures.txt
-# names ({path} = assets/minecraft/textures/<path>.png), from the client jar with the most textures among the copy's
-# versions, as mc_<path with _>.png, and the list of what came; a texture the jar lacks keeps Luanti's own. The copy
-# gone, so are they.
+# Luanti's look and sounds from the player's own Minecraft, a copy of its .minecraft folder in HOME: the textures
+# textures.txt names ({path} = assets/minecraft/textures/<path>.png), from the client jar with the most textures among
+# the copy's versions, as mc_<path with _>.png, and the list of what came; a texture the jar lacks keeps Luanti's own.
+# Then the sounds sounds.txt names, found by hash in the asset index of the jar's version (the newest index when that
+# is not known), each under the game's file names so that it plays in place of the game's. The copy gone, so are they.
 minecraft() {
     src=""
     for d in "$HOMEDIR/minecraft" "$HOMEDIR/.minecraft"; do
@@ -246,8 +250,45 @@ minecraft() {
         fail "Could not write to HOME: Luanti's own textures are back"
     fi
     set_conf goodluck_mc_assets true
-    rm -rf "$MC_STAGE"
     say "%s of the %s textures Luanti can take are Minecraft %s's now" "$got" "$total" "$v"
+
+    index=$(sed -n 's/.*"assets": *"\([^"]*\)".*/\1/p' "${jar%.jar}.json" 2>/dev/null | head -n 1)
+    [ -n "$index" ] && [ -f "$src/assets/indexes/$index.json" ] ||
+        index=$(ls -t "$src"/assets/indexes/*.json 2>/dev/null | head -n 1 | sed 's|.*/||; s|\.json$||')
+    if [ -z "$index" ] || [ ! -f "$SOUNDS" ]; then
+        say "The copy has no assets folder: Luanti keeps its own sounds"
+        rm -rf "$MC_STAGE"
+        return 0
+    fi
+    # the index, one object a line: "minecraft/sounds/dig/stone1.ogg":{"hash":"4ec8...","size":7434
+    tr -d ' \n\r' < "$src/assets/indexes/$index.json" | tr '}' '\n' |
+        awk -F'"' '$2 ~ /^minecraft\/sounds\// { print substr($2, 18), $6 }' > "$MC_STAGE/sounds.map"
+    find "/$TREE/games/minetest_game/mods" -name '*.ogg' | sed 's|.*/||' | sort > "$MC_STAGE/sounds.have"
+    # for each line of sounds.txt: the game's file names of that sound, then name.<n>.ogg for what is left, each with
+    # one of Minecraft's objects (xx/hash) in turn
+    awk 'FNR == 1 { f++ }
+        f == 1 { n = $0; sub(/\.ogg$/, "", n); sub(/\.[0-9]$/, "", n); have[n] = (n in have) ? have[n] " " $0 : $0; next }
+        f == 2 { hash[$1] = $2; next }
+        /^#/ || NF < 2 { next }
+        {
+            k = 0
+            for (i = 2; i <= NF; i++) if (($i ".ogg") in hash) mc[++k] = hash[$i ".ogg"]
+            if (!k) next
+            m = split(have[$1], out, " ")
+            for (n = 1; m < k && n <= 9; n++) {
+                name = $1 "." n ".ogg"
+                taken = 0
+                for (i = 1; i <= m; i++) if (out[i] == name) taken = 1
+                if (!taken) out[++m] = name
+            }
+            for (i = 1; i <= m; i++) { h = mc[(i - 1) % k + 1]; print substr(h, 1, 2) "/" h, out[i] }
+        }' "$MC_STAGE/sounds.have" "$MC_STAGE/sounds.map" "$SOUNDS" > "$MC_STAGE/sounds.copy"
+    sgot=0
+    while read -r obj name; do
+        cp "$src/assets/objects/$obj" "$MC_DEST/$name" 2>/dev/null && echo "$name" >> "$MC_LIST" && sgot=$((sgot + 1))
+    done < "$MC_STAGE/sounds.copy"
+    rm -rf "$MC_STAGE"
+    say "%s sounds came from Minecraft %s too" "$sgot" "$v"
 }
 
 # a swap: what is installed now becomes the next undo, so undoing twice brings the update back
