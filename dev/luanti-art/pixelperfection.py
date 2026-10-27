@@ -2,15 +2,18 @@
 # goodluck_models' default textures for Minecraft's layouts, from Pixel Perfection by XSSheep (CC BY-SA 4.0) as
 # Mineclonia carries it (https://codeberg.org/mineclonia/mineclonia, 7410cf1): its chest drawn for Minecraft's
 # model before 1.15, which stood upside down, is turned to the layout since, and its double chest split into the two
-# halves; the minecart and its item as they are; the farm animals moved to 26.x's layouts (below)
-#   python3 dev/luanti-art/pixelperfection.py <mineclonia checkout> [out dir]
+# halves; the minecart and its item as they are; the farm animals moved to 26.x's layouts (below); the horses and the
+# spider from Pixel Perfection Legacy by Nova Wostra (CC BY-SA 4.0, https://modrinth.com/resourcepack/pixel-perfection-
+# legacy, 26.3-97.2 unzipped), which draws them in Minecraft's layouts since 1.14, cut into what each texture draws
+#   python3 dev/luanti-art/pixelperfection.py <mineclonia checkout> [pixel perfection legacy dir] [out dir]
 import os, sys
 from PIL import Image
 
 ROOT = os.path.dirname(os.path.abspath(__file__)) + "/../.."
+MODS = ROOT + "/rootfs/board/my-device/rootfs-overlay/usr/share/luanti/games/minetest_game/mods"
 SRC = sys.argv[1]
-OUT = sys.argv[2] if len(sys.argv) > 2 else \
-    ROOT + "/rootfs/board/my-device/rootfs-overlay/usr/share/luanti/games/minetest_game/mods/goodluck_models/textures"
+LEGACY = sys.argv[2] if len(sys.argv) > 2 else None
+OUT = sys.argv[3] if len(sys.argv) > 3 else MODS + "/goodluck_models/textures"
 
 
 def faces(u, v, w, h, d):
@@ -105,3 +108,41 @@ wool.save(ANIMALS + "/mobs_sheep_wool.png")
 canvas("sheep_sheared").save(ANIMALS + "/mobs_sheep_shaved.png")
 canvas().save(ANIMALS + "/mobs_sheep_horns.png")
 print("textures in", os.path.relpath(ANIMALS, ROOT))
+
+# the horses: the coat, the markings and the armor keep only what the mesh's first primitive reads, the saddle and the
+# chest (from the donkey's texture) only what the second does, so that each shows nothing where another belongs; an
+# empty 64x64 is the gear with nothing on; the spider with its eyes over it
+if LEGACY:
+    HORSES = MODS + "/goodluck_horse/textures/goodluck_horse_"
+    entity = LEGACY + "/assets/minecraft/textures/entity/"
+    SADDLE = [(26, 0, 10, 9, 9), (1, 1, 6, 5, 6), (19, 0, 4, 5, 2), (29, 5, 1, 2, 2), (32, 2, 0, 3, 16)]
+    CHEST = [(26, 21, 8, 8, 3)]
+
+    def rects(boxes):
+        return [r for b in boxes for r in faces(*b) if r[2] and r[3]]
+
+    def cut(path, keep=None, clear=()):
+        img = Image.open(entity + path).convert("RGBA")
+        out = Image.new("RGBA", img.size) if keep else img.copy()
+        for x, y, w, h in rects(keep or []):
+            out.paste(img.crop((x, y, x + w, y + h)), (x, y))
+        for x, y, w, h in rects(clear):
+            out.paste(Image.new("RGBA", (w, h)), (x, y))
+        return out
+
+    for coat in ("white", "creamy", "chestnut", "brown", "black", "gray", "darkbrown"):
+        cut(f"horse/horse_{coat}.png", clear=SADDLE + CHEST).save(f"{HORSES}{coat}.png")
+    for marks in ("white", "whitefield", "whitedots", "blackdots"):
+        cut(f"horse/horse_markings_{marks}.png", clear=SADDLE + CHEST).save(f"{HORSES}markings_{marks}.png")
+    for kind in ("donkey", "mule"):
+        cut(f"horse/{kind}.png", clear=SADDLE + CHEST).save(f"{HORSES}{kind}.png")
+    for metal in ("leather", "iron", "gold", "diamond"):
+        cut(f"equipment/horse_body/{metal}.png", clear=SADDLE + CHEST).save(f"{HORSES}armor_{metal}.png")
+    cut("equipment/horse_body/leather_overlay.png", clear=SADDLE + CHEST).save(HORSES + "armor_leather_trim.png")
+    cut("equipment/horse_saddle/saddle.png", keep=SADDLE).save(HORSES + "saddle.png")
+    cut("horse/donkey.png", keep=CHEST).save(HORSES + "chest.png")
+    Image.new("RGBA", (64, 64)).save(HORSES + "blank.png")
+    spider = Image.open(entity + "spider/spider.png").convert("RGBA")
+    spider.alpha_composite(Image.open(entity + "spider/spider_eyes.png").convert("RGBA"))
+    spider.save(MODS + "/goodluck_monsters/textures/goodluck_monsters_spider.png")
+    print("horses in", os.path.relpath(HORSES, ROOT), "and the spider")
