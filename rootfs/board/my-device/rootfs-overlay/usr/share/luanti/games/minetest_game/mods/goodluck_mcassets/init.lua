@@ -91,10 +91,12 @@ local function formspec(fs)
 			at = fs:find("]", first, true) + 1
 		end
 		fs = fs:sub(1, at - 1) .. "style_type[label;textcolor=#404040]" .. fs:sub(at)
-		-- the selected tab's bottom rows are the window's top border: 2 px less into the window than the game's own tab
+		-- the selected tab's bottom rows are the window's top border: 2 px less into the window than the game's own
+		-- tab; its top reaches over the formspec's edge, where the console's engine clips an image
 		fs = fs:gsub("image%[([%d%.%-]+),([%d%.%-]+);([%d%.]+),([%d%.]+);([^;]*tab_top_selected[^;]*);4%]", function(x, y, w, h, img)
 			local flipped = img:find("transformFY", 1, true)
-			return ("image[%s,%g;%s,%g;%s;4]"):format(x, tonumber(y) + (flipped and 0.04 or 0), w, tonumber(h) - 0.04, img)
+			return ("style_type[image;noclip=true]image[%s,%g;%s,%g;%s;4]style_type[image;noclip=false]"):format(
+				x, tonumber(y) + (flipped and 0.04 or 0), w, tonumber(h) - 0.04, img)
 		end)
 	end
 	return fs
