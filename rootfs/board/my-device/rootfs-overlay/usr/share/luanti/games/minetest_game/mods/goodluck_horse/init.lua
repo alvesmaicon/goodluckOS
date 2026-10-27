@@ -1,8 +1,8 @@
--- Horses, donkeys and mules as in Minecraft (Java), on mob_horse's model and sounds: herds in grassland and savanna,
--- seven coats and five markings, health, speed and jump of their own; tamed by riding them until they stop throwing
--- you off, steered only with a saddle, horse armor (horses) or a chest (donkeys and mules), an inventory with them
--- (sneak + place on the animal, or the inventory while riding), a jump that charges while jump is held, foals from
--- golden apples, a horse and a donkey make a mule
+-- Horses, donkeys and mules as in Minecraft (Java), in its models (goodluck_models' meshes) with mob_horse's sounds:
+-- herds in grassland and savanna, seven coats and five markings, health, speed and jump of their own; tamed by riding
+-- them until they stop throwing you off, steered only with a saddle, horse armor (horses) or a chest (donkeys and
+-- mules), an inventory with them (sneak + place on the animal, or the inventory while riding), a jump that charges
+-- while jump is held, foals from golden apples, a horse and a donkey make a mule
 local S = core.get_translator("goodluck_horse")
 goodluck_horse = {}
 
@@ -18,14 +18,16 @@ local has_xp = core.get_modpath("goodluck_xp") and goodluck_xp
 local COATS = {"white", "creamy", "chestnut", "brown", "black", "gray", "darkbrown"}
 local MARKINGS = {"", "white", "whitefield", "whitedots", "blackdots"}
 
--- donkeys and mules: Minecraft's fixed speed (7.55 of 4.9 to 14.6, here as far along 5 to 9) and jump strength
+-- donkeys and mules: Minecraft's fixed speed (7.55 of 4.9 to 14.6, here as far along 5 to 9) and jump strength, its
+-- sizes (the donkey drawn at 0.87 and 1.5 high, the mule at 0.92) and its model with the long ears and the chests
 local KINDS = {
 	horse = {name = "goodluck_horse:horse", description = S("Horse"), coats = COATS, markings = MARKINGS,
-		armor = true, scale = 1},
+		armor = true, scale = 1, height = 1.6},
 	donkey = {name = "goodluck_horse:horse_donkey", description = S("Donkey"), coats = {"donkey"}, markings = {""},
-		chest = true, scale = 0.85, speed = MIN_SPEED + (MAX_SPEED - MIN_SPEED) * 0.28, jump = 0.5},
+		chest = true, scale = 0.87, height = 1.5, speed = MIN_SPEED + (MAX_SPEED - MIN_SPEED) * 0.28, jump = 0.5},
 	mule = {name = "goodluck_horse:horse_mule", description = S("Mule"), coats = {"mule"}, markings = {""},
-		chest = true, scale = 0.95, speed = MIN_SPEED + (MAX_SPEED - MIN_SPEED) * 0.28, jump = 0.5, sterile = true},
+		chest = true, scale = 0.92, height = 1.6, speed = MIN_SPEED + (MAX_SPEED - MIN_SPEED) * 0.28, jump = 0.5,
+		sterile = true},
 }
 local KIND_OF = {}
 for kind, k in pairs(KINDS) do
@@ -63,6 +65,8 @@ local function kind_of(self)
 	return KINDS[KIND_OF[self.name] or "horse"]
 end
 
+-- the coat, its markings and the armor on one texture; the saddle and the chest on the gear's, the mesh's second
+-- material, which only its own parts read (nothing shows where it is blank)
 local function texture(self)
 	local t = G .. (self._coat or "brown") .. ".png"
 	if self._marking and self._marking ~= "" then
@@ -76,19 +80,19 @@ local function texture(self)
 	elseif armor then
 		t = t .. "^" .. G .. "armor_" .. armor:get_name():match("armor_(%a+)$") .. ".png"
 	end
-	if self._chest then
-		t = t .. "^" .. G .. "chest.png"
-	end
+	local gear = G .. "blank.png"
 	if self._saddle then
-		t = t .. "^" .. G .. "saddle.png"
+		gear = gear .. "^" .. G .. "saddle.png"
 	end
-	return t
+	if self._chest then
+		gear = gear .. "^" .. G .. "chest.png"
+	end
+	return t, gear
 end
 
 local function update_look(self)
-	local t = texture(self)
-	-- the model has two buffers: one texture each
-	self.base_texture = {t, t}
+	local t, gear = texture(self)
+	self.base_texture = {t, gear}
 	self.object:set_properties({textures = self.base_texture})
 	local points = self._armor and ARMORS[ItemStack(self._armor):get_name()] or 0
 	self.armor = 100 - 4 * points
@@ -221,7 +225,7 @@ local function horse_formspec(self)
 	local esc = core.formspec_escape
 	local k = kind_of(self)
 	local title = self._nametag and self._nametag ~= "" and self._nametag or k.description
-	local t = texture(self)
+	local t, gear = texture(self)
 	local fs = {
 		"label[0,0;" .. esc(title) .. "]",
 		"image[0.1,0.6;1,1;" .. G .. "slot_saddle.png]",
@@ -234,7 +238,8 @@ local function horse_formspec(self)
 		fs[#fs + 1] = "listring[" .. inv .. ";armor]listring[current_player;main]"
 	end
 	local mw = self._chest and 2.4 or 5.6
-	fs[#fs + 1] = ("model[1.3,0.4;%g,3.4;horse;mobs_horse.x;%s,%s;-8,150;false;true;25,25]"):format(mw, esc(t), esc(t))
+	fs[#fs + 1] = ("model[1.3,0.4;%g,3.4;horse;goodluck_models_%s.glb;%s,%s;-8,150;false;true;0,0]"):format(mw,
+		k.chest and "donkey" or "horse", esc(t), esc(gear))
 	if self._chest then
 		fs[#fs + 1] = "list[" .. inv .. ";chest;3.15,0.6;5,3;]"
 		fs[#fs + 1] = "listring[" .. inv .. ";chest]listring[current_player;main]"
@@ -329,10 +334,10 @@ local function hearts(self)
 end
 
 local function mount(self, player)
+	-- the rider's hips on the saddle (the model's back is 13.4 units up; the sitting player's model is lowered)
 	local s = kind_of(self).scale
-	self.driver_attach_at = {x = 0, y = 10 * s, z = -2 * s}
-	self.driver_eye_offset = {x = 0, y = 13 * s, z = 0}
-	self.driver_scale = {x = 0.8, y = 0.8}
+	self.driver_attach_at = {x = 0, y = 12 * s, z = 0}
+	self.driver_eye_offset = {x = 0, y = 3 * s, z = 0}
 	mobs.attach(self, player)
 	self._charge = nil
 	if not self.tamed then
@@ -490,7 +495,7 @@ local function on_breed(self, other)
 	return false
 end
 
--- ---- the animals: mob_horse's model, sounds and animations with this behaviour -------------------------------------
+-- ---- the animals: goodluck_models' meshes and mob_horse's sounds with this behaviour -------------------------------
 local function after_activate(self)
 	if not self._coat then
 		roll(self)
@@ -597,24 +602,25 @@ local function do_custom(self, dtime)
 end
 
 for kind, k in pairs(KINDS) do
-	local s = 1.2 * k.scale
 	mobs:register_mob(k.name, {
 		description = k.description,
 		type = "animal",
 		passive = true,
 		visual = "mesh",
-		visual_size = {x = s, y = s},
-		mesh = "mobs_horse.x",
-		collisionbox = {-0.4 * k.scale, -0.01, -0.4 * k.scale, 0.4 * k.scale, 1.25 * k.scale, 0.4 * k.scale},
+		visual_size = {x = k.scale, y = k.scale},
+		mesh = "goodluck_models_" .. (k.chest and "donkey" or "horse") .. ".glb",
+		collisionbox = {-0.7, -0.01, -0.7, 0.7, k.height - 0.01, 0.7},
+		-- glTF frames are seconds: it rears now and then (stand2) and when it throws you off (punch)
 		animation = {
-			speed_normal = 15,
-			stand_start = 25, stand_end = 25,
-			stand2_start = 25, stand2_end = 50, stand2_loop = false,
-			walk_start = 75, walk_end = 100,
-			run_start = 75, run_end = 100, run_speed = 45,
-			punch_start = 55, punch_end = 75, punch_speed = 35,
+			speed_normal = 1, speed_run = 1,
+			stand_start = 0, stand_end = 1,
+			stand2_start = 6, stand2_end = 7.6, stand2_loop = false,
+			walk_start = 1, walk_end = 2,
+			run_start = 3, run_end = 3.5,
+			punch_start = 6, punch_end = 7.6, punch_loop = false,
+			die_start = 4, die_end = 5, die_loop = false,
 		},
-		textures = {{G .. k.coats[1] .. ".png", G .. k.coats[1] .. ".png"}},
+		textures = {{G .. k.coats[1] .. ".png", G .. "blank.png"}},
 		fear_height = 3,
 		walk_chance = 60,
 		view_range = 7,

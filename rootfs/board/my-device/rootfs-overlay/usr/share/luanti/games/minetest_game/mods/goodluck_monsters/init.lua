@@ -1,6 +1,7 @@
 -- Minecraft's classic monsters with art of our own: the zombie and the skeleton (3d_armor's character model), the
--- spider (mobs_monster's CC0 model) and, in the creeper's place, the bomb mushroom. They come out in the dark, on the
--- surface and in caves (mobs_monster's own spawn no more); the zombie and the skeleton burn in the sun
+-- spider (Minecraft's model from goodluck_models, Pixel Perfection Legacy's skin) and, in the creeper's place, the
+-- bomb mushroom. They come out in the dark, on the surface and in caves (mobs_monster's own spawn no more); the
+-- zombie and the skeleton burn in the sun
 local S = core.get_translator("goodluck_monsters")
 local MOD = "goodluck_monsters:"
 local BLANK = "goodluck_monsters_blank.png"
@@ -200,9 +201,9 @@ mobs:register_mob(MOD .. "spider", {
 	damage = 2,
 	hp_min = 16, hp_max = 16,
 	armor = 100,
-	collisionbox = {-0.7, -0.5, -0.7, 0.7, 0, 0.7},
+	collisionbox = {-0.7, -0.01, -0.7, 0.7, 0.89, 0.7},
 	visual = "mesh",
-	mesh = "mobs_spider.b3d",
+	mesh = "goodluck_models_spider.glb",
 	textures = {{"goodluck_monsters_spider.png"}},
 	makes_footstep_sound = false,
 	sounds = {attack = "mobs_spider", distance = HEAR},
@@ -216,12 +217,14 @@ mobs:register_mob(MOD .. "spider", {
 	light_damage = 0,
 	fall_damage = false,
 	fear_height = 8,
+	-- glTF frames are seconds; Minecraft's spider has no bite of its own, so it attacks at a run
 	animation = {
-		speed_normal = 15,
-		stand_start = 0, stand_end = 0,
-		walk_start = 1, walk_end = 21,
-		run_start = 1, run_end = 21, run_speed = 30,
-		punch_start = 25, punch_end = 45, punch_speed = 30,
+		speed_normal = 1, speed_run = 1,
+		stand_start = 0, stand_end = 1,
+		walk_start = 1, walk_end = 1.6,
+		run_start = 3, run_end = 3.4,
+		punch_start = 3, punch_end = 3.4,
+		die_start = 4, die_end = 5, die_loop = false,
 	},
 	-- as in Minecraft, it leaves you be in the light unless you hit it
 	do_punch = function(self)

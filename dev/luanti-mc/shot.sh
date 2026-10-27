@@ -3,14 +3,15 @@
 #   docker run --rm -v goodluck-work:/work:ro -v luanti-native:/build:ro -v "$PWD":/repo luanti-native \
 #       bash /repo/dev/luanti-mc/shot.sh <pack>       (no pack: the game as it ships)
 # WORLD=<seed>: a normal world instead, looking around where the player spawns; FIRST=<pattern>: those first;
-# EXTRA=<mod dir>: one more mod (a scene of its own); MARKS="a b": a screenshot at each "scene: a" it logs
+# EXTRA=<mod dir>: one more mod (a scene of its own); MARKS="a b": a screenshot at each "scene: a" it logs;
+# NOSHOWCASE=1: without the showcase mod (it teleports the player and opens the inventory, which unloads a scene)
 set -euo pipefail
 L=/tmp/l; G=$L/games/mcdump_game; OUT=/repo/dev/out/luanti-mc; NAME=${1:-none}
 mkdir -p "$L" "$G" "$OUT" "$L/textures/server" "$L/worlds/show"
 for d in bin builtin client fonts textures locale; do [ -e /build/src/$d ] && cp -a /build/src/$d "$L/"; done
 cp -a /work/br/out/target/usr/share/luanti/games/minetest_game/. "$G"
 cp -a /repo/rootfs/board/my-device/rootfs-overlay/usr/share/luanti/games/minetest_game/. "$G"
-[ -z "${WORLD:-}" ] && cp -a /repo/dev/luanti-mc/showcase "$G/mods/goodluck_showcase"
+[ -z "${WORLD:-}" ] && [ -z "${NOSHOWCASE:-}" ] && cp -a /repo/dev/luanti-mc/showcase "$G/mods/goodluck_showcase"
 [ -n "${EXTRA:-}" ] && cp -a "$EXTRA" "$G/mods/"
 [ "$NAME" != none ] && cp -a "$OUT/$NAME"/. "$L/textures/server/"
 [ -f "$OUT/$NAME.txt" ] && mkdir -p "$L/mod_data/goodluck_mcassets" && cp "$OUT/$NAME.txt" "$L/mod_data/goodluck_mcassets/imported.txt"

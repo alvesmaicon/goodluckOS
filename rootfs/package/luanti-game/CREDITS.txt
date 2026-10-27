@@ -99,19 +99,20 @@ mob_horse
   (freesound.org/people/GoodListener/sounds/322445): mods/mob_horse/license.txt
   and sounds/license.txt.
   Left out: its textures (the coats, CC BY-SA 3.0 by Mjollna, the horseshoes
-  and the saddle overlay), as goodluck_horse paints its own and takes the
-  horseshoes out of the game, and spawn_example.lua. Added: a spawn.lua that
-  spawns nothing: goodluck_horse registers its own horse, donkey and mule on
-  this model and these sounds, and mob_horse's horse never appears.
+  and the saddle overlay), as goodluck_horse wears goodluck_models' meshes
+  and Pixel Perfection Legacy's coats (see goodluck_models) and takes the
+  horseshoes out of the game, and spawn_example.lua; its model ships unused.
+  Added: a spawn.lua that spawns nothing: goodluck_horse registers its own
+  horse, donkey and mule with these sounds, and mob_horse's horse never
+  appears.
 
 goodluck_monsters
   The zombie and the skeleton wear 3d_armor's character model (see 3d_armor).
-  The spider is mobs_monster's mobs_spider.b3d (AspireMint, CC BY-SA 3.0)
-  with its mobs_spider.ogg (see mobs_monster); its skin,
-  goodluck_monsters_spider.png, is mobs_spider_grey.png (AspireMint, CC BY-SA
-  3.0) recoloured, with bigger red eyes, and so under CC BY-SA 3.0. The bomb
-  mushroom's model, every other texture and the sounds are goodluckOS's own
-  (see goodluck_* below).
+  The spider is goodluck_models' mesh of Minecraft's with mobs_monster's
+  mobs_spider.ogg (see mobs_monster); its skin, goodluck_monsters_spider.png,
+  is Pixel Perfection Legacy's spider with its eyes over it (see
+  goodluck_models), CC BY-SA 4.0. The bomb mushroom's model, every other
+  texture and the sounds are goodluckOS's own (see goodluck_* below).
 
 goodluck_chest
   The big chest's halves, goodluck_chest_{front,top,back,inside}_{left,right}.png,
@@ -141,6 +142,18 @@ goodluck_models
   LICENSE-media.md), moved to Minecraft 26.x's layouts by
   dev/luanti-art/pixelperfection.py (the cow's muzzle taken from its nose, the
   wool made grey), and so under CC BY-SA 4.0; the horns are an empty image.
+  The horses' and the spider's meshes are goodluckOS's own too (animals.py);
+  the horses' textures, under goodluck_horse's names
+  (mods/goodluck_horse/textures: the seven coats, the four markings, the
+  donkey, the mule, the saddle, the chest and the horse armor), and the
+  spider's skin (mods/goodluck_monsters/textures/goodluck_monsters_spider.png)
+  are Pixel Perfection Legacy's by Nova Wostra, after XSSheep's Pixel
+  Perfection, CC BY-SA 4.0
+  (https://modrinth.com/resourcepack/pixel-perfection-legacy, 26.3-97.2), the
+  horses' cut by pixelperfection.py into what each texture draws (the coats
+  without the saddle and the chest, the saddle without the chest, the chest
+  from the donkey's), the spider's eyes laid over it, and so under CC BY-SA
+  4.0; the blank gear is an empty image.
 
 goodluck_villages
   Built on villages_mtg 1.0.3 by Drix03,
@@ -153,9 +166,10 @@ screenshot.jpg, made on textstudio.com, whose terms are unclear. The game
 doesn't use them.
 
 goodluck_* mods (but goodluck_villages' buildings, goodluck_monsters' spider,
-goodluck_chest's halves and goodluck_models' chests, minecart and farm animals' textures, above), and the stamina, mobs_animal, mobs_monster, x_enchanting, mobs_npc and
-x_bows media above (but the half-drawn bow, CC BY-SA 4.0)
-  Code, pixel art (goodluck_horse's coats, markings, saddle and horse armor
-  are painted by a script on mob_horse's model), the rat's and the bomb
-  mushroom's models, and the item pickup, experience, bow, monster, horse equip
-  and anvil sounds made for goodluckOS, under goodluckOS's license, GPL-2.0.
+goodluck_chest's halves, goodluck_models' chests, minecart and farm animals'
+textures and goodluck_horse's textures, above), and the stamina, mobs_animal,
+mobs_monster, x_enchanting, mobs_npc and x_bows media above (but the
+half-drawn bow, CC BY-SA 4.0)
+  Code, pixel art, the rat's and the bomb mushroom's models, and the item
+  pickup, experience, bow, monster, horse equip and anvil sounds made for
+  goodluckOS, under goodluckOS's license, GPL-2.0.

@@ -243,6 +243,31 @@ mobs_sheep_base.png	[combine:64x64:0,0={entity/sheep/sheep}
 mobs_sheep_wool.png	[combine:64x64:0,32={entity/sheep/sheep_wool}
 mobs_sheep_shaved.png	[combine:64x64
 
+# The horses and the spider (goodluck_models' meshes too): the coat, the markings and the armor on the first texture;
+# the saddle, the bridle and the chest on the second, which only their own parts read (the chest's region is the
+# donkey texture's); the spider with its eyes over it
+goodluck_horse_white.png	{entity/horse/horse_white}
+goodluck_horse_creamy.png	{entity/horse/horse_creamy}
+goodluck_horse_chestnut.png	{entity/horse/horse_chestnut}
+goodluck_horse_brown.png	{entity/horse/horse_brown}
+goodluck_horse_black.png	{entity/horse/horse_black}
+goodluck_horse_gray.png	{entity/horse/horse_gray}
+goodluck_horse_darkbrown.png	{entity/horse/horse_darkbrown}
+goodluck_horse_markings_white.png	{entity/horse/horse_markings_white}
+goodluck_horse_markings_whitefield.png	{entity/horse/horse_markings_whitefield}
+goodluck_horse_markings_whitedots.png	{entity/horse/horse_markings_whitedots}
+goodluck_horse_markings_blackdots.png	{entity/horse/horse_markings_blackdots}
+goodluck_horse_donkey.png	{entity/horse/donkey}
+goodluck_horse_mule.png	{entity/horse/mule}
+goodluck_horse_armor_leather.png	{entity/equipment/horse_body/leather}
+goodluck_horse_armor_leather_trim.png	{entity/equipment/horse_body/leather_overlay}
+goodluck_horse_armor_iron.png	{entity/equipment/horse_body/iron}
+goodluck_horse_armor_gold.png	{entity/equipment/horse_body/gold}
+goodluck_horse_armor_diamond.png	{entity/equipment/horse_body/diamond}
+goodluck_horse_saddle.png	{entity/equipment/horse_saddle/saddle}
+goodluck_horse_chest.png	{entity/horse/donkey}
+goodluck_monsters_spider.png	{entity/spider/spider}^{entity/spider/spider_eyes}
+
 # Wool and dye
 wool_white.png	{block/white_wool}
 wool_grey.png	{block/light_gray_wool}
