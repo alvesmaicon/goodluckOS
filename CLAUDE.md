@@ -25,7 +25,7 @@ On the Mac, `dev/gl` runs everything in a native arm64 Debian container (Colima)
 - Never bump versions or edit upstream's `CHANGELOG.md`: Jeremy does that.
 - Commits that touch a fork issue cite it as `alvesmaicon/goodluckOS#N`, so a cherry-pick upstream doesn't link to the wrong issue.
 - A fork-only commit message (CLAUDE.md, `dev/`, merges of upstream) never writes an upstream number as `#N`: GitHub resolves it to CodeZombie and puts the commit on that issue's timeline, where nobody can remove it. Write `upstream PR 70`. Only commits meant for an upstream PR cite upstream issues.
-- Upstream PRs: open an issue first, keep each PR small and on a branch from `origin/main` (cherry-picked from `develop`), test the PR's own image on the device, and say that AI was used. The owner reviews every diff before it goes out.
+- Upstream PRs: open an issue first, keep each PR small and on a branch from `origin/main` (cherry-picked from `develop`), test the PR's own image on the device. The Co-Authored-By lines in the commits already say that AI was used; the PR text doesn't repeat it. The owner reviews every diff before it goes out.
 - Upstream issue or PR comments never link this fork: say the feature is ready and tested on the owner's console, and offer a PR. The owner doesn't want to pull users away from upstream.
 - The owner writes in Brazilian Portuguese. Repository text (code, commits, README, PRs) is in English.
 
