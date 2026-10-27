@@ -35,6 +35,17 @@ x_enchanting_wood_footstep	step/wood1 step/wood2 step/wood3 step/wood4 step/wood
 x_enchanting_wood_hit	step/wood1 step/wood2 step/wood3 step/wood4 step/wood5 step/wood6
 x_enchanting_wood_place	dig/wood1 dig/wood2 dig/wood3 dig/wood4
 
+# Breaking and placing by material: the mod gives these to the nodes whose dug sound is their footstep (wool by its
+# group), as Minecraft breaks and places with its dig/* files
+goodluck_mc_break_stone	dig/stone1 dig/stone2 dig/stone3 dig/stone4
+goodluck_mc_break_wood	dig/wood1 dig/wood2 dig/wood3 dig/wood4
+goodluck_mc_break_gravel	dig/gravel1 dig/gravel2 dig/gravel3 dig/gravel4
+goodluck_mc_break_sand	dig/sand1 dig/sand2 dig/sand3 dig/sand4
+goodluck_mc_break_grass	dig/grass1 dig/grass2 dig/grass3 dig/grass4
+goodluck_mc_break_snow	dig/snow1 dig/snow2 dig/snow3 dig/snow4
+goodluck_mc_break_cloth	dig/cloth1 dig/cloth2 dig/cloth3 dig/cloth4
+goodluck_mc_step_cloth	step/cloth1 step/cloth2 step/cloth3 step/cloth4
+
 # Chests, doors, furnace, fire, carts
 default_chest_open	block/chest/open
 default_chest_close	block/chest/close1 block/chest/close2 block/chest/close3

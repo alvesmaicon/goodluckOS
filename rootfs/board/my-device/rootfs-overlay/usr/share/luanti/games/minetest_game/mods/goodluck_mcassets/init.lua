@@ -65,6 +65,28 @@ local function tiles(list)
 	return changed and out or nil
 end
 
+-- Minecraft breaks and places a block with its dig/* files at pitch 0.8, where the game's dug and place sounds are
+-- its footsteps, or one sound for all; the material is read from the dug sound (wool from its group)
+local MATERIAL = {
+	default_hard_footstep = "stone", default_dug_node = "stone", default_dug_metal = "stone",
+	default_dirt_footstep = "gravel", default_gravel_dug = "gravel", default_sand_footstep = "sand",
+	default_grass_footstep = "grass", default_wood_footstep = "wood", default_snow_footstep = "snow",
+}
+
+local function sounds(def)
+	local s = def.sounds
+	if type(s) ~= "table" then return end
+	local m = def.groups and def.groups.wool and "cloth" or type(s.dug) == "table" and MATERIAL[s.dug.name]
+	if not m or not have["goodluck_mc_break_" .. m .. ".1.ogg"] then return end
+	local out = table.copy(s)
+	out.dug = {name = "goodluck_mc_break_" .. m, gain = 1.0, pitch = 0.8}
+	out.place = {name = "goodluck_mc_break_" .. m, gain = 1.0, pitch = 0.8}
+	if m == "cloth" and have["goodluck_mc_step_cloth.1.ogg"] then
+		out.footstep = {name = "goodluck_mc_step_cloth", gain = 0.2}
+	end
+	return out
+end
+
 core.register_on_mods_loaded(function()
 	for name, def in pairs(core.registered_items) do
 		local o = {}
@@ -72,6 +94,7 @@ core.register_on_mods_loaded(function()
 		for _, f in ipairs({"inventory_image", "wield_image"}) do
 			if swap(def[f]) ~= def[f] then o[f] = swap(def[f]) end
 		end
+		o.sounds = sounds(def)
 		if next(o) and name ~= "" then core.override_item(name, o) end
 	end
 	for _, def in pairs(core.registered_entities) do
