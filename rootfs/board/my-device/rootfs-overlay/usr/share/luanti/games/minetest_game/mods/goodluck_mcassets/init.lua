@@ -1,5 +1,12 @@
--- The files come from the player's own game (luanti-mc-import.sh); nothing of Minecraft ships with goodluckOS
+-- The files come from the player's own game, taken into textures/server by luanti-update.sh, which lists what came
+-- in mod_data; nothing of Minecraft ships with goodluckOS
 if not core.settings:get_bool("goodluck_mc_assets", false) then return end
+
+local have = {}
+local list = io.open(core.get_mod_data_path() .. "/imported.txt")
+if not list then return end
+for name in list:lines() do have[name:match("^%s*(.-)%s*$")] = true end
+list:close()
 
 local opaque_leaves = core.settings:get("leaves_style") == "opaque"
 
@@ -15,9 +22,14 @@ for line in io.lines(core.get_modpath("goodluck_mcassets") .. "/textures.txt") d
 	local from, to, rest = line:match("^([^#%s]%S*)%s+(%S+)%s*(.*)$")
 	if from and not rest:find("file") then
 		to = to:gsub("{([^}]+)}", function(p) return "mc_" .. p:gsub("/", "_") .. ".png" end)
-		if rest:find("leaves") and (opaque_leaves or from:find("_simple%.png$")) then to = backed(to) end
-		map[from] = to
-		length[from] = tonumber(rest:match("length=([%d.]+)"))
+		-- a file the player's version lacks leaves the game's texture
+		local all = true
+		for name in to:gmatch("mc_[%w_%-%.]+%.png") do all = all and have[name] end
+		if all then
+			if rest:find("leaves") and (opaque_leaves or from:find("_simple%.png$")) then to = backed(to) end
+			map[from] = to
+			length[from] = tonumber(rest:match("length=([%d.]+)"))
+		end
 	end
 end
 
