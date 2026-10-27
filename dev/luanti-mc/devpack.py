@@ -14,4 +14,6 @@ with zipfile.ZipFile(sys.argv[1]) as jar:
     for p in sorted(paths):
         with open(f"{OUT}/mc_{p.replace('/', '_')}.png", "wb") as f:
             f.write(jar.read(f"assets/minecraft/textures/{p}.png"))
-print(len(paths), "files in", os.path.relpath(OUT, ROOT))
+# the list luanti-update.sh leaves for the mod, next to the pack
+open(OUT + ".txt", "w").write("".join(f"mc_{p.replace('/', '_')}.png\n" for p in sorted(paths)))
+print(len(paths), "files in", os.path.relpath(OUT, ROOT), "and their list in", os.path.relpath(OUT + ".txt", ROOT))

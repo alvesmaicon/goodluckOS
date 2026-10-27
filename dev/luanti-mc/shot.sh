@@ -13,6 +13,7 @@ cp -a /repo/rootfs/board/my-device/rootfs-overlay/usr/share/luanti/games/minetes
 [ -z "${WORLD:-}" ] && cp -a /repo/dev/luanti-mc/showcase "$G/mods/goodluck_showcase"
 [ -n "${EXTRA:-}" ] && cp -a "$EXTRA" "$G/mods/"
 [ "$NAME" != none ] && cp -a "$OUT/$NAME"/. "$L/textures/server/"
+[ -f "$OUT/$NAME.txt" ] && mkdir -p "$L/mod_data/goodluck_mcassets" && cp "$OUT/$NAME.txt" "$L/mod_data/goodluck_mcassets/imported.txt"
 cp /repo/rootfs/board/my-device/rootfs-overlay/usr/share/goodluck/defaults/luanti.conf "$L/minetest.conf"
 printf 'fullscreen = false\nviewing_range = 60\ngoodluck_mc_assets = %s\n' \
     "$([ "$NAME" != none ] && echo true || echo false)" >> "$L/minetest.conf"

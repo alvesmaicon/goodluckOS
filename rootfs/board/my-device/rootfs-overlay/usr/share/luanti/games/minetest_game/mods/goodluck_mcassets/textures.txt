@@ -1,6 +1,7 @@
 # Luanti texture   what draws it instead: {path} = assets/minecraft/textures/<path>.png in the player's own client jar
-# The importer copies each {path} as mc_<path with _>.png. "length=" sets a tile animation's length, "file" makes
-# the importer copy the image under the Luanti name (for images the game draws from code), "leaves" puts a dark
+# Update Luanti (luanti-update.sh) copies each {path} as mc_<path with _>.png and lists what it found; a line whose
+# file the player's version lacks keeps the game's texture. "length=" sets a tile animation's length, "file" makes
+# the importer copy the image under the Luanti name too (for images the game draws from code), "leaves" puts a dark
 # shade behind the holes when leaves are opaque.
 # Biome colours are Minecraft's plains/forest ones: grass #91bd59, leaves #77ab2f, water #3f76e4.
 

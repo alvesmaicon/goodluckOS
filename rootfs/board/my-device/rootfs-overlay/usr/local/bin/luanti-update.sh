@@ -1,5 +1,6 @@
 #!/bin/sh
-# Updates Luanti from a package copied to HOME/updates over USB, or undoes the last update. Puppy runs it through doas,
+# Updates Luanti from a package copied to HOME/updates over USB, or undoes the last update, and gives Luanti the
+# textures of the player's own Minecraft while a copy of its .minecraft folder is in HOME. Puppy runs it through doas,
 # on the text console. A package, luanti-<version>.tar.xz, is all of Luanti and data only: the engine (usr/bin/luanti,
 # usr/share/luanti with its game, the engine's translation), luanti.conf's defaults, the luanti*.sh scripts and
 # files.md5; nothing in it runs, and nothing changes unless every file checks out. Versions (the commit's date, then its
@@ -14,6 +15,46 @@ TREE=usr/share/luanti
 VERSION=$TREE/goodluck-version
 ALLOWED='^usr/share/luanti/[^ ]*$|^usr/bin/luanti$|^usr/share/locale/[^/ ]*/LC_MESSAGES/luanti\.mo$|^usr/share/goodluck/defaults/luanti\.conf$|^usr/local/bin/luanti(\.sh|-perflog\.sh|-update\.sh)$'
 NEEDED="usr/bin/luanti $TREE/builtin/init.lua $TREE/games/minetest_game/game.conf $VERSION"
+# the player's Minecraft: goodluck_mcassets names the textures, Luanti reads textures/server, the mod reads the list
+MINETEST=$HOMEDIR/.minetest
+TABLE=/$TREE/games/minetest_game/mods/goodluck_mcassets/textures.txt
+MC_DEST=$MINETEST/textures/server/minecraft
+MC_LIST=$MINETEST/mod_data/goodluck_mcassets/imported.txt
+MC_STAGE=/tmp/luanti-minecraft
+
+# Puppy's language setting; the Portuguese is here, not in pt-BR.lang, so that a package brings its messages' translation
+LANGUAGE=$(sed -n 's/^language=//p' "$HOMEDIR/.config/puppy/settings" 2>/dev/null | tail -n 1)
+translate() {
+    [ "$LANGUAGE" = pt-BR ] || return 0
+    awk -v key="$1" 'index($0, key " = ") == 1 { print substr($0, length(key) + 4); exit }' <<'LANG'
+Luanti update = Atualização do Luanti
+Installed: %s = Instalado: %s
+No update in the updates folder = Nenhuma atualização na pasta updates
+Already up to date = Já está atualizado
+This update (%s) is older than the installed one: nothing was changed = Esta atualização (%s) é mais antiga que a instalada: nada foi mudado
+Checking %s... = Conferindo %s...
+The update is damaged: nothing was changed = A atualização está com defeito: nada foi mudado
+Not a whole Luanti update: nothing was changed = Não é uma atualização completa do Luanti: nada foi mudado
+Not enough room on the system: nothing was changed = Falta espaço no sistema: nada foi mudado
+Saving the current version to undo it... = Guardando a versão atual para poder desfazer...
+Could not save the current version: nothing was changed = Não deu para guardar a versão atual: nada foi mudado
+Installing %s... = Instalando %s...
+Installing failed: the previous version is back = A instalação falhou: a versão anterior voltou
+Installing failed: run Undo Luanti update = A instalação falhou: rode Undo Luanti update
+Luanti updated to %s = Luanti atualizado para %s
+Nothing to undo = Nada para desfazer
+Going back to the version before the last update... = Voltando para a versão de antes da última atualização...
+Luanti is back to the previous version (undo again to return) = O Luanti voltou para a versão anterior (desfaça de novo para retornar)
+Undoing failed: nothing was changed = Não deu para desfazer: nada foi mudado
+Minecraft found in %s: taking its textures... = Minecraft encontrado em %s: pegando as texturas dele...
+No Minecraft: Java Edition client (versions/<version>/<version>.jar) in the copy: nothing was taken = Não há um cliente do Minecraft: Java Edition (versions/<versão>/<versão>.jar) na cópia: nada foi pego
+None of Luanti's textures is in Minecraft %s: nothing was taken = Nenhuma textura do Luanti está no Minecraft %s: nada foi pego
+Could not write to HOME: Luanti's own textures are back = Não deu para gravar na HOME: as texturas do próprio Luanti voltaram
+%s of the %s textures Luanti can take are Minecraft %s's now = %s das %s texturas que o Luanti pode pegar agora são as do Minecraft %s
+The Minecraft copy is gone from HOME: Luanti's own textures are back = A cópia do Minecraft saiu da HOME: as texturas do próprio Luanti voltaram
+Back to the menu in %s s = Voltando ao menu em %s s
+LANG
+}
 
 # the console's font has no accents; one letter at a time, as BusyBox's sed reads a [...] of them byte by byte
 ascii() {
@@ -24,7 +65,8 @@ ascii() {
 
 # say "English text with %s" [args]: translated as Puppy is, on the screen and in the log
 say() {
-    _fmt=$(/usr/local/bin/gl-tr "$1" 2>/dev/null || printf '%s' "$1")
+    _fmt=$(translate "$1")
+    [ -n "$_fmt" ] || _fmt=$1
     shift
     _msg=$(printf "$_fmt" "$@")
     ascii "$_msg" | fold -s -w 76 | sed 's/^/  /'
@@ -42,7 +84,7 @@ finish() {
 
 fail() {
     say "$@"
-    rm -rf "$STAGE"
+    rm -rf "$STAGE" "$MC_STAGE"
     finish 1
 }
 
@@ -66,11 +108,25 @@ saved_paths() {
     printf '%s' "$_out"
 }
 
+# one setting in HOME/.minetest/minetest.conf, as luanti.sh sets them
+set_conf() {
+    mkdir -p "$MINETEST"
+    if grep -q "^$1 *=" "$MINETEST/minetest.conf" 2>/dev/null; then
+        sed -i "s|^$1 *=.*|$1 = $2|" "$MINETEST/minetest.conf"
+    else
+        echo "$1 = $2" >> "$MINETEST/minetest.conf"
+    fi
+}
+
+# the newest package in HOME/updates, when it is newer than what is installed
 apply() {
     installed=$(head -n 1 "/$VERSION" 2>/dev/null)
     say "Installed: %s" "${installed:-?}"
     pkg=$(ls "$UPDATES"/luanti-*.tar.xz 2>/dev/null | sort | tail -n 1)
-    [ -n "$pkg" ] || fail "No update in the updates folder"
+    if [ -z "$pkg" ]; then
+        say "No update in the updates folder"
+        return 1
+    fi
     version=$(version_of "$pkg")
     # packages older than the newest are of no use any more
     mkdir -p "$UPDATES/old"
@@ -79,10 +135,12 @@ apply() {
     done
     if [ "$version" = "$installed" ]; then
         mv -f "$pkg" "$UPDATES/old/"
-        fail "Already up to date"
+        say "Already up to date"
+        return 1
     elif [ -n "$installed" ] && older "$version" "$installed"; then
         mv -f "$pkg" "$UPDATES/old/"
-        fail "This update (%s) is older than the installed one: nothing was changed" "$version"
+        say "This update (%s) is older than the installed one: nothing was changed" "$version"
+        return 1
     fi
 
     say "Checking %s..." "${pkg##*/}"
@@ -127,7 +185,69 @@ apply() {
     rm -rf "/$TREE.old" "$STAGE"
     mkdir -p "$UPDATES/installed" && mv -f "$pkg" "$UPDATES/installed/"
     say "Luanti updated to %s" "$version"
-    finish 0
+}
+
+# Luanti's look from the player's own Minecraft, a copy of its .minecraft folder in HOME: the textures textures.txt
+# names ({path} = assets/minecraft/textures/<path>.png), from the client jar with the most textures among the copy's
+# versions, as mc_<path with _>.png, and the list of what came; a texture the jar lacks keeps Luanti's own. The copy
+# gone, so are they.
+minecraft() {
+    src=""
+    for d in "$HOMEDIR/minecraft" "$HOMEDIR/.minecraft"; do
+        [ -d "$d/versions" ] && src=$d && break
+    done
+    if [ -z "$src" ]; then
+        [ -d "$MC_DEST" ] || return 1
+        say "The Minecraft copy is gone from HOME: Luanti's own textures are back"
+        rm -rf "$MC_DEST" "$MC_LIST"
+        set_conf goodluck_mc_assets false
+        return 0
+    fi
+    say "Minecraft found in %s: taking its textures..." "${src##*/}"
+    jar="" best=0
+    for j in "$src"/versions/*/*.jar; do
+        [ -f "$j" ] || continue
+        n=$(unzip -l "$j" 2>/dev/null | grep -c 'assets/minecraft/textures/.*\.png$')
+        [ "$n" -gt "$best" ] && jar=$j && best=$n
+    done
+    if [ -z "$jar" ]; then
+        say "No Minecraft: Java Edition client (versions/<version>/<version>.jar) in the copy: nothing was taken"
+        return 1
+    fi
+    v=${jar%/*}
+    v=${v##*/}
+    paths=$(awk '!/^#/ { while (match($0, /\{[^}]+\}/)) { print substr($0, RSTART + 1, RLENGTH - 2); $0 = substr($0, RSTART + RLENGTH) } }' "$TABLE" | sort -u)
+    total=$(echo "$paths" | wc -l | tr -d ' ')
+    rm -rf "$MC_STAGE" && mkdir -p "$MC_STAGE/new" || fail "Could not write to HOME: Luanti's own textures are back"
+    # a member the jar lacks is just not there afterwards
+    unzip -o -q "$jar" $(echo "$paths" | sed 's|^|assets/minecraft/textures/|; s|$|.png|') -d "$MC_STAGE" 2>/dev/null
+    : > "$MC_STAGE/list"
+    for p in $paths; do
+        f=$MC_STAGE/assets/minecraft/textures/$p.png
+        [ -f "$f" ] || continue
+        mv "$f" "$MC_STAGE/new/mc_${p//\//_}.png" && echo "mc_${p//\//_}.png" >> "$MC_STAGE/list"
+    done
+    # "file" lines: the image under the Luanti name too, for what the game draws from code
+    awk '!/^#/ && $3 ~ /file/ && match($2, /\{[^}]+\}/) { print $1, substr($2, RSTART + 1, RLENGTH - 2) }' "$TABLE" |
+        while read -r to p; do
+            [ -f "$MC_STAGE/new/mc_${p//\//_}.png" ] && cp "$MC_STAGE/new/mc_${p//\//_}.png" "$MC_STAGE/new/$to"
+        done
+    got=$(wc -l < "$MC_STAGE/list" | tr -d ' ')
+    if [ "$got" -eq 0 ]; then
+        rm -rf "$MC_STAGE"
+        say "None of Luanti's textures is in Minecraft %s: nothing was taken" "$v"
+        return 1
+    fi
+    # cp, not mv: as root, mv onto HOME (FAT) would try to give each file its tmpfs owner and complain
+    if ! { rm -rf "$MC_DEST" && mkdir -p "${MC_DEST%/*}" "${MC_LIST%/*}" && cp -r "$MC_STAGE/new" "$MC_DEST" &&
+            cp "$MC_STAGE/list" "$MC_LIST"; }; then
+        rm -rf "$MC_DEST" "$MC_LIST"
+        set_conf goodluck_mc_assets false
+        fail "Could not write to HOME: Luanti's own textures are back"
+    fi
+    set_conf goodluck_mc_assets true
+    rm -rf "$MC_STAGE"
+    say "%s of the %s textures Luanti can take are Minecraft %s's now" "$got" "$total" "$v"
 }
 
 # a swap: what is installed now becomes the next undo, so undoing twice brings the update back
@@ -160,7 +280,11 @@ printf '\033[2J\033[H\033[?25l\n'
 say "Luanti update"
 printf '\n'
 case $1 in
-    apply) apply ;;
+    apply)
+        result=1
+        apply && result=0
+        minecraft && result=0
+        finish $result ;;
     undo) undo ;;
     *) fail "Usage: luanti-update.sh apply|undo" ;;
 esac
