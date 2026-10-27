@@ -1,0 +1,50 @@
+From: alvesmaicon <alvesmaiconn@gmail.com>
+Subject: [PATCH] ASoC: sun8i-codec-analog: power the headphone amplifier down at shutdown
+
+simple-audio-card has no shutdown callback, so a reboot or a power off
+resets the SoC, or cuts AVCC, with the headphone amplifier still on, and
+the headphones hear its output collapse as a loud click. With the
+amplifier kept powered between streams, that is every reboot.
+
+Give the analog codec a platform shutdown that powers the amplifier
+down the way DAPM does it: HPPAEN off, 1 s for the output to settle,
+then HPCOM and its protection off.
+
+diff --git a/sound/soc/sunxi/sun8i-codec-analog.c b/sound/soc/sunxi/sun8i-codec-analog.c
+--- a/sound/soc/sunxi/sun8i-codec-analog.c
++++ b/sound/soc/sunxi/sun8i-codec-analog.c
+@@ -914,13 +914,34 @@
+ 					       &sun8i_codec_analog_cmpnt_drv,
+ 					       NULL, 0);
+ }
++
++/*
++ * The card has no shutdown, so a reboot resets the SoC with the headphone
++ * amplifier on, and the headphones hear it collapse. Power it down the way
++ * DAPM does: the amplifier, 1 s for it to settle, then HPCOM.
++ */
++static void sun8i_codec_analog_shutdown(struct platform_device *pdev)
++{
++	struct regmap *regmap = dev_get_regmap(&pdev->dev, NULL);
+ 
++	if (!regmap)
++		return;
++
++	regmap_update_bits(regmap, SUN8I_ADDA_PAEN_HP_CTRL,
++			   BIT(SUN8I_ADDA_PAEN_HP_CTRL_HPPAEN), 0);
++	msleep(1000);
++	regmap_update_bits(regmap, SUN8I_ADDA_PAEN_HP_CTRL,
++			   (0x3 << SUN8I_ADDA_PAEN_HP_CTRL_HPCOM_FC) |
++			   BIT(SUN8I_ADDA_PAEN_HP_CTRL_COMPTEN), 0);
++}
++
+ static struct platform_driver sun8i_codec_analog_driver = {
+ 	.driver = {
+ 		.name = "sun8i-codec-analog",
+ 		.of_match_table = sun8i_codec_analog_of_match,
+ 	},
+ 	.probe = sun8i_codec_analog_probe,
++	.shutdown = sun8i_codec_analog_shutdown,
+ };
+ module_platform_driver(sun8i_codec_analog_driver);
+ 
