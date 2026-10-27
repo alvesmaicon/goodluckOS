@@ -1,0 +1,31 @@
+From: alvesmaicon <alvesmaiconn@gmail.com>
+Subject: [PATCH] ASoC: sun8i-codec-analog: let the headphone amplifier settle before powering down
+
+With headphones on the jack (direct drive, the return on HPCOM), every
+stream end popped loudly and reset the whole analog block: headphone
+volume back to 0, the PA source mutes and every other analog control
+back to its default, while the driver kept no cache to notice.
+
+DAPM powers the path down right after the headphone amplifier: the DAC,
+HPCOM and the clocks within a few ms. Spacing those steps showed that
+the reset stops once the amplifier has 300 ms to itself, and the pop
+once it has about 800 ms. Wait 1 s after it goes off.
+
+diff --git a/sound/soc/sunxi/sun8i-codec-analog.c b/sound/soc/sunxi/sun8i-codec-analog.c
+index 2024e2b..238f989 100644
+--- a/sound/soc/sunxi/sun8i-codec-analog.c
++++ b/sound/soc/sunxi/sun8i-codec-analog.c
+@@ -359,6 +359,13 @@ static int sun8i_headphone_amp_event(struct snd_soc_dapm_widget *w,
+ 		snd_soc_component_update_bits(component, SUN8I_ADDA_PAEN_HP_CTRL,
+ 					      BIT(SUN8I_ADDA_PAEN_HP_CTRL_HPPAEN),
+ 					      0x0);
++		/*
++		 * Let the amplifier's output settle before the rest of the
++		 * path (DAC, HPCOM, clocks) powers down: with headphones on
++		 * the jack, powering it all down at once pops and resets the
++		 * analog block, volumes and mutes back to their defaults.
++		 */
++		msleep(1000);
+ 	}
+ 
+ 	return 0;
