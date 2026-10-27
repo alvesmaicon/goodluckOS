@@ -34,7 +34,7 @@ An uncompromisingly fast, small, modern, and feature-rich custom firmware for A2
 - SELECT+START closes the active application cleanly (RetroArch saves first), bringing you right back to the launcher
 - FN+START+SELECT force-kills the active application
 - FN+DPAD_UP toggles a live FPS/CPU graph for monitoring in-game performance. What it shows, its style and its corner are set in System Settings -> Overlay.
-- FN+DPAD_DOWN switches the sound between the speaker and the headphones only (the console can't detect the headphone jack)
+- FN+DPAD_DOWN switches the sound between the speaker and the headphones only (the console can't detect the headphone jack). On the headphones the amplifier stays on until an hour without sound, so they don't hear it powering up and down around every sound
 - If the screen is on, the LEDs are off. Nothing blinding you while you're playing in the dark
 - Comes stock with Chocolate Doom, ready to play
 - Second SD card (TF-2 slot) for more games, with its own launcher tab
