@@ -75,7 +75,7 @@ Card layout (A33):
 - HOME's "Volume was not properly unmounted" on every boot is an old power cut, not the last shutdown: Linux never clears a FAT dirty flag it found at mount, only `fsck.fat -a` does (with HOME unmounted).
 - Never leave backups (`*.orig`, `*.bak`) in `/etc/init.d`: rcS/rcK run every `S??*` file there.
 - A new rootfs on a card with an older HOME: appd needs `HOME/.local/launcher.sh` (contains `/usr/bin/puppy`). Without it the console hangs at "Starting system...".
-- Serial: ~10 KB/s. After a cable reconnect the console sits at a login prompt (`dev/glserial.py` logs in). The console has no `pkill`/`pgrep`. `/tmp` and `/var/log` are lost on reboot (the blackbox in `/var/lib/blackbox` keeps the kernel log).
+- Serial: ~40 KB/s (a 6 MB kernel in ~2.5 min); `glserial.py send` prints a line every 10 % with the time left. Run long sends under Monitor so the owner sees them move. A running binary can't be overwritten ("Text file busy"): send to `/tmp` and `mv`. After a cable reconnect the console sits at a login prompt (`dev/glserial.py` logs in). The console has no `pkill`/`pgrep`. `/tmp` and `/var/log` are lost on reboot (the blackbox in `/var/lib/blackbox` keeps the kernel log).
 - Git Bash on Windows rewrites `/tmp/...` arguments into Windows paths: set `MSYS_NO_PATHCONV=1`.
 - MTP is ~10 MB/s; the card reader is 40-80 MB/s. Use the reader for big copies (ROMs).
 - The overlay over games is the Gallium HUD patched in Mesa (`rootfs/board/my-device/patches/mesa3d`): a feedback panel (`/dev/shm/hud-osd`) and a status bar (`GALLIUM_HUD_STATUS`, set by `etc/profile.d/gallium_hud.sh`). FN+UP sends signal 34 to the running app.

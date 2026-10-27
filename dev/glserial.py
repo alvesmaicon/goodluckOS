@@ -89,12 +89,18 @@ def cmd_send(c, args):
     c.read_for(1, PROMPT)
     chunk, n = 3000, (len(b64) + 2999) // 3000
     print(f"sending {len(data):,} bytes in {n} blocks", flush=True)
+    start, shown = time.time(), -1
     for i in range(n):
         c.write(f"printf '%s' '{b64[i * chunk:(i + 1) * chunk]}' >> {remote}.b64\n")
         if not PROMPT.search(c.read_for(5, PROMPT)):
             sys.exit(f"the console stopped answering at block {i + 1}/{n}")
-        if i % 50 == 0:
-            print(f"block {i + 1}/{n}", flush=True)
+        pct = (i + 1) * 100 // n
+        if pct // 10 > shown:   # a line every 10 %, with the time left
+            shown = pct // 10
+            left = int((time.time() - start) / (i + 1) * (n - i - 1))
+            sent = min(len(data), (i + 1) * chunk * 3 // 4)
+            print(f"{pct:3d}% ({sent / 1e6:.1f} of {len(data) / 1e6:.1f} MB), ~{left // 60}m{left % 60:02d}s left", flush=True)
+    print("decoding on the console and checking the SHA-256", flush=True)
     out = c.run(f"base64 -d {remote}.b64 > {remote} && rm {remote}.b64 && sha256sum {remote}")
     local = hashlib.sha256(data).hexdigest()
     print(out.strip())

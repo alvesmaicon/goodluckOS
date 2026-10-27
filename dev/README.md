@@ -68,7 +68,7 @@ The console's USB-C data port is a composite gadget: a serial shell (ACM, `ttyGS
 dev/glserial.py cmd "tar -xzf /home/player/deploy.tar.gz -C / && rm /home/player/deploy.tar.gz && sync"
 dev/glserial.py cmd "cp /home/player/libgallium-26.1.8.so /usr/lib/ && sync"
 dev/glserial.py cmd "dd if=/home/player/android_boot_a33.img of=/dev/mmcblk0 bs=512 seek=172032 conv=fsync"
-dev/glserial.py send dev/out/puppy.armhf /usr/bin/puppy   # ~1 min per 300 KB
+dev/glserial.py send dev/out/puppy.armhf /tmp/puppy.new   # ~40 KB/s (a kernel in ~2.5 min), a line every 10 % with the time left
 dev/glserial.py get /home/player/logs/templog.csv templog.csv
 dev/glserial.py get --cmd "dmesg" dmesg.txt
 ```
