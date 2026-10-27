@@ -77,6 +77,10 @@ Then reboot (`reboot`), or close and reopen the app. A new `appctl` needs the re
 
 **The whole rootfs or the kernel with the card in the reader:** `dev/sdcard-mac.sh <diskN> boot|rootfs <file>` writes only that region. It backs the region up first and checks the write by reading it back. It refuses the daily card unless you pass `--daily-card`. Before writing a new rootfs to a card with an older HOME, check what the new rootfs expects in HOME (e.g. appd needs `HOME/.local/launcher.sh`).
 
+## Audio test
+
+`dev/audio-test.sh beeps` plays five half-second tones on the console with the gaps mixed: 8 s, when the DACs have powered down, and 2 s, when they are still on. Each step is labeled on the screen and the time each tone takes is printed (~0.65 s; ~1.25 s means the amplifier had to power up). Listen on the headphones (`--speaker` for the speaker) and note which tones click or hum without knowing the gaps; the printed order tells afterwards. `dev/audio-test.sh reboot` reboots and waits for the console, to hear the power down. This is how the pops of patches 0011-0016 were found and checked; keep the steps few, the listener loses count past six.
+
 ## Luanti packages
 
 Luanti lives on the `feat/luanti*` branches. A card whose image has Update Luanti takes a new Luanti as one file, `luanti-<date>-<time>-<commit>.tar.xz`, copied to `HOME/updates`; [docs/ports](../docs/ports/README.md#updating-luanti) describes the console side. A package holds what the commit's image would: the engine, the game with its mods, the overlay's Luanti files (`usr/share/luanti`, `luanti.conf`, `luanti*.sh`) and the engine's translations that the image keeps.
