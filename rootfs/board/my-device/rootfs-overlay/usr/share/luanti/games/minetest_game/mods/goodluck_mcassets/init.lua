@@ -45,11 +45,17 @@ local function swap(s)
 	end))
 end
 
--- the inventory's window as a 9-slice: the four corners of Minecraft's 176x166 window in a 32x32 image
+-- the inventory's window as a 9-slice in a 32x32 image: Minecraft's chest window, whose title band is flat beyond
+-- the border, gives the upper corners, the top and side edges and the centre; the lower pieces are the upper ones
+-- upside down
 local function window(img)
-	local function corner(x, y) return ("[combine\\:16x16\\:%d,%d=%s"):format(-x, -y, img) end
-	return ("[combine:32x32:0,0=%s:16,0=%s:0,16=%s:16,16=%s"):format(
-		corner(0, 0), corner(160, 0), corner(0, 150), corner(160, 150))
+	local function piece(w, h, x, y, flip)
+		return ("[combine\\:%dx%d\\:%d,%d=%s%s"):format(w, h, -x, -y, img, flip and "\\^[transformFY" or "")
+	end
+	return ("[combine:32x32:0,0=%s:22,0=%s:0,22=%s:22,22=%s:10,0=%s:10,22=%s:0,10=%s:22,10=%s:10,10=%s"):format(
+		piece(10, 10, 0, 0), piece(10, 10, 166, 0), piece(10, 10, 0, 0, true), piece(10, 10, 166, 0, true),
+		piece(12, 10, 60, 0), piece(12, 10, 60, 0, true), piece(10, 12, 0, 4), piece(10, 12, 166, 4),
+		piece(12, 12, 60, 4))
 end
 
 -- Minecraft's hotbar holds 9 slots of 20 px in 182: cut to the slots the player has, the right edge kept
@@ -59,17 +65,25 @@ local function hotbar(img, slots)
 	return ("[combine:%dx22:%d,0=%s:0,0=[combine\\:%dx22\\:0,0=%s"):format(w, w - 182, img, w - 1, img)
 end
 
--- every image a formspec names, the window and the slot colours with it
+-- every image a formspec names, the window and the slot colours with it; the window's labels dark, as Minecraft's
 local LISTCOLORS = "listcolors[#00000069;#5A5A5A;#141318;#30434C;#FFF]"
+local WINDOWS = {["gui_formbg.png"] = true, ["x_enchanting_gui_formbg.png"] = true}
 local function formspec(fs)
 	if type(fs) ~= "string" then return fs end
+	local windowed = false
 	-- a name with modifiers is escaped as the formspec's own text, so that the escaping inside [combine survives
 	fs = fs:gsub("[%w_%-%.]+%.png", function(t)
 		local m = map[t]
-		if t == "gui_formbg.png" and m then m = window(m) end
+		if WINDOWS[t] and m then
+			m = window(m)
+			windowed = true
+		end
 		return m and m:find("[%^%[]") and core.formspec_escape(m) or m
 	end)
-	if map["gui_formbg.png"] then fs = fs:gsub(LISTCOLORS:gsub("%p", "%%%0"), "listcolors[#8b8b8b;#c6c6c6;#373737;#100010f0;#fff]") end
+	if windowed then
+		fs = fs:gsub(LISTCOLORS:gsub("%p", "%%%0"), "listcolors[#8b8b8b;#c6c6c6;#373737;#100010f0;#fff]")
+		fs = fs:gsub("^([^%]]*%])", "%1style_type[label;textcolor=#404040]", 1)
+	end
 	return fs
 end
 

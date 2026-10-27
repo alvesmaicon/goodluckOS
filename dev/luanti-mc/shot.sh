@@ -19,7 +19,7 @@ printf 'fullscreen = false\nviewing_range = 60\ngoodluck_mc_assets = %s\n' \
     "$([ "$NAME" != none ] && echo true || echo false)" >> "$L/minetest.conf"
 if [ -n "${WORLD:-}" ]; then printf 'fixed_map_seed = %s\n' "$WORLD" >> "$L/minetest.conf"
 else printf 'mg_name = singlenode\nenable_fog = false\nshowcase_first = %s\n' "${FIRST:-}" >> "$L/minetest.conf"; fi
-printf 'gameid = mcdump\nbackend = sqlite3\n' > "$L/worlds/show/world.mt"
+printf 'gameid = mcdump\nbackend = sqlite3\ncreative_mode = %s\n' "$([ -n "${CREATIVE:-}" ] && echo true || echo false)" > "$L/worlds/show/world.mt"
 Xvfb :99 -screen 0 640x480x24 -nolisten tcp >/dev/null 2>&1 & X=$!
 sleep 1
 (cd "$L" && DISPLAY=:99 SDL_VIDEODRIVER=x11 MESA_GLES_VERSION_OVERRIDE=2.0 LIBGL_ALWAYS_SOFTWARE=1 \
