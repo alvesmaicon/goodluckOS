@@ -36,13 +36,69 @@ end
 local function swap(s)
 	if type(s) ~= "string" or s == "" then return s end
 	if map[s] then return map[s] end
-	-- [combine takes its own ":" and "^" escaping: only plain names go in there
+	-- inside [combine, a name with modifiers goes in with its ":" and "^" escaped
 	local plain = s:find("[combine", 1, true)
 	return (s:gsub("[%w_%-%.]+%.png", function(t)
 		local m = map[t]
-		if m and m:find("^", 1, true) then return not plain and "(" .. m .. ")" or nil end
+		if m and m:find("[%^:]") then return plain and m:gsub("[%^:]", "\\%0") or "(" .. m .. ")" end
 		return m
 	end))
+end
+
+-- the inventory's window as a 9-slice: the four corners of Minecraft's 176x166 window in a 32x32 image
+local function window(img)
+	local function corner(x, y) return ("[combine\\:16x16\\:%d,%d=%s"):format(-x, -y, img) end
+	return ("[combine:32x32:0,0=%s:16,0=%s:0,16=%s:16,16=%s"):format(
+		corner(0, 0), corner(160, 0), corner(0, 150), corner(160, 150))
+end
+
+-- Minecraft's hotbar holds 9 slots of 20 px in 182: cut to the slots the player has, the right edge kept
+local function hotbar(img, slots)
+	if slots >= 9 then return img end
+	local w = 2 + 20 * slots
+	return ("[combine:%dx22:%d,0=%s:0,0=[combine\\:%dx22\\:0,0=%s"):format(w, w - 182, img, w - 1, img)
+end
+
+-- every image a formspec names, the window and the slot colours with it
+local LISTCOLORS = "listcolors[#00000069;#5A5A5A;#141318;#30434C;#FFF]"
+local function formspec(fs)
+	if type(fs) ~= "string" then return fs end
+	-- a name with modifiers is escaped as the formspec's own text, so that the escaping inside [combine survives
+	fs = fs:gsub("[%w_%-%.]+%.png", function(t)
+		local m = map[t]
+		if t == "gui_formbg.png" and m then m = window(m) end
+		return m and m:find("[%^%[]") and core.formspec_escape(m) or m
+	end)
+	if map["gui_formbg.png"] then fs = fs:gsub(LISTCOLORS:gsub("%p", "%%%0"), "listcolors[#8b8b8b;#c6c6c6;#373737;#100010f0;#fff]") end
+	return fs
+end
+
+local hud_replace_builtin = core.hud_replace_builtin
+core.hud_replace_builtin = function(name, def)
+	if type(def) == "table" then
+		def = table.copy(def)
+		def.text, def.text2 = swap(def.text), swap(def.text2)
+	end
+	return hud_replace_builtin(name, def)
+end
+
+local show_formspec = core.show_formspec
+core.show_formspec = function(player, name, fs) return show_formspec(player, name, formspec(fs)) end
+
+for _, f in ipairs({"add_particle", "add_particlespawner"}) do
+	local add = core[f]
+	core[f] = function(def, ...)
+		if type(def) == "table" and def.texture then
+			def = table.copy(def)
+			if type(def.texture) == "table" then
+				def.texture = table.copy(def.texture)
+				def.texture.name = swap(def.texture.name)
+			else
+				def.texture = swap(def.texture)
+			end
+		end
+		return add(def, ...)
+	end
 end
 
 local function tiles(list)
@@ -121,5 +177,43 @@ core.register_on_joinplayer(function(player)
 		end
 		return set_properties(self, props)
 	end
+	-- HUD elements, the hotbar and the inventory, from any mod, whenever they are set
+	local hud_add, hud_change = methods.hud_add, methods.hud_change
+	methods.hud_add = function(self, def)
+		if type(def) == "table" then
+			def = table.copy(def)
+			def.text, def.text2 = swap(def.text), swap(def.text2)
+		end
+		return hud_add(self, def)
+	end
+	methods.hud_change = function(self, id, stat, value)
+		if stat == "text" or stat == "text2" then value = swap(value) end
+		return hud_change(self, id, stat, value)
+	end
+	local set_hotbar, set_selected = methods.hud_set_hotbar_image, methods.hud_set_hotbar_selected_image
+	methods.hud_set_hotbar_image = function(self, img)
+		local m = swap(img)
+		if m ~= img then m = hotbar(m, self:hud_get_hotbar_itemcount()) end
+		return set_hotbar(self, m)
+	end
+	methods.hud_set_hotbar_selected_image = function(self, img) return set_selected(self, swap(img)) end
+	local set_inventory_formspec = methods.set_inventory_formspec
+	methods.set_inventory_formspec = function(self, fs) return set_inventory_formspec(self, formspec(fs)) end
 	methods.goodluck_mcassets = true
+end)
+
+-- what the other mods set as the player joined, through the methods above once every join callback ran: the
+-- hotbar's images, the inventory and the HUD elements (the first player's were set before the methods were in place)
+core.register_on_joinplayer(function(player)
+	core.after(0, function()
+		if not player:is_valid() then return end
+		player:hud_set_hotbar_image(player:hud_get_hotbar_image())
+		player:hud_set_hotbar_selected_image(player:hud_get_hotbar_selected_image())
+		player:set_inventory_formspec(player:get_inventory_formspec())
+		for id, def in pairs(player:hud_get_all() or {}) do
+			for _, f in ipairs({"text", "text2"}) do
+				if type(def[f]) == "string" and swap(def[f]) ~= def[f] then player:hud_change(id, f, def[f]) end
+			end
+		end
+	end)
 end)

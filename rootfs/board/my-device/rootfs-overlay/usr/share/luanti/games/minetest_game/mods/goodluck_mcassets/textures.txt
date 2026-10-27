@@ -475,3 +475,27 @@ mobs_bunny_inv.png	{item/rabbit_spawn_egg}
 mobs_kitten_inv.png	{item/cat_spawn_egg}
 mobs_bee_inv.png	{item/bee_spawn_egg}
 mobs_panda_inv.png	{item/panda_spawn_egg}
+
+# Interface. The HUD's bars (swapped in hud_replace_builtin, hud_add and hud_change), the hotbar (cut to the slots it
+# has), the inventory's slots and window (swapped in every formspec, the window as a 9-slice of Minecraft's), the sun,
+# the moon and the crosshair (the engine's own files, so "file"), and particles
+heart.png	{gui/sprites/hud/heart/container}^{gui/sprites/hud/heart/full}
+heart_gone.png	{gui/sprites/hud/heart/container}
+bubble.png	{gui/sprites/hud/air}
+bubble_gone.png	{gui/sprites/hud/air_empty}
+stamina_hud_fg.png	{gui/sprites/hud/food_empty}^{gui/sprites/hud/food_full}
+stamina_hud_bg.png	{gui/sprites/hud/food_empty}
+stamina_hud_poison.png	{gui/sprites/hud/food_empty_hunger}^{gui/sprites/hud/food_full_hunger}
+goodluck_armor.png	{gui/sprites/hud/armor_empty}^{gui/sprites/hud/armor_full}
+goodluck_armor_bg.png	{gui/sprites/hud/armor_empty}
+goodluck_xp_bar_bg.png	{gui/sprites/hud/experience_bar_background}^[resize:454x10
+goodluck_xp_bar.png	{gui/sprites/hud/experience_bar_progress}^[resize:454x10
+gui_hotbar.png	{gui/sprites/hud/hotbar}
+gui_hotbar_selected.png	{gui/sprites/hud/hotbar_selection}
+gui_hb_bg.png	{gui/sprites/container/slot}
+gui_formbg.png	{gui/container/inventory}
+sun.png	{environment/celestial/sun}	file
+moon.png	{environment/celestial/moon/full_moon}	file
+crosshair.png	{gui/sprites/hud/crosshair}	file
+tnt_blast.png	{particle/explosion_0}
+mobs_heart_particle.png	{particle/heart}

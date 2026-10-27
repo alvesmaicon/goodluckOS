@@ -36,11 +36,20 @@ elif [ -n "${WORLD:-}" ]; then
         DISPLAY=:99 xwd -root -silent | convert xwd:- "$OUT/shot-$NAME-world$v.png"; echo "dev/out/luanti-mc/shot-$NAME-world$v.png"
         DISPLAY=:99 xdotool mousemove_relative -- 200 0
     done
+    if [ -n "${INVENTORY:-}" ]; then
+        DISPLAY=:99 xdotool key i; sleep 2
+        DISPLAY=:99 xwd -root -silent | convert xwd:- "$OUT/shot-$NAME-inventory.png"; echo "dev/out/luanti-mc/shot-$NAME-inventory.png"
+    fi
 else
     for v in floor wall items close; do
         for _ in $(seq 120); do grep -q "showcase: $v" "$OUT/shot-$NAME.log" && break; sleep 1; done
         DISPLAY=:99 xwd -root -silent | convert xwd:- "$OUT/shot-$NAME-$v.png"; echo "dev/out/luanti-mc/shot-$NAME-$v.png"
     done
+    # INVENTORY=1: the inventory open too
+    if [ -n "${INVENTORY:-}" ]; then
+        DISPLAY=:99 xdotool key i; sleep 2
+        DISPLAY=:99 xwd -root -silent | convert xwd:- "$OUT/shot-$NAME-inventory.png"; echo "dev/out/luanti-mc/shot-$NAME-inventory.png"
+    fi
 fi
 kill $P $X 2>/dev/null || true
 grep -E "ERROR|WARNING" "$OUT/shot-$NAME.log" | grep -v "backend" | head -20 || true
