@@ -19,6 +19,8 @@ NEEDED="usr/bin/luanti $TREE/builtin/init.lua $TREE/games/minetest_game/game.con
 MINETEST=$HOMEDIR/.minetest
 TABLE=/$TREE/games/minetest_game/mods/goodluck_mcassets/textures.txt
 SOUNDS=/$TREE/games/minetest_game/mods/goodluck_mcassets/sounds.txt
+MUSIC=/$TREE/games/minetest_game/mods/goodluck_mcassets/music.txt
+MC_MUSIC=$MINETEST/music
 MC_DEST=$MINETEST/textures/server/minecraft
 MC_LIST=$MINETEST/mod_data/goodluck_mcassets/imported.txt
 MC_STAGE=/tmp/luanti-minecraft
@@ -53,6 +55,8 @@ None of Luanti's textures is in Minecraft %s: nothing was taken = Nenhuma textur
 Could not write to HOME: Luanti's own textures are back = Não deu para gravar na HOME: as texturas do próprio Luanti voltaram
 %s of the %s textures Luanti can take are Minecraft %s's now = %s das %s texturas que o Luanti pode pegar agora são as do Minecraft %s
 %s sounds came from Minecraft %s too = %s sons também vieram do Minecraft %s
+Copying the music of Minecraft %s (%s tracks)... = Copiando as músicas do Minecraft %s (%s faixas)...
+%s music tracks are on the card = %s músicas estão no cartão
 The copy has no assets folder: Luanti keeps its own sounds = A cópia não tem a pasta assets: o Luanti fica com os sons dele
 The Minecraft copy is gone from HOME: Luanti's own textures are back = A cópia do Minecraft saiu da HOME: as texturas do próprio Luanti voltaram
 Back to the menu in %s s = Voltando ao menu em %s s
@@ -194,7 +198,9 @@ apply() {
 # textures.txt names ({path} = assets/minecraft/textures/<path>.png), from the client jar with the most textures among
 # the copy's versions, as mc_<path with _>.png, and the list of what came; a texture the jar lacks keeps Luanti's own.
 # Then the sounds sounds.txt names, found by hash in the asset index of the jar's version (the newest index when that
-# is not known), each under the game's file names so that it plays in place of the game's. The copy gone, so are they.
+# is not known), each under the game's file names so that it plays in place of the game's, and the music music.txt
+# names into HOME/.minetest/music/<set>, where the engine plays it (a track already there, of the same size, stays).
+# The copy gone, so are they.
 minecraft() {
     src=""
     for d in "$HOMEDIR/minecraft" "$HOMEDIR/.minecraft"; do
@@ -203,7 +209,7 @@ minecraft() {
     if [ -z "$src" ]; then
         [ -d "$MC_DEST" ] || return 1
         say "The Minecraft copy is gone from HOME: Luanti's own textures are back"
-        rm -rf "$MC_DEST" "$MC_LIST"
+        rm -rf "$MC_DEST" "$MC_LIST" "$MC_MUSIC"
         set_conf goodluck_mc_assets false
         return 0
     fi
@@ -262,7 +268,7 @@ minecraft() {
     fi
     # the index, one object a line: "minecraft/sounds/dig/stone1.ogg":{"hash":"4ec8...","size":7434
     tr -d ' \n\r' < "$src/assets/indexes/$index.json" | tr '}' '\n' |
-        awk -F'"' '$2 ~ /^minecraft\/sounds\// { print substr($2, 18), $6 }' > "$MC_STAGE/sounds.map"
+        awk -F'"' '$2 ~ /^minecraft\/sounds\// { print substr($2, 18), $6, substr($9, 2) }' > "$MC_STAGE/sounds.map"
     find "/$TREE/games/minetest_game/mods" -name '*.ogg' | sed 's|.*/||' | sort > "$MC_STAGE/sounds.have"
     # for each line of sounds.txt: the game's file names of that sound, then name.<n>.ogg for what is left, each with
     # one of Minecraft's objects (xx/hash) in turn
@@ -287,8 +293,27 @@ minecraft() {
     while read -r obj name; do
         cp "$src/assets/objects/$obj" "$MC_DEST/$name" 2>/dev/null && echo "$name" >> "$MC_LIST" && sgot=$((sgot + 1))
     done < "$MC_STAGE/sounds.copy"
-    rm -rf "$MC_STAGE"
     say "%s sounds came from Minecraft %s too" "$sgot" "$v"
+
+    # the index's size tells a track already copied: 250 MB would take a while every time
+    awk 'FNR == 1 { f++ }
+        f == 1 { hash[$1] = $2; size[$1] = $3; next }
+        /^#/ || NF < 2 { next }
+        { for (i = 2; i <= NF; i++) { n = "music/" $i ".ogg"; if (n in hash) { h = hash[n]; m = $i; sub(/.*\//, "", m);
+            print substr(h, 1, 2) "/" h, size[n], $1 "/" m ".ogg" } } }' "$MC_STAGE/sounds.map" "$MUSIC" > "$MC_STAGE/music.copy"
+    total=$(wc -l < "$MC_STAGE/music.copy" | tr -d ' ')
+    if [ "$total" -gt 0 ]; then
+        say "Copying the music of Minecraft %s (%s tracks)..." "$v" "$total"
+        mgot=0
+        while read -r obj size name; do
+            mkdir -p "$MC_MUSIC/${name%/*}"
+            [ -f "$MC_MUSIC/$name" ] && [ "$(wc -c < "$MC_MUSIC/$name" | tr -d ' ')" = "$size" ] ||
+                cp "$src/assets/objects/$obj" "$MC_MUSIC/$name" 2>/dev/null || continue
+            mgot=$((mgot + 1))
+        done < "$MC_STAGE/music.copy"
+        say "%s music tracks are on the card" "$mgot"
+    fi
+    rm -rf "$MC_STAGE"
 }
 
 # a swap: what is installed now becomes the next undo, so undoing twice brings the update back

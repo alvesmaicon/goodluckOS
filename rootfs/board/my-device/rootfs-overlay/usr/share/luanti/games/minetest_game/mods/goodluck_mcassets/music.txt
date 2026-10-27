@@ -1,0 +1,8 @@
+# set   Minecraft tracks (minecraft/sounds/music/<name>.ogg, found by the asset index), as its sounds.json groups them
+# Update Luanti (luanti-update.sh) copies them to HOME/.minetest/music/<set>/, where the engine plays them as
+# Minecraft does (music_volume): "game" in a survival game, "creative" and "game" in a creative one, "water" with the
+# head under water, "menu" on the main menu.
+game	game/a_familiar_room game/below_and_above game/broken_clocks game/clark game/comforting_memories game/danny game/dry_hands game/ebb game/featherfall game/fireflies game/floating_dream game/haggstrom game/home game/key game/komorebi game/left_to_bloom game/lilypad game/living_mice game/memories game/mice_on_venus game/minecraft game/nightly game/one_more_day game/os_piano game/oxygene game/puzzlebox game/shores game/subwoofer_lullaby game/sweden game/watcher game/wet_hands game/yakusoku
+creative	game/creative/aria_math game/creative/biome_fest game/creative/blind_spots game/creative/dreiton game/creative/haunt_muskie game/creative/taswell
+water	game/water/axolotl game/water/dragon_fish game/water/shuniji
+menu	game/ebb game/home game/memories game/nightly game/shores menu/beginning_2 menu/floating_trees menu/moog_city_2 menu/mutation

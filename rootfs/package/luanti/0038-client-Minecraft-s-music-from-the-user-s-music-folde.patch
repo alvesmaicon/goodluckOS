@@ -1,0 +1,350 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Tue, 27 Oct 2026 11:29:56 -0300
+Subject: [PATCH 38/38] client: Minecraft's music from the user's music folder
+
+A MusicPlayer plays the tracks of <path_user>/music/<set>/*.ogg as
+Minecraft's MusicManager plays its music: one at a time, the first 5 s
+after the program starts (its 100 ticks), then a random pause of 10 to
+20 minutes in a game (12000 to 24000 ticks) and of 1 to 30 s on the
+menu (20 to 600 ticks), never the same track twice in a row, at
+music_volume (a setting of its own, as Minecraft's slider, on top of
+sound_volume). The set is "menu" on the main menu, "creative" (which
+also plays "game") with the creative privilege, "water" with the camera
+in a liquid and "game" otherwise, as Minecraft picks its creative and
+under water music. The delay outlives the menu and the games, as
+Minecraft's does, and a situation with a shorter longest pause cuts it
+down, so a game's track comes soon after the menu's; a track cut short
+by the end of its sound manager (leaving a game, entering one) is
+followed within half a second, as Minecraft's menu music replaces the
+game's.
+
+The tracks are streamed from the file (loadSoundFile) and never go
+through the server's media: Minecraft's 66 game tracks are 250 MB, and
+the client keeps every media file in memory on a console with 512 MB.
+The end of a track is known from its length (ov_time_total) rather than
+from the sound manager's removed sounds, which the client's own
+bookkeeping consumes. Nothing plays without the folder, and nothing
+ships with the engine.
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+
+diff --git a/builtin/settingtypes.txt b/builtin/settingtypes.txt
+index 9588f7348..50f0f4ed9 100644
+--- a/builtin/settingtypes.txt
++++ b/builtin/settingtypes.txt
+@@ -890,6 +890,10 @@ sound_volume_unfocused (Volume when unfocused) float 0.3 0.0 1.0
+ #    pause menu.
+ mute_sound (Mute sound) bool false
+ 
++#    Volume of the music in <user path>/music (menu, game, creative and water), on top of the volume of all sounds.
++#    0 plays none.
++music_volume (Music volume) float 1.0 0.0 1.0
++
+ [*User Interfaces]
+ 
+ #    Set the language. By default, the system language is used.
+diff --git a/src/client/CMakeLists.txt b/src/client/CMakeLists.txt
+index 2f5c0edf6..e705337f7 100644
+--- a/src/client/CMakeLists.txt
++++ b/src/client/CMakeLists.txt
+@@ -56,6 +56,7 @@ set(client_SRCS
+ 	${CMAKE_CURRENT_SOURCE_DIR}/gameui.cpp
+ 	${CMAKE_CURRENT_SOURCE_DIR}/game_formspec.cpp
+ 	${CMAKE_CURRENT_SOURCE_DIR}/guiscalingfilter.cpp
++	${CMAKE_CURRENT_SOURCE_DIR}/music.cpp
+ 	${CMAKE_CURRENT_SOURCE_DIR}/hud.cpp
+ 	${CMAKE_CURRENT_SOURCE_DIR}/imagefilters.cpp
+ 	${CMAKE_CURRENT_SOURCE_DIR}/inputhandler.cpp
+diff --git a/src/client/game.cpp b/src/client/game.cpp
+index 47ec24d63..81b2f54ea 100644
+--- a/src/client/game.cpp
++++ b/src/client/game.cpp
+@@ -13,6 +13,7 @@
+ #include "client/keys.h"
+ #include "client/mapblock_mesh.h"
+ #include "client/sound.h"
++#include "client/music.h"
+ #include "clientmap.h"
+ #include "clientmedia.h" // For clientMediaUpdateCacheCopy
+ #include "config.h"
+@@ -396,6 +397,7 @@ Game::Game() :
+ Game::~Game()
+ {
+ 	delete client;
++	music.reset();
+ 	soundmaker.reset();
+ 	sound_manager.reset();
+ 
+@@ -661,6 +663,7 @@ void Game::shutdown()
+ 
+ 	delete client;
+ 	client = nullptr;
++	music.reset();
+ 	soundmaker.reset();
+ 	sound_manager.reset();
+ 
+@@ -748,6 +751,7 @@ bool Game::initSound()
+ 
+ 	soundmaker = std::make_unique<SoundMaker>(sound_manager.get(), nodedef_manager);
+ 	soundmaker->registerReceiver(eventmgr);
++	music = std::make_unique<MusicPlayer>(sound_manager.get());
+ 
+ 	return true;
+ }
+@@ -2775,6 +2779,11 @@ void Game::updateSound(f32 dtime)
+ 	MapNode n = map.getNode(player->getFootstepNodePos());
+ 	soundmaker->update(dtime, player->makes_footstep_sound,
+ 			nodedef_manager->get(n).sound_footstep);
++
++	// Minecraft's music: its creative set with the creative privilege, its underwater set with the head in a liquid
++	MapNode cam_node = map.getNode(floatToInt(camera->getPosition(), BS));
++	music->step(dtime, nodedef_manager->get(cam_node).isLiquid() ? "water" :
++			client->checkPrivilege("creative") ? "creative" : "game");
+ }
+ 
+ 
+diff --git a/src/client/game_internal.h b/src/client/game_internal.h
+index 7f26684ae..2b73e1772 100644
+--- a/src/client/game_internal.h
++++ b/src/client/game_internal.h
+@@ -28,6 +28,7 @@
+ class Game;
+ class GameUI;
+ class SoundMaker;
++class MusicPlayer;
+ class Server;
+ class NodeMetadata;
+ class ProfilerGraph;
+@@ -321,6 +322,7 @@ class Game {
+ 
+ 	std::unique_ptr<ISoundManager> sound_manager;
+ 	std::unique_ptr<SoundMaker> soundmaker;
++	std::unique_ptr<MusicPlayer> music;
+ 
+ 	ChatBackend *chat_backend = nullptr;
+ 	CaptureLogOutput m_chat_log_buf;
+diff --git a/src/client/music.cpp b/src/client/music.cpp
+new file mode 100644
+index 000000000..62d748064
+--- /dev/null
++++ b/src/client/music.cpp
+@@ -0,0 +1,107 @@
++// Luanti
++// SPDX-License-Identifier: LGPL-2.1-or-later
++// Copyright (C) 2026 Maicon Alves
++
++#include "music.h"
++#include <algorithm>
++#include "config.h"
++#include "sound.h"
++#include "sound_spec.h"
++#include "filesys.h"
++#include "porting.h"
++#include "settings.h"
++#include "util/numeric.h"
++#include "util/string.h"
++#include "log.h"
++#if USE_SOUND
++#include <vorbis/vorbisfile.h>
++#endif
++
++// Minecraft's MusicManager: 100 ticks to the first track, then a random pause after each; the delay outlives the
++// menu and the games, and a situation with a shorter longest pause cuts it down
++static f32 g_music_delay = 5.0f;
++static std::string g_music_last;
++
++static std::vector<std::string> tracks(const std::string &set)
++{
++	std::vector<std::string> out;
++	auto add = [&](const std::string &sub) {
++		std::string dir = porting::path_user + DIR_DELIM "music" DIR_DELIM + sub;
++		for (const auto &node : fs::GetDirListing(dir))
++			if (!node.dir && str_ends_with(node.name, std::string(".ogg")))
++				out.push_back(dir + DIR_DELIM + node.name);
++	};
++	add(set);
++	if (set == "creative")
++		add("game");
++	return out;
++}
++
++static f32 duration(const std::string &path)
++{
++#if USE_SOUND
++	OggVorbis_File vf;
++	if (ov_fopen(path.c_str(), &vf) == 0) {
++		f32 seconds = ov_time_total(&vf, -1);
++		ov_clear(&vf);
++		if (seconds > 0.0f)
++			return seconds;
++	}
++#endif
++	return 180.0f;
++}
++
++MusicPlayer::~MusicPlayer()
++{
++	if (m_playing)
++		g_music_delay = myrand_range(0.0f, 0.5f);
++}
++
++void MusicPlayer::step(f32 dtime, const std::string &set)
++{
++	const bool menu = set == "menu";
++	const f32 min_delay = menu ? 1.0f : 600.0f, max_delay = menu ? 30.0f : 1200.0f;
++	if (set != m_set) {
++		m_set = set;
++		m_files = tracks(set);
++	}
++	if (m_playing) {
++		m_left -= dtime;
++		if (m_left > 0.0f)
++			return;
++		m_playing = false;
++		g_music_delay = myrand_range(min_delay, max_delay);
++	}
++	g_music_delay = std::min(g_music_delay, max_delay) - dtime;
++	if (g_music_delay > 0.0f || m_files.empty())
++		return;
++	f32 gain = g_settings->getFloat("music_volume");
++	if (gain <= 0.0f) {
++		g_music_delay = 10.0f;
++		return;
++	}
++	play(gain);
++}
++
++void MusicPlayer::play(f32 gain)
++{
++	std::string path = m_files[myrand_range(0, (int)m_files.size() - 1)];
++	if (path == g_music_last && m_files.size() > 1)
++		path = m_files[(myrand_range(0, (int)m_files.size() - 2) + 1 +
++				(&*std::find(m_files.begin(), m_files.end(), path) - &m_files[0])) % m_files.size()];
++	if (m_loaded.insert(path).second) {
++		if (!m_sound->loadSoundFile(path, path)) {
++			m_loaded.erase(path);
++			g_music_delay = 10.0f;
++			return;
++		}
++		m_sound->addSoundToGroup(path, path);
++	}
++	SoundSpec spec(path, gain);
++	spec.use_local_fallback = false;
++	m_sound->playSound(m_sound->allocateId(1), spec);
++	m_left = duration(path);
++	infostream << "MusicPlayer: " << path << " (" << m_left << " s)" << std::endl;
++	m_playing = true;
++	g_music_last = path;
++}
+diff --git a/src/client/music.h b/src/client/music.h
+new file mode 100644
+index 000000000..124379687
+--- /dev/null
++++ b/src/client/music.h
+@@ -0,0 +1,35 @@
++// Luanti
++// SPDX-License-Identifier: LGPL-2.1-or-later
++// Copyright (C) 2026 Maicon Alves
++
++#pragma once
++
++#include <memory>
++#include <set>
++#include <string>
++#include <vector>
++#include "irrlichttypes.h"
++
++class ISoundManager;
++
++// Plays the tracks of <path_user>/music/<set>/*.ogg as Minecraft plays its music: one at a time, straight from the
++// file, 10 to 20 minutes apart in a game and 1 to 30 s apart on the menu, at music_volume; a track cut short by the
++// end of its sound manager is followed by the next within half a second, as Minecraft's menu music replaces the
++// game's. The set is "menu", "game", "creative" (which also plays "game") or "water".
++class MusicPlayer
++{
++public:
++	MusicPlayer(ISoundManager *sound) : m_sound(sound) {}
++	~MusicPlayer();
++	void step(f32 dtime, const std::string &set);
++
++private:
++	void play(f32 gain);
++
++	ISoundManager *m_sound;
++	std::string m_set;
++	std::vector<std::string> m_files;
++	std::set<std::string> m_loaded;
++	bool m_playing = false;
++	f32 m_left = 0.0f; // of the track, in seconds
++};
+diff --git a/src/defaultsettings.cpp b/src/defaultsettings.cpp
+index f10bff59b..67caa0c87 100644
+--- a/src/defaultsettings.cpp
++++ b/src/defaultsettings.cpp
+@@ -101,6 +101,7 @@ void set_default_settings()
+ 	settings->setDefault("sound_volume", "0.8");
+ 	settings->setDefault("sound_volume_unfocused", "0.3");
+ 	settings->setDefault("mute_sound", "false");
++	settings->setDefault("music_volume", "1.0");
+ 	settings->setDefault("sound_extensions_blacklist", "");
+ 	settings->setDefault("mesh_generation_interval", "0");
+ 	settings->setDefault("mesh_generation_threads", "0");
+diff --git a/src/gui/guiEngine.cpp b/src/gui/guiEngine.cpp
+index f95df2d21..830ecc189 100644
+--- a/src/gui/guiEngine.cpp
++++ b/src/gui/guiEngine.cpp
+@@ -35,6 +35,7 @@
+ #endif
+ 
+ #include <algorithm>
++#include "client/music.h"
+ #include <csignal>
+ 
+ 
+@@ -147,6 +148,7 @@ GUIEngine::GUIEngine(gui::IGUIElement *parent,
+ #endif
+ 	if (!m_sound_manager)
+ 		m_sound_manager = std::make_unique<DummySoundManager>();
++	m_music = std::make_unique<MusicPlayer>(m_sound_manager.get());
+ 
+ 	// create topleft header
+ 	m_toplefttext = L"";
+@@ -400,6 +402,7 @@ void GUIEngine::run()
+ 
+ 		sound_volume_control(m_sound_manager.get(), device->isWindowActive());
+ 		m_sound_manager->step(dtime);
++		m_music->step(dtime, "menu");
+ 
+ #ifdef __ANDROID__
+ 		m_menu->getAndroidUIInput();
+@@ -426,6 +429,7 @@ GUIEngine::~GUIEngine()
+ 		m_menu.reset();
+ 	}
+ 
++	m_music.reset();
+ 	m_sound_manager.reset();
+ 
+ 	m_irr_toplefttext->remove();
+diff --git a/src/gui/guiEngine.h b/src/gui/guiEngine.h
+index 1d4922990..46e8153f3 100644
+--- a/src/gui/guiEngine.h
++++ b/src/gui/guiEngine.h
+@@ -112,6 +112,8 @@ class MenuMusicFetcher final : public SoundFallbackPathProvider
+ };
+ 
+ /** implementation of main menu based upon formspecs */
++class MusicPlayer;
++
+ class GUIEngine {
+ 	/** grant ModApiMainMenu access to private members */
+ 	friend class ModApiMainMenu;
+@@ -199,6 +201,8 @@ class GUIEngine {
+ 	std::unique_ptr<ISimpleTextureSource> m_texture_source;
+ 	/** sound manager */
+ 	std::unique_ptr<ISoundManager>        m_sound_manager;
++	/** Minecraft's menu music, from the user's music folder */
++	std::unique_ptr<MusicPlayer>          m_music;
+ 
+ 	/** representation of form source to be used in mainmenu formspec */
+ 	FormspecFormSource                   *m_formspecgui = nullptr;
