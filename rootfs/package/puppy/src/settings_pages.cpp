@@ -11,6 +11,7 @@
 #include "settings.h"
 #include "system/clock.h"
 #include "system/device.h"
+#include "system/network.h"
 #include "system/retroarch.h"
 #include "tester.h"
 #include "util.h"
@@ -94,6 +95,7 @@ std::string SettingsScreen::title(Page p) const {
         case Page::Tabs:      return tr("Launcher tabs");
         case Page::Shortcuts: return tr("Shortcuts");
         case Page::Info:      return tr("System Info");
+        case Page::Network:  return tr("Network");
         case Page::Resize:    return tr("Resize Home");
         default:
             for (const auto& s : sections())
@@ -130,6 +132,7 @@ std::vector<Row> SettingsScreen::rows(Page p) {
         case Page::Tabs:      return tabsPage();
         case Page::Shortcuts: return shortcutsPage();
         case Page::Info:      return infoPage();
+        case Page::Network:  return networkPage();
         case Page::Resize:    return resizePage();
         case Page::Credits:   return creditsPage();
     }
@@ -453,6 +456,11 @@ std::vector<Row> SettingsScreen::systemPage() {
         resize = Resize::read();
         open(Page::Info);
     }));
+    rows.push_back(Row::link("Network", [this] {
+        net = NetworkStatus::read();
+        netRead = SDL_GetTicks();
+        open(Page::Network);
+    }, net.address));
     // Overlay, Date & Time, the launcher's view, tabs, font and accent, and the power mode; the language,
     // the confirm button, the time zone and the clock stay
     rows.push_back(Row::action("Restore default settings", [this] {
@@ -505,6 +513,48 @@ std::vector<Row> SettingsScreen::infoPage() {
     }
     rows.push_back(Row::info("Storage", fill2("%s used of %s", humanSize(home.usedKb), humanSize(home.totalKb))));
     if (resize.canGrow()) rows.push_back(Row::info("Unused", trf("%s on the card (see Resize Home)", humanSize(resize.unusedKb))));
+    return rows;
+}
+
+// The USB cable as a network: the PC or phone on it shares its internet with the console
+std::vector<Row> SettingsScreen::networkPage() {
+    std::vector<Row> rows;
+    Row mode = Row::choice("USB cable", {"Files (MTP)", "Network"}, net.networkMode ? 1 : 0, [this](int i) {
+        setUsbMode(i == 1);
+        net = NetworkStatus::read();
+        netRead = SDL_GetTicks();
+    });
+    mode.hint = "Network: the PC or phone on the cable shares its connection with the console (Internet Sharing on a Mac, "
+                "the adapter's Sharing tab on Windows, Ethernet tethering on a phone). Files: HOME shows up on it as a drive. "
+                "Not both at once.";
+    rows.push_back(mode);
+
+    const char* status = "Off (the cable is for files)";
+    if (net.networkMode) {
+        if (!net.hostUp) status = "No PC or phone on the cable";
+        else if (net.address.empty()) status = "Connected, waiting for an address";
+        else status = "Connected";
+    }
+    rows.push_back(Row::info("Status", tr(status)));
+    if (net.networkMode) {
+        rows.push_back(Row::info("Address", net.address.empty() ? "-" : net.address));
+        rows.push_back(Row::info("Gateway", net.gateway.empty() ? "-" : net.gateway));
+        rows.push_back(Row::info("DNS", net.dns.empty() ? "-" : net.dns));
+        const char* check = net.check == "ok" ? "OK" : net.check == "fail" ? "no answer"
+                          : net.check == "checking" ? "checking..." : "not checked";
+        rows.push_back(Row::info("Internet", tr(check)));
+        Row test = Row::action("Check the internet", [this] {
+            checkInternet();
+            net.check = "checking";
+        });
+        test.enabled = !net.address.empty();
+        test.hint = "Fetches a page over HTTPS through the cable.";
+        rows.push_back(test);
+        Row ask = Row::action("Ask for an address", [this] { askForAddress(); });
+        ask.enabled = net.hostUp;
+        ask.hint = "Asks the PC or phone for an address now, instead of within a minute.";
+        rows.push_back(ask);
+    }
     return rows;
 }
 
