@@ -485,6 +485,33 @@ goodluck_horse_armor_diamond_item.png	{item/diamond_horse_armor}
 3d_armor_inv_leggings_diamond.png	{item/diamond_leggings}
 3d_armor_inv_boots_diamond.png	{item/diamond_boots}
 
+# The armor worn: Minecraft's layers are drawn in the skin's layout, 3d_armor's character model paints the helmet in
+# the hat's place (x 32-64) and the boots at 16-32, 0-12 (sides 4-12, top and sole above), the chestplate and the
+# leggings where the layers have them; masks (dev/luanti-art/armor_masks.py) keep each piece's part. Leather dyed as
+# its items. The leggings go under the chestplate as in Minecraft (init.lua puts them first)
+3d_armor_helmet_steel.png	[combine:64x32:32,0={entity/equipment/humanoid/iron}^[mask:goodluck_mcassets_mask_helmet.png
+3d_armor_chestplate_steel.png	{entity/equipment/humanoid/iron}^[mask:goodluck_mcassets_mask_chestplate.png
+3d_armor_leggings_steel.png	{entity/equipment/humanoid_leggings/iron}^[mask:goodluck_mcassets_mask_leggings.png
+3d_armor_boots_steel.png	([combine:64x32:16,-20={entity/equipment/humanoid/iron}^[mask:goodluck_mcassets_mask_boots.png)^([combine:64x32:16,-16={entity/equipment/humanoid/iron}^[mask:goodluck_mcassets_mask_boots_top.png)
+3d_armor_helmet_copper.png	[combine:64x32:32,0={entity/equipment/humanoid/copper}^[mask:goodluck_mcassets_mask_helmet.png
+3d_armor_chestplate_copper.png	{entity/equipment/humanoid/copper}^[mask:goodluck_mcassets_mask_chestplate.png
+3d_armor_leggings_copper.png	{entity/equipment/humanoid_leggings/copper}^[mask:goodluck_mcassets_mask_leggings.png
+3d_armor_boots_copper.png	([combine:64x32:16,-20={entity/equipment/humanoid/copper}^[mask:goodluck_mcassets_mask_boots.png)^([combine:64x32:16,-16={entity/equipment/humanoid/copper}^[mask:goodluck_mcassets_mask_boots_top.png)
+3d_armor_helmet_leather.png	[combine:64x32:32,0={entity/equipment/humanoid/leather}^[multiply:#a06540^([combine:64x32:32,0={entity/equipment/humanoid/leather_overlay})^[mask:goodluck_mcassets_mask_helmet.png
+3d_armor_chestplate_leather.png	{entity/equipment/humanoid/leather}^[multiply:#a06540^{entity/equipment/humanoid/leather_overlay}^[mask:goodluck_mcassets_mask_chestplate.png
+3d_armor_leggings_leather.png	{entity/equipment/humanoid_leggings/leather}^[multiply:#a06540^{entity/equipment/humanoid_leggings/leather_overlay}^[mask:goodluck_mcassets_mask_leggings.png
+3d_armor_boots_leather.png	([combine:64x32:16,-20={entity/equipment/humanoid/leather}^[multiply:#a06540^([combine:64x32:16,-20={entity/equipment/humanoid/leather_overlay})^[mask:goodluck_mcassets_mask_boots.png)^([combine:64x32:16,-16={entity/equipment/humanoid/leather}^[multiply:#a06540^([combine:64x32:16,-16={entity/equipment/humanoid/leather_overlay})^[mask:goodluck_mcassets_mask_boots_top.png)
+3d_armor_helmet_gold.png	[combine:64x32:32,0={entity/equipment/humanoid/gold}^[mask:goodluck_mcassets_mask_helmet.png
+3d_armor_chestplate_gold.png	{entity/equipment/humanoid/gold}^[mask:goodluck_mcassets_mask_chestplate.png
+3d_armor_leggings_gold.png	{entity/equipment/humanoid_leggings/gold}^[mask:goodluck_mcassets_mask_leggings.png
+3d_armor_boots_gold.png	([combine:64x32:16,-20={entity/equipment/humanoid/gold}^[mask:goodluck_mcassets_mask_boots.png)^([combine:64x32:16,-16={entity/equipment/humanoid/gold}^[mask:goodluck_mcassets_mask_boots_top.png)
+3d_armor_helmet_diamond.png	[combine:64x32:32,0={entity/equipment/humanoid/diamond}^[mask:goodluck_mcassets_mask_helmet.png
+3d_armor_chestplate_diamond.png	{entity/equipment/humanoid/diamond}^[mask:goodluck_mcassets_mask_chestplate.png
+3d_armor_leggings_diamond.png	{entity/equipment/humanoid_leggings/diamond}^[mask:goodluck_mcassets_mask_leggings.png
+3d_armor_boots_diamond.png	([combine:64x32:16,-20={entity/equipment/humanoid/diamond}^[mask:goodluck_mcassets_mask_boots.png)^([combine:64x32:16,-16={entity/equipment/humanoid/diamond}^[mask:goodluck_mcassets_mask_boots_top.png)
+# The player: Steve, the top half of the skin being the layout the character model has (no second layer)
+character.png	{entity/player/wide/steve}^[sheet:1x2:0,0
+
 # Spawn eggs
 goodluck_monsters_zombie_egg.png	{item/zombie_spawn_egg}
 goodluck_monsters_skeleton_egg.png	{item/skeleton_spawn_egg}

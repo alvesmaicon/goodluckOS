@@ -72,14 +72,15 @@ local WINDOWS = {["gui_formbg.png"] = true, ["x_enchanting_gui_formbg.png"] = tr
 local function formspec(fs)
 	if type(fs) ~= "string" then return fs end
 	local windowed = false
-	-- a name with modifiers is escaped as the formspec's own text, so that the escaping inside [combine survives
+	-- a name with modifiers goes in as a group, whole in what surrounds it, and escaped as the formspec's own text,
+	-- so that the escaping inside [combine survives
 	fs = fs:gsub("[%w_%-%.]+%.png", function(t)
 		local m = map[t]
 		if WINDOWS[t] and m then
 			m = window(m)
 			windowed = true
 		end
-		return m and m:find("[%^%[]") and core.formspec_escape(m) or m
+		return m and m:find("[%^%[]") and core.formspec_escape("(" .. m .. ")") or m
 	end)
 	if windowed then
 		-- slot, hover, border and tooltip colours of our own, near the window's greys
@@ -232,6 +233,30 @@ core.register_on_joinplayer(function(player)
 	methods.set_formspec_prepend = function(self, fs) return set_formspec_prepend(self, formspec(fs)) end
 	methods.goodluck_mcassets = true
 end)
+
+-- 3d_armor paints the pieces worn in their slots' order, the leggings over the chestplate's lower rows; Minecraft
+-- draws them under it, and the layers above come with its belt
+if armor then
+	local update_player_visuals = armor.update_player_visuals
+	armor.update_player_visuals = function(self, player)
+		local t = self.textures[player:get_player_name()]
+		if t and t.armor then
+			local parts = t.armor:split("^")
+			-- a piece in a group ("(...)") over its 1x1 blank.png stays 1x1: the base gets the skin's size
+			if parts[1] == "blank.png" then
+				parts[1] = "[fill:64x32:0,0:#00000000"
+			end
+			for i = 3, #parts do
+				if parts[i]:find("^3d_armor_leggings_") then
+					table.insert(parts, 2, table.remove(parts, i))
+					break
+				end
+			end
+			t.armor = table.concat(parts, "^")
+		end
+		return update_player_visuals(self, player)
+	end
+end
 
 -- what the other mods set as the player joined, through the methods above once every join callback ran: the
 -- hotbar's images, the inventory and the HUD elements (the first player's were set before the methods were in place)
