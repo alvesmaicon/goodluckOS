@@ -164,27 +164,6 @@ core.register_on_mods_loaded(function()
 		end
 		core.override_item(name, animated)
 	end
-	-- wieldview joins a tool's image and its overlay as text: it gets the animation's still image
-	if armor and armor.get_wield_image then
-		local get_wield_image = armor.get_wield_image
-		armor.get_wield_image = function(item)
-			local def = core.registered_tools[ItemStack(item):get_name()]
-			if not def or type(def.inventory_overlay) ~= "table" then
-				return get_wield_image(item)
-			end
-			local image, overlay = def.wield_image, def.wield_overlay
-			if image == nil or image == "" then
-				image, overlay = def.inventory_image, def.inventory_overlay
-			end
-			if image == nil or image == "" then
-				return "blank.png"
-			end
-			if type(overlay) == "table" then
-				overlay = overlay.name
-			end
-			return overlay and overlay ~= "" and image .. "^" .. overlay or image
-		end
-	end
 end)
 
 -- x_enchanting writes its own glint over the item's images: it is shown none, and ours goes on after
