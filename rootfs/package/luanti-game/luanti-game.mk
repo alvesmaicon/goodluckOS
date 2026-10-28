@@ -23,9 +23,9 @@ LUANTI_GAME_X_ENCHANTING_VERSION = 0d589e69b39642b31397ec52b5b5b5239a0c45f6
 LUANTI_GAME_X_BOWS_VERSION = 7b36ca2d9c7df12314b90b83541a5200f517b7c3
 # the ContentDB release of 2026-10-17
 LUANTI_GAME_MOB_HORSE_VERSION = aa3ad5e04c7c13b54d3ae80d95c59710f9daf44b
-# the modpack's mods that need nothing outside minetest_game, without the armor stand and wieldview
+# the modpack's mods that need nothing outside minetest_game, without the armor stand
 LUANTI_GAME_3D_ARMOR_MODS = 3d_armor 3d_armor_sfinv armor_wood armor_cactus armor_bronze \
-	armor_steel armor_gold armor_diamond shields
+	armor_steel armor_gold armor_diamond shields wieldview
 LUANTI_GAME_EXTRA_DOWNLOADS = \
 	https://codeberg.org/tenplus1/mobs_redo/archive/$(LUANTI_GAME_MOBS_REDO_VERSION).tar.gz \
 	https://codeberg.org/tenplus1/mobs_animal/archive/$(LUANTI_GAME_MOBS_ANIMAL_VERSION).tar.gz \
