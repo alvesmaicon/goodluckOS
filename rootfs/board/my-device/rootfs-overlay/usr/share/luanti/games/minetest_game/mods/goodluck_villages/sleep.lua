@@ -7,10 +7,14 @@ local DUSK, DAWN = 0.76, 0.24
 local REACH = 24
 local STUCK, GIVE_UP = 3, 20
 local AWAY = 24
+-- lying down: the mob's own frames, else the character model's
 local LAY = {x = 162, y = 166}
--- the villager's feet under its position (mobs_npc's collision box)
 local npc = core.registered_entities["mobs_npc:npc"]
-local BOTTOM = npc and (npc.initial_properties or npc).collisionbox[2] or -1
+
+-- the villager's feet under its position, by its collision box
+local function bottom(self)
+	return (self.base_colbox or self.collisionbox)[2]
+end
 local SIDES = {vector.new(1, 0, 0), vector.new(-1, 0, 0), vector.new(0, 0, 1), vector.new(0, 0, -1)}
 
 local function night()
@@ -117,7 +121,7 @@ goodluck_villages.home = home
 
 local function feet(self)
 	local pos = self.object:get_pos()
-	return vector.new(math.floor(pos.x + 0.5), math.floor(pos.y + BOTTOM + 0.5), math.floor(pos.z + 0.5))
+	return vector.new(math.floor(pos.x + 0.5), math.floor(pos.y + bottom(self) + 0.5), math.floor(pos.z + 0.5))
 end
 
 local function path(self, to, reach)
@@ -129,7 +133,7 @@ local function path(self, to, reach)
 end
 
 local function place(self, cell)
-	self.object:set_pos(vector.offset(cell, 0, -0.5 - BOTTOM, 0))
+	self.object:set_pos(vector.offset(cell, 0, -0.5 - bottom(self), 0))
 end
 
 -- walking: legs of {to = cell, door = pos, soft = true}, a door leg straight across with the door open, a soft one
@@ -206,14 +210,15 @@ end
 
 local function lie(self, h)
 	local p = vector.add(h.bed, vector.multiply(h.dir, 0.5))
-	p.y = h.bed.y + 0.5 - BOTTOM - 0.45
+	p.y = h.bed.y + 0.5 - bottom(self) - 0.45
 	self.goodluck_sleeping, self.disable_falling, self.state = true, true, "stand"
 	self.object:set_properties({physical = false})
 	self.object:set_velocity(vector.zero())
 	self.object:set_acceleration(vector.zero())
 	self.object:set_pos(p)
 	self:set_yaw(core.dir_to_yaw(h.dir) + math.pi)
-	self.object:set_animation(LAY, 0, 0, false)
+	local anim = self.animation or {}
+	self.object:set_animation(anim.lay_start and {x = anim.lay_start, y = anim.lay_end} or LAY, 0, 0, false)
 	self.animation_current = "lay"
 	core.get_meta(h.bed):set_int("goodluck_day", core.get_day_count())
 end

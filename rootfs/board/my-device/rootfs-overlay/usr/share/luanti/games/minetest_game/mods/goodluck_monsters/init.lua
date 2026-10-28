@@ -1,12 +1,9 @@
--- Minecraft's classic monsters with art of our own: the zombie and the skeleton (3d_armor's character model), the
--- spider (Minecraft's model from goodluck_models, Pixel Perfection Legacy's skin) and, in the creeper's place, the
--- bomb mushroom. They come out in the dark, on the surface and in caves (mobs_monster's own spawn no more); the
--- zombie and the skeleton burn in the sun
+-- Minecraft's classic monsters: the zombie, the skeleton and the spider in its models (goodluck_models' meshes,
+-- Pixel Perfection Legacy's skins) and, in the creeper's place, the bomb mushroom of our own. They come out in the
+-- dark, on the surface and in caves (mobs_monster's own spawn no more); the zombie and the skeleton burn in the sun
 local S = core.get_translator("goodluck_monsters")
 local MOD = "goodluck_monsters:"
 local BLANK = "goodluck_monsters_blank.png"
-local armor_model = core.get_modpath("3d_armor") ~= nil
-local MESH = armor_model and "3d_armor_character.b3d" or "character.b3d"
 local bows = core.get_modpath("x_bows") ~= nil
 local tnt_mod = core.get_modpath("tnt") ~= nil
 local food = core.get_modpath("goodluck_food") ~= nil
@@ -20,21 +17,26 @@ local function drops(...)
 	return list
 end
 
--- skin, then 3d_armor's armor layer and the item in the right hand
-local function skin(tex, wield)
-	return armor_model and {tex, BLANK, wield or BLANK} or {tex}
-end
-
--- the player's animations
+-- goodluck_models' humanoids (seconds): the zombie's arms are up through all of them, the skeleton's bow in the
+-- shot
 local HUMANOID = {
-	speed_normal = 30, speed_run = 30,
-	stand_start = 0, stand_end = 79,
-	walk_start = 168, walk_end = 187,
-	run_start = 168, run_end = 187,
-	punch_start = 189, punch_end = 198,
-	shoot_start = 189, shoot_end = 198,
-	die_start = 162, die_end = 166, die_speed = 15, die_loop = false,
+	speed_normal = 1, speed_run = 1,
+	stand_start = 0, stand_end = 1,
+	walk_start = 1, walk_end = 2,
+	run_start = 3, run_end = 3.5,
+	punch_start = 6, punch_end = 6.5,
+	shoot_start = 6, shoot_end = 6.5,
+	die_start = 4, die_end = 5, die_loop = false,
 }
+
+-- a mob saved with another model's textures (3d_armor's character, from before) takes this one's
+local function dress(self, textures)
+	if #self.base_texture ~= #textures then
+		self.base_texture = table.copy(textures)
+		self.textures = self.base_texture
+		self.object:set_properties({textures = self.base_texture})
+	end
+end
 
 -- burning in direct sunlight, 1 a second, in flames: mobs_redo's light damage reads the light at the feet, which on
 -- ground below y = 0 rounds into the ground; the head's is read here. True when it died
@@ -71,15 +73,15 @@ local function ambient(self, dtime)
 	end
 end
 
--- arms held out in front, on top of whatever the animation does
+-- the arms held straight out, on top of whatever the animation does (the bow up at someone)
 local function arms_out(self, on)
 	if self._arms == on or not self.object.set_bone_override then
 		return
 	end
 	self._arms = on
 	local rot = on and {vec = vector.new(math.rad(90), 0, 0), absolute = false} or nil
-	self.object:set_bone_override("Arm_Left", rot and {rotation = rot} or nil)
-	self.object:set_bone_override("Arm_Right", rot and {rotation = rot} or nil)
+	self.object:set_bone_override("left_arm", rot and {rotation = rot} or nil)
+	self.object:set_bone_override("right_arm", rot and {rotation = rot} or nil)
 end
 
 mobs:register_mob(MOD .. "zombie", {
@@ -92,10 +94,10 @@ mobs:register_mob(MOD .. "zombie", {
 	damage = 3,
 	hp_min = 20, hp_max = 20,
 	armor = 100,
-	collisionbox = {-0.3, 0, -0.3, 0.3, 1.7, 0.3},
+	collisionbox = {-0.3, 0, -0.3, 0.3, 1.95, 0.3},
 	visual = "mesh",
-	mesh = MESH,
-	textures = {skin("goodluck_monsters_zombie.png")},
+	mesh = "goodluck_models_zombie.glb",
+	textures = {{"goodluck_monsters_zombie.png"}},
 	makes_footstep_sound = true,
 	sounds = {damage = "goodluck_monsters_zombie_hurt",
 		death = "goodluck_monsters_zombie_hurt", distance = HEAR},
@@ -114,8 +116,7 @@ mobs:register_mob(MOD .. "zombie", {
 	fear_height = 4,
 	animation = HUMANOID,
 	after_activate = function(self)
-		self._arms = nil
-		arms_out(self, true)
+		dress(self, {"goodluck_monsters_zombie.png"})
 	end,
 	do_custom = function(self, dtime)
 		if burn(self, dtime) then
@@ -137,10 +138,10 @@ mobs:register_mob(MOD .. "skeleton", {
 	damage = 2,
 	hp_min = 20, hp_max = 20,
 	armor = 100,
-	collisionbox = {-0.3, 0, -0.3, 0.3, 1.7, 0.3},
+	collisionbox = {-0.3, 0, -0.3, 0.3, 1.95, 0.3},
 	visual = "mesh",
-	mesh = MESH,
-	textures = {skin("goodluck_monsters_skeleton.png", bows and "x_bows_bow_wood.png")},
+	mesh = "goodluck_models_skeleton.glb",
+	textures = {{"goodluck_monsters_skeleton.png", bows and "x_bows_bow_wood.png" or BLANK}},
 	use_texture_alpha = true,
 	makes_footstep_sound = true,
 	sounds = {damage = "goodluck_monsters_skeleton",
@@ -159,6 +160,7 @@ mobs:register_mob(MOD .. "skeleton", {
 	animation = HUMANOID,
 	after_activate = function(self)
 		self._arms = nil
+		dress(self, {"goodluck_monsters_skeleton.png", bows and "x_bows_bow_wood.png" or BLANK})
 	end,
 	do_custom = function(self, dtime)
 		if burn(self, dtime) then
@@ -171,10 +173,10 @@ mobs:register_mob(MOD .. "skeleton", {
 })
 
 mobs:register_arrow(MOD .. "arrow", {
-	visual = bows and "mesh" or "sprite",
-	mesh = bows and "x_bows_arrow.b3d" or nil,
-	textures = {bows and "x_bows_arrow_mesh.png" or "goodluck_monsters_bone.png"},
-	visual_size = {x = 1, y = 1},
+	visual = "mesh",
+	mesh = "goodluck_models_arrow.glb",
+	textures = {"goodluck_models_arrow.png"},
+	visual_size = {x = 0.9, y = 0.9},
 	velocity = 18,
 	lifetime = 3,
 	do_custom = function(self)

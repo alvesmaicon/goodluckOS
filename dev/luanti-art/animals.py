@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-# goodluck_models' creatures: Minecraft's models for its textures' layouts (the cow, the pig, the sheep with its wool,
-# the chicken, the horse, the donkey the mule shares, the spider), one skinned mesh each, every part a joint, animated
-# as Minecraft animates them. Written as binary glTF: Minecraft's model space (y down, the head toward -z, the right
-# side toward -x) is turned to glTF's (the head toward -z, which Luanti's loader turns to +z, where a mob looks at yaw
-# 0), 10 units a node. Frames are seconds: stand 0-1, walk from 1, run from 3, die 4-5, eat 6-8 (cow, sheep), rear
-# 6-7.6 (horses), flap from 9 (chicken). The horses' saddle, bridle and chests are a second primitive, so that a
-# texture of their own draws them, and nothing where it is blank
+# goodluck_models' creatures and things: Minecraft's models for its textures' layouts (the cow, the pig, the sheep
+# with its wool, the chicken, the horse, the donkey the mule shares, the spider, the zombie, the skeleton, the
+# villager, the boat, the arrow), one skinned mesh each, every part a joint, animated as Minecraft animates them.
+# Written as binary glTF: Minecraft's model space (y down, the head toward -z, the right side toward -x) is turned to
+# glTF's (the head toward -z, which Luanti's loader turns to +z, where a mob looks at yaw 0), 10 units a node. Frames
+# are seconds: stand 0-1, walk from 1, run from 3, die 4-5, eat 6-8 (cow, sheep), rear 6-7.6 (horses), hit or aim
+# 6-6.5 (zombie, skeleton), lay 8-8.1 (villager), flap from 9 (chicken). The horses' saddle, bridle and chests and the
+# skeleton's bow are a second primitive, so that a texture of their own draws them, and nothing where it is blank
 #   python3 dev/luanti-art/animals.py [out dir]
 import json, math, os, struct, sys
 from mcmodel import box, posed
@@ -194,6 +195,122 @@ def crawl(amount, period):
 
 SPIDER = [(0, 1, crawl(0, 1)), (1, 0.6, crawl(1, 0.6)), (3, 0.4, crawl(1, 0.4)), (4, 1, both(die, crawl(0, 1)))]
 
+def quad(corners, uv):
+    # a two-sided quad, in the build's groups of six faces: the two sides and four empty faces at its middle
+    m = tuple(sum(c[i] for c in corners) / 4 for i in range(3))
+    return [(corners, uv), ([corners[1], corners[0], corners[3], corners[2]], uv)] + [([m, m, m, m], uv)] * 4
+
+
+def humanoid(thin):
+    # Minecraft's humanoid: the head and the body hang from y 0, the arms from the shoulders, the legs from the hips;
+    # the skeleton's limbs 2 pixels wide (its left ones the right ones mirrored, 64x32), the zombie's 4 (64x64)
+    head = box(0, 0, -4, -8, -4, 8, 8, 8) + box(32, 0, -4, -8, -4, 8, 8, 8, grow=0.5)
+    if thin:
+        right_arm, left_arm = box(40, 16, -1, -2, -1, 2, 12, 2), box(40, 16, -1, -2, -1, 2, 12, 2, mirror=True)
+        right_leg, left_leg = box(0, 16, -1, 0, -1, 2, 12, 2), box(0, 16, -1, 0, -1, 2, 12, 2, mirror=True)
+        hip = 2
+    else:
+        right_arm, left_arm = box(40, 16, -3, -2, -2, 4, 12, 4), box(32, 48, -1, -2, -2, 4, 12, 4)
+        right_leg, left_leg = box(0, 16, -2, 0, -2, 4, 12, 4), box(16, 48, -2, 0, -2, 4, 12, 4)
+        hip = 1.9
+    # the skeleton's bow: its item image on a square in the right hand, across the arm, drawn by the second texture
+    bow = quad([(8, 10, -8), (-8, 10, -8), (-8, 10, 8), (8, 10, 8)], (0, 0, 64, 32)) if thin else ()
+    return [part("head", (0, 0, 0), head), part("body", (0, 0, 0), box(16, 16, -4, 0, -2, 8, 12, 4)),
+            part("right_arm", (-5, 2, 0), right_arm, gear=bow), part("left_arm", (5, 2, 0), left_arm),
+            part("right_leg", (-hip, 12, 0), right_leg), part("left_leg", (hip, 12, 0), left_leg)]
+
+
+def villager():
+    # Minecraft's villager since 1.14: a tall head with its hat layer, the brim of a hat and the nose, the robe over
+    # the body, the arms crossed and turned up, the legs
+    rim = posed(box(30, 47, -8, -8, -6, 16, 16, 1), (0, 0, 0), (-PI / 2, 0, 0))
+    head = box(0, 0, -4, -10, -4, 8, 10, 8) + box(32, 0, -4, -10, -4, 8, 10, 8, grow=0.51) + \
+        box(24, 0, -1, -3, -6, 2, 4, 2) + rim
+    arms = box(44, 22, -8, -2, -2, 4, 8, 4) + box(44, 22, 4, -2, -2, 4, 8, 4, mirror=True) + \
+        box(40, 38, -4, 2, -2, 8, 4, 4)
+    return [part("head", (0, 0, 0), head),
+            part("body", (0, 0, 0), box(16, 20, -4, 0, -3, 8, 12, 6) + box(0, 38, -4, 0, -3, 8, 18, 6, grow=0.5)),
+            part("arms", (0, 2, 0), arms, rot=(-0.75, 0, 0)),
+            part("right_leg", (-2, 12, 0), box(0, 22, -2, 0, -2, 4, 12, 4)),
+            part("left_leg", (2, 12, 0), box(0, 22, -2, 0, -2, 4, 12, 4, mirror=True))]
+
+
+def stride(legs, arms, period):
+    # Minecraft's humanoid walk: the legs cos(limb swing * 0.6662) * 1.4 * swing amount, each arm with the other leg
+    # at 2 * 0.5 * the amount
+    def pose(t):
+        a = math.sin(2 * PI * t / period)
+        return {"right_leg": (mc_x(legs * a), None), "left_leg": (mc_x(-legs * a), None),
+                "right_arm": (mc_x(-arms * a), None), "left_arm": (mc_x(arms * a), None)}
+    return pose
+
+
+def sway(t):
+    # the arms at rest: out by cos(age * 0.09) * 0.05 + 0.05 and back and forth by sin(age * 0.067) * 0.05
+    z, x = math.cos(2 * PI * t) * 0.05 + 0.05, math.sin(2 * PI * t) * 0.05
+    return {"right_arm": (mc_rot(x, 0, z), None), "left_arm": (mc_rot(-x, 0, -z), None)}
+
+
+def zombie_arms(up, hit=None):
+    # Minecraft's zombie: the arms up at -pi/2.25 (-pi/1.5 at someone), a little in; hitting, they swing down by
+    # sin(attack * pi) * 1.2 and come back; the sway on top
+    def pose(t):
+        f = g = 0.0
+        if hit:
+            f, g = math.sin(t / hit * PI), math.sin((1 - (1 - t / hit) ** 2) * PI)
+        x = up + f * 1.2 - g * 0.4
+        z, bob = math.cos(2 * PI * t) * 0.05 + 0.05, math.sin(2 * PI * t) * 0.05
+        return {"right_arm": (mc_rot(x + bob, -(0.1 - f * 0.6), z), None),
+                "left_arm": (mc_rot(x - bob, 0.1 - f * 0.6, -z), None)}
+    return pose
+
+
+def aim(t):
+    # the skeleton's bow up: both arms straight ahead, the right one a little in
+    return {"right_arm": (mc_rot(-PI / 2, -0.1, 0), None), "left_arm": (mc_rot(-PI / 2, 0.1, 0), None)}
+
+
+def lay(t):
+    # on the back, the head toward the model's back, moved half its height ahead so that it lies about its position
+    # (sleep.lua puts a villager at the bed's middle) and 3 pixels up so that the back lies on the bed
+    return {"root": (mc_x(-PI / 2), (0, -3, -12))}
+
+
+ZOMBIE_UP = -PI / 2.25
+ZOMBIE = [(0, 1, zombie_arms(ZOMBIE_UP)), (1, 1.0, both(zombie_arms(ZOMBIE_UP), stride(0.7, 0, 1.0))),
+          (3, 0.5, both(zombie_arms(ZOMBIE_UP), stride(1.4, 0, 0.5))), (4, 1, both(die, zombie_arms(ZOMBIE_UP))),
+          (6, 0.5, zombie_arms(-PI / 1.5, 0.5))]
+SKELETON = [(0, 1, sway), (1, 1.0, stride(0.7, 0.5, 1.0)), (3, 0.5, stride(1.4, 1.0, 0.5)), (4, 1, die), (6, 0.5, aim)]
+VILLAGER = [(0, 1, None), (1, 1.0, stride(0.7, 0, 1.0)), (3, 0.5, stride(1.4, 0, 0.5)), (4, 1, die), (8, 0.1, lay)]
+
+
+def boat():
+    # Minecraft's boat since 1.14, its bow at +x in its model, turned a quarter so that the bow leads, and 18 down so
+    # that the entity sits at the waterline (its renderer lifts the model 6 pixels); the paddles rest on the sides
+    def piece(u, v, x, y, z, w, h, d, pivot, rot=(0, 0, 0)):
+        return posed(box(u, v, x, y, z, w, h, d), pivot, rot)
+    paddle = lambda u, v, x: box(u, v, -1, 0, -5, 2, 2, 18) + box(u, v, x, -3, 8, 1, 6, 7)
+    faces = piece(0, 0, -14, -9, -8, 28, 16, 3, (0, 3, 1), (PI / 2, 0, 0)) + \
+        piece(0, 19, -13, -7, -1, 18, 6, 2, (-15, 4, 4), (0, PI * 1.5, 0)) + \
+        piece(0, 27, -8, -7, -1, 16, 6, 2, (15, 4, 0), (0, PI / 2, 0)) + \
+        piece(0, 35, -14, -7, -1, 28, 6, 2, (0, 4, -9), (0, PI, 0)) + \
+        piece(0, 43, -14, -7, -1, 28, 6, 2, (0, 4, 9)) + \
+        posed(paddle(62, 0, -1.001), (3, -5, 9), (0, 0, 0.19634955)) + \
+        posed(paddle(62, 20, 0.001), (3, -5, -9), (0, PI, 0.19634955))
+    return [part("boat", (0, 0, 0), posed(faces, (0, 18, 0), (0, PI / 2, 0)))]
+
+
+def arrow():
+    # Minecraft's arrow: two fins 16 by 4 crossed at an eighth of a turn and the tip a square of 4, the tip 4 pixels
+    # ahead of the entity (its renderer draws it 0.9 of a pixel a unit: visual_size 0.9); its model points at -x,
+    # here at -z
+    z0, z1 = -12, 4
+    faces = quad([(0, -2, z1), (0, -2, z0), (0, 2, z0), (0, 2, z1)], (0, 0, 16, 5)) + \
+        quad([(-2, 0, z1), (-2, 0, z0), (2, 0, z0), (2, 0, z1)], (0, 0, 16, 5)) + \
+        quad([(-2, -2, -11), (2, -2, -11), (2, 2, -11), (-2, 2, -11)], (0, 5, 5, 10))
+    return [part("arrow", (0, 0, 0), posed(faces, (0, 24, 0), (0, 0, PI / 4)))]
+
+
 ANIMALS = {
     # 26.x's cow: the classic one with a muzzle, on 64x64; left legs mirrored
     "cow": ((64, 64), [
@@ -225,6 +342,11 @@ ANIMALS = {
     "horse": ((64, 64), horse(False), HORSE),
     "donkey": ((64, 64), horse(True), HORSE),
     "spider": ((64, 32), spider(), SPIDER),
+    "zombie": ((64, 64), humanoid(False), ZOMBIE),
+    "skeleton": ((64, 32), humanoid(True), SKELETON),
+    "villager": ((64, 64), villager(), VILLAGER),
+    "boat": ((128, 64), boat(), [(0, 1, None)]),
+    "arrow": ((32, 32), arrow(), [(0, 1, None)]),
 }
 
 
@@ -341,7 +463,7 @@ def build(name, tex, parts, segments):
             if path == "rotation":
                 out = add("4f", [at(jname, t)[0] for t in times], "VEC4", FLOAT)
             else:
-                moved = lambda d: tuple(r + o for r, o in zip(local[jname], (-d[0] * S, -d[1] * S, d[2] * S)))
+                moved = lambda d: tuple(r + o for r, o in zip(local.get(jname, (0.0, 0.0, 0.0)), (-d[0] * S, -d[1] * S, d[2] * S)))
                 out = add("3f", [moved(at(jname, t)[1]) for t in times], "VEC3", FLOAT)
             samplers.append({"input": tin, "output": out, "interpolation": "LINEAR"})
             channels.append({"sampler": len(samplers) - 1, "target": {"node": j, "path": path}})
@@ -350,9 +472,11 @@ def build(name, tex, parts, segments):
         "scene": 0, "scenes": [{"nodes": [0, len(nodes) - 1]}], "nodes": nodes,
         "meshes": [{"primitives": primitives}],
         "skins": [{"joints": list(range(len(joints))), "inverseBindMatrices": inverse, "skeleton": 0}],
-        "animations": [{"name": "all", "channels": channels, "samplers": samplers}],
+        "animations": channels and [{"name": "all", "channels": channels, "samplers": samplers}] or None,
         "buffers": [{"byteLength": len(blob)}], "bufferViews": views, "accessors": accessors,
     }
+    # a still thing (the boat, the arrow) has no animation: glTF allows none, not an empty one
+    doc = {k: v for k, v in doc.items() if v is not None}
     text = json.dumps(doc, separators=(",", ":")).encode()
     text += b" " * (-len(text) % 4)
     blob += b"\0" * (-len(blob) % 4)

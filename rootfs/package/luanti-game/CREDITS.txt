@@ -59,7 +59,8 @@ mobs_npc
   Replaced by goodluckOS's own: gui_arrow_blank.png and mobs_npc_shop_icon.png,
   which its credits don't name. Added: an empty spawn.lua, so mobs_npc spawns
   nothing by itself (goodluck_villages places the villagers), and the pt_BR
-  translation.
+  translation. Its character model and skins ship unused: goodluck_villages
+  puts Minecraft's villager on its NPC and trader (see goodluck_models).
 
 3d_armor
   https://github.com/minetest-mods/3d_armor, commit @3D_ARMOR_VERSION@
@@ -88,7 +89,8 @@ x_bows
   x_bows_bow_wood_charged.png and so under their CC BY-SA 4.0. Left out:
   the quiver's sounds (same credits as above; goodluck_bow takes the quiver
   out of the game) and smoke_puff.png (not credited, empty, unused). Added:
-  the pt_BR translation.
+  the pt_BR translation. Its arrow model and x_bows_arrow_mesh.png ship
+  unused: goodluck_models puts Minecraft's arrow on its arrow entity.
 
 mob_horse
   https://codeberg.org/tenplus1/mob_horse, commit @MOB_HORSE_VERSION@
@@ -107,12 +109,13 @@ mob_horse
   appears.
 
 goodluck_monsters
-  The zombie and the skeleton wear 3d_armor's character model (see 3d_armor).
-  The spider is goodluck_models' mesh of Minecraft's with mobs_monster's
-  mobs_spider.ogg (see mobs_monster); its skin, goodluck_monsters_spider.png,
-  is Pixel Perfection Legacy's spider with its eyes over it (see
-  goodluck_models), CC BY-SA 4.0. The bomb mushroom's model, every other
-  texture and the sounds are goodluckOS's own (see goodluck_* below).
+  The zombie, the skeleton and the spider are goodluck_models' meshes of
+  Minecraft's, the spider with mobs_monster's mobs_spider.ogg (see
+  mobs_monster); their skins, goodluck_monsters_zombie.png, _skeleton.png and
+  _spider.png, are Pixel Perfection Legacy's (see goodluck_models), CC BY-SA
+  4.0, the spider's with its eyes over it. Their arrow is goodluck_models'.
+  The bomb mushroom's model, every other texture and the sounds are
+  goodluckOS's own (see goodluck_* below).
 
 goodluck_chest
   The big chest's halves, goodluck_chest_{front,top,back,inside}_{left,right}.png,
@@ -153,23 +156,34 @@ goodluck_models
   horses' cut by pixelperfection.py into what each texture draws (the coats
   without the saddle and the chest, the saddle without the chest, the chest
   from the donkey's), the spider's eyes laid over it, and so under CC BY-SA
-  4.0; the blank gear is an empty image.
+  4.0; the blank gear is an empty image. The zombie's, the skeleton's, the
+  villager's, the boat's and the arrow's meshes are goodluckOS's own too
+  (animals.py; the boat's and the arrow's take the place of boats' and
+  x_bows' models); their textures, the zombie's and the skeleton's skins
+  (goodluck_monsters), the villager's with its plains clothes and each job's
+  over it (mods/goodluck_villages/textures: goodluck_villages_villager.png and
+  _job_armorer, _toolsmith, _cleric, _librarian, _farmer), the oak boat
+  (goodluck_models_boat.png) and the arrow (goodluck_models_arrow.png) are
+  Pixel Perfection Legacy's (the villager's two laid together by
+  pixelperfection.py), and so under CC BY-SA 4.0.
 
 goodluck_villages
   Built on villages_mtg 1.0.3 by Drix03,
   https://content.luanti.org/packages/Drix03/villages_mtg/, MIT:
   mods/goodluck_villages/LICENSE-villages_mtg.md. Its eight buildings
-  (schems/) are unchanged; the village code is reworked by goodluckOS.
+  (schems/) are unchanged; the village code is reworked by goodluckOS. The
+  villagers wear goodluck_models' villager, in Pixel Perfection Legacy's
+  textures (see goodluck_models).
 
 Left out of mobs, mobs_animal, mobs_monster, stamina, mobs_npc and mob_horse:
 screenshot.jpg, made on textstudio.com, whose terms are unclear. The game
 doesn't use them.
 
-goodluck_* mods (but goodluck_villages' buildings, goodluck_monsters' spider,
-goodluck_chest's halves, goodluck_models' chests, minecart and farm animals'
-textures and goodluck_horse's textures, above), and the stamina, mobs_animal,
-mobs_monster, x_enchanting, mobs_npc and x_bows media above (but the
-half-drawn bow, CC BY-SA 4.0)
+goodluck_* mods (but goodluck_villages' buildings and villagers' textures,
+goodluck_monsters' skins, goodluck_chest's halves, goodluck_models' chests,
+minecart, boat, arrow and farm animals' textures and goodluck_horse's
+textures, above), and the stamina, mobs_animal, mobs_monster, x_enchanting,
+mobs_npc and x_bows media above (but the half-drawn bow, CC BY-SA 4.0)
   Code, pixel art, the rat's and the bomb mushroom's models, and the item
   pickup, experience, bow, monster, horse equip and anvil sounds made for
   goodluckOS, under goodluckOS's license, GPL-2.0.
