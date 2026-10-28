@@ -3,6 +3,7 @@
 #   osd-notify.sh volume|brightness <percent> [muted]
 #   osd-notify.sh output 0 speaker|headphones
 #   osd-notify.sh battery <percent>|off
+#   osd-notify.sh network <address>
 # Every GL app, Puppy included, shows /dev/shm/hud-osd (label, value and bar percent, -1 for none)
 # through the Gallium HUD patch in Mesa. Its font is ASCII only, so accents are dropped.
 
@@ -22,9 +23,12 @@ case "$kind" in
     brightness) label=$(/usr/local/bin/gl-tr Brightness) ;;
     output)     label=$(/usr/local/bin/gl-tr "Audio output") ;;
     battery)    label=$(/usr/local/bin/gl-tr "Low battery") ;;
+    network)    label=$(/usr/local/bin/gl-tr "USB network") ;;
     *)          label=$kind ;;
 esac
-if [ "$kind" = output ]; then
+if [ "$kind" = network ]; then
+    value=$2; bar=-1
+elif [ "$kind" = output ]; then
     [ "$3" = headphones ] && value=$(/usr/local/bin/gl-tr Headphones) || value=$(/usr/local/bin/gl-tr Speaker)
     bar=-1
 elif [ "$pct" = off ]; then

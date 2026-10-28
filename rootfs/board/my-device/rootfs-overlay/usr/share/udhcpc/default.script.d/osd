@@ -1,0 +1,4 @@
+#!/bin/sh
+# udhcpc hook: shows the address the USB network got on the screen (osd-notify.sh)
+[ "$1" = bound ] && /usr/local/bin/osd-notify.sh network "$ip"
+exit 0
