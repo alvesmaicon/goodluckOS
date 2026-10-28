@@ -1,4 +1,15 @@
 #!/bin/sh
-# udhcpc hook: shows the address the USB network got on the screen (osd-notify.sh)
-[ "$1" = bound ] && /usr/local/bin/osd-notify.sh network "$ip"
+# udhcpc hook: the address the USB network got goes on the screen (osd-notify.sh), then whether
+# the internet answers over HTTPS. The notice lasts 1.5 s, so the result is shown three times.
+[ "$1" = bound ] || exit 0
+/usr/local/bin/osd-notify.sh network "$ip"
+command -v curl >/dev/null || exit 0
+(
+    code=$(curl -s -o /dev/null -m 10 -w '%{http_code}' https://connectivitycheck.gstatic.com/generate_204)
+    [ "$code" = 204 ] && msg="Internet OK" || msg="No internet"
+    for i in 1 2 3; do
+        /usr/local/bin/osd-notify.sh network "$ip: $(/usr/local/bin/gl-tr "$msg")"
+        sleep 2
+    done
+) >/dev/null 2>&1 &
 exit 0
