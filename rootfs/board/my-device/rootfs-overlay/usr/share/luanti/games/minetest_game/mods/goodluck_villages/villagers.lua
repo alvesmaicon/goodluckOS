@@ -1,11 +1,38 @@
 -- Villagers: mobs_npc's NPC, one a bed (sleep.lua), and its trader with one of Minecraft's trades at the blacksmith
 -- (armorer, toolsmith), the church (cleric), the library (librarian) and the fields (farmer). Paid in emeralds at
 -- Minecraft's prices; every trader also buys something, as Minecraft's do, and that is how emeralds are earned.
+-- Both wear Minecraft's villager (goodluck_models' mesh): the plains skin, each job's clothes over it
 local S = core.get_translator("goodluck_villages")
 
 if not core.get_modpath("mobs_npc") then
 	goodluck_villages.spawn = function() end
 	return
+end
+
+-- in place of mobs_npc's character: the feet at the position (its box hung a node under it; sleep.lua reads the
+-- box), the animations of the mesh in seconds, lying down at 8
+local MESH, SKIN = "goodluck_models_villager.glb", "goodluck_villages_villager.png"
+local BOX = {-0.3, 0, -0.3, 0.3, 1.95, 0.3}
+local ANIMATION = {
+	speed_normal = 1, speed_run = 1,
+	stand_start = 0, stand_end = 1,
+	walk_start = 1, walk_end = 2,
+	run_start = 3, run_end = 3.5,
+	punch_start = 0, punch_end = 1,
+	die_start = 4, die_end = 5, die_loop = false,
+	lay_start = 8, lay_end = 8,
+}
+for _, name in ipairs({"mobs_npc:npc", "mobs_npc:trader"}) do
+	local def = core.registered_entities[name]
+	local p = def.initial_properties
+	p.mesh, p.collisionbox, p.selectionbox, p.visual_size = MESH, BOX, BOX, {x = 1, y = 1}
+	def.base_mesh, def.base_colbox, def.base_selbox, def.base_size = MESH, BOX, BOX, {x = 1, y = 1}
+	def.animation = ANIMATION
+	-- the list mobs_npc's definition draws a skin from, changed in place
+	for i = #def.texture_list, 1, -1 do
+		def.texture_list[i] = nil
+	end
+	def.texture_list[1] = {SKIN}
 end
 
 local EMERALD = "goodluck_emerald:emerald"
@@ -84,13 +111,29 @@ local jobs = {
 	},
 }
 
+-- the skin with the job's clothes over it (a villager from before keeps mobs_npc's skin in its data: replaced)
+local function dress(self)
+	local job = jobs[self.goodluck_job] and self.goodluck_job
+	local skin = job and SKIN .. "^goodluck_villages_job_" .. job .. ".png" or SKIN
+	if not self.base_texture or self.base_texture[1] ~= skin then
+		self.base_texture = {skin}
+		self.textures = self.base_texture
+		self.object:set_properties({textures = self.base_texture})
+	end
+end
+
 -- villagers stay: mobs_redo removes an untamed mob that wakes up while mob_active_limit is reached
 local activate = mobs.mob_class.mob_activate
 function mobs.mob_class.mob_activate(self, staticdata, def, dtime)
-	if self.name == "mobs_npc:npc" or self.name == "mobs_npc:trader" then
+	local villager = self.name == "mobs_npc:npc" or self.name == "mobs_npc:trader"
+	if villager then
 		self.tamed = true
 	end
-	return activate(self, staticdata, def, dtime)
+	local kept = activate(self, staticdata, def, dtime)
+	if villager and self.object:get_pos() then
+		dress(self)
+	end
+	return kept
 end
 
 -- a floor with two free nodes over it, anywhere in the box
@@ -124,6 +167,7 @@ function goodluck_villages.spawn(p1, p2, job, bed)
 	if ent and jobs[job] then
 		ent.goodluck_job = job
 		ent.game_name = jobs[job].title
+		dress(ent)
 		-- no name over their heads, as in Minecraft (the trade window says who they are); mobs_npc names traders
 		ent.nametag, ent._nametag = nil, nil
 		obj:set_properties({nametag = ""})

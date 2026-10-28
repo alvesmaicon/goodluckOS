@@ -1,7 +1,8 @@
--- Minecraft's shapes for the chest, the bed, the sign, the minecart, the farm animals (animals.lua), the horses and
--- the spider (meshes goodluck_horse and goodluck_monsters wear), so that its textures fit them: the player's own
--- through goodluck_mcassets, else Pixel Perfection's (chest, minecart, animals, horses, spider) and goodluckOS' own
--- (bed, sign). Meshes drawn by dev/luanti-art/models.py and animals.py
+-- Minecraft's shapes for the chest, the bed, the sign, the minecart, the boat, the arrow, the farm animals
+-- (animals.lua), the horses, the spider, the zombie, the skeleton and the villager (meshes goodluck_horse,
+-- goodluck_monsters and goodluck_villages wear), so that its textures fit them: the player's own through
+-- goodluck_mcassets, else Pixel Perfection's (chest, minecart, boat, arrow, animals, horses, monsters, villager) and
+-- goodluckOS' own (bed, sign). Meshes drawn by dev/luanti-art/models.py and animals.py
 local M = "goodluck_models_"
 
 -- chests: a pixel in from every side and 14 high; open, the lid stands up on its hinge at the back
@@ -91,6 +92,19 @@ if cart then
 	cart.initial_properties.mesh = M .. "minecart.obj"
 	cart.initial_properties.textures = {M .. "minecart.png"}
 	core.override_item("carts:cart", {inventory_image = M .. "minecart_item.png", wield_image = M .. "minecart_item.png"})
+end
+
+-- the boat and the bow's arrow, at 0.9 of its pixels as Minecraft's renderer draws it
+local boat = core.registered_entities["boats:boat"]
+if boat then
+	boat.initial_properties.mesh = M .. "boat.glb"
+	boat.initial_properties.textures = {M .. "boat.png"}
+end
+local arrow = core.registered_entities["x_bows:arrow_entity"]
+if arrow then
+	arrow.initial_properties.mesh = M .. "arrow.glb"
+	arrow.initial_properties.textures = {M .. "arrow.png"}
+	arrow.initial_properties.visual_size = {x = 0.9, y = 0.9}
 end
 
 if core.get_modpath("mobs_animal") then

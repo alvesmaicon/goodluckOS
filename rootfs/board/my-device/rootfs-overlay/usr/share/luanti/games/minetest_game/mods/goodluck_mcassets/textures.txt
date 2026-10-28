@@ -267,6 +267,17 @@ goodluck_horse_armor_diamond.png	{entity/equipment/horse_body/diamond}
 goodluck_horse_saddle.png	{entity/equipment/horse_saddle/saddle}
 goodluck_horse_chest.png	{entity/horse/donkey}
 goodluck_monsters_spider.png	{entity/spider/spider}^{entity/spider/spider_eyes}
+# The zombie, the skeleton, the villagers (the plains skin, a job's clothes over it), the boat and the arrow
+goodluck_monsters_zombie.png	{entity/zombie/zombie}
+goodluck_monsters_skeleton.png	{entity/skeleton/skeleton}
+goodluck_villages_villager.png	{entity/villager/villager}^{entity/villager/type/plains}
+goodluck_villages_job_armorer.png	{entity/villager/profession/armorer}
+goodluck_villages_job_toolsmith.png	{entity/villager/profession/toolsmith}
+goodluck_villages_job_cleric.png	{entity/villager/profession/cleric}
+goodluck_villages_job_librarian.png	{entity/villager/profession/librarian}
+goodluck_villages_job_farmer.png	{entity/villager/profession/farmer}
+goodluck_models_boat.png	{entity/boat/oak}
+goodluck_models_arrow.png	{entity/projectiles/arrow}
 
 # Wool and dye
 wool_white.png	{block/white_wool}

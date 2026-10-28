@@ -145,4 +145,19 @@ if LEGACY:
     spider = Image.open(entity + "spider/spider.png").convert("RGBA")
     spider.alpha_composite(Image.open(entity + "spider/spider_eyes.png").convert("RGBA"))
     spider.save(MODS + "/goodluck_monsters/textures/goodluck_monsters_spider.png")
-    print("horses in", os.path.relpath(HORSES, ROOT), "and the spider")
+    # the zombie and the skeleton as they are; the villager with the plains clothes under each job's; the oak boat
+    # and the arrow
+    monsters = MODS + "/goodluck_monsters/textures/goodluck_monsters_"
+    for mob in ("zombie", "skeleton"):
+        Image.open(f"{entity}{mob}/{mob}.png").convert("RGBA").save(f"{monsters}{mob}.png")
+    villages = MODS + "/goodluck_villages/textures/goodluck_villages_"
+    os.makedirs(os.path.dirname(villages), exist_ok=True)
+    villager = Image.open(entity + "villager/villager.png").convert("RGBA")
+    villager.alpha_composite(Image.open(entity + "villager/type/plains.png").convert("RGBA"))
+    villager.save(villages + "villager.png")
+    for job in ("armorer", "toolsmith", "cleric", "librarian", "farmer"):
+        Image.open(f"{entity}villager/profession/{job}.png").convert("RGBA").save(f"{villages}job_{job}.png")
+    Image.open(entity + "boat/oak.png").convert("RGBA").save(OUT + "/goodluck_models_boat.png")
+    Image.open(entity + "projectiles/arrow.png").convert("RGBA").save(OUT + "/goodluck_models_arrow.png")
+    print("horses in", os.path.relpath(HORSES, ROOT) + ", the spider, the zombie, the skeleton, the villagers,",
+          "the boat and the arrow")
