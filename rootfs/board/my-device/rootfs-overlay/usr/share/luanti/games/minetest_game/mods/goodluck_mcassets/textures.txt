@@ -606,3 +606,22 @@ x_enchanting_symbol_23.png	{particle/sga_w}
 x_enchanting_symbol_24.png	{particle/sga_x}
 x_enchanting_symbol_25.png	{particle/sga_y}
 x_enchanting_symbol_26.png	{particle/sga_z}
+
+# The rest with a piece in Minecraft: the bow being drawn, the wet soil's side, the dead and three live corals, the
+# written book, honey, the beehive, mobs_monster's lava orb and fireball, the mapping kit, leather horse armor's item,
+# a pane's edge. What is left has none (bushes, cotton, glass stairs and doors, bones, the quiver...)
+x_bows_bow_wood_semi_charged.png	{item/bow_pulling_1}
+x_bows_bow_wood_charged.png	{item/bow_pulling_2}
+farming_soil_wet_side.png	{block/dirt}
+default_coral_skeleton.png	{block/dead_tube_coral_block}
+default_coral_cyan.png	{block/tube_coral_block}
+default_coral_pink.png	{block/brain_coral_block}
+default_coral_orange.png	{block/fire_coral_block}
+default_book_written.png	{item/written_book}
+mobs_honey_inv.png	{item/honey_bottle}
+mobs_beehive.png	{block/beehive_front}
+zmobs_lava_orb.png	{item/magma_cream}
+mobs_fireball.png	{item/fire_charge}
+map_mapping_kit.png	{item/map}
+goodluck_horse_armor_leather_item.png	{item/leather_horse_armor}
+xpanes_edge.png	{block/glass_pane_top}
