@@ -47,6 +47,7 @@ An uncompromisingly fast, small, modern, and feature-rich custom firmware for A2
 - Autostart any application on boot, including games or a front-end like EmulationStation (coming soon)
 - USB terminal access for remote debugging. Log in with `sudo screen /dev/ttyACM* 115200` and `root:root`
 - HOME shows up on your PC over USB (MTP), like a phone: copy games and saves without taking the SD card out
+- Internet over the same USB cable: the PC shares its connection with the console (CDC NCM, no driver to install), in place of MTP while it's on
 - Half Life 1 ported and playable: [Get It Here](https://github.com/CodeZombie/glOSports-half-life)
 
 ### USB TTY
@@ -281,6 +282,9 @@ Stock firmware:
 - Bad/no hotkeys
 - Can't be flashed to smaller SD cards.
 - The MBR (at least on the GA36-MB) is broken by default. You can't add games unless you manually fix it with my [guide](https://gist.github.com/CodeZombie/83be58b000ee6a14c7b91a6027a8eedf)
+
+### Internet over USB
+The data port can be an Ethernet adapter named goodluckOS instead of the MTP drive (CDC NCM, which Windows 10 and 11, macOS and Linux drive out of the box): the A33's USB controller can't do both at once. From the serial shell, `usb-mode.sh network` switches over (the PC sees the console plugged in again) and `usb-mode.sh files` brings MTP back; the choice is kept across reboots. Share the PC's internet with that adapter (Windows: the Sharing tab of your Wi-Fi or Ethernet adapter's properties; macOS: System Settings -> General -> Sharing -> Internet Sharing; Linux: the connection's IPv4 method "Shared to other computers") and the console gets an address from the PC within a minute; `ip addr show usb0` shows it. A Mac only sets a new adapter up while its screen is unlocked.
 
 ## Which chip does my console have?
 GA36-MB consoles (sold as R36S) come with an Allwinner A23 or A33, and goodluckOS builds for one don't boot on the other. The stock menu reports a 64-bit CPU and 1 GB of RAM on both, and the marking on the chip can't be trusted either. On Windows, [chip-version](chip-version/README.md) reads the microSD card that came with the console and tells which chip it has.
