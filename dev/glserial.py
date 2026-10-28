@@ -71,7 +71,7 @@ class Console:
 
     def run(self, cmd, timeout=30):
         marker = "@@DONE@@"
-        self.write(f"{cmd}; echo {marker[:3]}''{marker[3:]}\n")
+        self.write(f"{cmd}\necho {marker[:3]}''{marker[3:]}\n")
         o = self.read_for(timeout, re.compile(re.escape(marker) + r".*# $", re.S))
         return o.split(marker)[0].replace("\r", "").lstrip("\n")
 
