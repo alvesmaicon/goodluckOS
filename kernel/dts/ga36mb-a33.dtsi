@@ -23,7 +23,7 @@
 		"Speaker", "Speaker",
 		"Headphone", "Headphone Jack";
 
-	simple-audio-card,pin-switches = "Speaker";	/* no jack detection */
+	simple-audio-card,pin-switches = "Speaker";
 
 	simple-audio-card,routing =
         "Left DAC", "DACL",
@@ -38,6 +38,10 @@
 
 &dai {
 	status = "okay";
+};
+
+&codec_analog {
+	interrupts = <GIC_SPI 46 IRQ_TYPE_LEVEL_HIGH>;	/* headset detection: the jack's switch is on HBIAS */
 };
 
 // The base sun8i-a33.dtsi's opp table only goes up to 1.008ghz.

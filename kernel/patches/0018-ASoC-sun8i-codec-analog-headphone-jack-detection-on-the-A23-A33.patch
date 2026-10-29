@@ -1,0 +1,204 @@
+From: alvesmaicon <alvesmaiconn@gmail.com>
+Subject: [PATCH] ASoC: sun8i-codec-analog: headphone jack detection on the A23/A33
+
+The A23/A33 analog codec reads the current out of HBIAS with a small
+ADC, and raises an interrupt when it crosses a threshold. The vendor
+kernel uses it for headset detection. On the GA36-MB the jack's detect
+switch is wired to HBIAS: a normally closed contact draws current while
+the jack is empty (the ADC reads 10 with the headphone amplifier on, 26
+with it off) and a plug opens it (0). The interrupt fires both ways.
+
+When the board's DT gives the codec its interrupt, report a headphone
+jack: keep HBIAS on (and its "always on" mode, without which the ADC
+reads nothing), enable the in and out interrupts with the vendor's
+threshold, and read the ADC 200 ms after the last one, once the contact
+has stopped bouncing. simple-audio-card sets the jack from its card
+probe, before the aux components probe, so set_jack only touches
+registers and the interrupt; the component's probe forces the HBIAS
+widget on for DAPM. simple-audio-card creates the jack for an aux
+component that reports a jack type, so the card needs no change; the
+jack shows up as an input switch (SW_HEADPHONE_INSERT) and as a jack
+control. Without the interrupt nothing changes.
+
+diff --git a/sound/soc/sunxi/sun8i-codec-analog.c b/sound/soc/sunxi/sun8i-codec-analog.c
+--- a/sound/soc/sunxi/sun8i-codec-analog.c
++++ b/sound/soc/sunxi/sun8i-codec-analog.c
+@@ -6,6 +6,7 @@
+  * Copyright 2016 Chen-Yu Tsai <wens@csie.org>
+  */
+ 
++#include <linux/interrupt.h>
+ #include <linux/io.h>
+ #include <linux/kernel.h>
+ #include <linux/module.h>
+@@ -13,6 +14,7 @@
+ #include <linux/platform_device.h>
+ #include <linux/regmap.h>
+ 
++#include <sound/jack.h>
+ #include <sound/soc.h>
+ #include <sound/soc-dapm.h>
+ #include <sound/tlv.h>
+@@ -223,6 +225,10 @@ static const struct snd_kcontrol_new sun8i_codec_common_controls[] = {
+ struct sun8i_codec_analog {
+ 	unsigned int hp_mute;	/* the user's HPPAMUTE bits, while hp_muted */
+ 	bool hp_muted;
++	void __iomem *base;
++	struct snd_soc_jack *jack;
++	struct delayed_work jack_work;
++	int jack_irq;
+ };
+ 
+ /*
+@@ -801,6 +807,7 @@ static const struct sun8i_codec_analog_quirks sun8i_v3s_quirks = {
+ static int sun8i_codec_analog_cmpnt_probe(struct snd_soc_component *cmpnt)
+ {
+ 	struct device *dev = cmpnt->dev;
++	struct sun8i_codec_analog *priv = dev_get_drvdata(dev);
+ 	const struct sun8i_codec_analog_quirks *quirks;
+ 	int ret;
+ 
+@@ -826,6 +833,10 @@ static int sun8i_codec_analog_cmpnt_probe(struct snd_soc_component *cmpnt)
+ 		ret = sun8i_codec_add_hmic(cmpnt);
+ 		if (ret)
+ 			return ret;
++		/* Headset detection reads the jack through HBIAS */
++		if (priv->jack_irq > 0)
++			snd_soc_dapm_force_enable_pin(snd_soc_component_to_dapm(cmpnt),
++						      "HBIAS");
+ 	}
+ 
+ 	if (quirks->has_linein) {
+@@ -855,6 +866,109 @@ static int sun8i_codec_analog_cmpnt_probe(struct snd_soc_component *cmpnt)
+ 	return 0;
+ }
+ 
++/* Headset detection, next to the PR register in the PRCM (A23/A33) */
++#define SUN8I_ADDA_HMIC_EN			0x04
++#define SUN8I_ADDA_HMIC_EN_DIG				0
++#define SUN8I_ADDA_HMIC_CTRL			0x08
++#define SUN8I_ADDA_HMIC_CTRL_JACK_OUT_IRQ_EN		20
++#define SUN8I_ADDA_HMIC_CTRL_JACK_IN_IRQ_EN		19
++#define SUN8I_ADDA_HMIC_CTRL_TH1			0
++#define SUN8I_ADDA_HMIC_DATA			0x0c
++#define SUN8I_ADDA_HMIC_DATA_IRQ_PEND			GENMASK(20, 16)
++#define SUN8I_ADDA_HMIC_DATA_ADC			GENMASK(4, 0)
++
++/*
++ * The jack's detect switch is wired to HBIAS: a normally closed contact
++ * draws current from it while the jack is empty, and a plug opens it.
++ * The headset mic ADC then reads 0 with headphones in.
++ */
++static void sun8i_codec_analog_jack_work(struct work_struct *work)
++{
++	struct sun8i_codec_analog *priv =
++		container_of(to_delayed_work(work), struct sun8i_codec_analog,
++			     jack_work);
++	u32 adc = readl(priv->base + SUN8I_ADDA_HMIC_DATA) &
++		  SUN8I_ADDA_HMIC_DATA_ADC;
++
++	snd_soc_jack_report(priv->jack, adc < 3 ? SND_JACK_HEADPHONE : 0,
++			    SND_JACK_HEADPHONE);
++}
++
++static irqreturn_t sun8i_codec_analog_jack_irq(int irq, void *dev_id)
++{
++	struct sun8i_codec_analog *priv = dev_id;
++	u32 pend = readl(priv->base + SUN8I_ADDA_HMIC_DATA) &
++		   SUN8I_ADDA_HMIC_DATA_IRQ_PEND;
++
++	if (!pend)
++		return IRQ_NONE;
++
++	writel(pend, priv->base + SUN8I_ADDA_HMIC_DATA);
++	/* Read the jack once the contact has stopped bouncing */
++	mod_delayed_work(system_power_efficient_wq, &priv->jack_work,
++			 msecs_to_jiffies(200));
++
++	return IRQ_HANDLED;
++}
++
++static int sun8i_codec_analog_get_jack_type(struct snd_soc_component *cmpnt)
++{
++	struct sun8i_codec_analog *priv = dev_get_drvdata(cmpnt->dev);
++
++	return priv->jack_irq > 0 ? SND_JACK_HEADPHONE : 0;
++}
++
++static int sun8i_codec_analog_set_jack(struct snd_soc_component *cmpnt,
++				       struct snd_soc_jack *jack, void *data)
++{
++	struct sun8i_codec_analog *priv = dev_get_drvdata(cmpnt->dev);
++	int ret;
++
++	if (priv->jack_irq <= 0)
++		return -ENOTSUPP;
++
++	if (!jack) {
++		writel(0, priv->base + SUN8I_ADDA_HMIC_CTRL);
++		cancel_delayed_work_sync(&priv->jack_work);
++		priv->jack = NULL;
++		return 0;
++	}
++	if (priv->jack)
++		return 0;
++	priv->jack = jack;
++
++	/*
++	 * The switch needs HBIAS on, with or without a mic in use. This runs
++	 * before the component's probe, so no DAPM here: the probe forces
++	 * the HBIAS widget on.
++	 */
++	snd_soc_component_update_bits(cmpnt, SUN8I_ADDA_MIC1G_MICBIAS_CTRL,
++				      BIT(SUN8I_ADDA_MIC1G_MICBIAS_CTRL_HMICBIASEN) |
++				      BIT(SUN8I_ADDA_MIC1G_MICBIAS_CTRL_HMICBIAS_MODE),
++				      BIT(SUN8I_ADDA_MIC1G_MICBIAS_CTRL_HMICBIASEN) |
++				      BIT(SUN8I_ADDA_MIC1G_MICBIAS_CTRL_HMICBIAS_MODE));
++
++	writel(BIT(SUN8I_ADDA_HMIC_EN_DIG), priv->base + SUN8I_ADDA_HMIC_EN);
++	writel(SUN8I_ADDA_HMIC_DATA_IRQ_PEND, priv->base + SUN8I_ADDA_HMIC_DATA);
++	ret = devm_request_irq(cmpnt->dev, priv->jack_irq,
++			       sun8i_codec_analog_jack_irq, 0,
++			       dev_name(cmpnt->dev), priv);
++	if (ret) {
++		priv->jack = NULL;
++		return ret;
++	}
++	writel(BIT(SUN8I_ADDA_HMIC_CTRL_JACK_OUT_IRQ_EN) |
++	       BIT(SUN8I_ADDA_HMIC_CTRL_JACK_IN_IRQ_EN) |
++	       1 << SUN8I_ADDA_HMIC_CTRL_TH1,
++	       priv->base + SUN8I_ADDA_HMIC_CTRL);
++
++	/* Report the jack as it is, once HBIAS is up */
++	queue_delayed_work(system_power_efficient_wq, &priv->jack_work,
++			   msecs_to_jiffies(100));
++
++	return 0;
++}
++
+ static const struct snd_soc_component_driver sun8i_codec_analog_cmpnt_drv = {
+ 	.controls		= sun8i_codec_common_controls,
+ 	.num_controls		= ARRAY_SIZE(sun8i_codec_common_controls),
+@@ -863,6 +977,8 @@ static const struct snd_soc_component_driver sun8i_codec_analog_cmpnt_drv = {
+ 	.dapm_routes		= sun8i_codec_common_routes,
+ 	.num_dapm_routes	= ARRAY_SIZE(sun8i_codec_common_routes),
+ 	.probe			= sun8i_codec_analog_cmpnt_probe,
++	.set_jack		= sun8i_codec_analog_set_jack,
++	.get_jack_type		= sun8i_codec_analog_get_jack_type,
+ };
+ 
+ static const struct of_device_id sun8i_codec_analog_of_match[] = {
+@@ -905,6 +1021,13 @@ static int sun8i_codec_analog_probe(struct platform_device *pdev)
+ 		return PTR_ERR(regmap);
+ 	}
+ 
++	priv->base = base;
++	INIT_DELAYED_WORK(&priv->jack_work, sun8i_codec_analog_jack_work);
++	/* Headset detection only on boards that give its interrupt */
++	priv->jack_irq = platform_get_irq_optional(pdev, 0);
++	if (priv->jack_irq == -EPROBE_DEFER)
++		return -EPROBE_DEFER;
++
+ 	return devm_snd_soc_register_component(&pdev->dev,
+ 					       &sun8i_codec_analog_cmpnt_drv,
+ 					       NULL, 0);
