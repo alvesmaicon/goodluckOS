@@ -46,6 +46,9 @@ blocks({"goodluck_nether:quartz_block", "goodluck_nether:quartz_pillar", "goodlu
 	{0.8, PICK, 0})
 blocks({"goodluck_nether:magma"}, {0.5, PICK, 0})
 blocks({"goodluck_nether:soul_sand"}, {0.5, SHOVEL})
+blocks({"goodluck_nether:crying_obsidian"}, {50, PICK, 3})
+blocks({"goodluck_nether:blackstone", "goodluck_nether:polished_blackstone_bricks"}, {1.5, PICK, 0})
+blocks({"goodluck_nether:polished_blackstone"}, {2, PICK, 0})
 blocks({"goodluck_anvil:anvil", "goodluck_anvil:anvil_chipped", "goodluck_anvil:anvil_damaged",
 	"x_enchanting:table", "mobs:spawner", "doors:trapdoor_steel", "doors:trapdoor_steel_open", "xpanes:bar",
 	"xpanes:bar_flat", "xpanes:trapdoor_steel_bar", "xpanes:trapdoor_steel_bar_open"}, {5, PICK, 0})

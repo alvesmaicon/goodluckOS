@@ -190,6 +190,64 @@ default.register_fence("goodluck_nether:nether_brick_fence", {
 	_goodluck_mc_sound = "nether_bricks",
 })
 
+-- crying obsidian, of the ruined portals: no use in a frame, a purple glow and tears now and then
+core.register_node("goodluck_nether:crying_obsidian", {
+	description = S("Crying Obsidian"),
+	tiles = {"goodluck_nether_crying_obsidian.png"},
+	paramtype = "light",
+	light_source = 10,
+	groups = {cracky = 1, level = 2},
+	is_ground_content = false,
+	sounds = default.node_sound_stone_defaults(),
+})
+core.register_abm({
+	label = "Crying obsidian tears",
+	nodenames = {"goodluck_nether:crying_obsidian"},
+	interval = 3,
+	chance = 6,
+	catch_up = false,
+	action = function(pos)
+		local x, z = pos.x + math.random(-35, 35) / 100, pos.z + math.random(-35, 35) / 100
+		core.add_particle({pos = {x = x, y = pos.y - 0.52, z = z}, velocity = {x = 0, y = -0.1, z = 0},
+			acceleration = {x = 0, y = -6, z = 0}, expirationtime = 1.2, size = 1.2, collisiondetection = true,
+			collision_removal = true, glow = 10, texture = "goodluck_nether_tear.png"})
+	end,
+})
+
+-- blackstone (1.16), in patches low in the Nether and in its ruined portals; it makes stone tools and furnaces as
+-- cobblestone does, and polishes into polished blackstone and its bricks
+core.register_node("goodluck_nether:blackstone", {
+	description = S("Blackstone"),
+	tiles = {"goodluck_nether_blackstone_top.png", "goodluck_nether_blackstone_top.png",
+		"goodluck_nether_blackstone.png"},
+	groups = {cracky = 3, stone = 1},
+	is_ground_content = false,
+	sounds = default.node_sound_stone_defaults(),
+})
+core.register_node("goodluck_nether:polished_blackstone", {
+	description = S("Polished Blackstone"),
+	tiles = {"goodluck_nether_polished_blackstone.png"},
+	groups = {cracky = 3},
+	is_ground_content = false,
+	sounds = default.node_sound_stone_defaults(),
+})
+core.register_node("goodluck_nether:polished_blackstone_bricks", {
+	description = S("Polished Blackstone Bricks"),
+	tiles = {"goodluck_nether_polished_blackstone_bricks.png"},
+	groups = {cracky = 3},
+	is_ground_content = false,
+	sounds = default.node_sound_stone_defaults(),
+})
+stairs.register_stair_and_slab("blackstone", "goodluck_nether:blackstone", {cracky = 3},
+	{"goodluck_nether_blackstone_top.png", "goodluck_nether_blackstone_top.png", "goodluck_nether_blackstone.png"},
+	S("Blackstone Stairs"), S("Blackstone Slab"), default.node_sound_stone_defaults(), true)
+stairs.register_stair_and_slab("polished_blackstone", "goodluck_nether:polished_blackstone", {cracky = 3},
+	{"goodluck_nether_polished_blackstone.png"}, S("Polished Blackstone Stairs"), S("Polished Blackstone Slab"),
+	default.node_sound_stone_defaults(), true)
+stairs.register_stair_and_slab("polished_blackstone_bricks", "goodluck_nether:polished_blackstone_bricks",
+	{cracky = 3}, {"goodluck_nether_polished_blackstone_bricks.png"}, S("Polished Blackstone Brick Stairs"),
+	S("Polished Blackstone Brick Slab"), default.node_sound_stone_defaults(), true)
+
 -- nether wart: planted on soul sand, it grows in the dark, a stage every 11 minutes or so (Minecraft's random tick
 -- at 1 in 10), and gives 2 to 4 when ripe
 local HEIGHT = {5, 8, 11, 14}
@@ -260,6 +318,12 @@ core.register_craft({output = BRICKS, recipe = {{BRICK, BRICK}, {BRICK, BRICK}}}
 core.register_craft({output = "goodluck_nether:nether_brick_fence 6",
 	recipe = {{BRICKS, BRICK, BRICKS}, {BRICKS, BRICK, BRICKS}}})
 core.register_craft({type = "cooking", output = BRICK, recipe = RACK})
+core.register_craft({output = "goodluck_nether:polished_blackstone 4",
+	recipe = {{"goodluck_nether:blackstone", "goodluck_nether:blackstone"},
+		{"goodluck_nether:blackstone", "goodluck_nether:blackstone"}}})
+core.register_craft({output = "goodluck_nether:polished_blackstone_bricks 4",
+	recipe = {{"goodluck_nether:polished_blackstone", "goodluck_nether:polished_blackstone"},
+		{"goodluck_nether:polished_blackstone", "goodluck_nether:polished_blackstone"}}})
 if core.get_modpath("goodluck_redstone") then
 	local R = "goodluck_redstone:redstone"
 	core.register_craft({output = "goodluck_redstone:lamp", recipe = {{"", R, ""}, {R, GLOWSTONE, R}, {"", R, ""}}})
@@ -267,7 +331,8 @@ end
 
 -- ores and patches, by the engine in the realm's netherrack once mapgen.lua has carved it: veins as many and as big
 -- as Minecraft's (1.16) per 16x16 column over its 108 nodes of height, matched as goodluck_ores matches them, lava
--- springs (hidden and on walls), magma about the lava sea's level, soul sand anywhere and gravel by the sea
+-- springs (hidden and on walls), magma about the lava sea's level, soul sand anywhere, gravel by the sea and
+-- blackstone under it
 local COLUMN = 16 * 16 * 108
 local function ore(def)
 	def.wherein = RACK
@@ -284,11 +349,16 @@ ore({ore_type = "scatter", ore = MAGMA, clust_scarcity = 16 * 16 * 10 / 4, clust
 	y_min = SEA - 4, y_max = SEA + 5})
 ore({ore_type = "blob", ore = SOUL_SAND, clust_scarcity = 16 * 16 * 16, clust_size = 7, y_min = SEA - 4,
 	noise_params = {offset = 0, scale = 1, spread = {x = 5, y = 5, z = 5}, seed = 7431, octaves = 1, persistence = 0}})
+ore({ore_type = "blob", ore = "goodluck_nether:blackstone", clust_scarcity = 16 * 16 * 16, clust_size = 6,
+	y_min = YMIN + 5, y_max = YMIN + 28,
+	noise_params = {offset = 0, scale = 1, spread = {x = 5, y = 5, z = 5}, seed = 7433, octaves = 1, persistence = 0}})
 ore({ore_type = "blob", ore = "default:gravel", clust_scarcity = 12 * 12 * 12, clust_size = 6, y_min = SEA - 3,
 	y_max = SEA + 6,
 	noise_params = {offset = 0, scale = 1, spread = {x = 5, y = 5, z = 5}, seed = 7432, octaves = 1, persistence = 0}})
 
 core.register_mapgen_script(core.get_modpath("goodluck_nether") .. "/mapgen.lua")
+dofile(core.get_modpath("goodluck_nether") .. "/portal.lua")
+dofile(core.get_modpath("goodluck_nether") .. "/ruins.lua")
 
 -- inside: the Nether's red fog, as near as Minecraft's (it also keeps the A33 from drawing far into one big cave), no
 -- sun, moon, stars or clouds; soul sand walks at 40 %, magma burns half a heart every half second unless sneaking

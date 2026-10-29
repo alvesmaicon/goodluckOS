@@ -35,7 +35,8 @@ local function natural(name, def, g)
 		"^default:sand_with_kelp$", "^default:permafrost", "bush_stem$", "^default:[%a_]*_source$",
 		"^farming:cotton_wild$", "^flowers:", "^mobs:cobweb$", "^mobs:beehive$", "^mobs:hearing_vines$",
 		"^goodluck_amethyst:", "^goodluck_nether:netherrack$", "^goodluck_nether:bedrock$", "^goodluck_nether:glowstone$",
-		"^goodluck_nether:soul_sand$", "^goodluck_nether:magma$", "^goodluck_nether:%a+_ore$"))
+		"^goodluck_nether:soul_sand$", "^goodluck_nether:magma$", "^goodluck_nether:%a+_ore$",
+		"^goodluck_nether:blackstone$", "^goodluck_nether:crying_obsidian$"))
 end
 
 local function functional(name)

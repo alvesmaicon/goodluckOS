@@ -178,10 +178,11 @@ goodluck_villages
 goodluck_nether
   Its textures are Pixel Perfection's by XSSheep and Pixel Perfection Legacy's
   by Nova Wostra, CC BY-SA 4.0, as Mineclonia 0.124.0 carries them
-  (https://codeberg.org/mineclonia/mineclonia, mods/ITEMS/mcl_nether and
-  mcl_core's bedrock; its LEGAL.md), copied under goodluck_nether's names by
-  dev/luanti-art/nether.py, and so under CC BY-SA 4.0. Its code is goodluckOS's
-  own (see goodluck_* below).
+  (https://codeberg.org/mineclonia/mineclonia, mods/ITEMS/mcl_nether,
+  mcl_blackstone, mcl_portals' portal and its particle, and mcl_core's bedrock,
+  crying obsidian and its tear; its LEGAL.md), copied under goodluck_nether's
+  names by dev/luanti-art/nether.py, and so under CC BY-SA 4.0. Its code and
+  its ruined portals' shapes are goodluckOS's own (see goodluck_* below).
 
 Left out of mobs, mobs_animal, mobs_monster, stamina, mobs_npc and mob_horse:
 screenshot.jpg, made on textstudio.com, whose terms are unclear. The game

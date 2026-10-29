@@ -55,6 +55,11 @@ goodluck_mc_step_nether_bricks	block/nether_bricks/step1 block/nether_bricks/ste
 goodluck_mc_break_nether_ore	block/nether_ore/break1 block/nether_ore/break2 block/nether_ore/break3 block/nether_ore/break4
 goodluck_mc_step_nether_ore	block/nether_ore/step1 block/nether_ore/step2 block/nether_ore/step3 block/nether_ore/step4 block/nether_ore/step5
 
+# The nether portal: its hum, the whoosh on stepping in, the arrival
+goodluck_nether_portal_ambient	portal/portal
+goodluck_nether_portal_trigger	portal/trigger
+goodluck_nether_portal_travel	portal/travel
+
 # Chests, doors, furnace, fire, carts
 default_chest_open	block/chest/open
 default_chest_close	block/chest/close1 block/chest/close2 block/chest/close3
