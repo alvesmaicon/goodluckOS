@@ -1,8 +1,8 @@
 From: alvesmaicon <alvesmaiconn@gmail.com>
 Subject: [PATCH] ASoC: sun8i-codec-analog: mute the headphone amplifier while the DACs power up
 
-With the amplifier kept powered, every stream still starts with a click
-on the headphones: the DACs powering up. The vendor driver mutes the
+Every stream that powers the path up starts with a click on the
+headphones: the DACs powering up. The vendor driver mutes the
 amplifier (HPPAMUTE) around that and ramps the volume up afterwards. On
 the console, muting alone is enough, and 50 ms after the DACs are on
 the click is over.
@@ -15,11 +15,10 @@ muted keeps it muted.
 diff --git a/sound/soc/sunxi/sun8i-codec-analog.c b/sound/soc/sunxi/sun8i-codec-analog.c
 --- a/sound/soc/sunxi/sun8i-codec-analog.c
 +++ b/sound/soc/sunxi/sun8i-codec-analog.c
-@@ -216,7 +216,58 @@
- 		       SUN8I_ADDA_ADC_AP_EN_ADCG, 0x7, 0,
+@@ -217,6 +217,57 @@ static const struct snd_kcontrol_new sun8i_codec_common_controls[] = {
  		       sun8i_codec_out_mixer_pregain_scale),
  };
-+
+ 
 +#define SUN8I_ADDA_HP_MUTE_MASK	(BIT(SUN8I_ADDA_DAC_PA_SRC_LHPPAMUTE) | \
 +				 BIT(SUN8I_ADDA_DAC_PA_SRC_RHPPAMUTE))
 +
@@ -59,7 +58,7 @@ diff --git a/sound/soc/sunxi/sun8i-codec-analog.c b/sound/soc/sunxi/sun8i-codec-
 +{
 +	struct snd_soc_component *component = snd_soc_dapm_to_component(w->dapm);
 +	struct sun8i_codec_analog *priv = dev_get_drvdata(component->dev);
- 
++
 +	if (!priv->hp_muted)
 +		return 0;
 +
@@ -74,7 +73,7 @@ diff --git a/sound/soc/sunxi/sun8i-codec-analog.c b/sound/soc/sunxi/sun8i-codec-
  static const struct snd_soc_dapm_widget sun8i_codec_common_widgets[] = {
  	/* ADC */
  	SND_SOC_DAPM_ADC("Left ADC", NULL, SUN8I_ADDA_ADC_AP_EN,
-@@ -225,10 +276,13 @@
+@@ -225,10 +276,13 @@ static const struct snd_soc_dapm_widget sun8i_codec_common_widgets[] = {
  			 SUN8I_ADDA_ADC_AP_EN_ADCREN, 0),
  
  	/* DAC */
@@ -92,7 +91,7 @@ diff --git a/sound/soc/sunxi/sun8i-codec-analog.c b/sound/soc/sunxi/sun8i-codec-
  	/*
  	 * Due to this component and the codec belonging to separate DAPM
  	 * contexts, we need to manually link the above widgets to their
-@@ -835,9 +889,15 @@
+@@ -828,9 +882,15 @@ MODULE_DEVICE_TABLE(of, sun8i_codec_analog_of_match);
  
  static int sun8i_codec_analog_probe(struct platform_device *pdev)
  {
