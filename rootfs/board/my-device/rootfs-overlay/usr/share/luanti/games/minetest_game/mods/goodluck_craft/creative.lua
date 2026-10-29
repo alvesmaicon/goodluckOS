@@ -104,7 +104,7 @@ local CATEGORIES = {
 		"^emerald$", "^diamond$", "^redstone$", "^amethyst_shard$", "^flint$", "^stick$", "^clay", "^paper$", "^book$", "^string$", "^cotton$",
 		"^wheat$", "^flour$", "^sugar$", "^bowl$"}},
 	{"spawn_eggs", S("Spawn Eggs"), "goodluck_craft_spawn_egg.png", 2, 5, function(name, def, g)
-		return any_group(g, "spawn_egg")
+		return any_group(g, "spawn_egg") or name == "goodluck_nether:spawner"
 	end},
 }
 

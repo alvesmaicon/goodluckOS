@@ -1,7 +1,7 @@
 -- The Nether's monsters as Minecraft (26.x) has them, in goodluck_models' meshes: the ghast floats about and fires at
 -- whoever it sees; the blaze keeps its distance and fires bursts of three; the magma cube hops, in three sizes, the
 -- bigger splitting in smaller; zombified piglins leave you alone until one of them is hit; the wither skeleton hits
--- with Wither. Blazes and wither skeletons come out only in fortresses (the next wave: their eggs until then);
+-- with Wither. Blazes and wither skeletons come out only in fortresses (and blazes from their spawners);
 -- ghasts, magma cubes and zombified piglins anywhere in the Nether whatever the light, and now and then a zombified
 -- piglin out of a portal in the Overworld. Their fireballs, the ghast's blast, being on fire, the fire charge, and
 -- what they drop
@@ -906,7 +906,8 @@ core.register_node(N .. "wither_skeleton_skull", {
 -- air over it, ghasts in the open (below), whatever the light; 8 monsters at most within 64 of the nearest player, of
 -- them 5 zombified piglins, 1 magma cube and 2 ghasts, so that the piglins never take the ghasts' room
 local GROUND = {RACK, N .. "soul_sand", N .. "quartz_ore", N .. "gold_ore", "default:gravel"}
-local CAP, LIMIT = 8, {[N .. "ghast"] = 2, [N .. "magma_cube"] = 1, [N .. "zombified_piglin"] = 5}
+local CAP, LIMIT = 8, {[N .. "ghast"] = 2, [N .. "magma_cube"] = 1, [N .. "zombified_piglin"] = 5,
+	[N .. "blaze"] = 4, [N .. "wither_skeleton"] = 4, ["goodluck_monsters:skeleton"] = 2}
 local function crowded(pos, name)
 	local player, near = nil, 128
 	for _, p in ipairs(core.get_connected_players()) do
@@ -975,6 +976,60 @@ core.register_globalstep(function(dtime)
 		end
 	end
 end)
+
+-- inside a fortress's pieces, on its bricks, Minecraft's own list for them instead, by weight and in groups:
+-- blazes (2 to 3), wither skeletons (5), zombified piglins (4), magma cubes (4) and now and then a skeleton (5),
+-- under the same caps
+local FORTRESS = {{N .. "blaze", 10, 2, 3}, {N .. "wither_skeleton", 8, 5, 5}, {N .. "zombified_piglin", 5, 4, 4},
+	{N .. "magma_cube", 3, 4, 4}, {"goodluck_monsters:skeleton", 2, 5, 5}}
+core.register_on_mods_loaded(function()
+	for i = #FORTRESS, 1, -1 do
+		if not core.registered_entities[FORTRESS[i][1]] then
+			table.remove(FORTRESS, i)
+		end
+	end
+end)
+local function room(p, name)
+	local cb = core.registered_entities[name].base_colbox
+	for y = 0, math.ceil(cb[5]) - 1 do
+		if core.get_node(vector.offset(p, 0, y, 0)).name ~= "air" then
+			return false
+		end
+	end
+	return (core.registered_nodes[core.get_node(vector.offset(p, 0, -1, 0)).name] or {}).walkable
+end
+core.register_abm({
+	label = "Nether fortress monsters",
+	nodenames = {N .. "nether_bricks"},
+	neighbors = {"air"},
+	interval = 30,
+	chance = 150,
+	catch_up = false,
+	action = function(pos)
+		local p = vector.offset(pos, 0, 1, 0)
+		if not spawning or not stand(p) or not R.fortress.piece_at(p) then
+			return
+		end
+		local total = 0
+		for _, e in ipairs(FORTRESS) do
+			total = total + e[2]
+		end
+		local roll = math.random(1, total)
+		for _, e in ipairs(FORTRESS) do
+			roll = roll - e[2]
+			if roll <= 0 then
+				local q = p
+				for _ = 1, math.random(e[3], e[4]) do
+					if room(q, e[1]) and not crowded(q, e[1]) then
+						core.add_entity(q, e[1])
+					end
+					q = vector.offset(p, math.random(-2, 2), 0, math.random(-2, 2))
+				end
+				return
+			end
+		end
+	end,
+})
 
 -- a portal in the Overworld lets a zombified piglin out now and then, at its foot: Minecraft's 1 in 1000 for each of
 -- its blocks each random tick (every 68 s), on Normal

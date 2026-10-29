@@ -1,8 +1,9 @@
 -- The Nether's ground, in the map generator's threads: in the realm (init.lua) the engine's stone becomes netherrack
 -- carved by 3D noise, sampled every 4 nodes across and 8 up and blended in between, as Minecraft does, so that only
 -- the blending runs for each node; lava fills what is open up to the sea, bedrock closes the floor and the ceiling in
--- Minecraft's 5 rough layers. Glowstone hangs from the ceilings, fire and mushrooms sit on the floors; the engine then
--- adds the ores and patches, starts the lava springs flowing and lights it all
+-- Minecraft's 5 rough layers. The fortresses (fortress.lua) go in next; glowstone hangs from the ceilings, fire and
+-- mushrooms sit on the floors; the engine then adds the ores and patches, starts the lava springs flowing and lights
+-- it all
 local R = core.ipc_get("goodluck_nether:realm")
 local YMIN, YMAX, SEA = R.ymin, R.ymax, R.sea
 -- the grid the noise is sampled on (the row below is written out for 4 across)
@@ -110,6 +111,12 @@ core.register_on_generated(function(vm, minp, maxp, blockseed)
 		end
 	end
 
+	-- the fortresses' share of this mapchunk, before what grows on the netherrack (Minecraft places them first too)
+	local tf = core.get_us_time()
+	local fortress = goodluck_nether.fortress.draw(data, area, {x = minp.x, y = y0, z = minp.z},
+		{x = maxp.x, y = y1, z = maxp.z})
+	tf = core.get_us_time() - tf
+
 	local function inside(x, y, z)
 		return x >= minp.x and x <= maxp.x and z >= minp.z and z <= maxp.z and y > y0 and y < y1
 	end
@@ -181,6 +188,13 @@ core.register_on_generated(function(vm, minp, maxp, blockseed)
 	local t3 = core.get_us_time()
 
 	vm:set_data(data)
+	if fortress then
+		for _, n in ipairs(fortress.nodes) do
+			vm:set_node_at(n, n)
+		end
+		placed.fortress = fortress.pieces
+		core.save_gen_notify("goodluck_nether:fortress", {spawners = fortress.spawners, chests = fortress.chests})
+	end
 	local t4 = core.get_us_time()
 	core.generate_ores(vm, {x = minp.x, y = y0, z = minp.z}, {x = maxp.x, y = y1, z = maxp.z})
 	local t5 = core.get_us_time()
@@ -190,5 +204,5 @@ core.register_on_generated(function(vm, minp, maxp, blockseed)
 	local t7 = core.get_us_time()
 	-- what it took and made, for a mod that asks (set_gen_notify)
 	core.save_gen_notify("goodluck_nether:chunk", {y = minp.y, read = t1 - t0, shape = t2 - t1, features = t3 - t2,
-		write = t4 - t3, ores = t5 - t4, liquids = t6 - t5, light = t7 - t6, placed = placed})
+		fortress = tf, write = t4 - t3, ores = t5 - t4, liquids = t6 - t5, light = t7 - t6, placed = placed})
 end)

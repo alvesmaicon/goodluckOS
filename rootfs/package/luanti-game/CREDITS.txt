@@ -195,8 +195,10 @@ goodluck_nether
   spawn eggs and the blaze rod, blaze powder, ghast tear, magma cream and fire
   charge are Pixel Perfection Legacy's by Nova Wostra (26.3-97.2,
   https://modrinth.com/resourcepack/pixel-perfection-legacy), CC BY-SA 4.0,
-  copied by dev/luanti-art/nether_mobs.py. Its code and its ruined portals'
-  shapes are goodluckOS's own (see goodluck_* below).
+  copied by dev/luanti-art/nether_mobs.py. Its monster spawner wears mobs'
+  mob_spawner.png (above). Its code, its ruined portals' shapes and its
+  fortresses, laid out as Minecraft's, are goodluckOS's own (see goodluck_*
+  below).
 
 goodluck_effects
   Its textures are Pixel Perfection's by XSSheep and Pixel Perfection Legacy's
