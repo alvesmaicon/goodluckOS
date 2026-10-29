@@ -41,23 +41,12 @@ local function blocks(player, hitter)
 	return d.x * look.x + d.z * look.z > 0
 end
 
-local function walk_speed(name)
-	local def = armor.def[name]
-	return def and def.speed or 1
-end
-
 local function set_slowed(player, name, on)
 	if (slowed[name] or false) == on then
 		return
 	end
 	slowed[name] = on or nil
-	local walk = walk_speed(name)
-	if on then
-		player:set_physics_override({speed = walk * SLOW})
-	-- a bed or another mod may have changed the speed meanwhile: leave theirs
-	elseif math.abs(player:get_physics_override().speed - walk * SLOW) < 0.001 then
-		player:set_physics_override({speed = walk})
-	end
+	goodluck_physics.set(player, "goodluck_shield", on and {speed = SLOW} or nil)
 end
 
 -- the shield worn, copied to the left hand, raised or not
@@ -143,11 +132,7 @@ core.register_on_punchplayer(function(player, hitter)
 end)
 
 armor:register_on_update(function(player)
-	local name = player:get_player_name()
-	if slowed[name] then
-		player:set_physics_override({speed = walk_speed(name) * SLOW})
-	end
-	show(player, name)
+	show(player, player:get_player_name())
 end)
 
 core.register_on_leaveplayer(function(player)

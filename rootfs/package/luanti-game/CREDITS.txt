@@ -184,15 +184,25 @@ goodluck_nether
   names by dev/luanti-art/nether.py, and so under CC BY-SA 4.0. Its code and
   its ruined portals' shapes are goodluckOS's own (see goodluck_* below).
 
+goodluck_effects
+  Its textures are Pixel Perfection's by XSSheep and Pixel Perfection Legacy's
+  by Nova Wostra, CC BY-SA 4.0, as Mineclonia 0.124.0 carries them
+  (https://codeberg.org/mineclonia/mineclonia, mcl_potions' effect icons,
+  withered heart and swirl, mcl_hunger's poisoned heart and mcl_mobitems'
+  feather; its LEGAL.md), copied under goodluck_effects' names by
+  dev/luanti-art/effects.py, and so under CC BY-SA 4.0. Its code is goodluckOS's
+  own (see goodluck_* below).
+
 Left out of mobs, mobs_animal, mobs_monster, stamina, mobs_npc and mob_horse:
 screenshot.jpg, made on textstudio.com, whose terms are unclear. The game
 doesn't use them.
 
 goodluck_* mods (but goodluck_villages' buildings and villagers' textures,
 goodluck_monsters' skins, goodluck_chest's halves, goodluck_models' chests,
-minecart, boat, arrow and farm animals' textures, goodluck_horse's and
-goodluck_nether's textures, above), and the stamina, mobs_animal, mobs_monster, x_enchanting,
-mobs_npc and x_bows media above (but the half-drawn bow, CC BY-SA 4.0)
+minecart, boat, arrow and farm animals' textures, goodluck_horse's,
+goodluck_nether's and goodluck_effects' textures, above), and the stamina,
+mobs_animal, mobs_monster, x_enchanting, mobs_npc and x_bows media above (but
+the half-drawn bow, CC BY-SA 4.0)
   Code, pixel art, the rat's and the bomb mushroom's models, and the item
   pickup, experience, bow, monster, horse equip and anvil sounds made for
   goodluckOS, under goodluckOS's license, GPL-2.0.

@@ -56,11 +56,6 @@ for _, name in ipairs({BOW, BOW .. "_semi_charged", BOW .. "_charged"}) do
 	core.override_item(name, def)
 end
 
-local function walk_speed(name)
-	local def = core.global_exists("armor") and armor.def and armor.def[name]
-	return def and def.speed or 1
-end
-
 local function set_drawing(player, name, on)
 	if (drawing[name] or false) == on then
 		return
@@ -69,13 +64,7 @@ local function set_drawing(player, name, on)
 	if sprint then
 		sprint.stop(player, on, "bow")
 	end
-	local walk = walk_speed(name)
-	if on then
-		player:set_physics_override({speed = walk * SLOW})
-	-- a bed or another mod may have changed the speed meanwhile: leave theirs
-	elseif math.abs(player:get_physics_override().speed - walk * SLOW) < 0.001 then
-		player:set_physics_override({speed = walk})
-	end
+	goodluck_physics.set(player, "goodluck_bow", on and {speed = SLOW} or nil)
 end
 
 -- as in Minecraft, an arrow shot in creative or with Infinity stays until it goes away by itself

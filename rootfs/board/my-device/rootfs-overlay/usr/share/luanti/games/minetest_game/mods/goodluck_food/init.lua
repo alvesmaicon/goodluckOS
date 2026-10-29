@@ -92,7 +92,7 @@ core.register_craft({
 	cooktime = 10,
 })
 
--- 2 points, and at 3 in 5 stamina's poison, as Minecraft's Poison
+-- 2 points, and at 3 in 5 Minecraft's Poison for 5 s (goodluck_effects)
 core.register_craftitem("goodluck_food:poisonous_potato", {
 	description = S("Poisonous Potato"),
 	inventory_image = "goodluck_food_poisonous_potato.png",
@@ -100,10 +100,8 @@ core.register_craftitem("goodluck_food:poisonous_potato", {
 	on_use = function(itemstack, user, pointed_thing)
 		local full = stamina and stamina.get_saturation(user) or 0
 		itemstack = core.do_item_eat(2, nil, itemstack, user, pointed_thing)
-		local data = stamina and stamina.players[user:get_player_name()]
-		if data and full < stamina.VISUAL_MAX and math.random() < 0.6 then
-			data.poisoned = 4
-			user:hud_change(data.hud_id, "text", "stamina_hud_poison.png")
+		if stamina and full < stamina.VISUAL_MAX and math.random() < 0.6 and core.global_exists("goodluck_effects") then
+			goodluck_effects.apply(user, "poison", 5, 1)
 		end
 		return itemstack
 	end,
