@@ -117,13 +117,17 @@ def cmd_send(c, args):
                 sys.exit(f"the console stopped answering at block {i + 1}/{n}")
             i += 1
         except serial.SerialException:
-            # go on from the blocks that reached the file: a line cut short never ran
+            # go on from the blocks that reached the file
             drops += 1
             if drops > 20:
                 sys.exit("the serial dropped 20 times, giving up")
             print(f"serial dropped at block {i + 1}/{n}, reconnecting", flush=True)
             c.reopen()
-            i = int(c.run(f"wc -c < {remote}.b64").strip() or 0) // chunk
+            size = int(c.run(f"wc -c < {remote}.b64").strip() or 0)
+            i = size // chunk
+            # a block cut short may have reached the file in part: back to the last whole one
+            if size % chunk:
+                c.run(f"truncate -s {i * chunk} {remote}.b64")
             continue
         pct = i * 100 // n
         if pct // 10 > shown:   # a line every 10 %, with the time left
