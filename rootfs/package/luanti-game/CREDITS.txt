@@ -175,6 +175,14 @@ goodluck_villages
   villagers wear goodluck_models' villager, in Pixel Perfection Legacy's
   textures (see goodluck_models).
 
+goodluck_recipes
+  Its Recipes book is Minetest Game's mtg_craftguide, MIT (Jean-Patrick
+  Guerrero and contributors, pauloue):
+  mods/goodluck_recipes/LICENSE-mtg_craftguide.txt. Its code is reworked by
+  goodluckOS to show what the player has learnt, with mtg_craftguide's strings
+  and textures; the notice's box is goodluckOS's own (dev/luanti-art/toast.py,
+  see goodluck_* below).
+
 goodluck_nether
   Its textures are Pixel Perfection's by XSSheep and Pixel Perfection Legacy's
   by Nova Wostra, CC BY-SA 4.0, as Mineclonia 0.124.0 carries them
