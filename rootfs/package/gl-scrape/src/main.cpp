@@ -277,11 +277,12 @@ static bool needed(const Options& o, const Folder& f, const Gamelist& main, cons
     return o.lang != "en" && local.get(rom, "desc").empty();
 }
 
-static std::string cacheKey(const std::string& rom, const RomId& id) {
-    std::string key = id.crc.empty() ? "n-" + stem(rom) : id.crc;
+// By name and size, so a disc image is only read through (its CRC) the first time
+static std::string cacheKey(const std::string& rom, uint64_t size) {
+    std::string key = stem(rom);
     for (char& c : key)
         if (strchr("\\/:*?\"<>|", c)) c = '_';
-    return key + "-" + std::to_string(id.size) + ".json";
+    return key + "-" + std::to_string(size) + ".json";
 }
 
 static bool readFile(const std::string& path, std::string& out) {
@@ -438,11 +439,11 @@ int main(int argc, char** argv) {
             }
             report(o, p);
 
-            const RomId id = identify(f.dir + "/" + rom);
-            const std::string cached = cacheDir + "/" + cacheKey(rom, id);
+            struct stat st;
+            const std::string path = f.dir + "/" + rom;
+            const std::string cached = cacheDir + "/" + cacheKey(rom, stat(path.c_str(), &st) == 0 ? (uint64_t)st.st_size : 0);
             Json rec;
             std::string text;
-            struct stat st;
             if (readFile(cached, text) && Json::parse(text, rec)) {
                 // an unknown game is asked again after a week
                 if (rec["notfound"].text == "true" && stat(cached.c_str(), &st) == 0 && time(nullptr) - st.st_mtime > 7 * 86400)
@@ -451,12 +452,17 @@ int main(int argc, char** argv) {
                 rec = Json();
             }
             if (rec.isNull()) {
+                const RomId id = identify(path);
                 a = Answer::Busy;
                 for (int attempt = 0; attempt < 3 && (a == Answer::Busy || a == Answer::Network) && !stopping; ++attempt) {
                     if (attempt) sleep(a == Answer::Busy ? 10 : 5);
                     a = ss.gameInfo(f.sys->id, rom, id, rec);
                 }
                 p.detail = ss.detail;
+                if (a == Answer::Ok || a == Answer::NotFound) {
+                    ++q.today;      // ScreenScraper counts both
+                    p.requests = std::to_string(q.today) + "/" + std::to_string(q.perDay);
+                }
                 if (fatal(a)) {
                     save();
                     return finish(o, p, "error", describe(a), 1);
@@ -475,8 +481,6 @@ int main(int argc, char** argv) {
                     continue;
                 }
                 offline = 0;
-                ++q.today;
-                p.requests = std::to_string(q.today) + "/" + std::to_string(q.perDay);
                 writeFile(cached, rec.dump());
             }
             if (rec["notfound"].text == "true") {

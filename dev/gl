@@ -16,6 +16,7 @@ usage: dev/gl <command> [args]
   shell                     shell in the dev container
   app puppy|gl-scrape       the launcher or the scraper: armhf + native binaries (gl-scrape: .env, see dev/README.md)
   deploy <overlay files>... dev/out/deploy.tar.gz: the built apps + rootfs-overlay files, console paths
+  scrape-test               gl-scrape's tests: its pieces under sanitizers, then the program against a fake ScreenScraper
   shot <app> <name> <keys>  native app in Xvfb, a screenshot at each "|" (keys: xdotool names, "_" waits 1 s)
   scenes [dir]              launcher scenes of dev/scenes, one screenshot each (default dev/out/scenes)
   scenes-diff <dir> <dir>   the scenes whose screenshots differ between two runs, pixel by pixel
@@ -375,6 +376,7 @@ case $cmd in
     shell) exec bash ;;
     app) [ $# -ge 1 ] || usage; for a in "$@"; do build_app "$a"; done ;;
     shot) [ $# -eq 3 ] || usage; shot "$@" ;;
+    scrape-test) bash "$DEV/scrape-test/run.sh" ;;
     scenes) scenes "$@" ;;
     _scenes) scenes_run "$@" ;;
     scenes-diff) [ $# -eq 2 ] || usage; scenes_diff "$@" ;;

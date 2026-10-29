@@ -9,7 +9,13 @@
 
 #include "fetch.h"
 
-static const char* kApi = "https://api.screenscraper.fr/api2/";
+static const char* kDefaultApi = "https://api.screenscraper.fr/api2/";
+
+// SS_API in the environment points the tests at a fake server
+static std::string api() {
+    const char* a = getenv("SS_API");
+    return a && *a ? a : kDefaultApi;
+}
 static const char* kSoftname = "goodluckOS";
 
 const char* describe(Answer a) {
@@ -78,14 +84,14 @@ Answer ScreenScraper::request(const std::string& url, Json& out) {
 
 Answer ScreenScraper::userInfo(Quota& q) {
     Json j;
-    const Answer a = request(std::string(kApi) + "ssuserInfos.php?output=json&" + credentials(), j);
+    const Answer a = request(api() + "ssuserInfos.php?output=json&" + credentials(), j);
     if (a != Answer::Ok) return a;
     const Json& u = j["response"]["ssuser"];
     if (u.isNull()) return Answer::Garbled;
     q.user = u["id"].text;
     q.level = number(u["niveau"]);
     q.threads = std::max(1, number(u["maxthreads"]));
-    q.perMinute = number(u["maxrequestspermin"]);
+    q.perMinute = number(u["maxrequestspermin"].isNull() ? u["maxrequestsperdmin"] : u["maxrequestspermin"]);
     q.perDay = number(u["maxrequestsperday"]);
     q.today = number(u["requeststoday"]);
     q.unknownToday = number(u["requestskotoday"]);
@@ -104,7 +110,7 @@ static const char* romType(const std::string& file) {
 }
 
 Answer ScreenScraper::gameInfo(int systemId, const std::string& file, const RomId& id, Json& game) {
-    std::string url = std::string(kApi) + "jeuInfos.php?output=json&" + credentials() +
+    std::string url = api() + "jeuInfos.php?output=json&" + credentials() +
                       "&systemeid=" + std::to_string(systemId) + "&romtype=" + romType(file) + "&romnom=" + urlEncode(file) +
                       "&romtaille=" + std::to_string(id.size);
     if (!id.crc.empty()) url += "&crc=" + id.crc;

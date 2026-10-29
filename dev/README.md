@@ -95,6 +95,8 @@ dev/gl shell
 /repo/dev/out/gl-scrape.aarch64 --roots /tmp/roms --cache /tmp/cache --config /dev/null --lang pt gba
 ```
 
+`dev/gl scrape-test` runs its tests: its pieces under ASan and UBSan, then the program against `dev/scrape-test/fake-screenscraper.py` (`SS_API` points it there), which checks the first run, Missing only and All, the media, the gamelists, the cache and that no credential lands in it. It needs no account and no internet.
+
 It runs the `curl` program and hands it the URL on its standard input, so the credentials never show in `ps`. Buildroot takes them from `make`'s environment (a CI secret); an image built without them has a scraper that says so.
 
 ## Audio test

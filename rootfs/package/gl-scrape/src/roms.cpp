@@ -7,9 +7,6 @@
 #include <dirent.h>
 #include <sys/stat.h>
 
-// Read through below this size; a CD image is matched by its name and size
-static const uint64_t kMaxCrcBytes = 64ull << 20;
-
 static std::string lower(std::string s) {
     for (char& c : s) c = (char)tolower((unsigned char)c);
     return s;
@@ -99,7 +96,7 @@ RomId identify(const std::string& path) {
     if (ext == "zip") {
         RomId inner;
         if (zipEntry(f, id.size, inner)) id = inner;
-    } else if (ext != "cue" && ext != "m3u" && id.size <= kMaxCrcBytes) {
+    } else {
         if (!crcTable[1]) makeTable();
         uint32_t c = 0xFFFFFFFFu;
         static unsigned char buf[1 << 16];
