@@ -419,7 +419,7 @@ core.register_globalstep(function(dtime)
 			burn[name] = (burn[name] or 0) + step
 			if burn[name] >= 0.5 then
 				burn[name] = 0
-				player:set_hp(player:get_hp() - 1, {type = "set_hp", cause = "goodluck_nether:magma"})
+				player:set_hp(player:get_hp() - 1, {type = "set_hp", cause = "goodluck_nether:magma", fire = true})
 			end
 		else
 			burn[name] = nil

@@ -5,8 +5,6 @@ local fov = tonumber(core.settings:get("goodluck_sprint_fov") or "") or 1.1
 local FOV_TIME = 0.2
 -- with stamina on, running drains hunger as stamina's own sprint does and needs more than 6 points (not in creative)
 local hunger = core.get_modpath("stamina") and stamina
--- 3d_armor sets the walk speed (heavy armor is slower) each time the armor changes
-local armor_mod = core.get_modpath("3d_armor") and armor
 local DRAIN_TICK = 0.5
 local running, held, stopped = {}, {}, {}
 local drain_timer = 0
@@ -21,11 +19,6 @@ local function fed(player, name)
 	return not hungry(name) or hunger.get_saturation(player) > 6
 end
 
-local function walk_speed(name)
-	local def = armor_mod and armor_mod.def[name]
-	return def and def.speed or 1
-end
-
 local function set_running(player, name, on)
 	if running[name] == on then
 		return
@@ -36,13 +29,7 @@ local function set_running(player, name, on)
 	if fov ~= 1 and (on or was) then
 		player:set_fov(on and fov or 0, on, FOV_TIME)
 	end
-	local walk = walk_speed(name)
-	if on then
-		player:set_physics_override({speed = walk * speed})
-	-- a bed or another mod may have changed the speed meanwhile: leave theirs
-	elseif math.abs(player:get_physics_override().speed - walk * speed) < 0.001 then
-		player:set_physics_override({speed = walk})
-	end
+	goodluck_physics.set(player, "goodluck_sprint", on and {speed = speed} or nil)
 end
 
 function goodluck_sprint.running(player)
@@ -80,15 +67,6 @@ core.register_globalstep(function(dtime)
 		end
 	end
 end)
-
-if armor_mod then
-	armor:register_on_update(function(player)
-		local name = player:get_player_name()
-		if running[name] then
-			player:set_physics_override({speed = walk_speed(name) * speed})
-		end
-	end)
-end
 
 core.register_on_leaveplayer(function(player)
 	local name = player:get_player_name()

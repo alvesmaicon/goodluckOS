@@ -593,6 +593,26 @@ crosshair.png	{gui/sprites/hud/crosshair}	file
 tnt_blast.png	{particle/explosion_0}
 mobs_heart_particle.png	{particle/heart}
 
+# Status effects (goodluck_effects): the icons and their frame in the top right, the poisoned and withered hearts,
+# the swirl around the player
+goodluck_effects_background.png	{gui/sprites/hud/effect_background}
+goodluck_effects_speed.png	{mob_effect/speed}
+goodluck_effects_slowness.png	{mob_effect/slowness}
+goodluck_effects_jump_boost.png	{mob_effect/jump_boost}
+goodluck_effects_slow_falling.png	{mob_effect/slow_falling}
+goodluck_effects_poison.png	{mob_effect/poison}
+goodluck_effects_wither.png	{mob_effect/wither}
+goodluck_effects_regeneration.png	{mob_effect/regeneration}
+goodluck_effects_strength.png	{mob_effect/strength}
+goodluck_effects_weakness.png	{mob_effect/weakness}
+goodluck_effects_fire_resistance.png	{mob_effect/fire_resistance}
+goodluck_effects_water_breathing.png	{mob_effect/water_breathing}
+goodluck_effects_invisibility.png	{mob_effect/invisibility}
+goodluck_effects_hunger.png	{mob_effect/hunger}
+goodluck_effects_heart_poisoned.png	{gui/sprites/hud/heart/container}^{gui/sprites/hud/heart/poisoned_full}
+goodluck_effects_heart_withered.png	{gui/sprites/hud/heart/container}^{gui/sprites/hud/heart/withered_full}
+goodluck_effects_particle.png	{particle/effect_4}
+
 # The inventory's tabs (goodluck_craft, 9-sliced and flipped for the lower row) and the enchanting table (x_enchanting):
 # the creative inventory's tabs, the window again, the enchantment slots and their level marks, the slots, the lapis
 # slot with its mark, the grindstone's cross, and the glyphs that fly to the table as Minecraft's

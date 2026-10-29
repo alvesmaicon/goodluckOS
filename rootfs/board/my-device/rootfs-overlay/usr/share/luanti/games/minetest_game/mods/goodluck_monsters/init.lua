@@ -313,6 +313,11 @@ mobs:register_mob(MOD .. "mushroom", {
 	end,
 })
 
+-- Instant Health hurts them and Instant Damage heals them, as Minecraft's undead
+if core.global_exists("goodluck_effects") then
+	goodluck_effects.undead[MOD .. "zombie"], goodluck_effects.undead[MOD .. "skeleton"] = true, true
+end
+
 AMBIENT[MOD .. "zombie"] = "goodluck_monsters_zombie"
 AMBIENT[MOD .. "skeleton"] = "goodluck_monsters_skeleton"
 AMBIENT[MOD .. "spider"] = "mobs_spider"
