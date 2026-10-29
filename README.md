@@ -47,6 +47,7 @@ An uncompromisingly fast, small, modern, and feature-rich custom firmware for A2
 - Autostart any application on boot, including games or a front-end like EmulationStation (coming soon)
 - USB terminal access for remote debugging. Log in with `sudo screen /dev/ttyACM* 115200` and `root:root`
 - HOME shows up on your PC over USB (MTP), like a phone: copy games and saves without taking the SD card out
+- Internet over the same USB cable: the PC shares its connection with the console (CDC NCM, no driver to install), in place of MTP while it's on
 - Half Life 1 ported and playable: [Get It Here](https://github.com/CodeZombie/glOSports-half-life)
 
 ### USB TTY
@@ -225,6 +226,7 @@ System Settings
 ├── System
 │   ├── Power mode: Battery saver / Balanced / Performance
 │   ├── System Info
+│   ├── Network ─ USB cable: Files (MTP) / Network; status, address, gateway, DNS, Check the internet, Ask for an address
 │   └── Restore default settings
 ├── Input Settings
 │   ├── Confirm button: A (right) / B (bottom)
@@ -244,6 +246,7 @@ System Settings
 - **Resize Home**: expands HOME to fill the rest of the card, at the next boot (it asks first, then restarts). HOME is backed up to RAM while it's resized, so do it right after flashing, before copying your games.
 - **Empty trash**: deletes for good the games moved to the trash in the launcher.
 - **Power mode**: Balanced (the default) speeds the CPU and GPU up only when a game needs it; Battery saver caps the CPU at 816 MHz and the GPU at 240 MHz, for a longer battery life (heavy PS1 games may slow down); Performance keeps both at full speed. The choice is kept across reboots.
+- **Network**: with the USB cable set to Network, the console shows up on the PC or phone as a network adapter named goodluckOS instead of the MTP drive (the A33's USB controller can't do both at once), and the PC or phone can share its connection with it: Internet Sharing on a Mac, the adapter's Sharing tab on Windows, "Shared to other computers" on Linux, or Ethernet tethering on an Android phone (the console on the phone's OTG adapter with an A-to-C cable; the phone needs Android 11 or newer). The page shows the address the console got, the gateway and the DNS, Check the internet fetches a page over HTTPS, and Ask for an address asks right away instead of within a minute. The choice is kept across reboots; a Mac only sets a new adapter up while its screen is unlocked. Nothing uses the internet yet: it's the ground for a scraper and for setting the clock.
 - **Restore default settings**: puts Overlay, Date & Time, the launcher's view, tabs, font and accent color, and the power mode back to the defaults in `/usr/share/goodluck/defaults`, keeping the language, the confirm button, the time zone and the clock.
 - **Confirm button**: A (right, the default, as on a Nintendo pad) or B (bottom, as on an Xbox pad) launches and selects, and the other one goes back. The launcher, its hints and the shortcut list change right away. Every app that reads the pad through SDL (the video player, ports, Luanti) gets the chosen button as its south one, the button these apps confirm and jump with, from the next one you open. RetroArch reads the pad on its own, so with B the Game Boy (Color), GBA, NES and SNES cores get A and B swapped in their core remaps (`~/.config/retroarch/config/remaps/<core>/<core>.rmp`), and their games confirm with B too. A remap of your own for A or B is left alone, and going back to A takes the swap out. The other systems keep the buttons as printed (Western PlayStation games already confirm with the bottom one), and RetroArch's menu has its own swap option.
 - **Credits**: the people who made goodluckOS, grouped by role (someone with several roles shows under each), from the list of upstream's credits app (`/usr/share/credits/credits.ini`).
@@ -261,6 +264,8 @@ VT323, Pixelify Sans and Atkinson Hyperlegible are under the SIL Open Font Licen
 | ![Date & Time](docs/screenshots/system-settings-datetime.png) | ![Performance overlay in game](docs/screenshots/performance-overlay.png) |
 | System (Power mode) | Storage: the second card and the trash |
 | ![System](docs/screenshots/system-settings-system.png) | ![Storage: the second card and the trash](docs/screenshots/system-settings-storage.png) |
+| Network over the USB cable | |
+| ![Network](docs/screenshots/system-settings-network.png) | |
 
 ## Translations
 Every text in the launcher, System Settings included, and in the console's messages ("Restarting...") can be translated, and new languages need no code changes. Languages live in `/usr/share/goodluck/lang/<code>.lang` (in the repository: `rootfs/board/my-device/rootfs-overlay/usr/share/goodluck/lang/`) and show up in System Settings -> Interface -> Language as soon as the file is there.
@@ -286,6 +291,9 @@ Stock firmware:
 - Bad/no hotkeys
 - Can't be flashed to smaller SD cards.
 - The MBR (at least on the GA36-MB) is broken by default. You can't add games unless you manually fix it with my [guide](https://gist.github.com/CodeZombie/83be58b000ee6a14c7b91a6027a8eedf)
+
+### Internet over USB
+The data port can be an Ethernet adapter named goodluckOS instead of the MTP drive (CDC NCM, which Windows 10 and 11, macOS, Linux and Android drive out of the box): the A33's USB controller can't do both at once. System Settings -> System -> Network switches the cable over (the PC sees the console plugged in again) and shows what the console got; see [System Settings](#system-settings). From the serial shell, `usb-mode.sh network|files` does the same and `ip addr show usb0` shows the address.
 
 ## Which chip does my console have?
 GA36-MB consoles (sold as R36S) come with an Allwinner A23 or A33, and goodluckOS builds for one don't boot on the other. The stock menu reports a 64-bit CPU and 1 GB of RAM on both, and the marking on the chip can't be trusted either. On Windows, [chip-version](chip-version/README.md) reads the microSD card that came with the console and tells which chip it has.

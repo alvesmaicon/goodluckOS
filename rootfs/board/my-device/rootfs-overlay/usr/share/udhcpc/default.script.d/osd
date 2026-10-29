@@ -1,0 +1,10 @@
+#!/bin/sh
+# udhcpc hook: the address the USB network got goes on the screen, then usb-net.sh checks the internet
+case "$1" in
+    bound|renew)
+        /usr/local/bin/osd-notify.sh network "$ip"
+        command -v curl >/dev/null && /usr/local/bin/usb-net.sh check >/dev/null 2>&1 &
+        ;;
+    deconfig) rm -f /tmp/usb-net.check ;;
+esac
+exit 0

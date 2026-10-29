@@ -11,6 +11,7 @@
 #include "model.h"
 #include "system/audio.h"
 #include "system/hud.h"
+#include "system/network.h"
 #include "system/prefs.h"
 #include "system/storage.h"
 #include "system/sysinfo.h"
@@ -65,7 +66,7 @@ public:
 
 private:
     enum class Page { Display, Interface, Overlay, DateTime, Storage, System, Input,
-                      Tabs, Shortcuts, Info, Resize, Credits };
+                      Tabs, Shortcuts, Info, Network, Resize, Credits };
     struct Cursor {
         int sel = -1;       // the selected row, -1 for none (a page with nothing to change scrolls)
         int scroll = 0;     // the first row on screen
@@ -90,6 +91,8 @@ private:
     TrashStats trash;
     Resize resize;
     SystemInfo info;
+    NetworkStatus net;
+    Uint32 netRead = 0;             // the Network page re-reads the network every 2 s
     std::vector<std::pair<std::string, std::string>> credits;   // the Credits section only shows when there are some
     std::string startLanguage;
     Uint32 saveAt = 0;              // the brightness or volume changed: saved then (0: nothing to save)
@@ -130,6 +133,7 @@ private:
     std::vector<Row> storagePage();
     std::vector<Row> systemPage();
     std::vector<Row> infoPage();
+    std::vector<Row> networkPage();
     std::vector<Row> inputPage();
     std::vector<Row> shortcutsPage();
     std::vector<Row> resizePage();

@@ -6,8 +6,12 @@
 
 #include "layout.h"
 #include "system/clock.h"
+#include "system/osd.h"
 
-App::App(Ui& ui, SDL_GameController* pad) : ui(ui), pad(pad), input(pad) {}
+App::App(Ui& ui, SDL_GameController* pad) : ui(ui), pad(pad), input(pad) {
+    osdEvent = SDL_RegisterEvents(1);
+    watchOsd(osdEvent);
+}
 
 void App::push(std::unique_ptr<Screen> screen) {
     stack.push_back(std::move(screen));
@@ -127,6 +131,15 @@ int App::run() {
         }
         if (!clockFmt.empty())   // wake up when the minute changes
             timeout = std::min(timeout, (int)(60 - time(nullptr) % 60) * 1000);
+        if (panelUntil) {
+            if ((Sint32)(now - panelUntil) >= 0) {
+                panelUntil = 0;
+                dirty = true;
+                timeout = 0;
+            } else {
+                timeout = std::min(timeout, (int)(panelUntil - now));
+            }
+        }
         if (!noticeText.empty()) {
             if ((Sint32)(now - noticeUntil) >= 0) {
                 noticeText.clear();
@@ -184,6 +197,11 @@ int App::run() {
         }
 
         do {
+            if (ev.type == osdEvent) {
+                dirty = true;
+                panelUntil = SDL_GetTicks() + kPanelMs;
+                continue;
+            }
             if (ev.type == SDL_QUIT) running = false;
             else if (ev.type == SDL_WINDOWEVENT && ev.window.event == SDL_WINDOWEVENT_EXPOSED) dirty = true;
 

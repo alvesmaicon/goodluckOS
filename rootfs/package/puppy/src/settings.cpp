@@ -136,6 +136,7 @@ void SettingsScreen::reload() {
     trash = trashStats();
     resize = Resize::read();
     info = SystemInfo::read();
+    net = NetworkStatus::read();
 }
 
 SettingsScreen::Page SettingsScreen::page() const {
@@ -319,6 +320,10 @@ void SettingsScreen::tick(Uint32 now) {
         }
         if ((Sint32)(now - watchUntil) >= 0) watchUntil = 0;
     }
+    if (page() == Page::Network && (Sint32)(now - netRead) >= 2000) {
+        net = NetworkStatus::read();
+        netRead = now;
+    }
 }
 
 Uint32 SettingsScreen::wakeAt() const {
@@ -329,6 +334,7 @@ Uint32 SettingsScreen::wakeAt() const {
     earliest(saveAt);
     if (watchUntil) earliest(nextWatch);
     if (page() == Page::DateTime) earliest(clockDrawn + 1000);
+    if (page() == Page::Network) earliest(netRead + 2000);
     return at;
 }
 

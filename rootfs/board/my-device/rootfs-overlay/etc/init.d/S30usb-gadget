@@ -1,7 +1,16 @@
 #!/bin/sh
+# The USB data port: a serial shell (ACM) and, by mode, HOME over MTP (files, the default) or an
+# Ethernet adapter the PC shares its internet through (network, CDC NCM). The A33's controller
+# has five endpoints each way and the three functions would need six, so it is one or the other.
+#   start | stop             boot and shutdown
+#   switch files|network     rebuild the gadget in that mode (usb-mode.sh): the PC sees a replug
 
 G=/sys/kernel/config/usb_gadget/g1
 LOG=/tmp/usb-gadget.log
+MODE_FILE=/etc/player-flags/usb-mode
+CHECK_PID=/run/usb-gadget-check.pid
+
+mode() { [ "$(cat $MODE_FILE 2>/dev/null)" = network ] && echo network || echo files; }
 
 # timed <tenths of a second> <command...>: runs the command, gives up on it after that long.
 # Tearing the gadget down can block in the kernel, which hung shutdowns and reboots.
@@ -16,7 +25,8 @@ timed() {
     return 0
 }
 
-# umtprd keeps the MTP endpoints open until it exits: wait for it, then make sure
+# umtprd keeps the MTP endpoints open until it exits: wait for it, then make sure.
+# Closing them unbinds the gadget by itself (FunctionFS does that).
 stop_umtprd() {
     [ -f /run/umtprd.pid ] || return 0
     pid=$(cat /run/umtprd.pid)
@@ -27,18 +37,66 @@ stop_umtprd() {
     rm -f /run/umtprd.pid
 }
 
-# Rebuild the gadget with the serial console alone (MTP did not work)
+# Put the mode's function into the configuration (the gadget is unbound here)
+attach() {
+    if [ "$1" = network ]; then
+        # Fixed addresses from the card's id, so the PC keeps the adapter between boots
+        mkdir -p $G/functions/ncm.usb0
+        id=$(cut -c17-26 /sys/block/mmcblk0/device/cid 2>/dev/null | sed 's/../&:/g;s/:$//')
+        echo "02:${id:-00:00:00:00:01}" > $G/functions/ncm.usb0/dev_addr
+        echo "06:${id:-00:00:00:00:01}" > $G/functions/ncm.usb0/host_addr
+        ln -s $G/functions/ncm.usb0 $G/configs/c.1/
+    elif mountpoint -q /dev/ffs-mtp; then
+        ln -s $G/functions/ffs.mtp $G/configs/c.1/
+        umtprd >/tmp/umtprd.log 2>&1 &
+        echo $! > /run/umtprd.pid
+        # The gadget can only bind once umtprd has written its descriptors (the endpoints appear)
+        i=0
+        while [ ! -e /dev/ffs-mtp/ep1 ] && [ $i -lt 50 ]; do sleep 0.1; i=$((i + 1)); done
+        # a TF-2 card mounted before umtprd started
+        /usr/local/bin/external-card.sh mtp
+    fi
+}
+
+# Take the mode's function out again (the gadget is unbound here)
+detach() {
+    rm -f $G/configs/c.1/ffs.mtp $G/configs/c.1/ncm.usb0
+    rmdir $G/functions/ncm.usb0 2>/dev/null
+}
+
+# Rebuild the gadget with the serial console alone (the mode's function did not work)
 serial_only() {
     echo "$1: serial only" >> $LOG
     stop_umtprd
     echo "" > $G/UDC 2>/dev/null
-    rm -f $G/configs/c.1/ffs.mtp
+    detach
     ls /sys/class/udc > $G/UDC
+}
+
+# Bind the gadget to the USB Device Controller. If the mode's function keeps it from binding,
+# bind the serial console alone: losing the console is much worse than losing the rest.
+bind() {
+    UDC_NAME=$(ls /sys/class/udc)
+    if ! echo "$UDC_NAME" > $G/UDC 2>>$LOG; then
+        serial_only "bind failed"
+    elif [ -L $G/configs/c.1/ffs.mtp ] || [ -L $G/configs/c.1/ncm.usb0 ]; then
+        # The bind can succeed and the PC still not enumerate the device. With a cable in,
+        # a working gadget reaches "configured" in a second or two; give it 15s.
+        (
+            sleep 15
+            state=$(cat /sys/class/udc/$UDC_NAME/state)
+            echo "state after 15s: $state" >> $LOG
+            if [ "$(cat /sys/class/power_supply/axp20x-usb/online 2>/dev/null)" = "1" ] && [ "$state" != "configured" ]; then
+                serial_only "not enumerated"
+            fi
+        ) &
+        echo $! > $CHECK_PID
+    fi
 }
 
 case "$1" in
   start)
-    echo "Starting USB Gadget (serial + MTP)..."
+    echo "Starting USB Gadget (serial + $(mode))..."
 
     # leftovers of a stop that gave up would be built over: restart the console instead
     if [ -n "$(cat $G/UDC 2>/dev/null)" ] || mountpoint -q /dev/ffs-mtp; then
@@ -71,44 +129,37 @@ case "$1" in
 
     # Create the configuration
     mkdir -p configs/c.1/strings/0x409
-    echo "Serial + MTP" > configs/c.1/strings/0x409/configuration
+    echo "Serial + MTP or Network" > configs/c.1/strings/0x409/configuration
     echo 250 > configs/c.1/MaxPower
 
     # Serial console (ttyGS0)
     mkdir -p functions/acm.usb0
     ln -s functions/acm.usb0 configs/c.1/
 
-    # MTP: HOME shows up on the PC as a folder. umtprd answers on FunctionFS.
+    # MTP: HOME shows up on the PC as a folder. umtprd answers on FunctionFS, which stays
+    # mounted in both modes so a switch only has to start umtprd again.
     if mkdir -p functions/ffs.mtp 2>/dev/null; then
-        ln -s functions/ffs.mtp configs/c.1/
         mkdir -p /dev/ffs-mtp
         mount -t functionfs mtp /dev/ffs-mtp
-        umtprd >/tmp/umtprd.log 2>&1 &
-        echo $! > /run/umtprd.pid
-        # The gadget can only bind once umtprd has written its descriptors (the endpoints appear)
-        i=0
-        while [ ! -e /dev/ffs-mtp/ep1 ] && [ $i -lt 50 ]; do sleep 0.1; i=$((i + 1)); done
-        # a TF-2 card mounted before umtprd started
-        /usr/local/bin/external-card.sh mtp
     fi
 
-    # Bind the gadget to the USB Device Controller. If MTP keeps it from binding, drop MTP
-    # and bind the serial console alone: losing the console is much worse than losing MTP.
-    UDC_NAME=$(ls /sys/class/udc)
-    if ! echo "$UDC_NAME" > UDC 2>>$LOG; then
-        serial_only "bind failed"
-    elif [ -L configs/c.1/ffs.mtp ]; then
-        # The bind can succeed and the PC still not enumerate the device. With a cable in,
-        # a working gadget reaches "configured" in a second or two; give it 15s.
-        (
-            sleep 15
-            state=$(cat /sys/class/udc/$UDC_NAME/state)
-            echo "state after 15s: $state" >> $LOG
-            if [ "$(cat /sys/class/power_supply/axp20x-usb/online 2>/dev/null)" = "1" ] && [ "$state" != "configured" ]; then
-                serial_only "not enumerated"
-            fi
-        ) &
-    fi
+    attach "$(mode)"
+    bind
+    ;;
+  switch)
+    new=$2
+    [ "$new" = files ] || [ "$new" = network ] || { echo "Usage: $0 switch files|network"; exit 1; }
+    mkdir -p "$(dirname $MODE_FILE)"
+    echo "$new" > $MODE_FILE
+    [ -d $G/configs/c.1 ] || exit 1
+    if [ -f $CHECK_PID ]; then kill "$(cat $CHECK_PID)" 2>/dev/null; rm -f $CHECK_PID; fi
+    stop_umtprd
+    timed 30 sh -c "echo '' > $G/UDC 2>/dev/null" || { echo "switch: unbind timed out" >> $LOG; exit 1; }
+    detach
+    attach "$new"
+    bind
+    if [ "$new" = network ]; then /etc/init.d/S31usb-net start; else /etc/init.d/S31usb-net stop; fi
+    echo "switch: $new" >> $LOG
     ;;
   stop)
     echo "Stopping USB Gadget..."
@@ -126,18 +177,19 @@ case "$1" in
     timed 30 sh -c "echo '' > $G/UDC" || { echo "stop: unbind timed out" >> $LOG; exit 0; }
 
     # Remove symlinks
-    rm -f $G/configs/c.1/acm.usb0 $G/configs/c.1/ffs.mtp
+    rm -f $G/configs/c.1/acm.usb0 $G/configs/c.1/ffs.mtp $G/configs/c.1/ncm.usb0
     timed 20 umount /dev/ffs-mtp || { echo "stop: umount timed out" >> $LOG; exit 0; }
 
     # Remove directories in reverse order of creation
     rmdir $G/configs/c.1/strings/0x409
     rmdir $G/configs/c.1
     rmdir $G/functions/acm.usb0
+    rmdir $G/functions/ncm.usb0 2>/dev/null
     timed 20 rmdir $G/functions/ffs.mtp 2>/dev/null || { echo "stop: rmdir ffs.mtp timed out" >> $LOG; exit 0; }
     rmdir $G/strings/0x409
     rmdir $G
     ;;
   *)
-    echo "Usage: $0 {start|stop}"
+    echo "Usage: $0 {start|stop|switch files|network}"
     exit 1
 esac

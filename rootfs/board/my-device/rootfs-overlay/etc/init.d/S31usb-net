@@ -1,0 +1,17 @@
+#!/bin/sh
+# Internet over the USB data port: the PC shares its connection with the adapter the gadget
+# presents (usb0, S30usb-gadget) and hands out the address. With no PC sharing yet, udhcpc asks
+# again every minute; SIGUSR1 makes it ask now.
+
+PID=/run/udhcpc.usb0.pid
+
+case "$1" in
+  start)
+    [ -d /sys/class/net/usb0 ] || exit 0
+    udhcpc -i usb0 -R -t 3 -T 3 -A 60 -p $PID -x hostname:goodluckOS >/tmp/usb-net.log 2>&1 &
+    ;;
+  stop)
+    [ -f $PID ] && kill "$(cat $PID)" 2>/dev/null
+    ;;
+esac
+exit 0

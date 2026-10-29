@@ -60,6 +60,7 @@ constexpr Uint32 kSensorReadMs      = 5000;  // the top bar's battery and temper
 constexpr Uint32 kFollowMs          = 2200;  // after a hotkey, the levels are re-read while the Mesa HUD shows its bar
 constexpr Uint8 kFnButton           = 10;    // BTN_MODE, which the SDL mapping leaves out
 constexpr Uint32 kFollowReadMs      = 100;   // that often (the hotkey script runs async)
+constexpr Uint32 kPanelMs           = 1600;  // the Mesa HUD's feedback panel stays 1.5 s (OSD_MS in its patch)
 constexpr Uint32 kRepeatDelayMs     = 350;  // holding the d-pad repeats the move after this...
 constexpr Uint32 kRepeatRateMs      = 60;   // ...and then this often
 constexpr Uint32 kScrollDelayMs     = 250;  // right stick: description scroll repeat
