@@ -70,15 +70,22 @@ core.register_on_generated(function(vm, minp, maxp, blockseed)
 			local empty = y <= SEA and c_lava or c_air
 			local vi = area:index(minp.x, y, z)
 			for i = 1, nx - 1 do
-				local d = row[i]
-				local dd = (row[i + 1] - d) * 0.25
-				data[vi] = d > 0 and c_rack or empty
-				d = d + dd
-				data[vi + 1] = d > 0 and c_rack or empty
-				d = d + dd
-				data[vi + 2] = d > 0 and c_rack or empty
-				d = d + dd
-				data[vi + 3] = d > 0 and c_rack or empty
+				local d, e = row[i], row[i + 1]
+				-- the blend is a straight line: both ends on one side, all four nodes are
+				if d > 0 and e > 0 then
+					data[vi], data[vi + 1], data[vi + 2], data[vi + 3] = c_rack, c_rack, c_rack, c_rack
+				elseif d <= 0 and e <= 0 then
+					data[vi], data[vi + 1], data[vi + 2], data[vi + 3] = empty, empty, empty, empty
+				else
+					local dd = (e - d) * 0.25
+					data[vi] = d > 0 and c_rack or empty
+					d = d + dd
+					data[vi + 1] = d > 0 and c_rack or empty
+					d = d + dd
+					data[vi + 2] = d > 0 and c_rack or empty
+					d = d + dd
+					data[vi + 3] = d > 0 and c_rack or empty
+				end
 				vi = vi + 4
 			end
 		end
@@ -174,11 +181,14 @@ core.register_on_generated(function(vm, minp, maxp, blockseed)
 	local t3 = core.get_us_time()
 
 	vm:set_data(data)
-	core.generate_ores(vm, {x = minp.x, y = y0, z = minp.z}, {x = maxp.x, y = y1, z = maxp.z})
-	vm:update_liquids()
-	vm:calc_lighting()
 	local t4 = core.get_us_time()
+	core.generate_ores(vm, {x = minp.x, y = y0, z = minp.z}, {x = maxp.x, y = y1, z = maxp.z})
+	local t5 = core.get_us_time()
+	vm:update_liquids()
+	local t6 = core.get_us_time()
+	vm:calc_lighting()
+	local t7 = core.get_us_time()
 	-- what it took and made, for a mod that asks (set_gen_notify)
 	core.save_gen_notify("goodluck_nether:chunk", {y = minp.y, read = t1 - t0, shape = t2 - t1, features = t3 - t2,
-		engine = t4 - t3, placed = placed})
+		write = t4 - t3, ores = t5 - t4, liquids = t6 - t5, light = t7 - t6, placed = placed})
 end)
