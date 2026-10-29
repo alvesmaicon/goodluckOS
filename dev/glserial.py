@@ -105,7 +105,7 @@ def cmd_send(c, args):
     data = open(args.local, "rb").read()
     b64 = base64.b64encode(data).decode()
     remote = args.remote
-    c.write(f"rm -f {remote}.b64\n")
+    c.write(f": > {remote}.b64\n")   # an empty file sends as an empty file
     c.read_for(1, PROMPT)
     chunk, n = 3000, (len(b64) + 2999) // 3000
     print(f"sending {len(data):,} bytes in {n} blocks", flush=True)
