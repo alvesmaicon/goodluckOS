@@ -184,6 +184,11 @@ goodluck_nether_wart_0.png	{block/nether_wart_stage0}
 goodluck_nether_wart_1.png	{block/nether_wart_stage1}
 goodluck_nether_wart_2.png	{block/nether_wart_stage2}
 goodluck_nether_portal.png	{block/nether_portal}	length=1.6
+goodluck_nether_crying_obsidian.png	{block/crying_obsidian}
+goodluck_nether_blackstone.png	{block/blackstone}
+goodluck_nether_blackstone_top.png	{block/blackstone_top}
+goodluck_nether_polished_blackstone.png	{block/polished_blackstone}
+goodluck_nether_polished_blackstone_bricks.png	{block/polished_blackstone_bricks}
 
 # Workstations and other blocks
 default_furnace_top.png	{block/furnace_top}
