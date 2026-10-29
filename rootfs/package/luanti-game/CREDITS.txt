@@ -114,8 +114,9 @@ goodluck_monsters
   mobs_monster); their skins, goodluck_monsters_zombie.png, _skeleton.png and
   _spider.png, are Pixel Perfection Legacy's (see goodluck_models), CC BY-SA
   4.0, the spider's with its eyes over it. Their arrow is goodluck_models'.
-  The bomb mushroom's model, every other texture and the sounds are
-  goodluckOS's own (see goodluck_* below).
+  The spider eye, goodluck_monsters_spider_eye.png, is Pixel Perfection
+  Legacy's too (dev/luanti-art/potions.py). The bomb mushroom's model, every
+  other texture and the sounds are goodluckOS's own (see goodluck_* below).
 
 goodluck_chest
   The big chest's halves, goodluck_chest_{front,top,back,inside}_{left,right}.png,
@@ -209,14 +210,30 @@ goodluck_effects
   dev/luanti-art/effects.py, and so under CC BY-SA 4.0. Its code is goodluckOS's
   own (see goodluck_* below).
 
+goodluck_potions
+  The potions' bottle and liquid, the splash potion, the fermented spider eye,
+  the glistering melon slice and the rabbit's foot are Pixel Perfection
+  Legacy's by Nova Wostra (26.3-97.2,
+  https://modrinth.com/resourcepack/pixel-perfection-legacy), CC BY-SA 4.0. The
+  brewing stand's textures, its item, and its window's bubbles and slots are
+  Pixel Perfection's by XSSheep as Mineclonia 0.124.0 carries them
+  (https://codeberg.org/mineclonia/mineclonia, mcl_brewing; its LEGAL.md),
+  CC BY-SA 4.0, the stand's put together in Minecraft's layout. All copied by
+  dev/luanti-art/potions.py, and so under CC BY-SA 4.0. Its window's arrow and
+  fuel bar, its code and the stand's mesh (goodluck_models) are goodluckOS's
+  own (see goodluck_* below). goodluck_food's pufferfish,
+  goodluck_food_pufferfish.png, is Pixel Perfection Legacy's too, by the same
+  script.
+
 Left out of mobs, mobs_animal, mobs_monster, stamina, mobs_npc and mob_horse:
 screenshot.jpg, made on textstudio.com, whose terms are unclear. The game
 doesn't use them.
 
 goodluck_* mods (but goodluck_villages' buildings and villagers' textures,
-goodluck_monsters' skins, goodluck_chest's halves, goodluck_models' chests,
-minecart, boat, arrow and farm animals' textures, goodluck_horse's,
-goodluck_nether's and goodluck_effects' textures, above), and the stamina,
+goodluck_monsters' skins and spider eye, goodluck_chest's halves,
+goodluck_models' chests, minecart, boat, arrow and farm animals' textures,
+goodluck_horse's, goodluck_nether's, goodluck_effects' and goodluck_potions'
+textures and goodluck_food's pufferfish, above), and the stamina,
 mobs_animal, mobs_monster, x_enchanting, mobs_npc and x_bows media above (but
 the half-drawn bow, CC BY-SA 4.0)
   Code, pixel art, the rat's and the bomb mushroom's models, and the item

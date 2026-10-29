@@ -24,6 +24,7 @@ FILES = {
     "fire_resistance": "ITEMS/mcl_potions/textures/mcl_potions_effect_fire_proof",
     "water_breathing": "ITEMS/mcl_potions/textures/mcl_potions_effect_water_breathing",
     "invisibility": "ITEMS/mcl_potions/textures/mcl_potions_effect_invisible",
+    "night_vision": "ITEMS/mcl_potions/textures/mcl_potions_effect_night_vision",
     "hunger": "ITEMS/mcl_potions/textures/mcl_potions_effect_food_poisoning",
     "heart_poisoned": "PLAYER/mcl_hunger/textures/hbhunger_icon_health_poison",
     "heart_withered": "ITEMS/mcl_potions/textures/mcl_potions_icon_wither",

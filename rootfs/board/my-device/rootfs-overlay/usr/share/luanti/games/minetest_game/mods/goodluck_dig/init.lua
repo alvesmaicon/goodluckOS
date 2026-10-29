@@ -51,6 +51,11 @@ blocks({"goodluck_nether:blackstone", "goodluck_nether:polished_blackstone_brick
 blocks({"goodluck_nether:polished_blackstone"}, {2, PICK, 0})
 blocks({"goodluck_nether:wither_skeleton_skull"}, {1})
 blocks({"goodluck_nether:spawner"}, {5, PICK, 0})
+local stands = {"goodluck_potions:brewing_stand"}
+for bits = 1, 7 do
+	stands[#stands + 1] = "goodluck_potions:brewing_stand_" .. bits
+end
+blocks(stands, {0.5, PICK, 0})
 blocks({"goodluck_anvil:anvil", "goodluck_anvil:anvil_chipped", "goodluck_anvil:anvil_damaged",
 	"x_enchanting:table", "mobs:spawner", "doors:trapdoor_steel", "doors:trapdoor_steel_open", "xpanes:bar",
 	"xpanes:bar_flat", "xpanes:trapdoor_steel_bar", "xpanes:trapdoor_steel_bar_open"}, {5, PICK, 0})

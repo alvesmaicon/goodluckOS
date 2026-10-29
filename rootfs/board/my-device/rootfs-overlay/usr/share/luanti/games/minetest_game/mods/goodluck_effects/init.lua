@@ -128,9 +128,10 @@ local function stop(player, effect)
 	changed(player)
 end
 
--- Instant Health heals 4 and Instant Damage takes 6, twice that a level up; on the undead each does the other
-function E.instant(obj, effect, level)
-	local amount = (effect == "instant_health" and 4 or 6) * 2 ^ ((level or 1) - 1)
+-- Instant Health heals 4 and Instant Damage takes 6, twice that a level up, times share (a splash's nearness); on
+-- the undead each does the other
+function E.instant(obj, effect, level, share)
+	local amount = math.floor((effect == "instant_health" and 4 or 6) * 2 ^ ((level or 1) - 1) * (share or 1) + 0.5)
 	local ent = not obj:is_player() and obj:get_luaentity()
 	local heal = (effect == "instant_health") ~= (ent and E.undead[ent.name] or false)
 	if obj:is_player() then
@@ -440,6 +441,22 @@ E.register("invisibility", {description = S("Invisibility"), color = "#f6f6f6",
 			seen[name] = nil
 		end
 	end})
+-- everything seen as lit as its brightest light, through the engine's night_vision lighting (handheld.25 on); in its
+-- last 10 s it flickers as Minecraft's does (0.7 + 0.3 sin(ticks * pi / 5))
+local function night_vision(player, value)
+	if player:get_lighting().night_vision then
+		player:set_lighting({night_vision = value})
+	end
+end
+E.register("night_vision", {description = S("Night Vision"), color = "#c2ff66",
+	on_start = function(player) night_vision(player, 1) end,
+	on_step = function(player)
+		local _, left = E.get(player, "night_vision")
+		if left and left <= BLINK then
+			night_vision(player, 0.7 + 0.3 * math.sin(left * 20 * math.pi * 0.2))
+		end
+	end,
+	on_stop = function(player) night_vision(player, 0) end})
 E.register("instant_health", {description = S("Instant Health"), color = "#f82423", instant = true})
 E.register("instant_damage", {description = S("Instant Damage"), color = "#a9656a", bad = true, instant = true})
 

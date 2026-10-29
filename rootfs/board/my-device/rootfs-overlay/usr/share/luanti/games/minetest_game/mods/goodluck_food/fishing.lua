@@ -5,7 +5,7 @@ local S = core.get_translator("goodluck_food")
 local ROD = "goodluck_food:fishing_rod"
 local BITE = 1.2
 -- Minecraft's weights, without what this game lacks
-local FISH = {{"goodluck_food:cod", 60}, {"goodluck_food:salmon", 25}}
+local FISH = {{"goodluck_food:cod", 60}, {"goodluck_food:salmon", 25}, {"goodluck_food:pufferfish", 13}}
 local JUNK = {{"flowers:waterlily", 17}, {"goodluck_food:bowl", 10}, {"mobs:leather", 10}, {"3d_armor:boots_leather", 10},
 	{"goodluck_monsters:rotten_flesh", 10}, {"vessels:glass_bottle", 10}, {"goodluck_monsters:bone", 10},
 	{"default:stick", 5}, {"farming:string", 5}}
@@ -189,3 +189,20 @@ for _, fish in ipairs({{"cod", S("Raw Cod"), 2, S("Cooked Cod"), 5}, {"salmon", 
 	})
 	core.register_craft({type = "cooking", output = cooked, recipe = raw, cooktime = 10})
 end
+
+-- the pufferfish isn't cooked: eaten, 1 of hunger, Poison II for a minute and Hunger III for 15 s (Minecraft's nausea
+-- has no match here); it makes Water Breathing in the brewing stand
+core.register_craftitem("goodluck_food:pufferfish", {
+	description = S("Pufferfish"),
+	inventory_image = "goodluck_food_pufferfish.png",
+	groups = {food = 1},
+	on_use = function(itemstack, user, pointed_thing)
+		local before = itemstack:get_count()
+		local left = core.item_eat(1)(itemstack, user, pointed_thing)
+		if left and left:get_count() < before and user and core.global_exists("goodluck_effects") then
+			goodluck_effects.apply(user, "poison", 60, 2)
+			goodluck_effects.apply(user, "hunger", 15, 3)
+		end
+		return left
+	end,
+})

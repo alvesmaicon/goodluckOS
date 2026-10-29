@@ -146,3 +146,10 @@ goodluck_nether_zombified_piglin_death	mob/zombified_piglin/zpigdeath
 goodluck_nether_wither_skeleton	mob/wither_skeleton/idle1 mob/wither_skeleton/idle2 mob/wither_skeleton/idle3
 goodluck_nether_wither_skeleton_hurt	mob/wither_skeleton/hurt1 mob/wither_skeleton/hurt2 mob/wither_skeleton/hurt3 mob/wither_skeleton/hurt4
 goodluck_nether_wither_skeleton_death	mob/wither_skeleton/death1 mob/wither_skeleton/death2
+
+# Potions (goodluck_potions): drunk, thrown, broken, a bottle filled, a brew done
+goodluck_potions_drink	random/drink
+goodluck_potions_throw	random/bow
+goodluck_potions_break	random/glass1 random/glass2 random/glass3
+goodluck_potions_fill	item/bottle/fill1 item/bottle/fill2 item/bottle/fill3 item/bottle/fill4
+goodluck_potions_brew	block/brewing_stand/brew1 block/brewing_stand/brew2
