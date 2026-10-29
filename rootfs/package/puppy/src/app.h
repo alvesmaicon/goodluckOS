@@ -64,6 +64,8 @@ private:
     std::string clockFmt, clock;    // strftime format of the top bar's clock, and what it shows
     bool following = false;     // after a volume, brightness or output hotkey, which change the levels behind our back
     Uint32 followUntil = 0, followNextRead = 0;
+    Uint32 osdEvent = (Uint32)-1;   // the HUD's panel was written (system/osd.h)
+    Uint32 panelUntil = 0;          // then one more frame takes it away
     std::string noticeText;
     Uint32 noticeUntil = 0;
     Uint32 lastActivity = 0;
