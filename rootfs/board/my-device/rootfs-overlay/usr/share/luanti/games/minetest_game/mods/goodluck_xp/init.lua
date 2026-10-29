@@ -216,13 +216,15 @@ if core.get_modpath("goodluck_creative") then
 	goodluck_creative.register_on_change(update_hud)
 end
 
--- ores: Minecraft's coal, lapis, emerald, diamond and redstone; none with silk touch
+-- ores: Minecraft's coal, lapis, emerald, diamond, redstone, nether quartz and nether gold; none with silk touch
 local ores = {
 	["default:stone_with_coal"] = {0, 2},
 	["goodluck_lapis:stone_with_lapis"] = {2, 5},
 	["goodluck_emerald:stone_with_emerald"] = {3, 7},
 	["goodluck_redstone:stone_with_redstone"] = {1, 5},
 	["default:stone_with_diamond"] = {3, 7},
+	["goodluck_nether:quartz_ore"] = {2, 5},
+	["goodluck_nether:gold_ore"] = {0, 1},
 }
 
 core.register_on_dignode(function(pos, oldnode, digger)

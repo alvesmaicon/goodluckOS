@@ -39,6 +39,13 @@ blocks({"goodluck_redstone:block"}, {5, PICK, 0})
 blocks({"default:ice", "default:cave_ice"}, {0.5, PICK})
 blocks({"goodluck_amethyst:amethyst_cluster"}, {1.5, PICK})
 blocks({"goodluck_amethyst:calcite"}, {0.75, PICK, 0})
+blocks({"goodluck_nether:netherrack"}, {0.4, PICK, 0})
+blocks({"goodluck_nether:quartz_ore", "goodluck_nether:gold_ore"}, {3, PICK, 0})
+blocks({"goodluck_nether:nether_bricks", "goodluck_nether:nether_brick_fence"}, {2, PICK, 0})
+blocks({"goodluck_nether:quartz_block", "goodluck_nether:quartz_pillar", "goodluck_nether:chiseled_quartz"},
+	{0.8, PICK, 0})
+blocks({"goodluck_nether:magma"}, {0.5, PICK, 0})
+blocks({"goodluck_nether:soul_sand"}, {0.5, SHOVEL})
 blocks({"goodluck_anvil:anvil", "goodluck_anvil:anvil_chipped", "goodluck_anvil:anvil_damaged",
 	"x_enchanting:table", "mobs:spawner", "doors:trapdoor_steel", "doors:trapdoor_steel_open", "xpanes:bar",
 	"xpanes:bar_flat", "xpanes:trapdoor_steel_bar", "xpanes:trapdoor_steel_bar_open"}, {5, PICK, 0})
@@ -46,7 +53,8 @@ blocks({"carts:rail", "carts:powerrail", "carts:brakerail"}, {0.7, PICK})
 blocks({"default:ladder_steel"}, {0.4, PICK})
 blocks({"default:sign_wall_steel", "goodluck_models:sign_standing_steel"}, {1, PICK})
 blocks({"default:glass", "default:obsidian_glass", "goodluck_redstone:lamp", "goodluck_redstone:lamp_on",
-	"xpanes:pane", "xpanes:pane_flat", "xpanes:obsidian_pane", "xpanes:obsidian_pane_flat"}, {0.3})
+	"xpanes:pane", "xpanes:pane_flat", "xpanes:obsidian_pane", "xpanes:obsidian_pane_flat",
+	"goodluck_nether:glowstone"}, {0.3})
 blocks({"goodluck_food:pumpkin", "goodluck_food:melon", "goodluck_food:jack_o_lantern"}, {1, AXE})
 blocks({"goodluck_food:cocoa_1", "goodluck_food:cocoa_2", "goodluck_food:cocoa_3"}, {0.2, AXE})
 blocks({"goodluck_food:cake", "goodluck_food:cake_1", "goodluck_food:cake_2", "goodluck_food:cake_3",
