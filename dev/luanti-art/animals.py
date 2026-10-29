@@ -286,11 +286,12 @@ VILLAGER = [(0, 1, None), (1, 1.0, stride(0.7, 0, 1.0)), (3, 0.5, stride(1.4, 0,
 
 def boat():
     # Minecraft's boat since 1.14, its bow at +x in its model, turned a quarter so that the bow leads, and 18 down so
-    # that the entity sits at the waterline (its renderer lifts the model 6 pixels); the paddles rest on the sides
+    # that the entity sits at the waterline (its renderer lifts the model 6 pixels): the floor's underside on it, the
+    # sides on the floor; the paddles rest on the sides
     def piece(u, v, x, y, z, w, h, d, pivot, rot=(0, 0, 0)):
         return posed(box(u, v, x, y, z, w, h, d), pivot, rot)
     paddle = lambda u, v, x: box(u, v, -1, 0, -5, 2, 2, 18) + box(u, v, x, -3, 8, 1, 6, 7)
-    faces = piece(0, 0, -14, -9, -8, 28, 16, 3, (0, 3, 1), (PI / 2, 0, 0)) + \
+    faces = piece(0, 0, -14, -9, -3, 28, 16, 3, (0, 3, 1), (PI / 2, 0, 0)) + \
         piece(0, 19, -13, -7, -1, 18, 6, 2, (-15, 4, 4), (0, PI * 1.5, 0)) + \
         piece(0, 27, -8, -7, -1, 16, 6, 2, (15, 4, 0), (0, PI / 2, 0)) + \
         piece(0, 35, -14, -7, -1, 28, 6, 2, (0, 4, -9), (0, PI, 0)) + \
