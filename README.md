@@ -28,8 +28,8 @@ An uncompromisingly fast, small, modern, and feature-rich custom firmware for A2
 - No swap on SD card (massively improves the life of your card over the stock f/w)
 - `Resize Home` (System Settings -> Storage) grows your HOME partition to fill all the available space on your microSD card.
 - Volume buttons change the volume and FN+Vol the screen brightness from anywhere, with a level bar shown over whatever is on screen: the launcher, the settings or any game
-- Optional in-game status bar with the CPU and power chip temperatures, the date and time, the battery, the volume and the audio output, over any game
-- Date and time with a time zone, kept while the console is off, shown in the launcher and the status bar (12/24-hour, several date formats)
+- A status bar with the CPU and power chip temperatures, the date and time, the battery, the volume and the audio output: the launcher's top bar, and optionally over any game, with the same items
+- Date and time with a time zone, kept while the console is off, shown in the status bar (12/24-hour, several date formats)
 - Brightness, volume and CPU mode are kept across reboots
 - SELECT+START closes the active application cleanly (RetroArch saves first), bringing you right back to the launcher
 - FN+START+SELECT force-kills the active application
@@ -41,7 +41,7 @@ An uncompromisingly fast, small, modern, and feature-rich custom firmware for A2
 - Music and video player (mpv): Music and Videos tabs in the launcher, played full screen with the console's buttons, with speed (0.25x to 2x) and zoom (up to 4x, moved with the right stick) for videos
 - Comes stock with Retroarch and several optimized cores (PCSX-ReArmed, Snes9x, QuickNES, DOSbox, Genesis Plus GX, mGBA, etc)
 - Games perform very well. Metal Gear Solid 1 is completely playable at reasonable framerates
-- Comes with a custom, optimized launcher application, with tabs per system, search, favourites and game artwork/descriptions from `gamelist.xml`
+- Comes with a custom, optimized launcher application, with tabs per system, search, favourites, play time and game artwork/descriptions from `gamelist.xml`
 - System Settings, in the launcher: brightness, volume, audio output, launcher options, language, interface font, overlay, date and time, storage (second card, trash, Resize Home), power mode (Battery saver, Balanced, Performance), system info, a button tester and a restore of the default settings
 - Translatable interface, with English and Brazilian Portuguese included (see [Translations](#translations))
 - Autostart any application on boot, including games or a front-end like EmulationStation (coming soon)
@@ -110,10 +110,12 @@ Puppy is goodluckOS' application launcher. It's what you see when you start good
 | Grid view | List view |
 | --- | --- |
 | ![Puppy in grid view](docs/screenshots/puppy-grid.png) | ![Puppy in list view](docs/screenshots/puppy-list.png) |
+| Showcase style (System Settings -> Interface), grid view | Showcase style, list view |
+| ![Puppy in the Showcase style's grid](docs/screenshots/showcase-grid.png) | ![Puppy in the Showcase style's list](docs/screenshots/showcase-list.png) |
 | Search (X): the on-screen keyboard filters every tab as you type | |
 | ![Search with the on-screen keyboard](docs/screenshots/puppy-search.png) | |
 
-The top bar shows the volume (a headphones icon when the sound goes to the headphones only) and the battery, whose level turns yellow while charging, green when full and red at 10% or less.
+The top bar shows the time, the volume (a headphones icon when the sound goes to the headphones only) and the battery, whose level turns yellow while charging, green when full and red at 10% or less. System Settings -> Overlay can add the date and the CPU and power chip temperatures, or take any of them out.
 
 Changing the brightness (FN+Vol) or the volume shows a level bar for a moment, and FN + D-pad down shows the audio output. It is drawn by the graphics driver (a patch to Mesa's Gallium HUD), so it looks the same over the launcher, the settings and every game:
 
@@ -127,13 +129,13 @@ Puppy uses a ini-formatted `apps.puppy` files to populate it's application list.
 
 Add a new entry by modifying the `apps.puppy` file in your HOME partition. Take a look at the comments at the top of that file for syntax/examples
 
-Works with scraped collections: point Skraper (or anything that writes EmulationStation's `gamelist.xml`) at your rom folders and Puppy shows the games' names, artwork, descriptions and year/genre/players, no conversion needed (see [How do I add games?](#how-do-i-add-games)).
+Works with scraped collections: point Skraper (or anything that writes EmulationStation's `gamelist.xml`) at your rom folders and Puppy shows the games' names, artwork, descriptions and year/genre/players (and, in the Showcase style, plays their videos), no conversion needed (see [How do I add games?](#how-do-i-add-games)).
 
-Each system and app category gets its own tab, plus an "All Games" tab with every system's games and the native ports of the Games tab (tagged "Ports"), a "My List" tab with your favourites and, once you've played something, a "Recent" tab with the last 30 games you opened, newest first. The strip at the top shows five tabs of the same width, the current one in the middle, and wraps around. Controls:
+Each system and app category gets its own tab, plus an "All Games" tab with every system's games and the native ports of the Games tab (tagged "Ports"; an app in My List or Recent is tagged "App"), a "My List" tab with your favourites, the most played first, and, once you've played something, a "Recent" tab with the last 30 games you opened, newest first, and a "Most Played" tab. The time spent in each game shows with its name, and in list view the day it was last played. The strip at the top shows five tabs of the same width, the current one in the middle, and wraps around. Controls:
 
 | Button | Action |
 |---|---|
-| L1 / R1 | Previous / next tab |
+| L1 / R1 | Previous / next tab (in the Showcase style's grid: skip 10 games along the row) |
 | D-pad / left stick | Move (hold to scroll). In list view, left/right jump a page |
 | Right stick up/down | Scroll the game's description (list view) |
 | A | Launch |
@@ -185,23 +187,25 @@ System Settings
 │   ├── Master Volume
 │   ├── Global Mute
 │   └── Audio output: Speaker / Headphones
-├── Launcher
-│   ├── Show launcher tabs
-│   ├── Launcher view: Grid / List
-│   └── Launcher tabs ─ which tabs to show
 ├── Interface
 │   ├── Language
+│   ├── Look: Style: Retro / Showcase
+│   ├── View: Grid / List
 │   ├── Font
-│   ├── Accent color ─ the highlight colour, from a list of 8
-│   └── Show Puppy on loading screens (off: a plain "Loading..." while a game starts)
+│   ├── Accent color ─ the highlight colour, from a list of 9
+│   ├── Show Puppy on loading screens (off: a plain "Loading..." while a game starts)
+│   ├── Trailer sound ─ the Showcase style's trailers play with their sound
+│   ├── Tabs: Show tabs
+│   └── Launcher tabs ─ which tabs to show
 ├── Overlay
-│   ├── In-game status bar: Show date
+│   ├── Status bar: In game, In the launcher
+│   ├── Show date
 │   ├── Show time
 │   ├── Show battery
 │   ├── Show audio
 │   ├── Show CPU temperature
 │   ├── Show power chip temperature
-│   ├── Opacity
+│   ├── Opacity in game
 │   ├── Performance (FN + UP): Show on game start
 │   ├── Content: FPS / FPS + CPU
 │   ├── Style: Graph / Text
@@ -230,12 +234,13 @@ System Settings
 ```
 
 - **Launcher tabs**: hidden tabs' games still appear in All Games and My List.
-- **Font**: Default (Inter), VT323, Pixelify Sans or ProggyClean.
-- **Accent color**: the colour of the selection, the buttons in the hints and the bars, and of the volume and brightness feedback in games (from the next game on): yellow (the default), orange, red, pink, purple, blue, cyan or green.
-- **In-game status bar**: the CPU temperature, the power chip (AXP223) temperature, the date, the time, the battery and the volume and audio output, each one on or off, in the top right corner of every game, with the launcher's icons; Opacity sets its background. All off by default, so nothing covers the game. The launcher keeps its own top bar.
+- **Font**: Default (Inter, or Atkinson Hyperlegible in the Showcase style), VT323, Pixelify Sans or ProggyClean.
+- **Accent color**: the colour of the selection, the buttons in the hints and the bars, and of the volume and brightness feedback in games (from the next game on): yellow (the default), orange, red, pink, purple, blue, cyan, green or white.
+- **Style**: Retro, Puppy's own look, or Showcase, after the Vitrine launcher by Jeferson Lopes: a dark blue screen, bold titles, the selection as a rounded pill in the accent color, the face buttons in the hints as their letter in its colour on a grey button, and that launcher's layouts. Its list is Shelf: a narrower list, the picture with rounded corners over the game's name, system, data and description, and an A-Z rail lighting the selected game's letter. Its grid is Streaming: the selected game's picture fills the top right under a see-through top bar, its base down beside the row's name and its top cut when it doesn't fit, its left and bottom edges fading into the screen next to the game's name and data, with a row of covers per tab under it. Left/right move along the row and L1/R1 skip 10 games along it; up/down go to the previous/next tab's row and stop at the first and the last. The next tab's row shows under the current one. When the selected game has a video in its gamelist.xml (Skraper's videos), or a `VIDEO=` line with a clip in its `apps.puppy` entry (a port's trailer), or is itself a video of the Videos tab (30 s of it), it plays once in place of the picture after 2 s without a button, in both layouts, muted unless Interface's Trailer sound is on; any button stops it.
+- **Status bar**: the CPU temperature, the power chip (AXP223) temperature, the date, the time, the battery and the volume and audio output, each one on or off. In game puts them in the top right corner of every game, over a background whose opacity you set; it is off by default, so nothing covers the game. In the launcher puts the same items in the launcher's top bar (on by default). The time, the battery and the audio are on by default. A temperature turns yellow from 75 °C, where the A33 starts to slow down, and red from 90 °C.
 - **Performance**: the Gallium HUD graphs that FN + D-pad up shows in game. Text only goes at the top.
 - Overlay changes apply from the next game on.
-- **Date & Time**: the date format and 12/24 hours (12-hour by default) of the launcher's top bar clock, which always shows the date and the time, and of the in-game status bar, which shows what Overlay turns on. The clock chip keeps the time while the console is off, so it only needs setting once; the time zone applies to the launcher right away and to the apps opened afterwards.
+- **Date & Time**: the date format and 12/24 hours (12-hour by default) of the status bar's clock, in the launcher and in games. The clock chip keeps the time while the console is off, so it only needs setting once; the time zone applies to the launcher right away and to the apps opened afterwards.
 - **Resize Home**: expands HOME to fill the rest of the card, at the next boot (it asks first, then restarts). HOME is backed up to RAM while it's resized, so do it right after flashing, before copying your games.
 - **Empty trash**: deletes for good the games moved to the trash in the launcher.
 - **Power mode**: Balanced (the default) speeds the CPU and GPU up only when a game needs it; Battery saver caps the CPU at 816 MHz and the GPU at 240 MHz, for a longer battery life (heavy PS1 games may slow down); Performance keeps both at full speed. The choice is kept across reboots.
@@ -245,12 +250,12 @@ System Settings
 
 UP / DOWN pick a section and A or RIGHT opens its page; there, LEFT / RIGHT change the selected setting (A opens the list of choices, or turns a switch on or off), B goes back, and L1 / R1 go to the previous / next section from anywhere. START closes System Settings, and POWER opens the power options here too. A change applies and is saved right away, the language and the font included. A page scrolls with the d-pad when it doesn't fit the screen.
 
-VT323 and Pixelify Sans are under the SIL Open Font License and ProggyClean under the MIT License; their license files are next to them in `/usr/share/fonts`.
+VT323, Pixelify Sans and Atkinson Hyperlegible are under the SIL Open Font License and ProggyClean under the MIT License; their license files are next to them in `/usr/share/fonts`.
 
 | Sections, with Display & Audio | Launcher tabs |
 | --- | --- |
 | ![System Settings](docs/screenshots/system-settings.png) | ![Launcher tabs](docs/screenshots/system-settings-tabs.png) |
-| Overlay | In-game status bar |
+| Overlay: the status bar in games and in the launcher | In-game status bar |
 | ![Overlay](docs/screenshots/system-settings-overlay.png) | ![In-game status bar](docs/screenshots/status-bar.png) |
 | Date & Time | Performance overlay in game (FN + D-pad up) |
 | ![Date & Time](docs/screenshots/system-settings-datetime.png) | ![Performance overlay in game](docs/screenshots/performance-overlay.png) |
@@ -313,7 +318,7 @@ To add a new emulator, find an appropriate armhf libretro core .so file (e.g. fr
 Then modify `HOME -> apps.puppy` with a new `[ARCHIVE]` entry, pointing the COMMAND to your new libretro core. Take a look at `HOME -> apps.puppy` for an exmaple.
 
 ## How do I add music and videos?
-Copy them into `HOME -> media -> music` and `HOME -> media -> videos`. The Music and Videos tabs show up in the launcher once there's something in them. A folder (an album, a series) is one entry that plays whole, with its `cover.jpg` or `folder.jpg` as the art; a single file plays along with the rest of its folder. Other art goes in the `icons` folder, named like the file or folder.
+Copy them into `HOME -> media -> music` and `HOME -> media -> videos`. The Music and Videos tabs show up in the launcher once there's something in them. A folder (an album, a series) is one entry that plays whole, with its `cover.jpg` or `folder.jpg` as the art; a single file plays along with the rest of its folder. In the Showcase style, a video's trailer is 30 s of itself from a fifth of the way in (a series: its first episode's). Other art goes in the `icons` folder, named like the file or folder.
 
 Controls (also in System Settings -> Input Settings -> Shortcuts):
 

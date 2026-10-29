@@ -1,6 +1,7 @@
 #include "app.h"
 
 #include <algorithm>
+#include <climits>
 #include <ctime>
 
 #include "layout.h"
@@ -25,8 +26,10 @@ void App::notice(const std::string& text) {
     noticeUntil = SDL_GetTicks() + kNoticeMs;
 }
 
-void App::clockChanged() {
-    clockFmt = clockFormat();
+void App::topBarChanged() {
+    hud = HudSettings::load();
+    clockFmt = hud.statusLauncher ? clockFormat(hud) : "";
+    sensorsDue = SDL_GetTicks();
     dirty = true;
 }
 
@@ -41,10 +44,31 @@ void App::follow() {
     followNextRead = SDL_GetTicks() + 30;   // give the script a moment to write it
 }
 
+// The top bar's values. The battery and the temperatures are sysfs files the AXP answers over its
+// bus: read only with sensors, else kept from the last frame (the marquee draws 30 a second).
+TopBar App::readTopBar(bool sensors) const {
+    TopBar b;
+    if (!hud.statusLauncher) return b;
+    b.clock = clockText(clockFmt);
+    if (hud.statusAudio && audio.volume >= 0) b.audio = audio;
+    if (!sensors) {
+        b.cpuTemp = bar.cpuTemp;
+        b.pmicTemp = bar.pmicTemp;
+        b.battery = bar.battery;
+        return b;
+    }
+    if (hud.statusCpuTemp) b.cpuTemp = cpuTemperature();
+    if (hud.statusPmicTemp) b.pmicTemp = pmicTemperature();
+    if (hud.statusBattery) b.battery = Battery::read();
+    return b;
+}
+
 // The lowest screen of the overlays on top draws itself and the bars; the overlays go over them.
 void App::render() {
-    battery = Battery::read();
-    clock = clockText(clockFmt);
+    const Uint32 now = SDL_GetTicks();
+    const bool sensors = (Sint32)(now - sensorsDue) >= 0;
+    bar = readTopBar(sensors);
+    if (sensors) sensorsDue = now + kSensorReadMs;
     size_t base = stack.size() - 1;
     while (base > 0 && stack[base]->overlay()) --base;
 
@@ -53,7 +77,7 @@ void App::render() {
     ui.setMarquee(base == stack.size() - 1);
     stack[base]->render(ui);
     // Bars are drawn last so long descriptions or scrolled tiles never spill over them
-    ui.header(stack[base]->header(), battery, audio, clock);
+    ui.header(stack[base]->header(), bar);
     ui.footer(stack.back()->hints());
     for (size_t i = base + 1; i < stack.size(); ++i) {
         ui.setMarquee(i == stack.size() - 1);
@@ -65,7 +89,7 @@ void App::render() {
 
 int App::run() {
     audio.read();
-    clockFmt = clockFormat();
+    topBarChanged();
     lastActivity = SDL_GetTicks();
 
     while (running && !stack.empty()) {
@@ -82,7 +106,9 @@ int App::run() {
 
         now = SDL_GetTicks();
         Uint32 elapsed = now - lastActivity;
-        int timeout = elapsed >= kIdleCheckMs ? 0 : (int)(kIdleCheckMs - elapsed);
+        // the idle check only reads the top bar's battery, audio and temperatures again
+        const bool liveItems = hud.statusLauncher && (hud.statusBattery || hud.statusAudio || hud.statusCpuTemp || hud.statusPmicTemp);
+        int timeout = !liveItems ? INT_MAX : elapsed >= kIdleCheckMs ? 0 : (int)(kIdleCheckMs - elapsed);
         if (input.repeatIn(now) >= 0) timeout = std::min(timeout, input.repeatIn(now));
         if (following) {
             if ((Sint32)(now - followUntil) >= 0) {
@@ -144,12 +170,15 @@ int App::run() {
                 lastActivity = now;
             } else if (now - lastActivity >= kIdleCheckMs) {
                 lastActivity = now;
-                if (Battery::read() != battery) dirty = true;
-                Audio a;
-                a.read();
-                if (a != audio) { audio = a; dirty = true; }
+                if (hud.statusAudio) audio.read();
+                const TopBar fresh = readTopBar(true);
+                if (fresh != bar) {
+                    bar = fresh;
+                    sensorsDue = now + kSensorReadMs;
+                    dirty = true;
+                }
             }
-            if (clockText(clockFmt) != clock) dirty = true;
+            if (clockText(clockFmt) != bar.clock) dirty = true;
             closed.clear();
             continue;
         }

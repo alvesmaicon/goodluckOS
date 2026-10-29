@@ -28,11 +28,35 @@ constexpr int kPreviewX             = kMargin + kListWidth + kMargin;
 constexpr int kPreviewW             = kScreenW - kPreviewX - kMargin;
 constexpr int kPreviewH             = kPreviewW * 3 / 4;
 
+// The Showcase style's list (Shelf): a narrower list, the picture over the game's data, an A-Z rail.
+constexpr int kShelfListW           = 312;
+constexpr int kShelfCardX           = kScreenW - kMargin - 28 - kPreviewW;     // the rail's 28 px on its right
+
+// The Showcase style's grid (Streaming): the selected game's picture at the top right, under the
+// see-through top bar, its base down beside the row's name and its top cut when it doesn't fit; one
+// row of covers per tab under it, the next tab's row peeking out at the bottom.
+constexpr int kHeroW                = 400;
+constexpr int kHeroH                = 300;
+constexpr int kHeroFadeW            = 64;   // the picture's left edge fading into the screen
+constexpr int kHeroFadeH            = 56;   // and its bottom one
+constexpr int kCardW                = 136;
+constexpr int kCardH                = 102;
+constexpr int kCardGap              = 10;
+constexpr int kRowsTop              = 224;
+constexpr Uint8 kBarShade           = 110;  // the see-through top bar's opacity at its bottom edge
+constexpr int kRowLabelH            = 24;
+constexpr int kHeroY                = kRowsTop + kRowLabelH - 4 - kHeroH;  // the base 4 px above the covers
+constexpr int kRowPitch             = kRowLabelH + kCardH + 12;
+constexpr int kRowSkip              = 10;   // covers L1/R1 jump along a row
+constexpr Uint32 kTrailerDelayMs    = 2000; // still on a game this long: its trailer plays
+constexpr Uint32 kTrailerFrameMs    = 33;   // its frames are read this often
+
 constexpr int kMaxQueryLength       = 32;
 constexpr int kMaxNameLength        = 96;   // renaming a game's file
 constexpr Uint32 kNoticeMs          = 2500;
 
 constexpr Uint32 kIdleCheckMs       = 60000;
+constexpr Uint32 kSensorReadMs      = 5000;  // the top bar's battery and temperatures, at most this often
 constexpr Uint32 kFollowMs          = 2200;  // after a hotkey, the levels are re-read while the Mesa HUD shows its bar
 constexpr Uint8 kFnButton           = 10;    // BTN_MODE, which the SDL mapping leaves out
 constexpr Uint32 kFollowReadMs      = 100;   // that often (the hotkey script runs async)
@@ -50,14 +74,16 @@ inline int gridTop(bool showTabs)  { return bodyTop(showTabs) + 8; }
 inline int listTop(bool showTabs)  { return bodyTop(showTabs) + 6; }
 inline int listRows(bool showTabs) { return (kScreenH - kFooterH - listTop(showTabs) - 4) / kListRowH; }
 
-constexpr SDL_Color kWhite  {255, 255, 255, 255};
-constexpr SDL_Color kGrey   {170, 170, 170, 255};
-constexpr SDL_Color kBlack  {0, 0, 0, 255};
 constexpr SDL_Color kYellow {255, 205, 60, 255};
 constexpr SDL_Color kRed    {230, 60, 50, 255};
 constexpr SDL_Color kGreen  {80, 200, 90, 255};
-constexpr SDL_Color kTile   {40, 40, 44, 255};
-constexpr SDL_Color kRowSel {56, 56, 64, 255};
-constexpr SDL_Color kBar    {12, 12, 14, 255};
-constexpr SDL_Color kClear  {24, 24, 28, 255};
 SDL_Color accent();         // the highlight colour chosen in System Settings (accents.h); kYellow by default
+
+// The colours of the interface style (styles.h)
+struct Theme {
+    bool showcase;                      // Vitrine's look and its layouts: Shelf (list) and Streaming (grid)
+    SDL_Color bg, bar, tile, rowSel;    // the screen, the top and bottom bars, tiles and tracks, a selected row
+    SDL_Color text, muted, item, dim;   // titles and values, secondary text, a list's other entries, a row not usable now
+    SDL_Color ink;                      // text on the accent colour
+};
+const Theme& theme();

@@ -2,9 +2,14 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <ctime>
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <map>
+#include <string_view>
+
+#include <unistd.h>
 
 #include "catalog.h"
 #include "config.h"
@@ -78,8 +83,10 @@ void restoreCursor(Model& m) {
 }
 
 // The tag of an entry in the mixed tabs: its system, or "Ports" for the native games.
+// An app's category can be long ("Emulators/Frontends") and would widen the tag column of the whole tab
 static std::string systemTag(const Category& c) {
-    return !c.isArchive && c.name == kGamesCategory ? "Ports" : c.label;
+    if (c.isArchive) return c.label;
+    return c.name == kGamesCategory ? "Ports" : "App";
 }
 
 // Prepends an "All Games" tab with the games of every system and the native ones, sorted by name.
@@ -111,20 +118,34 @@ void loadFavorites(Model& m) {
 }
 
 template <class Keys>
-static void saveKeys(const std::string& file, const Keys& keys) {
+static bool saveKeys(const std::string& file, const Keys& keys) {
     std::error_code ec;
     fs::create_directories(cfg.configDir, ec);
     const std::string tmp = file + ".tmp";
     {
         std::ofstream out(tmp);
-        if (!out) return;
+        if (!out) return false;
         for (const auto& key : keys) out << key << "\n";
+        if (!out.flush()) return false;
     }
     fs::rename(tmp, file, ec);
+    return !ec;
 }
 
 static void saveFavorites(const Model& m) { saveKeys(cfg.favoritesFile(), m.favorites); }
 static void saveRecents(const Model& m)   { saveKeys(cfg.recentsFile(), m.recents); }
+
+static bool savePlayTime(const Model& m) {
+    std::vector<std::string> lines;
+    for (const auto& [key, p] : m.playTime)
+        lines.push_back(key + "\t" + std::to_string(p.seconds) + "\t" + std::to_string(p.last));
+    return saveKeys(cfg.playTimeFile(), lines);
+}
+
+// Music, videos and terminal apps aren't games
+static bool isGame(const Category& c, const Entry& e) {
+    return !c.mixed && !c.media && !e.terminal;
+}
 
 static int tabIndex(const Model& m, const std::string& name) {
     for (size_t t = 0; t < m.categories.size(); ++t)
@@ -132,7 +153,8 @@ static int tabIndex(const Model& m, const std::string& name) {
     return -1;
 }
 
-// Fills My List with the favourite entries of every tab (except the mixed ones), sorted by name.
+// Fills My List with the favourite entries of every tab (except the mixed ones), the most played first,
+// then by name.
 static void rebuildMyList(Model& m) {
     int t = tabIndex(m, kMyListName);
     if (t < 0) return;
@@ -145,8 +167,9 @@ static void rebuildMyList(Model& m) {
             list.push_back(std::move(e));
         }
     }
-    std::stable_sort(list.begin(), list.end(), [](const Entry& l, const Entry& r) {
-        return l.searchKey < r.searchKey;
+    std::stable_sort(list.begin(), list.end(), [&m](const Entry& l, const Entry& r) {
+        const long long a = m.secondsPlayed(l), b = m.secondsPlayed(r);
+        return a != b ? a > b : l.searchKey < r.searchKey;
     });
     m.categories[t].entries = std::move(list);
     m.categories[t].tagColumn = -1;
@@ -228,12 +251,11 @@ void addRecentTab(Model& m) {
     m.categories[t].tagColumn = -1;
 }
 
-// Puts a game first in Recent, before it's launched (appd stops Puppy right after). Music, videos
-// and terminal apps aren't games.
+// Puts a game first in Recent, before it's launched (appd stops Puppy right after).
 void addRecent(Model& m, const Entry& e) {
     auto c = std::find_if(m.categories.begin(), m.categories.end(),
                           [&](const Category& x) { return !x.mixed && x.name == e.category; });
-    if (c == m.categories.end() || c->media || e.terminal) return;
+    if (c == m.categories.end() || !isGame(*c, e)) return;
     const std::string key = Model::favoriteKey(e);
     m.recents.erase(std::remove(m.recents.begin(), m.recents.end(), key), m.recents.end());
     m.recents.insert(m.recents.begin(), key);
@@ -244,6 +266,80 @@ void addRecent(Model& m, const Entry& e) {
     addRecentTab(m);
     m.applyFilter();
     if (inRecent) m.select(m.tab, 0);
+}
+
+// The command without the spaces around it, as appctl reads it (no copy: it's done for every game)
+static std::string_view trimmed(const std::string& s) {
+    const size_t a = s.find_first_not_of(" \t\r\n");
+    return a == std::string::npos ? std::string_view() : std::string_view(s).substr(a, s.find_last_not_of(" \t\r\n") - a + 1);
+}
+
+// The time in each game, plus the sessions appctl logged in RAM since Puppy last ran: they are
+// matched to the games by their command and added, and the log is emptied.
+void loadPlayTime(Model& m) {
+    std::ifstream in(cfg.playTimeFile());
+    for (std::string line; std::getline(in, line);) {
+        const size_t a = line.find('\t'), b = line.find('\t', a + 1), c = line.find('\t', b + 1);
+        if (c == std::string::npos) continue;
+        PlayTime& p = m.playTime[line.substr(0, b)];
+        p.seconds = atoll(line.c_str() + b + 1);
+        p.last = atoll(line.c_str() + c + 1);
+    }
+
+    std::map<std::string, long long, std::less<>> ran;   // command -> seconds
+    {
+        std::ifstream sessions(cfg.sessionsFile);
+        for (std::string line; std::getline(sessions, line);) {
+            const size_t tab = line.find('\t');
+            const long long seconds = atoll(line.c_str());
+            if (tab == std::string::npos || seconds <= 0) continue;
+            const std::string command = line.substr(tab + 1);
+            ran[std::string(trimmed(command))] += seconds;
+        }
+    }
+    // what can't be emptied would count again at every start
+    if (ran.empty() || access(cfg.sessionsFile.c_str(), W_OK) != 0) return;
+    const long long now = time(nullptr);
+    bool added = false;
+    for (const auto& c : m.categories)
+        for (const auto& e : c.entries) {
+            if (!isGame(c, e)) continue;
+            const auto r = ran.find(trimmed(e.command));
+            if (r == ran.end()) continue;
+            PlayTime& p = m.playTime[Model::favoriteKey(e)];
+            p.seconds += r->second;
+            p.last = now;
+            ran.erase(r);
+            added = true;
+        }
+    if (!added || savePlayTime(m)) std::ofstream(cfg.sessionsFile, std::ios::trunc);
+}
+
+// The Most Played tab: the games with play time, the most played first, right after Recent.
+void addMostPlayedTab(Model& m) {
+    if (m.playTime.empty()) return;
+    std::vector<Entry> list;
+    for (const auto& c : m.categories)
+        for (const auto& e : c.entries)
+            if (isGame(c, e) && m.secondsPlayed(e) > 0) {
+                list.push_back(e);
+                list.back().tag = systemTag(c);
+            }
+    if (list.empty()) return;
+    std::stable_sort(list.begin(), list.end(), [&m](const Entry& l, const Entry& r) {
+        const long long a = m.secondsPlayed(l), b = m.secondsPlayed(r);
+        return a != b ? a > b : l.searchKey < r.searchKey;
+    });
+    Category most;
+    most.name = kMostPlayedName;
+    most.label = kMostPlayedName;
+    most.isArchive = true;
+    most.mixed = true;
+    most.entries = std::move(list);
+    int t = tabIndex(m, kRecentName);
+    if (t < 0) t = tabIndex(m, kMyListName);
+    m.categories.insert(m.categories.begin() + t + 1, std::move(most));
+    if (m.tab > t) ++m.tab;
 }
 
 void toggleFavorite(Model& m) {
@@ -387,6 +483,10 @@ std::string renameEntry(Model& m, const Entry& e, const std::string& newName) {
 
     const bool fav = m.favorites.erase(Model::favoriteKey(e)) > 0;
     const auto recent = std::find(m.recents.begin(), m.recents.end(), Model::favoriteKey(e));
+    const auto time = m.playTime.find(Model::favoriteKey(e));
+    const bool played = time != m.playTime.end();
+    const PlayTime playTime = played ? time->second : PlayTime();
+    if (played) m.playTime.erase(time);
     const bool autostart = m.isAutoStart(e);
     const Entry* renamed = nullptr;
     for (auto& c : m.categories) {
@@ -406,6 +506,7 @@ std::string renameEntry(Model& m, const Entry& e, const std::string& newName) {
     }
     if (renamed && fav) { m.favorites.insert(Model::favoriteKey(*renamed)); saveFavorites(m); }
     if (renamed && recent != m.recents.end()) { *recent = Model::favoriteKey(*renamed); saveRecents(m); }
+    if (renamed && played) { m.playTime[Model::favoriteKey(*renamed)] = playTime; savePlayTime(m); }
     if (renamed && autostart) { writeAutoStart(*renamed); m.autoName = renamed->id; }
     return tr("Renamed");
 }
@@ -468,6 +569,7 @@ std::string deleteEntry(Model& m, const Entry& e) {
     if (m.favorites.erase(Model::favoriteKey(e))) saveFavorites(m);
     const auto recent = std::find(m.recents.begin(), m.recents.end(), Model::favoriteKey(e));
     if (recent != m.recents.end()) { m.recents.erase(recent); saveRecents(m); }
+    if (m.playTime.erase(Model::favoriteKey(e))) savePlayTime(m);
     if (m.isAutoStart(e)) {
         clearAutoStart();
         m.autoCategory.clear();
@@ -532,6 +634,7 @@ void loadSettings(Model& m) {
     const Prefs p = Prefs::load();
     m.view = p.listView ? View::List : View::Grid;
     m.showTabs = p.showTabs;
+    m.trailerSound = p.trailerSound;
     for (const std::string& name : p.hiddenTabs)
         for (auto& c : m.categories)
             if (!c.mixed && c.name == name) c.hidden = true;
@@ -551,10 +654,12 @@ bool loadModel(Model& m) {
     applySettingsCommand(m);
     addAllGamesTab(m);   // first tab, and the one shown at boot
     loadFavorites(m);
+    loadPlayTime(m);
     addMyListTab(m);
     addExternalTab(m);
     loadRecents(m);
     addRecentTab(m);
+    addMostPlayedTab(m);
     if (m.categories.empty()) {
         std::cerr << "Nothing to show\n";
         return false;

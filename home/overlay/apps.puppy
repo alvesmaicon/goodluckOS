@@ -5,7 +5,10 @@
 # NAME=Some Application
 # DESCRIPTION=This is an application!
 # ICON=/home/player/icons/application-icon.png
+# VIDEO=/home/player/videos/some-application.mp4
 # COMMAND=launch-the-application --some-flag
+#
+# VIDEO is optional: a short clip that plays in place of the icon, as the entry's trailer in the Showcase style.
 #
 # Example Archive:
 # Fields:

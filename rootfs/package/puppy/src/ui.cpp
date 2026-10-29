@@ -53,8 +53,8 @@ std::string elided(TTF_Font* font, const std::string& text, int maxW) {
     return "";
 }
 
-IconCache::IconCache(SDL_Renderer* r, const std::string& fallbackPath, int boxW, int boxH, bool fit)
-    : renderer(r), boxW(boxW), boxH(boxH), fit(fit) {
+IconCache::IconCache(SDL_Renderer* r, const std::string& fallbackPath, int boxW, int boxH, bool fit, size_t maxIcons)
+    : renderer(r), boxW(boxW), boxH(boxH), maxIcons(maxIcons), fit(fit) {
     fallback = load(fallbackPath);
     if (!fallback.tex) std::cerr << "Warning: missing fallback icon: " << fallbackPath << "\n";
 }
@@ -64,22 +64,23 @@ IconCache::~IconCache() {
     if (fallback.tex) SDL_DestroyTexture(fallback.tex);
 }
 
-IconCache::Icon IconCache::get(const std::string& path) {
-    if (path.empty()) return fallback;
+IconCache::Icon IconCache::get(const std::string& path, bool orFallback) {
+    const Icon none = orFallback ? fallback : Icon{};
+    if (path.empty()) return none;
 
     auto it = slots.find(path);
     if (it != slots.end()) {
         it->second.lastUsed = ++clock;
-        return it->second.icon.tex ? it->second.icon : fallback;
+        return it->second.icon.tex ? it->second.icon : none;
     }
 
-    if (slots.size() >= kMaxCachedIcons) evictOldest();
+    if (slots.size() >= maxIcons) evictOldest();
 
     Slot slot;
     slot.icon = load(path);
     slot.lastUsed = ++clock;
     slots[path] = slot;
-    return slot.icon.tex ? slot.icon : fallback;
+    return slot.icon.tex ? slot.icon : none;
 }
 
 // Name of the scaled copy of an image for this cache's box; changes when the image does.
@@ -156,7 +157,7 @@ void IconCache::evictOldest() {
     slots.erase(oldest);
 }
 
-Ui::Ui(const std::string& font, float scale) {
+Ui::Ui(const std::string& font, const std::string& bold, float scale) {
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) != 0) {
@@ -176,31 +177,43 @@ Ui::Ui(const std::string& font, float scale) {
     SDL_RenderSetLogicalSize(renderer, kScreenW, kScreenH);
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
-    setFont(font, scale);
+    setFont(font, bold, scale);
 
-    gridCache    = std::make_unique<IconCache>(renderer, cfg.fallbackIcon, kCellWidth, kCellHeight, false);
-    previewCache = std::make_unique<IconCache>(renderer, cfg.fallbackIcon, kPreviewW, kPreviewH, true);
+    gridCache    = std::make_unique<IconCache>(renderer, cfg.fallbackIcon, kCellWidth, kCellHeight, false, kMaxCachedIcons);
+    previewCache = std::make_unique<IconCache>(renderer, cfg.fallbackIcon, kPreviewW, kPreviewH, true, kMaxCachedIcons);
+    cardCache    = std::make_unique<IconCache>(renderer, cfg.fallbackIcon, kCardW, kCardH, false, kMaxCachedIcons);
+    heroCache    = std::make_unique<IconCache>(renderer, cfg.fallbackIcon, kHeroW, kHeroH, true, 4);   // 470 KB each
     ok_ = true;
 }
 
 Ui::~Ui() {
     gridCache.reset();
     previewCache.reset();
+    cardCache.reset();
+    heroCache.reset();
     if (clipTex) SDL_DestroyTexture(clipTex);
-    for (TTF_Font* f : {fonts.ui, fonts.title, fonts.desc, fonts.small}) if (f) TTF_CloseFont(f);
+    if (circle) SDL_DestroyTexture(circle);
+    if (corner) SDL_DestroyTexture(corner);
+    if (button) SDL_DestroyTexture(button);
+    for (TTF_Font* f : {fonts.ui, fonts.title, fonts.desc, fonts.small, fonts.uiBold, fonts.titleBold, fonts.smallBold, fonts.keyBold}) if (f) TTF_CloseFont(f);
     if (renderer) SDL_DestroyRenderer(renderer);
     if (window) SDL_DestroyWindow(window);
     if (sdlUp) { TTF_Quit(); IMG_Quit(); SDL_Quit(); }
 }
 
-// The four sizes of the interface font. What was measured or drawn with the old one is dropped.
-void Ui::setFont(const std::string& path, float scale) {
-    for (TTF_Font* f : {fonts.ui, fonts.title, fonts.desc, fonts.small}) if (f) TTF_CloseFont(f);
+// The four sizes of the interface font, and four of the bold one. What was measured or drawn with the
+// old ones is dropped.
+void Ui::setFont(const std::string& path, const std::string& bold, float scale) {
+    for (TTF_Font* f : {fonts.ui, fonts.title, fonts.desc, fonts.small, fonts.uiBold, fonts.titleBold, fonts.smallBold, fonts.keyBold}) if (f) TTF_CloseFont(f);
     auto size = [&](int pt) { return (int)std::lround(pt * scale); };
     fonts.ui    = TTF_OpenFont(path.c_str(), size(22));
     fonts.title = TTF_OpenFont(path.c_str(), size(30));
     fonts.desc  = TTF_OpenFont(path.c_str(), size(20));
     fonts.small = TTF_OpenFont(path.c_str(), size(15));
+    fonts.uiBold    = bold.empty() ? nullptr : TTF_OpenFont(bold.c_str(), size(22));
+    fonts.titleBold = bold.empty() ? nullptr : TTF_OpenFont(bold.c_str(), size(30));
+    fonts.smallBold = bold.empty() ? nullptr : TTF_OpenFont(bold.c_str(), size(15));
+    fonts.keyBold   = bold.empty() ? nullptr : TTF_OpenFont(bold.c_str(), size(11));
     if (!fonts.ui || !fonts.title || !fonts.desc || !fonts.small)
         std::cerr << "Warning: could not load font " << path << "\n";
     pillWidths.clear();
@@ -211,7 +224,7 @@ void Ui::setFont(const std::string& path, float scale) {
 
 void Ui::begin() {
     marqueeNext = 0;    // set again while the selected name is still scrolling
-    setColor(kClear);
+    setColor(theme().bg);
     SDL_RenderClear(renderer);
 }
 
@@ -220,56 +233,81 @@ void Ui::end() {
     SDL_RenderPresent(renderer);
 }
 
-void Ui::header(const Header& h, const Battery& battery, const Audio& audio, const std::string& clock) {
-    fill(kBar, {0, 0, kScreenW, kHeaderH});
+void Ui::header(const Header& h, const TopBar& bar) {
+    if (h.clear) shade({0, 0, kScreenW, kHeaderH}, theme().bg, 230, kBarShade);
+    else fill(theme().showcase ? theme().bg : theme().bar, {0, 0, kScreenW, kHeaderH});
     const int nameY = (kHeaderH - TTF_FontHeight(fonts.ui)) / 2;
 
+    // Right to left, 14 px apart: each item's text, then its icon (returns where the icon goes)
     const int statusY = (kHeaderH - TTF_FontHeight(fonts.small)) / 2;
-    std::string bat = battery.percent >= 0 ? std::to_string(battery.percent) + "%" : "??";
-    int statusX = kScreenW - kMargin - textWidth(fonts.small, bat);
-    drawText(renderer, fonts.small, bat, statusX, statusY, kGrey);
-    statusX -= 28;
-    batteryIcon(statusX, (kHeaderH - 12) / 2, battery.percent, battery.charging, battery.full);
-
-    if (audio.volume >= 0) {
-        std::string vol = audio.muted ? tr("muted") : std::to_string(audio.volume) + "%";
-        statusX -= 14 + textWidth(fonts.small, vol);
-        drawText(renderer, fonts.small, vol, statusX, statusY, kGrey);
-        statusX -= 22;
-        if (audio.headphones) headphonesIcon(statusX, (kHeaderH - 16) / 2, kGrey);
-        else speakerIcon(statusX, (kHeaderH - 16) / 2, kGrey, audio.muted);
+    int statusX = kScreenW - kMargin + 14;
+    auto item = [&](const std::string& text, int iconW, SDL_Color c) {
+        statusX -= 14 + textWidth(fonts.small, text);
+        drawText(renderer, fonts.small, text, statusX, statusY, c);
+        statusX -= iconW;
+        return statusX;
+    };
+    if (bar.battery) {
+        const Battery& b = *bar.battery;
+        const int x = item(b.percent >= 0 ? std::to_string(b.percent) + "%" : "??", 28, theme().muted);
+        batteryIcon(x, (kHeaderH - 12) / 2, b.percent, b.charging, b.full);
     }
-    if (!clock.empty()) {
-        statusX -= 14 + textWidth(fonts.small, clock);
-        drawText(renderer, fonts.small, clock, statusX, statusY, kGrey);
+    if (bar.audio) {
+        const Audio& a = *bar.audio;
+        const int x = item(a.muted ? tr("muted") : std::to_string(a.volume) + "%", 22, theme().muted);
+        if (a.headphones) headphonesIcon(x, (kHeaderH - 16) / 2, theme().muted);
+        else speakerIcon(x, (kHeaderH - 16) / 2, theme().muted, a.muted);
     }
+    if (!bar.clock.empty()) item(bar.clock, 0, theme().muted);
+    // the A33 slows down from 75 C; 90 C is "hot"
+    auto temp = [&](int t, void (Ui::*icon)(int, int, SDL_Color)) {
+        const SDL_Color c = t >= 90 ? kRed : t >= 75 ? kYellow : theme().muted;
+        (this->*icon)(item(t >= 0 ? std::to_string(t) + "\u00b0" : "??", 20, c), (kHeaderH - 16) / 2, c);
+    };
+    if (bar.pmicTemp) temp(*bar.pmicTemp, &Ui::boltIcon);
+    if (bar.cpuTemp) temp(*bar.cpuTemp, &Ui::chipIcon);
 
+    TTF_Font* titleFont = theme().showcase ? fonts.uiBold : fonts.ui;
     int countW = textWidth(fonts.small, h.count);
     int maxNameW = statusX - 24 - countW - 10 - kMargin;
-    const std::string title = elided(fonts.ui, h.title, maxNameW);
-    int nameW = textWidth(fonts.ui, title);
-    drawText(renderer, fonts.ui, title, kMargin, nameY, kWhite);
+    const std::string title = elided(titleFont, h.title, maxNameW);
+    int nameW = textWidth(titleFont, title);
+    drawText(renderer, titleFont, title, kMargin, nameY, theme().text);
     drawText(renderer, fonts.small, h.count, kMargin + nameW + 10,
-             nameY + TTF_FontAscent(fonts.ui) - TTF_FontAscent(fonts.small), h.highlight ? accent() : kGrey);
+             nameY + TTF_FontAscent(fonts.ui) - TTF_FontAscent(fonts.small), h.highlight ? accent() : theme().muted);
 }
 
 // Button in the highlight colour, followed by what it does. The gap between hints shrinks when they
 // wouldn't fit on one line (e.g. "Y Remove" is wider than "Y My List").
 void Ui::footer(const Hints& hints) {
     const int top = kScreenH - kFooterH;
-    fill(kBar, {0, top, kScreenW, kFooterH});
+    fill(theme().bar, {0, top, kScreenW, kFooterH});
 
     const int y = top + (kFooterH - TTF_FontHeight(fonts.small)) / 2;
     const int keyGap = 6;
+    auto labelW = [&](const Hint& h) { return std::max(textWidth(fonts.small, h.label), textWidth(fonts.small, h.room)); };
     int textW = 0;
-    for (const auto& h : hints) textW += textWidth(fonts.small, buttonLabel(h.first)) + keyGap + textWidth(fonts.small, h.second);
+    for (const auto& h : hints) textW += textWidth(fonts.small, buttonLabel(h.key)) + keyGap + labelW(h);
     const int slots = std::max(1, (int)hints.size() - 1);
+    if (theme().showcase) {   // Vitrine's: left to right, each button drawn, then what it does
+        const int cy = top + kFooterH / 2;
+        int w = 0;
+        for (const auto& h : hints) w += keyWidth(buttonLabel(h.key)) + keyGap + labelW(h);
+        const int gap = std::clamp((kScreenW - 2 * kMargin - w) / slots, 6, 18);
+        int x = kMargin;
+        for (const auto& h : hints) {
+            x += keyGlyph(buttonLabel(h.key), x, cy, theme().bar) + keyGap;
+            drawText(renderer, fonts.small, h.label, x, cy - TTF_FontHeight(fonts.small) / 2, theme().muted);
+            x += labelW(h) + gap;
+        }
+        return;
+    }
     const int gap = std::clamp((kScreenW - 2 * kMargin - textW) / slots, 4, 16);
     int x = kScreenW - kMargin;
     for (auto it = hints.rbegin(); it != hints.rend(); ++it) {
-        x -= textWidth(fonts.small, it->second);
-        drawText(renderer, fonts.small, it->second, x, y, kGrey);
-        const std::string key = buttonLabel(it->first);
+        x -= labelW(*it);
+        drawText(renderer, fonts.small, it->label, x, y, theme().muted);
+        const std::string key = buttonLabel(it->key);
         x -= keyGap + textWidth(fonts.small, key);
         drawText(renderer, fonts.small, key, x, y, accent());
         x -= gap;
@@ -281,15 +319,177 @@ void Ui::notice(const std::string& text) {
     const int padX = 14, h = TTF_FontHeight(fonts.desc) + 14;
     const int w = std::min(kScreenW - 2 * kMargin, textWidth(fonts.desc, text) + 2 * padX);
     SDL_Rect r{(kScreenW - w) / 2, kScreenH - kFooterH - h - 10, w, h};
-    fill({12, 12, 14, 240}, r);
-    frame(accent(), r, 2);
-    drawText(renderer, fonts.desc, text, r.x + padX, r.y + 7, kWhite, w - 2 * padX);
+    panel(r, {12, 12, 14, 240}, accent());
+    drawText(renderer, fonts.desc, text, r.x + padX, r.y + 7, theme().text, w - 2 * padX);
 }
 
 void Ui::status(const std::string& text) {
-    fill(kClear, {0, 0, kScreenW, kScreenH});
+    fill(theme().bg, {0, 0, kScreenW, kScreenH});
     drawText(renderer, fonts.title, text, (kScreenW - textWidth(fonts.title, text)) / 2,
-             (kScreenH - TTF_FontHeight(fonts.title)) / 2, kWhite);
+             (kScreenH - TTF_FontHeight(fonts.title)) / 2, theme().text);
+}
+
+// Retro: a band with the accent at its left edge. Showcase: a pill, in the accent when the d-pad is on it.
+SDL_Color Ui::selection(const SDL_Rect& r, bool focused) {
+    if (theme().showcase) {
+        roundRect(r, r.h / 2, focused ? accent() : theme().rowSel);
+        return focused ? theme().ink : theme().text;
+    }
+    fill(theme().rowSel, r);
+    if (focused) fill(accent(), {r.x, r.y, 4, r.h});
+    return theme().text;
+}
+
+SDL_Color Ui::accentOn(bool selected) const {
+    return theme().showcase && selected ? theme().ink : accent();
+}
+
+void Ui::panel(const SDL_Rect& r, SDL_Color inside, SDL_Color border) {
+    if (theme().showcase) {   // a card: the border shows when it isn't the card's own colour (a notice's accent)
+        roundRect(r, 16, border);
+        roundRect({r.x + 2, r.y + 2, r.w - 4, r.h - 4}, 14, theme().tile);
+        return;
+    }
+    fill(inside, r);
+    frame(border, r, 2);
+}
+
+void Ui::key(const SDL_Rect& r, bool lit) {
+    if (theme().showcase) roundRect(r, 8, lit ? accent() : theme().rowSel);
+    else fill(lit ? accent() : theme().tile, r);
+}
+
+void Ui::tabHighlight(const SDL_Rect& r) {
+    if (theme().showcase) {
+        roundRect({r.x + 16, r.y + r.h - 1, r.w - 32, 3}, 1, accent());
+        return;
+    }
+    fill(theme().rowSel, r);
+    fill(accent(), {r.x, r.y + r.h - 1, r.w, 2});
+}
+
+void Ui::toggle(const SDL_Rect& r, bool on, bool enabled, bool selected) {
+    if (theme().showcase) {
+        const SDL_Color lit = enabled ? accentOn(selected) : theme().dim;
+        roundRect(r, r.h / 2, on ? lit : theme().tile);
+        roundRect({on ? r.x + r.w - 18 : r.x + 2, r.y + 2, 16, 16}, 8,
+                  on ? (selected ? accent() : theme().ink) : theme().muted);
+        return;
+    }
+    fill(on ? (enabled ? accent() : theme().dim) : theme().tile, r);
+    fill(on ? theme().bar : theme().muted, {on ? r.x + r.w - 18 : r.x + 2, r.y + 2, 16, 16});
+}
+
+void Ui::track(const SDL_Rect& r, SDL_Color c) {
+    if (theme().showcase) roundRect(r, r.h / 2, c);
+    else fill(c, r);
+}
+
+// Showcase: rounded, and ringed on a selected row, whose pill may be the same colour
+void Ui::swatch(const SDL_Rect& r, SDL_Color c, bool selected) {
+    if (!theme().showcase) {
+        fill(c, r);
+        return;
+    }
+    if (selected) roundRect({r.x - 2, r.y - 2, r.w + 4, r.h + 4}, 6, theme().ink);
+    roundRect(r, 4, c);
+}
+
+// Corners from a white disc tinted to the colour (Vitrine's Painter), straight sides from rectangles
+void Ui::roundRect(const SDL_Rect& r, int radius, SDL_Color c) {
+    radius = std::min({radius, r.w / 2, r.h / 2});
+    if (!circle) {
+        const int size = 64;
+        SDL_Surface* s = SDL_CreateRGBSurfaceWithFormat(0, size, size, 32, SDL_PIXELFORMAT_RGBA32);
+        if (s) {
+            Uint32* px = (Uint32*)s->pixels;
+            const float rad = size / 2.0f;
+            for (int y = 0; y < size; ++y)
+                for (int x = 0; x < size; ++x) {
+                    const float dx = x + 0.5f - rad, dy = y + 0.5f - rad;
+                    const float a = std::clamp(rad - std::sqrt(dx * dx + dy * dy) + 0.5f, 0.0f, 1.0f);
+                    px[y * (s->pitch / 4) + x] = SDL_MapRGBA(s->format, 255, 255, 255, (Uint8)(a * 255));
+                }
+            circle = SDL_CreateTextureFromSurface(renderer, s);
+            SDL_FreeSurface(s);
+            if (circle) SDL_SetTextureBlendMode(circle, SDL_BLENDMODE_BLEND);
+        }
+    }
+    if (radius <= 0 || !circle) {
+        fill(c, r);
+        return;
+    }
+    SDL_SetTextureColorMod(circle, c.r, c.g, c.b);
+    SDL_SetTextureAlphaMod(circle, c.a);
+    const int half = 32;
+    const SDL_Rect src[4] = {{0, 0, half, half}, {half, 0, half, half}, {0, half, half, half}, {half, half, half, half}};
+    const SDL_Rect dst[4] = {{r.x, r.y, radius, radius}, {r.x + r.w - radius, r.y, radius, radius},
+                             {r.x, r.y + r.h - radius, radius, radius}, {r.x + r.w - radius, r.y + r.h - radius, radius, radius}};
+    for (int i = 0; i < 4; ++i) SDL_RenderCopy(renderer, circle, &src[i], &dst[i]);
+    fill(c, {r.x + radius, r.y, r.w - 2 * radius, r.h});
+    fill(c, {r.x, r.y + radius, radius, r.h - 2 * radius});
+    fill(c, {r.x + r.w - radius, r.y + radius, radius, r.h - 2 * radius});
+}
+
+// The face buttons in their colours, as printed on the pad
+static SDL_Color buttonColor(char letter) {
+    switch (letter) {
+        case 'A': return {229, 72, 77, 255};
+        case 'B': return {245, 197, 66, 255};
+        case 'X': return {62, 142, 247, 255};
+        default:  return {70, 167, 88, 255};
+    }
+}
+
+static bool faceButton(const std::string& key) {
+    return key.size() == 1 && std::string("ABXY").find(key[0]) != std::string::npos;
+}
+
+int Ui::keyWidth(const std::string& key) {
+    return faceButton(key) ? 22 : textWidth(fonts.keyBold, key) + 10;
+}
+
+// A face button: a grey disc, a little concave like the pad's (lit from above, its dish is darker at
+// the top and its rim lighter)
+static SDL_Texture* makeButton(SDL_Renderer* renderer) {
+    const int size = 64;
+    SDL_Surface* s = SDL_CreateRGBSurfaceWithFormat(0, size, size, 32, SDL_PIXELFORMAT_RGBA32);
+    if (!s) return nullptr;
+    Uint32* px = (Uint32*)s->pixels;
+    const float rad = size / 2.0f;
+    for (int y = 0; y < size; ++y)
+        for (int x = 0; x < size; ++x) {
+            const float dx = (x + 0.5f - rad) / rad, dy = (y + 0.5f - rad) / rad, d = std::sqrt(dx * dx + dy * dy);
+            const float a = std::clamp((1.0f - d) * rad + 0.5f, 0.0f, 1.0f);
+            const float slope = dy + 0.35f * dx;
+            const float shade = d > 0.86f ? 1.0f - 0.22f * slope : 1.0f + 0.12f * slope;
+            const auto ch = [&](float base) { return (Uint8)std::clamp(base * shade, 0.0f, 255.0f); };
+            px[y * (s->pitch / 4) + x] = SDL_MapRGBA(s->format, ch(66), ch(70), ch(80), (Uint8)(a * 255));
+        }
+    SDL_Texture* t = SDL_CreateTextureFromSurface(renderer, s);
+    SDL_FreeSurface(s);
+    if (t) SDL_SetTextureBlendMode(t, SDL_BLENDMODE_BLEND);
+    return t;
+}
+
+// A face button is its letter in its colour on a grey button; the others, their name in an outline
+int Ui::keyGlyph(const std::string& key, int x, int cy, SDL_Color inside) {
+    const int w = keyWidth(key);
+    if (faceButton(key)) {
+        if (!button) button = makeButton(renderer);
+        const SDL_Rect r{x, cy - w / 2, w, w};
+        if (button) SDL_RenderCopy(renderer, button, nullptr, &r);
+        drawText(renderer, fonts.smallBold, key, x + (w - textWidth(fonts.smallBold, key)) / 2,
+                 cy - TTF_FontHeight(fonts.smallBold) / 2, buttonColor(key[0]));
+        return w;
+    }
+    const int h = TTF_FontHeight(fonts.keyBold) + 2;
+    const SDL_Rect r{x, cy - h / 2, w, h};
+    roundRect(r, 4, theme().muted);
+    roundRect({r.x + 1, r.y + 1, r.w - 2, r.h - 2}, 3, inside);
+    drawText(renderer, fonts.keyBold, key, x + (w - textWidth(fonts.keyBold, key)) / 2,
+             cy - TTF_FontHeight(fonts.keyBold) / 2, theme().muted);
+    return w;
 }
 
 void Ui::setColor(SDL_Color c) { SDL_SetRenderDrawColor(renderer, c.r, c.g, c.b, c.a); }
@@ -312,16 +512,68 @@ void Ui::frame(SDL_Color c, const SDL_Rect& r, int t) {
 
 // Vertical fade from transparent (top) to the colour (bottom).
 void Ui::gradient(const SDL_Rect& r, SDL_Color c) {
+    shade(r, c, 0, 255);
+}
+
+// The colour with one opacity at the top and another at the bottom.
+void Ui::shade(const SDL_Rect& r, SDL_Color c, Uint8 top, Uint8 bottom) {
     SDL_Vertex v[4];
     const float xs[2] = {(float)r.x, (float)(r.x + r.w)};
     const float ys[2] = {(float)r.y, (float)(r.y + r.h)};
     for (int i = 0; i < 4; ++i) {
         v[i].position = {xs[i % 2], ys[i / 2]};
-        v[i].color = {c.r, c.g, c.b, (Uint8)(i < 2 ? 0 : 255)};
+        v[i].color = {c.r, c.g, c.b, i < 2 ? top : bottom};
         v[i].tex_coord = {0, 0};
     }
     const int idx[6] = {0, 1, 2, 1, 3, 2};
     SDL_RenderGeometry(renderer, nullptr, v, 4, idx, 6);
+}
+
+// A frame made elsewhere (a trailer's), stretched to the box; false when there is none.
+bool Ui::drawFrame(SDL_Texture* frame, const SDL_Rect& box) {
+    if (!frame) return false;
+    SDL_RenderCopy(renderer, frame, nullptr, &box);
+    return true;
+}
+
+// Horizontal fade from the colour (left) to transparent (right).
+void Ui::sideGradient(const SDL_Rect& r, SDL_Color c) {
+    SDL_Vertex v[4];
+    const float xs[2] = {(float)r.x, (float)(r.x + r.w)};
+    const float ys[2] = {(float)r.y, (float)(r.y + r.h)};
+    for (int i = 0; i < 4; ++i) {
+        v[i].position = {xs[i % 2], ys[i / 2]};
+        v[i].color = {c.r, c.g, c.b, (Uint8)(i % 2 ? 0 : 255)};
+        v[i].tex_coord = {0, 0};
+    }
+    const int idx[6] = {0, 1, 2, 1, 3, 2};
+    SDL_RenderGeometry(renderer, nullptr, v, 4, idx, 6);
+}
+
+// Paints what lies outside rounded corners, so a picture under it looks rounded (Vitrine's way).
+void Ui::roundCorners(const SDL_Rect& r, int radius, SDL_Color outside) {
+    if (!corner) {
+        const int size = 64;
+        SDL_Surface* s = SDL_CreateRGBSurfaceWithFormat(0, size, size, 32, SDL_PIXELFORMAT_RGBA32);
+        if (!s) return;
+        Uint32* px = (Uint32*)s->pixels;
+        for (int y = 0; y < size; ++y)
+            for (int x = 0; x < size; ++x) {   // the top left quarter: opaque outside the circle
+                const float dx = size - (x + 0.5f), dy = size - (y + 0.5f);
+                const float a = std::clamp(std::sqrt(dx * dx + dy * dy) - (size - 0.5f), 0.0f, 1.0f);
+                px[y * (s->pitch / 4) + x] = SDL_MapRGBA(s->format, 255, 255, 255, (Uint8)(a * 255));
+            }
+        corner = SDL_CreateTextureFromSurface(renderer, s);
+        SDL_FreeSurface(s);
+        if (!corner) return;
+        SDL_SetTextureBlendMode(corner, SDL_BLENDMODE_BLEND);
+    }
+    SDL_SetTextureColorMod(corner, outside.r, outside.g, outside.b);
+    const SDL_Rect dst[4] = {{r.x, r.y, radius, radius}, {r.x + r.w - radius, r.y, radius, radius},
+                             {r.x, r.y + r.h - radius, radius, radius}, {r.x + r.w - radius, r.y + r.h - radius, radius, radius}};
+    const SDL_RendererFlip flip[4] = {SDL_FLIP_NONE, SDL_FLIP_HORIZONTAL, SDL_FLIP_VERTICAL,
+                                      (SDL_RendererFlip)(SDL_FLIP_HORIZONTAL | SDL_FLIP_VERTICAL)};
+    for (int i = 0; i < 4; ++i) SDL_RenderCopyEx(renderer, corner, nullptr, &dst[i], 0, nullptr, flip[i]);
 }
 
 // Filled five-pointed star centred on (cx, cy), the My List badge.
@@ -347,7 +599,8 @@ void Ui::star(int cx, int cy, int r, SDL_Color c) {
 int Ui::pill(const std::string& text, int x, int y, SDL_Color bg, SDL_Color fg) {
     const int padX = 6, padY = 2;
     SDL_Rect r{x, y, textWidth(fonts.small, text) + padX * 2, TTF_FontHeight(fonts.small) + padY * 2};
-    fill(bg, r);
+    if (theme().showcase) roundRect(r, 5, bg);
+    else fill(bg, r);
     drawText(renderer, fonts.small, text, x + padX, y + padY, fg);
     return r.w;
 }
@@ -357,6 +610,20 @@ void Ui::drawIcon(IconCache& cache, const std::string& path, const SDL_Rect& box
     if (!icon.tex) return;
     SDL_Rect dst{box.x + (box.w - icon.w) / 2, box.y + (box.h - icon.h) / 2, icon.w, icon.h};
     SDL_RenderCopy(renderer, icon.tex, nullptr, &dst);
+}
+
+// The image scaled to cover the box, its edges cropped; false when there is no image.
+bool Ui::drawCover(IconCache& cache, const std::string& path, const SDL_Rect& box) {
+    IconCache::Icon icon = cache.get(path, false);
+    if (!icon.tex) return false;
+    const float scale = std::max((float)box.w / icon.w, (float)box.h / icon.h);
+    SDL_Rect src;
+    src.w = std::min(icon.w, (int)std::lround(box.w / scale));
+    src.h = std::min(icon.h, (int)std::lround(box.h / scale));
+    src.x = (icon.w - src.w) / 2;
+    src.y = (icon.h - src.h) / 2;
+    SDL_RenderCopy(renderer, icon.tex, &src, &box);
+    return true;
 }
 
 // Draws wrapped text and returns its height.
@@ -429,7 +696,7 @@ void Ui::sideTriangle(int cx, int cy, int r, bool left, SDL_Color c) {
 // Width of a pill() with this text; the system tags are measured once.
 int Ui::wrappedHeight(TTF_Font* font, const std::string& text, int width) {
     if (!font || text.empty()) return 0;
-    SDL_Surface* s = TTF_RenderUTF8_Blended_Wrapped(font, text.c_str(), kWhite, width);
+    SDL_Surface* s = TTF_RenderUTF8_Blended_Wrapped(font, text.c_str(), theme().text, width);
     if (!s) return 0;
     int h = s->h;
     SDL_FreeSurface(s);
@@ -479,10 +746,10 @@ void Ui::speakerIcon(int x, int y, SDL_Color c, bool muted) {
 
 // 24x12: green when full, yellow while charging, red at 10% or less
 void Ui::batteryIcon(int x, int y, int percent, bool charging, bool full) {
-    frame(kGrey, {x, y, 22, 12}, 1);
-    fill(kGrey, {x + 22, y + 3, 2, 6});
+    frame(theme().muted, {x, y, 22, 12}, 1);
+    fill(theme().muted, {x + 22, y + 3, 2, 6});
     const SDL_Color c = full || (charging && percent >= 100) ? kGreen
-                      : charging ? kYellow : percent <= 10 ? kRed : kGrey;
+                      : charging ? kYellow : percent <= 10 ? kRed : theme().muted;
     if (percent > 0) fill(c, {x + 2, y + 2, std::max(3, 18 * std::min(percent, 100) / 100), 8});
 }
 
@@ -494,4 +761,28 @@ void Ui::headphonesIcon(int x, int y, SDL_Color c) {
     fill(c, {x + 14, y + 3, 2, 7});
     fill(c, {x, y + 9, 4, 7});
     fill(c, {x + 12, y + 9, 4, 7});
+}
+
+// 16x16, like the in-game status bar's: the CPU temperature...
+void Ui::chipIcon(int x, int y, SDL_Color c) {
+    fill(c, {x + 3, y + 3, 10, 1});
+    fill(c, {x + 3, y + 12, 10, 1});
+    fill(c, {x + 3, y + 3, 1, 10});
+    fill(c, {x + 12, y + 3, 1, 10});
+    fill(c, {x + 6, y + 6, 4, 4});
+    for (int i = 5; i <= 11; i += 3) {
+        fill(c, {x + i, y + 1, 1, 2});
+        fill(c, {x + i, y + 13, 1, 2});
+        fill(c, {x + 1, y + i, 2, 1});
+        fill(c, {x + 13, y + i, 2, 1});
+    }
+}
+
+// ...and the power chip's
+void Ui::boltIcon(int x, int y, SDL_Color c) {
+    static const int rows[][3] = {
+        {9, 1, 3}, {8, 2, 3}, {7, 3, 3}, {6, 4, 3}, {5, 5, 3}, {4, 6, 8}, {4, 7, 8},
+        {8, 8, 3}, {7, 9, 3}, {6, 10, 3}, {5, 11, 3}, {4, 12, 2}, {4, 13, 1},
+    };
+    for (const auto& r : rows) fill(c, {x + r[0], y + r[1], r[2], 1});
 }

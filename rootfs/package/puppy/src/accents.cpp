@@ -16,6 +16,7 @@ const std::vector<Accent>& all() {
         {"blue", "Blue", {90, 165, 255, 255}},
         {"cyan", "Cyan", {70, 210, 220, 255}},
         {"green", "Green", {100, 210, 110, 255}},
+        {"white", "White", {240, 242, 245, 255}},
     };
     return list;
 }

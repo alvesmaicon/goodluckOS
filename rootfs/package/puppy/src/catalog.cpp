@@ -16,6 +16,7 @@ struct Archive {
     std::vector<std::string> dirs, exts, iconDirs;
     bool es = false;    // from es_systems.cfg: the command uses %ROM%-style placeholders
     bool media = false; // MEDIA=1: folders with matching files (albums, series) are entries too
+    bool excerpt = false;   // EXCERPT=1: videos, each one's trailer a part of itself
     std::string system, emulator, core;     // for %SYSTEM%, %EMULATOR% and %CORE%
 };
 
@@ -63,6 +64,7 @@ static void parseAppsFile(const std::string& path, std::vector<Record>& records)
             rec.entry.command     = get("COMMAND");
             rec.entry.terminal    = !get("TERMINAL").empty();
             rec.entry.iconPath    = get("ICON");
+            rec.entry.video       = get("VIDEO");
             // HIDE_IF_EXISTS=<path>: one-time entries (e.g. a first-boot setup) disappear once their job is done
             std::error_code ec;
             const std::string hideIf = get("HIDE_IF_EXISTS");
@@ -81,6 +83,7 @@ static void parseAppsFile(const std::string& path, std::vector<Record>& records)
             a.iconDirs    = splitList(get("ENTRY_ICONS_DIRECTORIES"));
             a.tab         = get("TAB");
             a.media       = !get("MEDIA").empty() && get("MEDIA") != "0";
+            a.excerpt     = !get("EXCERPT").empty() && get("EXCERPT") != "0";
             if (!a.name.empty() && !a.dirs.empty()) upsert(records, rec);
         }
         kv.clear();
@@ -248,7 +251,7 @@ static std::string findFolderCover(const fs::path& dir) {
 
 // What an EmulationStation/Skraper gamelist.xml says about one ROM.
 struct GameInfo {
-    std::string name, synopsis, image, meta;
+    std::string name, synopsis, image, video, meta;
 };
 
 static void appendUtf8(std::string& out, unsigned long cp) {
@@ -325,6 +328,8 @@ static std::map<std::string, GameInfo> readGamelistFile(const fs::path& dir, con
         g.synopsis = xmlTag(block, "desc");
         const std::string image = stripDotSlash(xmlTag(block, "image"));
         if (!image.empty()) g.image = (image[0] == '/' ? fs::path(image) : dir / image).string();
+        const std::string video = stripDotSlash(xmlTag(block, "video"));
+        if (!video.empty()) g.video = (video[0] == '/' ? fs::path(video) : dir / video).string();
 
         std::vector<std::string> meta;
         const std::string date = xmlTag(block, "releasedate");
@@ -342,7 +347,7 @@ static std::map<std::string, GameInfo> readGamelistFile(const fs::path& dir, con
 
 // dir/gamelist.xml, with names, descriptions and metadata replaced by the ones in the gamelist for the
 // interface language when there is one: gamelist.<code>.xml (e.g. gamelist.pt-BR.xml), or
-// gamelist.<language>.xml (gamelist.pt.xml). Images and anything it lacks come from gamelist.xml.
+// gamelist.<language>.xml (gamelist.pt.xml). Images, videos and anything it lacks come from gamelist.xml.
 static std::map<std::string, GameInfo> loadGamelist(const fs::path& dir) {
     auto out = readGamelistFile(dir, "gamelist.xml");
     const std::string code = i18n::current();
@@ -357,6 +362,7 @@ static std::map<std::string, GameInfo> loadGamelist(const fs::path& dir) {
         if (!l.synopsis.empty()) g.synopsis = l.synopsis;
         if (!l.meta.empty()) g.meta = l.meta;
         if (g.image.empty()) g.image = l.image;
+        if (g.video.empty()) g.video = l.video;
     }
     return out;
 }
@@ -381,6 +387,17 @@ static std::vector<Entry> expandArchive(const Archive& a) {
             if (it->is_regular_file(ec2) && matches(it->path())) return true;
         }
         return false;
+    };
+    // a series' first episode, by name
+    auto firstFile = [&](const fs::path& d) {
+        std::string first;
+        std::error_code ec;
+        for (fs::directory_iterator it(d, ec), end; !ec && it != end; it.increment(ec)) {
+            std::error_code ec2;
+            const std::string f = it->path().string();
+            if (it->is_regular_file(ec2) && matches(it->path()) && (first.empty() || f < first)) first = f;
+        }
+        return first;
     };
 
     std::vector<Entry> out;
@@ -412,10 +429,15 @@ static std::vector<Entry> expandArchive(const Archive& a) {
                 if (!g.name.empty()) e.name = g.name;
                 e.synopsis = g.synopsis;
                 e.meta = g.meta;
+                e.video = g.video;
                 std::error_code ec3;
                 if (e.iconPath.empty() && !g.image.empty() && fs::is_regular_file(g.image, ec3)) e.iconPath = g.image;
             }
             if (e.iconPath.empty()) e.iconPath = a.defaultIcon;
+            if (a.excerpt && e.video.empty()) {
+                e.video = folder ? firstFile(p) : p.string();
+                e.excerpt = true;
+            }
             out.push_back(std::move(e));
         }
     }

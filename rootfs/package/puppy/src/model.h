@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include <map>
 #include <set>
 #include <string>
 #include <vector>
@@ -19,18 +20,31 @@ struct PowerItem {
     bool quit = false;      // leave Puppy without launching anything
 };
 
+// The time spent in a game, from appd's sessions
+struct PlayTime {
+    long long seconds = 0;
+    long long last = 0;     // when it was last played (epoch)
+};
+
 struct Model {
     std::vector<Category> categories;
     int tab = 0;
     View view = View::Grid;
     bool showTabs = true;
+    bool trailerSound = false;
     std::string query;
     std::string autoCategory, autoName;   // the autolaunch entry
     std::set<std::string> favorites;      // "category<TAB>name" of the entries in My List
     std::vector<std::string> recents;     // the same for the Recent tab, most recent first
+    std::map<std::string, PlayTime> playTime;   // the same keys: the games played
 
     static std::string favoriteKey(const Entry& e) { return e.category + "\t" + e.id; }
     bool isFavorite(const Entry& e) const { return favorites.count(favoriteKey(e)) > 0; }
+    const PlayTime* played(const Entry& e) const {
+        auto it = playTime.find(favoriteKey(e));
+        return it == playTime.end() ? nullptr : &it->second;
+    }
+    long long secondsPlayed(const Entry& e) const { const PlayTime* p = played(e); return p ? p->seconds : 0; }
 
     // START opens System Settings; POWER opens the power menu (both from any tab)
     Entry settings;
@@ -68,13 +82,19 @@ struct Model {
         }
     }
 
+    // The tab delta steps away from the current one, skipping hidden tabs
+    int neighbour(int delta) const {
+        int n = (int)categories.size(), t = tab;
+        for (int i = 0; i < n; ++i) {
+            t = ((t + delta) % n + n) % n;
+            if (!categories[t].hidden) break;
+        }
+        return t;
+    }
+
     void switchTab(int delta) {
         descScroll = 0;
-        int n = (int)categories.size();
-        for (int i = 0; i < n; ++i) {   // skipping hidden tabs
-            tab = ((tab + delta) % n + n) % n;
-            if (!categories[tab].hidden) break;
-        }
+        tab = neighbour(delta);
     }
 
     void moveSel(int delta) {

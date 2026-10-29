@@ -26,7 +26,9 @@ Prefs Prefs::load() {
         else if (startsWith(line, "language=") && line.size() > 9) p.language = line.substr(9);
         else if (startsWith(line, "font=") && line.size() > 5) p.font = line.substr(5);
         else if (startsWith(line, "accent=") && line.size() > 7) p.accent = line.substr(7);
+        else if (startsWith(line, "style=") && line.size() > 6) p.style = line.substr(6);
         else if (line == "loading=text") p.loadingText = true;
+        else if (line == "trailer_sound=on") p.trailerSound = true;
         else if (line == "confirm=b") p.confirmBottom = true;
     }
     return p;
@@ -38,8 +40,8 @@ void Prefs::save() const {
         std::ifstream in(cfg.settingsFile());
         for (std::string line; std::getline(in, line);) {
             if (line.empty() || startsWith(line, "view=") || startsWith(line, "tabs=") || startsWith(line, "language=") ||
-                startsWith(line, "font=") || startsWith(line, "accent=") || startsWith(line, "hidden_tab=") ||
-                startsWith(line, "loading=") || startsWith(line, "confirm=")) continue;
+                startsWith(line, "font=") || startsWith(line, "accent=") || startsWith(line, "style=") || startsWith(line, "hidden_tab=") ||
+                startsWith(line, "loading=") || startsWith(line, "trailer_sound=") || startsWith(line, "confirm=")) continue;
             lines.push_back(line);
         }
     }
@@ -48,7 +50,9 @@ void Prefs::save() const {
     if (!language.empty()) lines.push_back("language=" + language);
     if (!font.empty()) lines.push_back("font=" + font);
     if (!accent.empty()) lines.push_back("accent=" + accent);
+    if (!style.empty()) lines.push_back("style=" + style);
     if (loadingText) lines.push_back("loading=text");
+    if (trailerSound) lines.push_back("trailer_sound=on");
     if (confirmBottom) lines.push_back("confirm=b");
     for (const auto& t : hiddenTabs) lines.push_back("hidden_tab=" + t);
 

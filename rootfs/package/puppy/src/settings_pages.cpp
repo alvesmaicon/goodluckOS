@@ -9,6 +9,7 @@
 #include "fonts.h"
 #include "overlays.h"
 #include "settings.h"
+#include "styles.h"
 #include "system/clock.h"
 #include "system/device.h"
 #include "system/retroarch.h"
@@ -81,7 +82,7 @@ static const char* const kShortcuts[][2] = {
 
 const std::vector<std::pair<SettingsScreen::Page, const char*>>& SettingsScreen::sections() const {
     static const std::vector<std::pair<Page, const char*>> list = {
-        {Page::Display, "Display & Audio"}, {Page::Launcher, "Launcher"}, {Page::Interface, "Interface"},
+        {Page::Display, "Display & Audio"}, {Page::Interface, "Interface"},
         {Page::Overlay, "Overlay"}, {Page::DateTime, "Date & Time"}, {Page::Storage, "Storage"},
         {Page::System, "System"}, {Page::Input, "Input Settings"}, {Page::Credits, "Credits"},
     };
@@ -120,7 +121,6 @@ std::string SettingsScreen::pageHint(Page p) const {
 std::vector<Row> SettingsScreen::rows(Page p) {
     switch (p) {
         case Page::Display:   return displayPage();
-        case Page::Launcher:  return launcherPage();
         case Page::Interface: return interfacePage();
         case Page::Overlay:   return overlayPage();
         case Page::DateTime:  return dateTimePage();
@@ -165,23 +165,6 @@ std::vector<Row> SettingsScreen::displayPage() {
     return rows;
 }
 
-std::vector<Row> SettingsScreen::launcherPage() {
-    std::vector<Row> rows;
-    rows.push_back(Row::toggle("Show launcher tabs", launcher.showTabs, [this](int on) {
-        launcher.showTabs = on;
-        prefs.showTabs = on;
-        prefs.save();
-    }));
-    rows.push_back(Row::choice("Launcher view", {"Grid", "List"}, launcher.view == View::List ? 1 : 0, [this](int i) {
-        launcher.view = i ? View::List : View::Grid;
-        prefs.listView = i;
-        prefs.save();
-    }));
-    if (std::any_of(launcher.categories.begin(), launcher.categories.end(), [](const Category& c) { return !c.mixed; }))
-        rows.push_back(Row::link("Launcher tabs", [this] { open(Page::Tabs); }));
-    return rows;
-}
-
 std::vector<Row> SettingsScreen::tabsPage() {
     std::vector<Row> rows;
     for (const Category& c : launcher.categories) {
@@ -219,6 +202,22 @@ std::vector<Row> SettingsScreen::interfacePage() {
     });
     language.rawChoices = true;
     rows.push_back(language);
+
+    // The launcher's look: the style and the view first, as they change the most
+    rows.push_back(Row::section("Look"));
+    std::vector<std::string> styleNames;
+    for (const styles::Style& s : styles::all()) styleNames.push_back(s.name);
+    rows.push_back(Row::choice("Style", styleNames, styles::find(prefs.style), [this](int i) {
+        prefs.style = styles::all()[i].key;
+        prefs.save();
+        styles::choose(prefs.style);
+        applyFont();    // the Showcase style has its own default font
+    }));
+    rows.push_back(Row::choice("View", {"Grid", "List"}, launcher.view == View::List ? 1 : 0, [this](int i) {
+        launcher.view = i ? View::List : View::Grid;
+        prefs.listView = i;
+        prefs.save();
+    }));
 
     std::vector<std::string> fontNames, keys;
     int currentFont = 0;
@@ -258,6 +257,22 @@ std::vector<Row> SettingsScreen::interfacePage() {
         prefs.loadingText = !on;
         prefs.save();
     }));
+    Row sound = Row::toggle("Trailer sound", prefs.trailerSound, [this](int on) {
+        launcher.trailerSound = on;
+        prefs.trailerSound = on;
+        prefs.save();
+    });
+    sound.hint = "In the Showcase style, a game's trailer plays with its sound, at the system volume.";
+    rows.push_back(sound);
+
+    rows.push_back(Row::section("Tabs"));
+    rows.push_back(Row::toggle("Show tabs", launcher.showTabs, [this](int on) {
+        launcher.showTabs = on;
+        prefs.showTabs = on;
+        prefs.save();
+    }));
+    if (std::any_of(launcher.categories.begin(), launcher.categories.end(), [](const Category& c) { return !c.mixed; }))
+        rows.push_back(Row::link("Launcher tabs", [this] { open(Page::Tabs); }));
     return rows;
 }
 
@@ -267,18 +282,21 @@ std::vector<Row> SettingsScreen::overlayPage() {
         return Row::toggle(label, hud.*field, [this, field](int on) {
             hud.*field = on;
             hud.save();
+            app.topBarChanged();
         });
     };
-    // The in-game status bar; the launcher has its own top bar. The clock's format and 12/24 hours
-    // come from Date & Time
-    rows.push_back(Row::section("In-game status bar"));
+    // The same items in games and in the launcher's top bar. The clock's format and 12/24 hours come
+    // from Date & Time
+    rows.push_back(Row::section("Status bar"));
+    rows.push_back(flag("In game", &HudSettings::statusGame));
+    rows.push_back(flag("In the launcher", &HudSettings::statusLauncher));
     rows.push_back(flag("Show date", &HudSettings::statusDate));
     rows.push_back(flag("Show time", &HudSettings::statusTime));
     rows.push_back(flag("Show battery", &HudSettings::statusBattery));
     rows.push_back(flag("Show audio", &HudSettings::statusAudio));
     rows.push_back(flag("Show CPU temperature", &HudSettings::statusCpuTemp));
     rows.push_back(flag("Show power chip temperature", &HudSettings::statusPmicTemp));
-    rows.push_back(Row::level("Opacity", hud.statusOpacity, 0, 100, 10, [this](int v) {
+    rows.push_back(Row::level("Opacity in game", hud.statusOpacity, 0, 100, 10, [this](int v) {
         hud.statusOpacity = v;
         hud.save();
     }));
@@ -321,7 +339,7 @@ std::vector<Row> SettingsScreen::dateTimePage() {
     rows.push_back(Row::toggle("24-hour clock", hud.h24, [this](int on) {
         hud.h24 = on;
         hud.save();
-        app.clockChanged();
+        app.topBarChanged();
     }));
     std::vector<std::string> formats;
     int format = 0;
@@ -332,7 +350,7 @@ std::vector<Row> SettingsScreen::dateTimePage() {
     Row dateFormat = Row::choice("Date format", formats, format, [this](int i) {
         hud.dateFormat = dateFormats()[i].value;
         hud.save();
-        app.clockChanged();
+        app.topBarChanged();
     });
     dateFormat.rawChoices = true;
     rows.push_back(dateFormat);
@@ -386,7 +404,7 @@ std::vector<Row> SettingsScreen::dateTimePage() {
         zone = i;
         setTimezone(i);
         clockEdit.tm_year = 0;      // shows the clock in the new zone
-        app.clockChanged();
+        app.topBarChanged();
     });
     timeZone.rawChoices = true;
     rows.push_back(timeZone);
@@ -476,13 +494,15 @@ void SettingsScreen::restoreDefaults() {
     prefs = fresh;
     prefs.save();
     accents::choose(prefs.accent);
+    styles::choose(prefs.style);
     launcher.view = View::Grid;
     launcher.showTabs = true;
+    launcher.trailerSound = false;
     for (Category& c : launcher.categories) c.hidden = false;
     applyFont();
     profile = defaultPowerProfile();
     runScript("power-profile.sh default", false);
-    app.clockChanged();
+    app.topBarChanged();
     defaultsRestored = true;
 }
 

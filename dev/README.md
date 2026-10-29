@@ -46,7 +46,7 @@ dev/gl kernel                           # dev/out/android_boot_a33.img (panel 1;
 dev/gl shell                            # a shell in the container (/repo, /work)
 ```
 
-`dev/gl scenes` checks that a change to Puppy draws what it drew before (or shows exactly what it changed). The fake games of `dev/scenes/games.txt` get generated covers. A shim (`dev/scenes/shim.c`) freezes the clock and fakes the mixer, and a mount namespace gives each scene an empty HOME and a fake battery. Two runs of the same code give the same pixels. Run it before a refactor and again after, then diff the two runs. The scenes are not for the README: those screenshots need real covers.
+`dev/gl scenes` checks that a change to Puppy draws what it drew before (or shows exactly what it changed). The fake games of `dev/scenes/games.txt` get generated covers. A shim (`dev/scenes/shim.c`) freezes the clock and fakes the mixer, and a mount namespace gives each scene an empty HOME and a fake battery (and, when the scene asks for them, fake CPU and power chip temperatures). Two runs of the same code give the same pixels. Run it before a refactor and again after, then diff the two runs. The scenes are not for the README: those screenshots need real covers.
 
 Buildroot runs with its tree in the `goodluck-work` volume, not in the repo. A macOS folder is case-insensitive (the kernel headers have files that differ only in case) and slow through virtiofs. `dev/gl rootfs` copies `rootfs/{board,configs,package}` in on each run, then runs `make` with whatever targets you pass. Things to know:
 

@@ -1,5 +1,10 @@
 . /usr/share/goodluck/defaults/gallium_hud.conf
-[ -f /home/player/.config/gallium_hud.conf ] && . /home/player/.config/gallium_hud.conf
+if [ -f /home/player/.config/gallium_hud.conf ]; then
+    unset HUD_STATUS_GAME
+    . /home/player/.config/gallium_hud.conf
+    # saved before the In game switch: its items were the game's
+    HUD_STATUS_GAME=${HUD_STATUS_GAME:-true}
+fi
 
 hud_x=10
 hud_y=10
@@ -15,8 +20,8 @@ fi
 export GALLIUM_HUD
 export GALLIUM_HUD_VISIBLE=$HUD_VISIBLE
 export GALLIUM_HUD_TOGGLE_SIGNAL=34
-# the in-game status bar's items, and its clock as a strftime format (format and 12/24 hours
-# from Date & Time)
+# the in-game status bar's items (none with In game off), and its clock as a strftime format
+# (format and 12/24 hours from Date & Time)
 hud_clock=""
 [ "$HUD_STATUS_DATE" = true ] && hud_clock=$HUD_DATE_FORMAT
 [ "$HUD_24H" = true ] && hud_time=%H:%M || hud_time="%I:%M %p"
@@ -27,9 +32,10 @@ hud_status=""
 [ -n "$hud_clock" ] && hud_status="${hud_status:+$hud_status,}clock"
 [ "$HUD_STATUS_BATTERY" = true ] && hud_status="${hud_status:+$hud_status,}battery"
 [ "$HUD_STATUS_AUDIO" = true ] && hud_status="${hud_status:+$hud_status,}audio"
+[ "$HUD_STATUS_GAME" = true ] || hud_status=""
 export GALLIUM_HUD_STATUS="${hud_status:-0}"
 export GALLIUM_HUD_STATUS_OPACITY=$HUD_STATUS_OPACITY
 export GALLIUM_HUD_STATUS_CLOCK="$hud_clock"
 # the volume / brightness feedback's colour: the launcher's accent (Interface -> Accent color)
 export GALLIUM_HUD_ACCENT=$HUD_ACCENT
-unset HUD_VISIBLE HUD_ITEMS HUD_STYLE HUD_POSITION HUD_STATUS_DATE HUD_STATUS_TIME HUD_STATUS_BATTERY HUD_STATUS_AUDIO HUD_STATUS_CPU_TEMP HUD_STATUS_PMIC_TEMP HUD_STATUS_OPACITY HUD_24H HUD_DATE_FORMAT HUD_ACCENT hud_x hud_y hud_time hud_clock hud_status
+unset HUD_VISIBLE HUD_ITEMS HUD_STYLE HUD_POSITION HUD_STATUS_GAME HUD_STATUS_LAUNCHER HUD_STATUS_DATE HUD_STATUS_TIME HUD_STATUS_BATTERY HUD_STATUS_AUDIO HUD_STATUS_CPU_TEMP HUD_STATUS_PMIC_TEMP HUD_STATUS_OPACITY HUD_24H HUD_DATE_FORMAT HUD_ACCENT hud_x hud_y hud_time hud_clock hud_status

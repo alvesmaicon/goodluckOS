@@ -33,6 +33,34 @@ Battery Battery::read() {
     return b;
 }
 
+int cpuTemperature() {
+    std::ifstream in("/sys/class/thermal/thermal_zone0/temp");
+    long millis;
+    return in >> millis ? (int)(millis / 1000) : -1;
+}
+
+int pmicTemperature() {
+    static std::string dir;
+    static bool searched = false;
+    if (!searched) {
+        searched = true;
+        std::error_code ec, real;
+        for (fs::directory_iterator it("/sys/bus/iio/devices", ec), end; !ec && it != end; it.increment(ec)) {
+            if (fs::canonical(it->path(), real).string().find("axp") == std::string::npos) continue;
+            dir = it->path().string();
+            break;
+        }
+    }
+    if (dir.empty()) return -1;
+    double v[3];
+    const char* files[] = {"in_temp_raw", "in_temp_offset", "in_temp_scale"};
+    for (int i = 0; i < 3; ++i) {
+        std::ifstream in(dir + "/" + files[i]);
+        if (!(in >> v[i])) return -1;
+    }
+    return (int)((v[0] + v[1]) * v[2] / 1000);
+}
+
 // Runs a shell command without waiting for it (screen off, restart... from puppy.conf).
 void runDetached(const std::string& command) {
     signal(SIGCHLD, SIG_IGN);   // no zombies

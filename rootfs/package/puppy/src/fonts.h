@@ -1,6 +1,7 @@
 #pragma once
 // The interface fonts System Settings offers, in the folder of puppy.conf's font. "Default" is that
-// font itself (Inter on goodluckOS). The choice is font=<key> in the settings file (see Prefs).
+// font itself (Inter on goodluckOS), or Atkinson Hyperlegible in the Showcase style. The choice is
+// font=<key> in the settings file (see Prefs).
 #include <string>
 #include <vector>
 
@@ -17,6 +18,8 @@ const std::vector<Font>& all();
 int find(const std::string& key);       // the index in all(); 0 ("default") for an unknown key
 std::string path(const Font& f);
 bool available(const Font& f);
-void choose(const std::string& key, std::string& path, float& scale);  // the default for a missing file
+// The default for a missing file. bold: the face of the Showcase style's titles, the regular one when
+// the font has none; "" in the retro style, which has no bold.
+void choose(const std::string& key, bool showcase, std::string& path, std::string& bold, float& scale);
 
 }  // namespace fonts

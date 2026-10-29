@@ -43,9 +43,9 @@ Header TesterScreen::header() const {
 // A button shape that lights up while it's pressed
 static void chip(Ui& ui, const char* label, bool on, const SDL_Rect& r) {
     const Fonts& fonts = ui.font();
-    ui.fill(on ? accent() : kTile, r);
+    ui.key(r, on);
     drawText(ui.sdl(), fonts.small, label, r.x + (r.w - textWidth(fonts.small, label)) / 2,
-             r.y + (r.h - TTF_FontHeight(fonts.small)) / 2, on ? kBlack : kWhite);
+             r.y + (r.h - TTF_FontHeight(fonts.small)) / 2, on ? theme().ink : theme().text);
 }
 
 void TesterScreen::render(Ui& ui) {
@@ -75,33 +75,33 @@ void TesterScreen::render(Ui& ui) {
     char text[96];
     const int lineH = TTF_FontLineSkip(fonts.desc);
     if (!joystick) {
-        drawText(renderer, fonts.desc, tr("No gamepad found."), x0, y, kGrey);
+        drawText(renderer, fonts.desc, tr("No gamepad found."), x0, y, theme().muted);
     } else {
         if (SDL_JoystickNumAxes(joystick) >= 4) {
             snprintf(text, sizeof(text), tr("Sticks:  L %+4d %+4d   R %+4d %+4d"),
                      SDL_JoystickGetAxis(joystick, 0) * 100 / 32767, SDL_JoystickGetAxis(joystick, 1) * 100 / 32767,
                      SDL_JoystickGetAxis(joystick, 2) * 100 / 32767, SDL_JoystickGetAxis(joystick, 3) * 100 / 32767);
-            drawText(renderer, fonts.desc, text, x0, y, kGrey);
+            drawText(renderer, fonts.desc, text, x0, y, theme().muted);
         }
         y += lineH;
         if (lastButton >= 0) snprintf(text, sizeof(text), tr("Last pressed: %s (button %d)"), kButtons[lastButton], lastButton);
         else snprintf(text, sizeof(text), "%s", tr("Press any button"));
-        drawText(renderer, fonts.desc, text, x0, y, kGrey);
+        drawText(renderer, fonts.desc, text, x0, y, theme().muted);
     }
 
     // holding the back button fills the bar; full, it goes back
     const Uint32 held = holdStart ? std::min<Uint32>(SDL_GetTicks() - holdStart, kExitHoldMs) : 0;
     SDL_Rect bar{x0, kScreenH - kFooterH - 14 - h, 5 * w + 4 * gap, h};
-    ui.fill(kTile, bar);
+    ui.track(bar, theme().tile);
     const std::string label = trf("Hold %s to go back", buttonLabel("B"));
     const int labelX = bar.x + (bar.w - textWidth(fonts.small, label)) / 2;
     const int labelY = bar.y + (bar.h - TTF_FontHeight(fonts.small)) / 2;
-    drawText(renderer, fonts.small, label, labelX, labelY, kWhite);
+    drawText(renderer, fonts.small, label, labelX, labelY, theme().text);
     if (held) {     // black where the bar is full
         SDL_Rect full{bar.x, bar.y, (int)(bar.w * held / kExitHoldMs), bar.h};
-        ui.fill(accent(), full);
+        ui.track(full, accent());
         SDL_RenderSetClipRect(renderer, &full);
-        drawText(renderer, fonts.small, label, labelX, labelY, kBlack);
+        drawText(renderer, fonts.small, label, labelX, labelY, theme().ink);
         SDL_RenderSetClipRect(renderer, nullptr);
     }
 }
