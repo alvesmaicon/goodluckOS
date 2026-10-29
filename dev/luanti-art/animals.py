@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 # goodluck_models' creatures and things: Minecraft's models for its textures' layouts (the cow, the pig, the sheep
 # with its wool, the chicken, the horse, the donkey the mule shares, the spider, the zombie, the skeleton, the
-# villager, the boat, the arrow), one skinned mesh each, every part a joint, animated as Minecraft animates them.
+# villager, the boat, the arrow, and the Nether's ghast, blaze, magma cube, zombified piglin and wither skeleton, as
+# 26.x has them), one skinned mesh each, every part a joint, animated as Minecraft animates them.
 # Written as binary glTF: Minecraft's model space (y down, the head toward -z, the right side toward -x) is turned to
 # glTF's (the head toward -z, which Luanti's loader turns to +z, where a mob looks at yaw 0), 10 units a node. Frames
 # are seconds: stand 0-1, walk from 1, run from 3, die 4-5, eat 6-8 (cow, sheep), rear 6-7.6 (horses), hit or aim
-# 6-6.5 (zombie, skeleton), lay 8-8.1 (villager), flap from 9 (chicken). The horses' saddle, bridle and chests and the
-# skeleton's bow are a second primitive, so that a texture of their own draws them, and nothing where it is blank
+# 6-6.5 (zombie, skeleton, zombified piglin, wither skeleton), lay 8-8.1 (villager), flap from 9 (chicken), hop 1-2
+# (magma cube); the blaze stands 0-10 and dies 11-12. The horses' saddle, bridle and chests and the skeletons' and
+# the piglin's bow or sword are a second primitive, so that a texture of their own draws them, and nothing where it
+# is blank
 #   python3 dev/luanti-art/animals.py [out dir]
 import json, math, os, struct, sys
 from mcmodel import box, posed
@@ -201,9 +204,10 @@ def quad(corners, uv):
     return [(corners, uv), ([corners[1], corners[0], corners[3], corners[2]], uv)] + [([m, m, m, m], uv)] * 4
 
 
-def humanoid(thin):
+def humanoid(thin, held=None):
     # Minecraft's humanoid: the head and the body hang from y 0, the arms from the shoulders, the legs from the hips;
-    # the skeleton's limbs 2 pixels wide (its left ones the right ones mirrored, 64x32), the zombie's 4 (64x64)
+    # the skeleton's limbs 2 pixels wide (its left ones the right ones mirrored, 64x32), the zombie's 4 (64x64); held
+    # in place of the skeleton's bow
     head = box(0, 0, -4, -8, -4, 8, 8, 8) + box(32, 0, -4, -8, -4, 8, 8, 8, grow=0.5)
     if thin:
         right_arm, left_arm = box(40, 16, -1, -2, -1, 2, 12, 2), box(40, 16, -1, -2, -1, 2, 12, 2, mirror=True)
@@ -216,8 +220,142 @@ def humanoid(thin):
     # the skeleton's bow: its item image on a square in the right hand, across the arm, drawn by the second texture
     bow = quad([(8, 10, -8), (-8, 10, -8), (-8, 10, 8), (8, 10, 8)], (0, 0, 64, 32)) if thin else ()
     return [part("head", (0, 0, 0), head), part("body", (0, 0, 0), box(16, 16, -4, 0, -2, 8, 12, 4)),
-            part("right_arm", (-5, 2, 0), right_arm, gear=bow), part("left_arm", (5, 2, 0), left_arm),
+            part("right_arm", (-5, 2, 0), right_arm, gear=bow if held is None else held),
+            part("left_arm", (5, 2, 0), left_arm),
             part("right_leg", (-hip, 12, 0), right_leg), part("left_leg", (hip, 12, 0), left_leg)]
+
+
+def affine(*steps):
+    # 4x4 matrices multiplied in the order given: ("t", x, y, z), ("r", axis, degrees), ("s", k)
+    m = [[float(i == j) for j in range(4)] for i in range(4)]
+    for step in steps:
+        n = [[float(i == j) for j in range(4)] for i in range(4)]
+        if step[0] == "t":
+            n[0][3], n[1][3], n[2][3] = step[1:]
+        elif step[0] == "s":
+            n[0][0] = n[1][1] = n[2][2] = step[1]
+        else:
+            i, j = {0: (1, 2), 1: (2, 0), 2: (0, 1)}[step[1]]
+            c, s = math.cos(math.radians(step[2])), math.sin(math.radians(step[2]))
+            n[i][i], n[i][j], n[j][i], n[j][j] = c, -s, s, c
+        m = [[sum(m[i][k] * n[k][j] for k in range(4)) for j in range(4)] for i in range(4)]
+    return lambda p: tuple(16 * sum(m[i][k] * v for k, v in enumerate(p + (1,))) for i in range(3))
+
+
+def held(tex, inward=0):
+    # an item in the right hand as Minecraft draws it (ItemInHandLayer, item/handheld's thirdperson_righthand): from
+    # the arm's pivot (the skeleton's moved inward 1) turned -90 about x and 180 about y, moved 1, 2 and -10 sixteenths,
+    # then the display's 4 up and 0.5 ahead, 55 about z and -90 about y, 0.85 its size about its middle; its image on a
+    # square at the middle of its thickness, each side as Minecraft's extruded item shows it, drawn whole by the second
+    # texture (tex: the model's texture size, the unit of its uv)
+    at = affine(("t", inward / 16, 0, 0), ("r", 0, -90), ("r", 1, 180), ("t", 1 / 16, 2 / 16, -10 / 16),
+                ("t", 0, 4 / 16, 0.5 / 16), ("r", 1, -90), ("r", 2, 55), ("s", 0.85), ("t", -0.5, -0.5, -0.5))
+    tr, tl, bl, br = (at((x, y, 0.5)) for x, y in ((1, 1), (0, 1), (0, 0), (1, 0)))
+    w, h = tex
+    mid = at((0.5, 0.5, 0.5))
+    return [([tr, tl, bl, br], (0, 0, w, h)), ([tl, tr, br, bl], (w, 0, 0, h))] + [([mid] * 4, (0, 0, w, h))] * 4
+
+
+def java_ints(seed, bound, n):
+    # java.util.Random(seed).nextInt(bound), n of them
+    mask = (1 << 48) - 1
+    seed, out = (seed ^ 0x5DEECE66D) & mask, []
+    while len(out) < n:
+        seed = (seed * 0x5DEECE66D + 0xB) & mask
+        bits = seed >> 17
+        if bits - bits % bound + bound - 1 < 2 ** 31:
+            out.append(bits % bound)
+    return out
+
+
+def ghast():
+    # Minecraft's ghast: the body 16 a side about 17.6, nine tentacles 8 to 14 long (Random(1660)) from 24.6, in rows
+    # of three half a step apart; the renderer scales it 4.5 about the ground (the mob's visual_size)
+    parts = [part("body", (0, 17.6, 0), box(0, 0, -8, -8, -8, 16, 16, 16))]
+    for i, extra in enumerate(java_ints(1660, 7, 9)):
+        x = ((i % 3 - (i // 3 % 2) * 0.5 + 0.25) / 2 * 2 - 1) * 5
+        z = ((i // 3) / 2 * 2 - 1) * 5
+        parts.append(part("tentacle%d" % i, (x, 24.6, z), box(0, 0, -1, 0, -1, 2, extra + 8, 2)))
+    return parts
+
+
+def tentacles(t):
+    # each swings 0.2 * sin(age * 0.3 + its number) + 0.4 about x
+    return {"tentacle%d" % i: (mc_x(0.2 * math.sin(t * FPS * 0.3 + i) + 0.4), None) for i in range(9)}
+
+
+# the blaze's rods: three rings of four, a quarter turn apart, going round once a second (-), every 10/3 s and every
+# 2 s (-), at 9, 7 and 5 from the middle, bobbing; their bobbing a touch faster than Minecraft's (8 and 16 times
+# where it goes 7.96 and 15.9) so that 10 s loop
+BOB = (16 * PI / 200, 32 * PI / 200)
+
+
+def rod(i, age):
+    ring, k = divmod(i, 4)
+    if ring == 0:
+        f, r, y = age * PI * -0.1, 9, -2 + math.cos((2 * i + age) * BOB[0])
+    elif ring == 1:
+        f, r, y = PI / 4 + age * PI * 0.03, 7, 2 + math.cos((2 * i + age) * BOB[0])
+    else:
+        f, r, y = 0.47123894 + age * PI * -0.05, 5, 11 + math.cos((1.5 * i + age) * BOB[1])
+    f += k * PI / 2
+    return (math.cos(f) * r, y, math.sin(f) * r)
+
+
+def blaze():
+    # Minecraft's blaze: the head, and twelve rods of 2x8x2 that the animation carries round
+    return [part("head", (0, 0, 0), box(0, 0, -4, -4, -4, 8, 8, 8))] + \
+        [part("rod%d" % i, rod(i, 0), box(0, 16, 0, 0, 0, 2, 8, 2)) for i in range(12)]
+
+
+def rods(t):
+    age = t * FPS
+    return {"rod%d" % i: (None, tuple(a - b for a, b in zip(rod(i, age), rod(i, 0)))) for i in range(12)}
+
+
+def magma_cube():
+    # Minecraft's magma cube since 26.x: eight slices of 8x1x8 from y 16, a joint each, around a core of 4; the
+    # renderer scales it by its size (the mob's visual_size)
+    parts = []
+    for i in range(8):
+        u, v = (0, 9 * i) if i < 4 else (32, 9 * i - 36)
+        parts.append(part("slice%d" % i, (0, 0, 0), box(u, v, -4, 16 + i, -4, 8, 1, 8)))
+    return parts + [part("core", (0, 0, 0), box(24, 40, -2, 18, -2, 4, 4, 4))]
+
+
+def hop(t):
+    # a jump: the slices part as Minecraft's squish does, from 1 at the jump easing to it by half a tick and dying
+    # away 0.9 a tick, shown for a cube of size 2 (squish / (size * 0.5 + 1)): slice i moves -(4 - i) * 1.7 * squish;
+    # the last 0.2 s close it
+    s, target = 0.0, 1.0
+    for _ in range(round(t * FPS)):
+        s += (target - s) * 0.5
+        target *= 0.9
+    f = s / 2 * min(1.0, (1.0 - t) / 0.2)
+    return {"slice%d" % i: (None, (0, -(4 - i) * 1.7 * f, 0)) for i in range(8)}
+
+
+def zombified_piglin():
+    # Minecraft's zombified piglin: the player's body on its 64x64 (the pants over the legs; no jacket, no hat, and
+    # its sleeves are blank) with the piglin's wide head, snout, tusks and ears, a golden sword in the right hand
+    head = box(0, 0, -5, -8, -4, 10, 8, 8) + box(31, 1, -2, -4, -5, 4, 4, 1) + box(2, 4, 2, -2, -5, 1, 2, 1) + \
+        box(2, 0, -3, -2, -5, 1, 2, 1)
+    leg = lambda u, v, pu, pv: box(u, v, -2, 0, -2, 4, 12, 4) + box(pu, pv, -2, 0, -2, 4, 12, 4, grow=0.25)
+    return [part("head", (0, 0, 0), head),
+            part("left_ear", (4.5, -6, 0), box(51, 6, 0, 0, -2, 1, 5, 4), rot=(0, 0, -PI / 6), parent="head"),
+            part("right_ear", (-4.5, -6, 0), box(39, 6, -1, 0, -2, 1, 5, 4), rot=(0, 0, PI / 6), parent="head"),
+            part("body", (0, 0, 0), box(16, 16, -4, 0, -2, 8, 12, 4)),
+            part("right_arm", (-5, 2, 0), box(40, 16, -3, -2, -2, 4, 12, 4), gear=held((64, 64))),
+            part("left_arm", (5, 2, 0), box(32, 48, -1, -2, -2, 4, 12, 4)),
+            part("right_leg", (-1.9, 12, 0), leg(0, 16, 0, 32)), part("left_leg", (1.9, 12, 0), leg(16, 48, 0, 48))]
+
+
+def ears(amount, period):
+    # the piglin's ears flap out and in, a little standing, more with the step
+    def pose(t):
+        a = 2 * PI * t / period
+        return {"left_ear": (mc_z(-math.cos(a) * amount), None), "right_ear": (mc_z(math.cos(a + 1) * amount), None)}
+    return pose
 
 
 def villager():
@@ -281,6 +419,19 @@ ZOMBIE = [(0, 1, zombie_arms(ZOMBIE_UP)), (1, 1.0, both(zombie_arms(ZOMBIE_UP), 
           (3, 0.5, both(zombie_arms(ZOMBIE_UP), stride(1.4, 0, 0.5))), (4, 1, both(die, zombie_arms(ZOMBIE_UP))),
           (6, 0.5, zombie_arms(-PI / 1.5, 0.5))]
 SKELETON = [(0, 1, sway), (1, 1.0, stride(0.7, 0.5, 1.0)), (3, 0.5, stride(1.4, 1.0, 0.5)), (4, 1, die), (6, 0.5, aim)]
+# the zombified piglin's arms as the zombie's, higher at someone; the wither skeleton's straight ahead at someone, as
+# 26.x's skeleton holding no bow
+ANGRY = -PI / 1.5
+PIGLIN = [(0, 1, both(zombie_arms(ZOMBIE_UP), ears(0.08, 1))),
+          (1, 1.0, both(zombie_arms(ZOMBIE_UP), both(stride(0.7, 0, 1.0), ears(0.2, 1.0)))),
+          (3, 0.5, both(zombie_arms(ANGRY), both(stride(1.4, 0, 0.5), ears(0.35, 0.5)))),
+          (4, 1, both(die, zombie_arms(ZOMBIE_UP))), (6, 0.5, zombie_arms(ANGRY, 0.5))]
+WITHER_SKELETON = [(0, 1, sway), (1, 1.0, stride(0.7, 0.5, 1.0)),
+                   (3, 0.5, both(zombie_arms(-PI / 2), stride(1.4, 0, 0.5))), (4, 1, die),
+                   (6, 0.5, zombie_arms(-PI / 2, 0.5))]
+GHAST = [(0, 2 * PI / (0.3 * FPS), tentacles), (4, 1, both(die, tentacles))]
+BLAZE = [(0, 10, rods), (11, 1, both(die, rods))]
+MAGMA_CUBE = [(0, 1, None), (1, 1.0, hop), (4, 1, die)]
 VILLAGER = [(0, 1, None), (1, 1.0, stride(0.7, 0, 1.0)), (3, 0.5, stride(1.4, 0, 0.5)), (4, 1, die), (8, 0.1, lay)]
 
 
@@ -348,6 +499,12 @@ ANIMALS = {
     "villager": ((64, 64), villager(), VILLAGER),
     "boat": ((128, 64), boat(), [(0, 1, None)]),
     "arrow": ((32, 32), arrow(), [(0, 1, None)]),
+    "ghast": ((64, 32), ghast(), GHAST),
+    "blaze": ((64, 32), blaze(), BLAZE),
+    "magma_cube": ((64, 64), magma_cube(), MAGMA_CUBE),
+    "zombified_piglin": ((64, 64), zombified_piglin(), PIGLIN),
+    # the wither skeleton is the skeleton with a stone sword (the renderer draws it 1.2 times as big)
+    "wither_skeleton": ((64, 32), humanoid(True, held((64, 32), 1)), WITHER_SKELETON),
 }
 
 

@@ -1,6 +1,7 @@
 -- Minecraft's Nether as a realm deep below the world: two mapchunks of height (Minecraft's 128 and a little more, so
 -- that no mapchunk is half of it), closed by bedrock, its ground made in the map generator's threads (mapgen.lua).
--- Its blocks and items, its ores and patches (placed by the engine), its red fog and what works otherwise in it
+-- Its blocks and items, its ores and patches (placed by the engine), its red fog and what works otherwise in it; its
+-- portal, ruined portals and monsters in portal.lua, ruins.lua and mobs.lua
 local S = core.get_translator("goodluck_nether")
 local YMIN, YMAX = -5152, -4993
 -- Minecraft's lava sea fills what is open up to 31 above the floor
@@ -359,6 +360,9 @@ ore({ore_type = "blob", ore = "default:gravel", clust_scarcity = 12 * 12 * 12, c
 core.register_mapgen_script(core.get_modpath("goodluck_nether") .. "/mapgen.lua")
 dofile(core.get_modpath("goodluck_nether") .. "/portal.lua")
 dofile(core.get_modpath("goodluck_nether") .. "/ruins.lua")
+if core.get_modpath("mobs") and core.get_modpath("goodluck_models") then
+	dofile(core.get_modpath("goodluck_nether") .. "/mobs.lua")
+end
 
 -- inside: the Nether's red fog, as near as Minecraft's (it also keeps the A33 from drawing far into one big cave), no
 -- sun, moon, stars or clouds; soul sand walks at 40 %, magma burns half a heart every half second unless sneaking
@@ -458,12 +462,14 @@ for _, name in ipairs({"bucket:bucket_water", "bucket:bucket_river_water"}) do
 	end
 end
 
--- none of the Overworld's monsters and animals come out in the Nether
+-- none of the Overworld's monsters and animals come out in the Nether, only its own, in any light (goodluck_mobs'
+-- rules for the Overworld don't hold there: this is the outer check, mobs.lua's caps decide)
 if mobs and mobs.spawn_abm_check then
 	local spawn_abm_check = mobs.spawn_abm_check
 	function mobs:spawn_abm_check(pos, node, name)
 		if goodluck_nether.inside(pos) then
-			return true
+			local crowded = goodluck_nether.spawns and goodluck_nether.spawns[name]
+			return not crowded or crowded(pos, name)
 		end
 		return spawn_abm_check(self, pos, node, name)
 	end

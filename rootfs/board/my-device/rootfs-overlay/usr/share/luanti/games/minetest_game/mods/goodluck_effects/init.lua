@@ -335,10 +335,15 @@ if core.global_exists("mobs") and mobs.mob_class then
 	end
 end
 
--- Slow Falling and Jump Boost against falls, Fire Resistance against lava, fire and anything that says it burns
+-- Slow Falling and Jump Boost against falls, Fire Resistance against lava, fire and anything that says it burns (a
+-- hurt with fire = true, a punch by something with _fire: a fireball)
 local function burns(node)
 	return core.get_item_group(node or "", "lava") > 0 or core.get_item_group(node or "", "igniter") > 0 or
 		core.get_item_group(node or "", "fire") > 0
+end
+local function fiery(reason)
+	local ent = reason.type == "punch" and reason.object and reason.object:get_luaentity()
+	return reason.fire or ent and ent._fire or reason.type == "node_damage" and burns(reason.node)
 end
 core.register_on_player_hpchange(function(player, hp_change, reason)
 	local list = hp_change < 0 and active[player:get_player_name()]
@@ -351,7 +356,7 @@ core.register_on_player_hpchange(function(player, hp_change, reason)
 		elseif list.jump_boost then
 			return math.min(0, hp_change + list.jump_boost.level)
 		end
-	elseif list.fire_resistance and (reason.fire or reason.type == "node_damage" and burns(reason.node)) then
+	elseif list.fire_resistance and fiery(reason) then
 		return 0
 	end
 	return hp_change
