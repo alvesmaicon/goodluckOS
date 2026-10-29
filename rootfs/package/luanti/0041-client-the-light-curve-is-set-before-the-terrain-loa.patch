@@ -1,0 +1,42 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Thu, 29 Oct 2026 08:11:59 -0300
+Subject: [PATCH 41/41] client: the light curve is set before the terrain loads
+
+The curve that turns light levels into brightness was set as the game loop started. Since the
+loading screen waits for the terrain (loading_terrain_radius), the meshes of the blocks around
+the player are made before that, and until then the curve's table is all zeros: they came out
+black but for what gives light of its own, torches drawn on dark walls. Meshes made once the game
+ran were right, so the dark stayed until a block there changed and was meshed again, a dig or a
+placed node, or the world was opened again.
+
+Found on the owner's console in a dungeon room at a fixed time of day: the same join was dark
+with the terrain wait and lit without it; the blocks, their light and the draw list were the
+same in both, and meshing every block again at the end of the wait made it lit. The two commits
+before this one came from an earlier reading of the same bug: blocks are not dropped as far at
+the join, but they do no harm.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/src/client/game.cpp b/src/client/game.cpp
+index 81b2f54ea..91e744d10 100644
+--- a/src/client/game.cpp
++++ b/src/client/game.cpp
+@@ -458,6 +458,8 @@ bool Game::startup(volatile std::sig_atomic_t *kill,
+ 	m_first_loop_after_window_activation = true;
+ 
+ 	g_client_translations->clear();
++	// before any block mesh: loadTerrain() makes them before the game runs
++	set_light_curve(g_settings->getFloat("display_gamma"));
+ 
+ 	// with the terrain to wait for (a local game, see loadTerrain), the steps before it fill the first 60 %
+ 	if (g_settings->getS16("loading_terrain_radius") > 0 && start_data.address.empty())
+@@ -500,8 +502,6 @@ void Game::run()
+ 
+ 	draw_times.reset();
+ 
+-	set_light_curve(g_settings->getFloat("display_gamma"));
+-
+ 	m_touch_simulate_aux1 = g_settings->getBool("fast_move")
+ 			&& client->checkPrivilege("fast");
+ 
