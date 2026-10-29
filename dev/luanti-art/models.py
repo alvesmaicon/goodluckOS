@@ -12,17 +12,23 @@ OUT = sys.argv[1] if len(sys.argv) > 1 else \
     ROOT + "/rootfs/board/my-device/rootfs-overlay/usr/share/luanti/games/minetest_game/mods/goodluck_models/models"
 
 
-def write(name, faces, tex, scale=1 / 16, centre=(8, 0, 8), lift=0):
-    # Minecraft's north is -z, Luanti's +z; the OBJ loader takes x mirrored: both flips at once are a half turn
+def write(name, faces, tex, scale=1 / 16, centre=(8, 0, 8), lift=0, groups=None):
+    # Minecraft's north is -z, Luanti's +z; the OBJ loader takes x mirrored: both flips at once are a half turn.
+    # groups: (name, faces) each, one mesh buffer and so one tile each, in their order
     w, h = tex
     lines = ["# goodluck_models, drawn by dev/luanti-art/models.py"]
-    vs, vts = [], []
-    for corners, (u0, v0, u1, v1) in faces:
-        for (x, y, z), (u, v) in zip(corners, [(u1, v0), (u0, v0), (u0, v1), (u1, v1)]):
-            vs.append(((centre[0] - x) * scale, (y - centre[1]) * scale + lift, (centre[2] - z) * scale))
-            vts.append((u / w, 1 - v / h))
+    vs, vts, starts = [], [], []
+    for group, part in groups or [(None, faces)]:
+        starts.append((len(vs), group))
+        for corners, (u0, v0, u1, v1) in part:
+            for (x, y, z), (u, v) in zip(corners, [(u1, v0), (u0, v0), (u0, v1), (u1, v1)]):
+                vs.append(((centre[0] - x) * scale, (y - centre[1]) * scale + lift, (centre[2] - z) * scale))
+                vts.append((u / w, 1 - v / h))
     lines += ["v %.5f %.5f %.5f" % p for p in vs] + ["vt %.5f %.5f" % t for t in vts]
     for i in range(0, len(vs), 4):
+        for start, group in starts:
+            if start == i and group:
+                lines.append("g " + group)
         lines.append("f " + " ".join("%d/%d" % (i + k + 1, i + k + 1) for k in range(4)))
     os.makedirs(OUT, exist_ok=True)
     with open(f"{OUT}/{name}", "w") as f:
@@ -70,4 +76,26 @@ for pivot, yaw in (((-9, 4, 0), 3 * math.pi / 2), ((9, 4, 0), math.pi / 2), ((0,
 # middle and runs along z at yaw 0, so the long side goes to z
 cart = [([(z, 6 - y, x) for x, y, z in c], uv) for c, uv in cart]
 write("goodluck_models_minecart.obj", cart, (64, 32), scale=10 / 16, centre=(0, 0, 0), lift=-5)
+# the brewing stand (its block model's elements): the rod, the base's three plates, and an arm for each bottle, the
+# second and third turned 45 degrees each way; an empty arm is the same with its texture flipped
+ROD = {f: (7, 2, 9, 16) for f in ("north", "south", "west", "east")}
+ROD.update({"down": (7, 7, 9, 9), "up": (7, 7, 9, 9)})
+plates = []
+for frm, to, top, sides, ends in (((9, 0, 5), (15, 2, 11), (9, 5, 15, 11), (9, 14, 15, 16), (5, 14, 11, 16)),
+                                  ((1, 0, 1), (7, 2, 7), (1, 1, 7, 7), (1, 14, 7, 16), (1, 14, 7, 16)),
+                                  ((1, 0, 9), (7, 2, 15), (1, 9, 7, 15), (1, 14, 7, 16), (9, 14, 15, 16))):
+    plates += element(frm, to, {"down": top, "up": top, "north": sides, "south": sides, "west": ends, "east": ends})
+
+
+def arm(angle):
+    if angle == 0:
+        return element((8, 0, 8), (16, 16, 8), {"north": (0, 0, 8, 16), "south": (8, 0, 0, 16)})
+    faces = element((-0.41, 0, 8), (7.59, 16, 8), {"north": (8, 0, 0, 16), "south": (0, 0, 8, 16)})
+    faces = [([(x - 8, y - 8, z - 8) for x, y, z in c], uv) for c, uv in faces]
+    return posed(faces, (8, 8, 8), (0, math.radians(angle), 0))
+
+
+write("goodluck_models_brewing_stand.obj", None, (16, 16), lift=-0.5, groups=[
+    ("rod", element((7, 0, 7), (9, 14, 9), ROD)), ("base", plates), ("arm0", arm(0)), ("arm1", arm(-45)),
+    ("arm2", arm(45))])
 print("meshes in", os.path.relpath(OUT, ROOT))

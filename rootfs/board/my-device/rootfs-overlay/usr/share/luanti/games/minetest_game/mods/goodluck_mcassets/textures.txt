@@ -412,6 +412,7 @@ goodluck_food_cod.png	{item/cod}
 goodluck_food_cooked_cod.png	{item/cooked_cod}
 goodluck_food_salmon.png	{item/salmon}
 goodluck_food_cooked_salmon.png	{item/cooked_salmon}
+goodluck_food_pufferfish.png	{item/pufferfish}
 
 # Materials
 default_stick.png	{item/stick}
@@ -445,6 +446,10 @@ goodluck_nether_magma_cream.png	{item/magma_cream}
 goodluck_nether_fire_charge.png	{item/fire_charge}
 goodluck_monsters_bone.png	{item/bone}
 goodluck_monsters_rotten_flesh.png	{item/rotten_flesh}
+goodluck_monsters_spider_eye.png	{item/spider_eye}
+goodluck_potions_fermented_spider_eye.png	{item/fermented_spider_eye}
+goodluck_potions_glistering_melon_slice.png	{item/glistering_melon_slice}
+goodluck_potions_rabbit_foot.png	{item/rabbit_foot}
 mobs_leather.png	{item/leather}
 mobs_chicken_feather.png	{item/feather}
 mobs_chicken_egg.png	{item/egg}
@@ -625,6 +630,7 @@ goodluck_effects_weakness.png	{mob_effect/weakness}
 goodluck_effects_fire_resistance.png	{mob_effect/fire_resistance}
 goodluck_effects_water_breathing.png	{mob_effect/water_breathing}
 goodluck_effects_invisibility.png	{mob_effect/invisibility}
+goodluck_effects_night_vision.png	{mob_effect/night_vision}
 goodluck_effects_hunger.png	{mob_effect/hunger}
 goodluck_effects_heart_poisoned.png	{gui/sprites/hud/heart/container}^{gui/sprites/hud/heart/poisoned_full}
 goodluck_effects_heart_withered.png	{gui/sprites/hud/heart/container}^{gui/sprites/hud/heart/withered_full}
@@ -692,3 +698,17 @@ mobs_fireball.png	{item/fire_charge}
 map_mapping_kit.png	{item/map}
 goodluck_horse_armor_leather_item.png	{item/leather_horse_armor}
 xpanes_edge.png	{block/glass_pane_top}
+
+# Potions and the brewing stand (goodluck_potions): the bottle and the liquid the game tints, the stand's arms and rod
+# and its base, its item, and its window's bubbles, arrow, fuel bar and empty slots
+goodluck_potions_potion.png	{item/potion}
+goodluck_potions_overlay.png	{item/potion_overlay}
+goodluck_potions_splash.png	{item/splash_potion}
+goodluck_potions_brewing_stand.png	{block/brewing_stand}
+goodluck_potions_brewing_stand_base.png	{block/brewing_stand_base}
+goodluck_potions_brewing_stand_item.png	{item/brewing_stand}
+goodluck_potions_bubbles.png	{gui/sprites/container/brewing_stand/bubbles}
+goodluck_potions_progress.png	{gui/sprites/container/brewing_stand/brew_progress}
+goodluck_potions_fuel.png	{gui/sprites/container/brewing_stand/fuel_length}
+goodluck_potions_slot_bottle.png	{gui/sprites/container/slot/potion}
+goodluck_potions_slot_fuel.png	{gui/sprites/container/slot/brewing_fuel}

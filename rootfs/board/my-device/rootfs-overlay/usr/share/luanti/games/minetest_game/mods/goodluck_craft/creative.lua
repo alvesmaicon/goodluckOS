@@ -42,7 +42,7 @@ end
 local function functional(name)
 	return matches(name, "^goodluck_craft:crafting_table$", "^default:furnace$", "^default:chest", "^default:bookshelf$",
 		"^default:torch$", "^goodluck_redstone:lamp$", "^default:ladder_", "^default:sign_wall_",
-		"^beds:", "^bones:", "^vessels:", "^fireflies:firefly_bottle$", "^mobs:spawner$", "^mobs:mob_repellent$",
+		"^beds:", "^bones:", "^vessels:", "^fireflies:firefly_bottle$", "^mobs:spawner$", "^goodluck_potions:brewing_stand$", "^mobs:mob_repellent$",
 		"^fire:permanent_flame$", "^goodluck_food:jack_o_lantern$", "^goodluck_nether:wither_skeleton_skull$") and
 		name ~= "vessels:glass_fragments"
 end
@@ -67,7 +67,7 @@ local function tools(name, def, g)
 end
 
 local function food(name, def, g)
-	return any_group(g, "food", "eatable", "food_apple", "food_berry", "food_bread")
+	return any_group(g, "food", "eatable", "food_apple", "food_berry", "food_bread", "potion")
 end
 
 local function ingredients(name, def, g)

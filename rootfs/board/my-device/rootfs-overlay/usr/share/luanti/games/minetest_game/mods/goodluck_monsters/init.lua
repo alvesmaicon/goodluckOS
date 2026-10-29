@@ -214,7 +214,8 @@ mobs:register_mob(MOD .. "spider", {
 	jump = true,
 	jump_height = 2,
 	floats = 0,
-	drops = drops({name = "farming:string", chance = 1, min = 0, max = 2}),
+	drops = drops({name = "farming:string", chance = 1, min = 0, max = 2},
+		{name = MOD .. "spider_eye", chance = 3, min = 1, max = 1}),
 	water_damage = 0, lava_damage = 5,
 	light_damage = 0,
 	fall_damage = false,
@@ -335,6 +336,21 @@ core.register_craftitem(MOD .. "rotten_flesh", {
 		local eaten = left and left:get_count() < before
 		if eaten and user and math.random(5) <= 4 and core.global_exists("goodluck_hunger") then
 			goodluck_hunger.hungry(user)
+		end
+		return left
+	end,
+})
+
+-- one spider in three drops its eye: 2 of hunger and Poison for 5 s, as in Minecraft
+core.register_craftitem(MOD .. "spider_eye", {
+	description = S("Spider Eye"),
+	inventory_image = "goodluck_monsters_spider_eye.png",
+	groups = {food = 1},
+	on_use = function(itemstack, user, pointed_thing)
+		local before = itemstack:get_count()
+		local left = core.item_eat(2)(itemstack, user, pointed_thing)
+		if left and left:get_count() < before and user and core.global_exists("goodluck_effects") then
+			goodluck_effects.apply(user, "poison", 5, 1)
 		end
 		return left
 	end,
