@@ -2,6 +2,8 @@
 case "$1" in
   start)
       alsactl restore -f /var/lib/alsa/asound.state
+      # the path stays up 10 s after a sound: each power up and down is a small tic on the headphones
+      for f in /sys/devices/platform/sound/*/pmdown_time; do echo 10000 > "$f"; done
       /usr/local/bin/audio-output.sh apply
       /usr/local/bin/hud-status.sh
   ;;
