@@ -1,7 +1,8 @@
 -- Minecraft's Nether as a realm deep below the world: two mapchunks of height (Minecraft's 128 and a little more, so
 -- that no mapchunk is half of it), closed by bedrock, its ground made in the map generator's threads (mapgen.lua).
 -- Its blocks and items, its ores and patches (placed by the engine), its red fog and what works otherwise in it; its
--- portal, ruined portals and monsters in portal.lua, ruins.lua and mobs.lua
+-- fortresses, monster spawner, portal, ruined portals and monsters in fortress.lua, spawner.lua, portal.lua,
+-- ruins.lua and mobs.lua
 local S = core.get_translator("goodluck_nether")
 local YMIN, YMAX = -5152, -4993
 -- Minecraft's lava sea fills what is open up to 31 above the floor
@@ -181,11 +182,11 @@ core.register_node(BRICKS, {
 stairs.register_stair_and_slab("nether_bricks", BRICKS, {cracky = 2}, {"goodluck_nether_bricks.png"},
 	S("Nether Brick Stairs"), S("Nether Brick Slab"), default.node_sound_stone_defaults(), true)
 
--- joins nether brick fences and walls only, as in Minecraft
+-- joins nether brick fences, walls and nether bricks (Minecraft's join any solid block), not wooden fences
 default.register_fence("goodluck_nether:nether_brick_fence", {
 	description = S("Nether Brick Fence"),
 	texture = "goodluck_nether_bricks.png",
-	connects_to = {"group:nether_brick_fence", "group:wall"},
+	connects_to = {"group:nether_brick_fence", "group:wall", BRICKS},
 	groups = {cracky = 2, nether_brick_fence = 1},
 	sounds = default.node_sound_stone_defaults(),
 	_goodluck_mc_sound = "nether_bricks",
@@ -357,11 +358,15 @@ ore({ore_type = "blob", ore = "default:gravel", clust_scarcity = 12 * 12 * 12, c
 	y_max = SEA + 6,
 	noise_params = {offset = 0, scale = 1, spread = {x = 5, y = 5, z = 5}, seed = 7432, octaves = 1, persistence = 0}})
 
-core.register_mapgen_script(core.get_modpath("goodluck_nether") .. "/mapgen.lua")
-dofile(core.get_modpath("goodluck_nether") .. "/portal.lua")
-dofile(core.get_modpath("goodluck_nether") .. "/ruins.lua")
+local path = core.get_modpath("goodluck_nether")
+core.register_mapgen_script(path .. "/fortress.lua")
+core.register_mapgen_script(path .. "/mapgen.lua")
+goodluck_nether.fortress = dofile(path .. "/fortress.lua")
+dofile(path .. "/spawner.lua")
+dofile(path .. "/portal.lua")
+dofile(path .. "/ruins.lua")
 if core.get_modpath("mobs") and core.get_modpath("goodluck_models") then
-	dofile(core.get_modpath("goodluck_nether") .. "/mobs.lua")
+	dofile(path .. "/mobs.lua")
 end
 
 -- inside: the Nether's red fog, as near as Minecraft's (it also keeps the A33 from drawing far into one big cave), no
