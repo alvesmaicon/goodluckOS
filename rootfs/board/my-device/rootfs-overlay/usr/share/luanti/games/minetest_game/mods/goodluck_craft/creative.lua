@@ -43,7 +43,8 @@ local function functional(name)
 	return matches(name, "^goodluck_craft:crafting_table$", "^default:furnace$", "^default:chest", "^default:bookshelf$",
 		"^default:torch$", "^goodluck_redstone:lamp$", "^default:ladder_", "^default:sign_wall_",
 		"^beds:", "^bones:", "^vessels:", "^fireflies:firefly_bottle$", "^mobs:spawner$", "^mobs:mob_repellent$",
-		"^fire:permanent_flame$", "^goodluck_food:jack_o_lantern$") and name ~= "vessels:glass_fragments"
+		"^fire:permanent_flame$", "^goodluck_food:jack_o_lantern$", "^goodluck_nether:wither_skeleton_skull$") and
+		name ~= "vessels:glass_fragments"
 end
 
 local function building(name, def, g)
@@ -61,7 +62,8 @@ end
 
 local function tools(name, def, g)
 	return not combat(name, def, g) and (def.type == "tool" or any_group(g, "tool", "rail") or
-		matches(name, "^boats:", "^carts:", "^mobs:saddle$", "^mobs:nametag$", "^mobs:protector"))
+		matches(name, "^boats:", "^carts:", "^mobs:saddle$", "^mobs:nametag$", "^mobs:protector",
+		"^goodluck_nether:fire_charge$"))
 end
 
 local function food(name, def, g)
@@ -92,7 +94,7 @@ local CATEGORIES = {
 	{"functional_blocks", S("Functional Blocks"), "default:sign_wall_wood", 1, 4, functional, {"^crafting_table$",
 		"^furnace$", "^chest", "shelf$", "^torch$", "lamp$", "light", "^ladder", "^sign", "bed"}},
 	{"tools_utilities", S("Tools & Utilities"), "default:pick_diamond", 2, 1, tools, {"^0", "^bucket",
-		"^flint_and_steel$", "^shears$", "rail$", "^cart$", "^boat$"}},
+		"^flint_and_steel$", "^fire_charge$", "^shears$", "rail$", "^cart$", "^boat$"}},
 	{"combat", S("Combat"), "default:sword_diamond", 2, 2, combat},
 	{"food_drinks", S("Food & Drinks"), "default:apple", 2, 3, food, {"^apple$", "^golden_apple$", "^melon_slice$",
 		"^blueberries$", "^carrot$", "^golden_carrot$", "^potato$", "^baked_potato$", "^poisonous_potato$", "^beetroot$",
