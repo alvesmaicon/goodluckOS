@@ -34,7 +34,8 @@ local function natural(name, def, g)
 		"^default:large_cactus_seedling$", "^default:papyrus$", "^default:dry_shrub$", "^default:coral_",
 		"^default:sand_with_kelp$", "^default:permafrost", "bush_stem$", "^default:[%a_]*_source$",
 		"^farming:cotton_wild$", "^flowers:", "^mobs:cobweb$", "^mobs:beehive$", "^mobs:hearing_vines$",
-		"^goodluck_amethyst:"))
+		"^goodluck_amethyst:", "^goodluck_nether:netherrack$", "^goodluck_nether:bedrock$", "^goodluck_nether:glowstone$",
+		"^goodluck_nether:soul_sand$", "^goodluck_nether:magma$", "^goodluck_nether:%a+_ore$"))
 end
 
 local function functional(name)

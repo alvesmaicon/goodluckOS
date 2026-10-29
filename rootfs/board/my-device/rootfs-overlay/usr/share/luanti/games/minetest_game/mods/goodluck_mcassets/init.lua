@@ -152,7 +152,8 @@ local function tiles(list)
 end
 
 -- Minecraft breaks and places a block with its dig/* files at pitch 0.8, where the game's dug and place sounds are
--- its footsteps, or one sound for all; the material is read from the dug sound (wool from its group)
+-- its footsteps, or one sound for all; the material is read from the dug sound (wool from its group), or named by the
+-- node (_goodluck_mc_sound), which then also walks and hits with Minecraft's step files of it
 local MATERIAL = {
 	default_hard_footstep = "stone", default_dug_node = "stone", default_dug_metal = "stone",
 	default_dirt_footstep = "gravel", default_gravel_dug = "gravel", default_sand_footstep = "sand",
@@ -162,13 +163,15 @@ local MATERIAL = {
 local function sounds(def)
 	local s = def.sounds
 	if type(s) ~= "table" then return end
-	local m = def.groups and def.groups.wool and "cloth" or type(s.dug) == "table" and MATERIAL[s.dug.name]
+	local own = def._goodluck_mc_sound
+	local m = own or def.groups and def.groups.wool and "cloth" or type(s.dug) == "table" and MATERIAL[s.dug.name]
 	if not m or not have["goodluck_mc_break_" .. m .. ".1.ogg"] then return end
 	local out = table.copy(s)
 	out.dug = {name = "goodluck_mc_break_" .. m, gain = 1.0, pitch = 0.8}
 	out.place = {name = "goodluck_mc_break_" .. m, gain = 1.0, pitch = 0.8}
-	if m == "cloth" and have["goodluck_mc_step_cloth.1.ogg"] then
-		out.footstep = {name = "goodluck_mc_step_cloth", gain = 0.2}
+	if (m == "cloth" or own) and have["goodluck_mc_step_" .. m .. ".1.ogg"] then
+		out.footstep = {name = "goodluck_mc_step_" .. m, gain = 0.2}
+		if own then out.dig = {name = "goodluck_mc_step_" .. m, gain = 0.5} end
 	end
 	return out
 end

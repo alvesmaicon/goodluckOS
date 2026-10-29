@@ -164,6 +164,26 @@ goodluck_amethyst_block.png	{block/amethyst_block}
 goodluck_amethyst_calcite.png	{block/calcite}
 goodluck_amethyst_cluster.png	{block/amethyst_cluster}
 
+# The Nether (goodluck_nether)
+goodluck_nether_netherrack.png	{block/netherrack}
+goodluck_nether_bedrock.png	{block/bedrock}
+goodluck_nether_glowstone.png	{block/glowstone}
+goodluck_nether_soul_sand.png	{block/soul_sand}
+goodluck_nether_magma.png	{block/magma}	length=1.2
+goodluck_nether_quartz_ore.png	{block/nether_quartz_ore}
+goodluck_nether_gold_ore.png	{block/nether_gold_ore}
+goodluck_nether_quartz_block_top.png	{block/quartz_block_top}
+goodluck_nether_quartz_block_side.png	{block/quartz_block_side}
+goodluck_nether_quartz_block_bottom.png	{block/quartz_block_bottom}
+goodluck_nether_quartz_pillar_top.png	{block/quartz_pillar_top}
+goodluck_nether_quartz_pillar_side.png	{block/quartz_pillar_side}
+goodluck_nether_quartz_chiseled_top.png	{block/chiseled_quartz_block_top}
+goodluck_nether_quartz_chiseled_side.png	{block/chiseled_quartz_block}
+goodluck_nether_bricks.png	{block/nether_bricks}
+goodluck_nether_wart_0.png	{block/nether_wart_stage0}
+goodluck_nether_wart_1.png	{block/nether_wart_stage1}
+goodluck_nether_wart_2.png	{block/nether_wart_stage2}
+
 # Workstations and other blocks
 default_furnace_top.png	{block/furnace_top}
 default_furnace_bottom.png	{block/furnace_top}
@@ -401,6 +421,10 @@ goodluck_lapis.png	{item/lapis_lazuli}
 goodluck_emerald.png	{item/emerald}
 goodluck_redstone_dust.png	{item/redstone}
 goodluck_amethyst_shard.png	{item/amethyst_shard}
+goodluck_nether_glowstone_dust.png	{item/glowstone_dust}
+goodluck_nether_quartz.png	{item/quartz}
+goodluck_nether_brick.png	{item/nether_brick}
+goodluck_nether_wart.png	{item/nether_wart}
 goodluck_monsters_bone.png	{item/bone}
 goodluck_monsters_rotten_flesh.png	{item/rotten_flesh}
 mobs_leather.png	{item/leather}

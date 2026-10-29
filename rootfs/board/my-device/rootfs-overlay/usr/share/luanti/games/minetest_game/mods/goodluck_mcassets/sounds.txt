@@ -45,6 +45,15 @@ goodluck_mc_break_grass	dig/grass1 dig/grass2 dig/grass3 dig/grass4
 goodluck_mc_break_snow	dig/snow1 dig/snow2 dig/snow3 dig/snow4
 goodluck_mc_break_cloth	dig/cloth1 dig/cloth2 dig/cloth3 dig/cloth4
 goodluck_mc_step_cloth	step/cloth1 step/cloth2 step/cloth3 step/cloth4
+# a node that names its own (_goodluck_mc_sound) is also walked on and hit with its step files
+goodluck_mc_break_netherrack	block/netherrack/break1 block/netherrack/break2 block/netherrack/break3 block/netherrack/break4 block/netherrack/break5 block/netherrack/break6
+goodluck_mc_step_netherrack	block/netherrack/step1 block/netherrack/step2 block/netherrack/step3 block/netherrack/step4 block/netherrack/step5 block/netherrack/step6
+goodluck_mc_break_soul_sand	block/soul_sand/break1 block/soul_sand/break2 block/soul_sand/break3 block/soul_sand/break4 block/soul_sand/break5 block/soul_sand/break6 block/soul_sand/break7 block/soul_sand/break8 block/soul_sand/break9
+goodluck_mc_step_soul_sand	block/soul_sand/step1 block/soul_sand/step2 block/soul_sand/step3 block/soul_sand/step4 block/soul_sand/step5
+goodluck_mc_break_nether_bricks	block/nether_bricks/break1 block/nether_bricks/break2 block/nether_bricks/break3 block/nether_bricks/break4 block/nether_bricks/break5 block/nether_bricks/break6
+goodluck_mc_step_nether_bricks	block/nether_bricks/step1 block/nether_bricks/step2 block/nether_bricks/step3 block/nether_bricks/step4 block/nether_bricks/step5 block/nether_bricks/step6
+goodluck_mc_break_nether_ore	block/nether_ore/break1 block/nether_ore/break2 block/nether_ore/break3 block/nether_ore/break4
+goodluck_mc_step_nether_ore	block/nether_ore/step1 block/nether_ore/step2 block/nether_ore/step3 block/nether_ore/step4 block/nether_ore/step5
 
 # Chests, doors, furnace, fire, carts
 default_chest_open	block/chest/open
