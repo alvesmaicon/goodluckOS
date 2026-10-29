@@ -32,7 +32,7 @@ struct Category {
     int sel = 0;                // position in 'visible'
     mutable int scroll = 0;     // first list row / grid row on screen, kept in view by the renderer
     mutable int tagColumn = -1; // list view: width of the system tag column (-1: to be measured)
-    bool hidden = false;        // left out of the tab strip (System Settings); still in All Games / My List
+    bool hidden = false;        // left out of the tab strip (System Settings); still in All Games
 };
 
 std::vector<Category> loadCatalog();

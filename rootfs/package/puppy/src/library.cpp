@@ -637,7 +637,12 @@ void loadSettings(Model& m) {
     m.trailerSound = p.trailerSound;
     for (const std::string& name : p.hiddenTabs)
         for (auto& c : m.categories)
-            if (!c.mixed && c.name == name) c.hidden = true;
+            if (hideable(c) && c.name == name) c.hidden = true;
+}
+
+// The tabs System Settings can hide: every system and apps tab, My List, Recent and Most Played
+bool hideable(const Category& c) {
+    return !c.mixed || c.name == kMyListName || c.name == kRecentName || c.name == kMostPlayedName;
 }
 
 // Everything the launcher shows: the catalog, the extra tabs, favourites, the options and the

@@ -7,6 +7,7 @@
 #include "accents.h"
 #include "config.h"
 #include "fonts.h"
+#include "library.h"
 #include "overlays.h"
 #include "settings.h"
 #include "styles.h"
@@ -112,7 +113,7 @@ std::string SettingsScreen::title(Page p) const {
 // Under the page, when the selected row has no hint of its own
 std::string SettingsScreen::pageHint(Page p) const {
     switch (p) {
-        case Page::Tabs: return tr("Tabs switched off are hidden; their games still show in All Games and My List.");
+        case Page::Tabs: return tr("Tabs switched off are hidden; their games still show in All Games.");
         case Page::System: return tr(powerProfiles()[profile].hint);
         case Page::ScraperRun: return tr("Puppy must stay open: starting a game stops the scraper. It goes on from there next time.");
         case Page::Resize:
@@ -179,12 +180,12 @@ std::vector<Row> SettingsScreen::displayPage() {
 std::vector<Row> SettingsScreen::tabsPage() {
     std::vector<Row> rows;
     for (const Category& c : launcher.categories) {
-        if (c.mixed) continue;
+        if (!hideable(c)) continue;
         std::string label = tr(c.label);
         if (c.label != c.name) label += "  (" + tr(c.name) + ")";
         Row r = Row::toggle(label, !c.hidden, [this, name = c.name](int on) {
             for (auto& cat : launcher.categories)
-                if (!cat.mixed && cat.name == name) cat.hidden = !on;
+                if (hideable(cat) && cat.name == name) cat.hidden = !on;
             std::vector<std::string>& hidden = prefs.hiddenTabs;
             hidden.erase(std::remove(hidden.begin(), hidden.end(), name), hidden.end());
             if (!on) hidden.push_back(name);
