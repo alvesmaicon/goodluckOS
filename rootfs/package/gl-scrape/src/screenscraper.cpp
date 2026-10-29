@@ -1,6 +1,7 @@
 #include "screenscraper.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cstdlib>
 #include <ctime>
 
@@ -93,9 +94,18 @@ Answer ScreenScraper::userInfo(Quota& q) {
     return Answer::Ok;
 }
 
+// A disc image is an "iso" to ScreenScraper, a cartridge a "rom"
+static const char* romType(const std::string& file) {
+    std::string ext = file.substr(file.rfind('.') + 1);
+    for (char& c : ext) c = (char)tolower((unsigned char)c);
+    for (const char* disc : {"cue", "chd", "iso", "cso", "pbp", "m3u", "cdi", "gdi"})
+        if (ext == disc) return "iso";
+    return "rom";
+}
+
 Answer ScreenScraper::gameInfo(int systemId, const std::string& file, const RomId& id, Json& game) {
     std::string url = std::string(kApi) + "jeuInfos.php?output=json&" + credentials() +
-                      "&systemeid=" + std::to_string(systemId) + "&romtype=rom&romnom=" + urlEncode(file) +
+                      "&systemeid=" + std::to_string(systemId) + "&romtype=" + romType(file) + "&romnom=" + urlEncode(file) +
                       "&romtaille=" + std::to_string(id.size);
     if (!id.crc.empty()) url += "&crc=" + id.crc;
     Json j;
