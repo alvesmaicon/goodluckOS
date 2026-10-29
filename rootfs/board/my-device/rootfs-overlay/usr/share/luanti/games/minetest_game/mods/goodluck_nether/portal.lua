@@ -6,6 +6,8 @@ local S = core.get_translator("goodluck_nether")
 local R = goodluck_nether
 local PORTAL, OBSIDIAN = "goodluck_nether:portal", "default:obsidian"
 local MAX, WAIT = 21, 4
+-- the obsidian block looks the same as obsidian with Minecraft's textures
+local FRAME = {[OBSIDIAN] = true, ["default:obsidian_block"] = true}
 local AXES = {x = {x = 1, y = 0, z = 0}, z = {x = 0, y = 0, z = 1}}
 local storage = core.get_mod_storage()
 
@@ -75,7 +77,7 @@ local function frame(pos, axis)
 		end
 		p.y = p.y - 1
 	end
-	if at(0, -1, p) ~= OBSIDIAN then
+	if not FRAME[at(0, -1, p)] then
 		return
 	end
 	for _ = 1, MAX do
@@ -84,21 +86,21 @@ local function frame(pos, axis)
 		end
 		p = {x = p.x - d.x, y = p.y, z = p.z - d.z}
 	end
-	if at(-1, 0, p) ~= OBSIDIAN then
+	if not FRAME[at(-1, 0, p)] then
 		return
 	end
 	local w, h = 0, 0
-	while w <= MAX and open(at(w, 0, p)) and at(w, -1, p) == OBSIDIAN do
+	while w <= MAX and open(at(w, 0, p)) and FRAME[at(w, -1, p)] do
 		w = w + 1
 	end
-	while h <= MAX and open(at(0, h, p)) and at(-1, h, p) == OBSIDIAN do
+	while h <= MAX and open(at(0, h, p)) and FRAME[at(-1, h, p)] do
 		h = h + 1
 	end
-	if w < 2 or w > MAX or h < 3 or h > MAX or at(w, 0, p) ~= OBSIDIAN or at(0, h, p) ~= OBSIDIAN then
+	if w < 2 or w > MAX or h < 3 or h > MAX or not FRAME[at(w, 0, p)] or not FRAME[at(0, h, p)] then
 		return
 	end
 	for a = 0, w - 1 do
-		if at(a, -1, p) ~= OBSIDIAN or at(a, h, p) ~= OBSIDIAN then
+		if not FRAME[at(a, -1, p)] or not FRAME[at(a, h, p)] then
 			return
 		end
 		for b = 0, h - 1 do
@@ -108,7 +110,7 @@ local function frame(pos, axis)
 		end
 	end
 	for b = 0, h - 1 do
-		if at(-1, b, p) ~= OBSIDIAN or at(w, b, p) ~= OBSIDIAN then
+		if not FRAME[at(-1, b, p)] or not FRAME[at(w, b, p)] then
 			return
 		end
 	end
@@ -156,23 +158,38 @@ function goodluck_nether.put_out(pos)
 end
 
 -- lit by flint and steel on the frame: a fire next to the obsidian lights the frame around it, if there is one
-core.override_item(OBSIDIAN, {
-	on_ignite = function(pos)
-		for _, o in ipairs({{0, 1, 0}, {0, -1, 0}, {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}}) do
-			local at = vector.offset(pos, o[1], o[2], o[3])
-			for axis in pairs(AXES) do
-				local p = frame(at, axis)
-				if p then
-					light(p)
-					return
+for name in pairs(FRAME) do
+	core.override_item(name, {
+		on_ignite = function(pos)
+			for _, o in ipairs({{0, 1, 0}, {0, -1, 0}, {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}}) do
+				local at = vector.offset(pos, o[1], o[2], o[3])
+				for axis in pairs(AXES) do
+					local p = frame(at, axis)
+					if p then
+						light(p)
+						return
+					end
 				end
 			end
+		end,
+		after_destruct = function(pos)
+			for _, o in ipairs({{0, 1, 0}, {0, -1, 0}, {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}}) do
+				goodluck_nether.put_out(vector.offset(pos, o[1], o[2], o[3]))
+			end
+		end,
+	})
+end
+
+-- flint and steel lights with the use button too, as in Minecraft (minetest_game's lights with the punch)
+local flint = core.registered_items["fire:flint_and_steel"]
+core.override_item("fire:flint_and_steel", {
+	on_place = function(itemstack, user, pointed_thing)
+		local node = pointed_thing.type == "node" and core.get_node(pointed_thing.under)
+		local def = node and core.registered_nodes[node.name]
+		if def and def.on_rightclick and not (user and user:get_player_control().sneak) then
+			return def.on_rightclick(pointed_thing.under, node, user, itemstack, pointed_thing)
 		end
-	end,
-	after_destruct = function(pos)
-		for _, o in ipairs({{0, 1, 0}, {0, -1, 0}, {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}}) do
-			goodluck_nether.put_out(vector.offset(pos, o[1], o[2], o[3]))
-		end
+		return flint.on_use(itemstack, user, pointed_thing)
 	end,
 })
 
