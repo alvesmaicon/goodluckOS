@@ -17,7 +17,9 @@ public:
         std::function<void(bool accepted)> done;                // closed with OK / START, or cancelled
         std::function<void(KeyboardScreen&, Action)> forward;   // actions the keyboard doesn't use
     };
-    KeyboardScreen(App& app, Keyboard& kb, std::string& text, bool rename, size_t maxLength, Hooks hooks);
+    // prompt: English, e.g. "User:"; by default "Rename:" or "Search:"
+    KeyboardScreen(App& app, Keyboard& kb, std::string& text, bool rename, size_t maxLength, Hooks hooks,
+                   const char* prompt = nullptr);
 
     void close(bool accept);
 
@@ -35,6 +37,7 @@ private:
     size_t cursor;      // byte position in text, moved with L1/R1 when renaming
     size_t maxLength;
     Hooks hooks;
+    const char* prompt;
 
     void type(const std::string& key);
 };

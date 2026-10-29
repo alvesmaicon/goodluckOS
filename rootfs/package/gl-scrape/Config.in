@@ -1,0 +1,14 @@
+config BR2_PACKAGE_GL_SCRAPE
+	bool "gl-scrape"
+	depends on BR2_INSTALL_LIBSTDCPP # C++ is required
+	select BR2_PACKAGE_LIBCURL
+	select BR2_PACKAGE_LIBCURL_CURL
+	select BR2_PACKAGE_CA_CERTIFICATES
+	help
+	  Scrapes the ROM folders from ScreenScraper into their
+	  gamelist.xml. It runs the curl program for HTTPS.
+	  ScreenScraper's developer credentials come from SS_DEVID
+	  and SS_DEVPASSWORD in the build's environment.
+
+comment "gl-scrape needs a toolchain w/ C++"
+	depends on !BR2_INSTALL_LIBSTDCPP

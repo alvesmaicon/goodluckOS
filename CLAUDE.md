@@ -11,6 +11,7 @@ A full image takes 1-2 hours and is only needed for a new card. Use `dev/gl` (se
 - Mesa patch: `dev/gl rootfs mesa3d-rebuild`, then copy `libgallium-*.so`.
 - Kernel/DTS: `dev/gl kernel`, then write `android_boot_a33.img` at sector 172032.
 - Luanti (`feat/luanti*`): `dev/gl luanti-pkg <commit>`, then `dev/luanti-console.sh send <card> <package>` runs Update Luanti on the console.
+- The scraper, gl-scrape (`rootfs/package/gl-scrape`): `dev/gl app gl-scrape`, then `dev/gl deploy`. ScreenScraper's developer credentials come from `.env` (dev/README), never from git; the native build scrapes in the container.
 - UI check without the console: `dev/gl shot puppy <name> "<keys> |"`, then look at the PNG.
 - Regression check: `dev/gl scenes <dir>` before and after a change, then `dev/gl scenes-diff <dir> <dir>` (pixel for pixel, `dev/scenes/scenes.txt`). Its games are fake; README screenshots need the real covers (the owner's `readme-shots.sh` set).
 
@@ -73,6 +74,7 @@ Card layout (A33):
 - `<pkg>-rebuild` doesn't delete a file removed from a local package's source: after deleting or moving sources, run `puppy-dirclean puppy`.
 - What Puppy starts in the background dies with it when appd starts an app (cgroup kill): anything that must finish (saving the mixer, a reboot request) runs in the foreground (`runScript(..., true)`).
 - `post-build.sh` must stay re-runnable (upstream #60).
+- gl-scrape hands curl the URL on its standard input: credentials never go in arguments (ps) or in its cache (`record()` strips them from the media URLs). ScreenScraper's `ssuserInfos` refuses a call without the player's account.
 - HOME's "Volume was not properly unmounted" on every boot is an old power cut, not the last shutdown: Linux never clears a FAT dirty flag it found at mount, only `fsck.fat -a` does (with HOME unmounted).
 - Never leave backups (`*.orig`, `*.bak`) in `/etc/init.d`: rcS/rcK run every `S??*` file there.
 - A new rootfs on a card with an older HOME: appd needs `HOME/.local/launcher.sh` (contains `/usr/bin/puppy`). Without it the console hangs at "Starting system...".

@@ -13,6 +13,7 @@
 #include "system/clock.h"
 #include "system/device.h"
 #include "system/network.h"
+#include "system/scraper.h"
 #include "system/retroarch.h"
 #include "tester.h"
 #include "util.h"
@@ -97,6 +98,9 @@ std::string SettingsScreen::title(Page p) const {
         case Page::Shortcuts: return tr("Shortcuts");
         case Page::Info:      return tr("System Info");
         case Page::Network:  return tr("Network");
+        case Page::Scraper:   return tr("Scraper");
+        case Page::ScraperSystems: return tr("Systems to scrape");
+        case Page::ScraperRun: return tr("Scraping");
         case Page::Resize:    return tr("Resize Home");
         default:
             for (const auto& s : sections())
@@ -110,6 +114,7 @@ std::string SettingsScreen::pageHint(Page p) const {
     switch (p) {
         case Page::Tabs: return tr("Tabs switched off are hidden; their games still show in All Games and My List.");
         case Page::System: return tr(powerProfiles()[profile].hint);
+        case Page::ScraperRun: return tr("Puppy must stay open: starting a game stops the scraper. It goes on from there next time.");
         case Page::Resize:
             if (resize.pending)
                 return tr("A resize is already scheduled for the next boot.") + std::string(" ") +
@@ -133,6 +138,9 @@ std::vector<Row> SettingsScreen::rows(Page p) {
         case Page::Shortcuts: return shortcutsPage();
         case Page::Info:      return infoPage();
         case Page::Network:  return networkPage();
+        case Page::Scraper:   return scraperPage();
+        case Page::ScraperSystems: return scraperSystemsPage();
+        case Page::ScraperRun: return scraperRunPage();
         case Page::Resize:    return resizePage();
         case Page::Credits:   return creditsPage();
     }
@@ -479,6 +487,12 @@ std::vector<Row> SettingsScreen::systemPage() {
         netRead = SDL_GetTicks();
         open(Page::Network);
     }, net.address));
+    rows.push_back(Row::link("Scraper", [this] {
+        net = NetworkStatus::read();
+        scraper = ScraperSettings::load();
+        scrapeFolders = scraperFolders();
+        open(Page::Scraper);
+    }, run.running() ? std::to_string(run.index) + "/" + std::to_string(run.total) : ""));
     // Overlay, Date & Time, the launcher's view, tabs, font and accent, and the power mode; the language,
     // the confirm button, the time zone and the clock stay
     rows.push_back(Row::action("Restore default settings", [this] {
@@ -574,6 +588,175 @@ std::vector<Row> SettingsScreen::networkPage() {
         ask.enabled = net.hostUp;
         ask.hint = "Asks the PC or phone for an address now, instead of within a minute.";
         rows.push_back(ask);
+    }
+    return rows;
+}
+
+// ScreenScraper's media types and regions as gl-scrape takes them, with their names here
+static const std::pair<const char*, const char*> kPictures[] = {
+    {"mixrbv2", "Mix"}, {"box-2D", "Box"}, {"box-3D", "3D box"}, {"ss", "Screenshot"},
+    {"sstitle", "Title screen"}, {"wheel", "Logo"}, {"none", "None"}};
+static const std::pair<const char*, const char*> kRegions[] = {
+    {"auto", "Auto"}, {"br", "Brazil"}, {"us", "USA"}, {"eu", "Europe"}, {"jp", "Japan"}, {"wor", "World"}};
+
+template <size_t N> static int keyIndex(const std::pair<const char*, const char*> (&list)[N], const std::string& key) {
+    for (size_t i = 0; i < N; ++i)
+        if (key == list[i].first) return (int)i;
+    return 0;
+}
+
+template <size_t N> static std::vector<std::string> names(const std::pair<const char*, const char*> (&list)[N]) {
+    std::vector<std::string> out;
+    for (const auto& item : list) out.push_back(item.second);
+    return out;
+}
+
+// Names, descriptions, pictures and videos of the games from ScreenScraper (gl-scrape, system/scraper.h)
+std::vector<Row> SettingsScreen::scraperPage() {
+    std::vector<Row> rows;
+    const bool busy = run.running() || (watchRun && run.state.empty());
+    const bool account = !scraper.user.empty() && !scraper.password.empty();
+    const char* needs = net.address.empty() ? "Needs the internet: see System -> Network."
+                      : !account ? "Type your ScreenScraper account first: it's free at screenscraper.fr."
+                      : "";
+
+    rows.push_back(Row::section("ScreenScraper account"));
+    Row user = Row::link("User", [this] {
+        type("User:", scraper.user, [this](const std::string& v) {
+            scraper.user = v;
+            scraper.save();
+            check = {};
+        });
+    }, scraper.user.empty() ? tr("not set") : scraper.user);
+    user.hint = "Free at screenscraper.fr. Without one, ScreenScraper often turns the scraper away.";
+    rows.push_back(user);
+    rows.push_back(Row::link("Password", [this] {
+        type("Password:", scraper.password, [this](const std::string& v) {
+            scraper.password = v;
+            scraper.save();
+            check = {};
+        });
+    }, scraper.password.empty() ? tr("not set") : std::string(std::min<size_t>(scraper.password.size(), 12), '*')));
+    std::string checked;
+    if (watchCheck) checked = tr("checking...");
+    else if (check.state == "done") checked = trf("OK, %s requests today", check.requests);
+    else if (!check.state.empty()) checked = tr(check.message);
+    Row test = Row::action("Check the account", [this] {
+        checkScraperAccount();
+        check = {};
+        watchCheck = true;
+        watchSince = runRead = SDL_GetTicks();
+    }, checked);
+    test.enabled = account && !net.address.empty() && !watchCheck;
+    test.hint = *needs ? needs : "Logs in and shows how many of today's requests are used.";
+    rows.push_back(test);
+
+    rows.push_back(Row::section("What to get"));
+    Row games = Row::choice("Games", {"Missing only", "All"}, scraper.all ? 1 : 0, [this](int i) {
+        scraper.all = i == 1;
+        scraper.save();
+    });
+    games.hint = "Missing only fills in what the games lack; All replaces it. Answers already received are kept, "
+                 "so asking again costs no requests.";
+    rows.push_back(games);
+    Row picture = Row::choice("Picture", names(kPictures), keyIndex(kPictures, scraper.image), [this](int i) {
+        scraper.image = kPictures[i].first;
+        scraper.save();
+    });
+    picture.hint = "Mix puts the screenshot, the box and the logo in one picture.";
+    rows.push_back(picture);
+    Row video = Row::toggle("Videos", scraper.video, [this](int on) {
+        scraper.video = on;
+        scraper.save();
+    });
+    video.hint = "Short gameplay clips, a few MB each.";
+    rows.push_back(video);
+    Row region = Row::choice("Region", names(kRegions), keyIndex(kRegions, scraper.region), [this](int i) {
+        scraper.region = kRegions[i].first;
+        scraper.save();
+    });
+    region.hint = "Whose names, covers and dates come first. Auto follows the file name, e.g. (USA).";
+    rows.push_back(region);
+    int chosen = 0;
+    for (const ScraperFolder& f : scrapeFolders)
+        chosen += std::find(scraper.skip.begin(), scraper.skip.end(), f.folder) == scraper.skip.end();
+    rows.push_back(Row::link("Systems", [this] { open(Page::ScraperSystems); },
+                             fill2("%s of %s", std::to_string(chosen), std::to_string(scrapeFolders.size()))));
+
+    rows.push_back(Row::section("Scrape"));
+    if (busy) {
+        rows.push_back(Row::link("Scraping", [this] { open(Page::ScraperRun); },
+                                 run.total ? std::to_string(run.index) + "/" + std::to_string(run.total) : ""));
+        return rows;
+    }
+    const std::string last = run.state == "done" ? tr("Done") : run.state == "stopped" ? tr("Stopped")
+                           : run.state == "error" ? tr("Error") : "";
+    Row go = Row::action("Start", [this] { startScraping(); }, last);
+    go.enabled = account && !net.address.empty() && chosen > 0;
+    go.hint = *needs ? needs : "Puppy must stay open: starting a game stops the scraper. It goes on from there next time.";
+    rows.push_back(go);
+    if (!run.state.empty()) rows.push_back(Row::link("Last run", [this] { open(Page::ScraperRun); }));
+    return rows;
+}
+
+void SettingsScreen::startScraping() {
+    startScraper();
+    run = {};
+    watchRun = true;
+    watchSince = runRead = SDL_GetTicks();
+    if (page() != Page::ScraperRun) open(Page::ScraperRun);
+}
+
+// A run under way, or the last one: Stop first, its progress under it
+std::vector<Row> SettingsScreen::scraperRunPage() {
+    std::vector<Row> rows;
+    const bool busy = run.running() || (watchRun && run.state.empty());
+    if (busy) {
+        rows.push_back(Row::action("Stop", [this] { stopScraper(run); }));
+    } else {
+        Row again = Row::action("Start", [this] { startScraping(); });
+        again.enabled = !scraper.user.empty() && !scraper.password.empty() && !net.address.empty();
+        rows.push_back(again);
+    }
+    if (run.state.empty()) {
+        rows.push_back(Row::info("Status", tr("Starting...")));
+        return rows;
+    }
+    const std::string state = run.state == "done" ? tr("Done") : run.state == "stopped" ? tr("Stopped")
+                            : run.state == "error" ? tr(run.message)
+                            : run.steps > 1 ? run.system + " (" + fill2("%s of %s", std::to_string(run.step), std::to_string(run.steps)) + ")"
+                            : run.system;
+    rows.push_back(Row::info("Status", state));
+    if (busy && run.total > 0) {
+        rows.push_back(Row::info("Game", fill2("%s of %s", std::to_string(run.index), std::to_string(run.total))));
+        Row now = Row::info(run.game, "");
+        now.rawLabel = true;
+        rows.push_back(now);
+    }
+    rows.push_back(Row::info("Scraped", std::to_string(run.found)));
+    if (run.notFound) rows.push_back(Row::info("Not found", std::to_string(run.notFound)));
+    if (run.failed) rows.push_back(Row::info("Failed", std::to_string(run.failed)));
+    if (run.skipped) rows.push_back(Row::info("Already complete", std::to_string(run.skipped)));
+    if (!run.requests.empty()) rows.push_back(Row::info("Requests today", run.requests));
+    if (!run.detail.empty() && run.state == "error") rows.push_back(Row::info("ScreenScraper", run.detail));
+    return rows;
+}
+
+// The systems with games, each one on or off
+std::vector<Row> SettingsScreen::scraperSystemsPage() {
+    std::vector<Row> rows;
+    if (scrapeFolders.empty()) rows.push_back(Row::info("No games in the ROM folders", ""));
+    for (const ScraperFolder& f : scrapeFolders) {
+        const bool on = std::find(scraper.skip.begin(), scraper.skip.end(), f.folder) == scraper.skip.end();
+        Row t = Row::toggle(f.name + "  (" + f.folder + ")", on, [this, folder = f.folder](int v) {
+            auto& skip = scraper.skip;
+            skip.erase(std::remove(skip.begin(), skip.end(), folder), skip.end());
+            if (!v) skip.push_back(folder);
+            scraper.save();
+        });
+        t.rawLabel = true;
+        t.hint = fill2("%s of %s games have all that's chosen.", std::to_string(f.complete), std::to_string(f.games));
+        rows.push_back(t);
     }
     return rows;
 }

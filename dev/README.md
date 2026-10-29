@@ -77,6 +77,28 @@ Then reboot (`reboot`), or close and reopen the app. A new `appctl` needs the re
 
 **The whole rootfs or the kernel with the card in the reader:** `dev/sdcard-mac.sh <diskN> boot|rootfs <file>` writes only that region. It backs the region up first and checks the write by reading it back. It refuses the daily card unless you pass `--daily-card`. Before writing a new rootfs to a card with an older HOME, check what the new rootfs expects in HOME (e.g. appd needs `HOME/.local/launcher.sh`).
 
+## The scraper (gl-scrape)
+
+`rootfs/package/gl-scrape` is the program behind System Settings -> System -> Scraper. ScreenScraper's developer credentials go into the binary at build time, hidden from `strings`, from `SS_DEVID` and `SS_DEVPASSWORD`. Locally `dev/gl` reads them from a `.env` at the root of the checkout or of the main checkout, which git ignores:
+
+```sh
+SS_DEVID=...
+SS_DEVPASSWORD=...
+SS_USER=...         # a ScreenScraper account, for tests in the container
+SS_PASSWORD=...
+```
+
+`dev/gl app gl-scrape` builds it for the console and natively, and says so when the credentials are missing; `dev/gl deploy` adds it to `usr/bin`. The native one scrapes a folder of ROMs in the container, so a change can be tried without the console:
+
+```sh
+dev/gl shell
+/repo/dev/out/gl-scrape.aarch64 --roots /tmp/roms --cache /tmp/cache --config /dev/null --lang pt gba
+```
+
+`dev/gl scrape-test` runs its tests: its pieces under ASan and UBSan, then the program against `dev/scrape-test/fake-screenscraper.py` (`SS_API` points it there), which checks the first run, Missing only and All, the media, the gamelists, the cache and that no credential lands in it. It needs no account and no internet.
+
+It runs the `curl` program and hands it the URL on its standard input, so the credentials never show in `ps`. Buildroot takes them from `make`'s environment (a CI secret); an image built without them has a scraper that says so.
+
 ## Audio test
 
 `dev/audio-test.sh beeps` plays five half-second tones on the console with the gaps mixed: 8 s, when the DACs have powered down, and 2 s, when they are still on. Each step is labeled on the screen and the time each tone takes is printed (~0.65 s; ~1.25 s means the amplifier had to power up). Listen on the headphones (`--speaker` for the speaker) and note which tones click or hum without knowing the gaps; the printed order tells afterwards. `dev/audio-test.sh reboot` reboots and waits for the console, to hear the power down. This is how the pops of patches 0011-0016 were found and checked; keep the steps few, the listener loses count past six.

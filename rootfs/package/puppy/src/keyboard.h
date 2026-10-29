@@ -14,6 +14,7 @@ struct Keyboard {
     static constexpr float kRowUnits = 10.0f;
 
     bool caps = false;      // the Aa key: letters typed in upper case
+    bool symbols = false;   // and, for passwords, symbols on the number row and the punctuation
     int row = 1, col = 0;   // starts on Q
 
     static const std::vector<Key>& keys(int r) {
@@ -40,6 +41,19 @@ struct Keyboard {
     }
 
     const std::string& current() const { return keys(row)[col].label; }
+
+    // What a one-character key types with Aa on
+    std::string shifted(const std::string& key) const {
+        static const char* kFrom = "1234567890-'().";
+        static const char* kTo = "!@#$%^&*+=_\"[],";
+        if (key.size() != 1) return key;
+        const char c = key[0];
+        if (c >= 'a' && c <= 'z') return std::string(1, (char)(c - 'a' + 'A'));
+        if (symbols)
+            for (int i = 0; kFrom[i]; ++i)
+                if (kFrom[i] == c) return std::string(1, kTo[i]);
+        return key;
+    }
 
     void move(int dx, int dy) {
         if (dx) {

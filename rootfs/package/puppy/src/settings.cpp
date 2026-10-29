@@ -137,6 +137,10 @@ void SettingsScreen::reload() {
     resize = Resize::read();
     info = SystemInfo::read();
     net = NetworkStatus::read();
+    scraper = ScraperSettings::load();
+    run = ScraperRun::read();
+    watchRun = run.running();
+    kb.symbols = true;
 }
 
 SettingsScreen::Page SettingsScreen::page() const {
@@ -182,10 +186,10 @@ void SettingsScreen::close() {
         saveLevels();
         saveAt = 0;
     }
-    const bool languageChanged = i18n::current() != startLanguage;
+    const bool reloadGames = i18n::current() != startLanguage || scrapeEnded();
     const auto closed = hooks.closed;
     app.pop();
-    if (closed) closed(languageChanged);
+    if (closed) closed(reloadGames);
 }
 
 // To the next row that can be selected; on a page with none, the page scrolls.
@@ -245,6 +249,17 @@ void SettingsScreen::choose(const Row& row) {
     d.selected = row.index;
     const auto set = row.set;
     app.push(std::make_unique<DialogScreen>(app, d, [set](int choice) { if (set) set(choice); }));
+}
+
+// The on-screen keyboard over the page, for a value typed in (the ScreenScraper account)
+void SettingsScreen::type(const char* prompt, const std::string& value, std::function<void(const std::string&)> done) {
+    typed = value;
+    kb.caps = false;
+    KeyboardScreen::Hooks hooks;
+    hooks.done = [this, done](bool accepted) {
+        if (accepted) done(trim(typed));
+    };
+    app.push(std::make_unique<KeyboardScreen>(app, kb, typed, true, 64, hooks, prompt));
 }
 
 void SettingsScreen::levelChanged() {
@@ -324,6 +339,22 @@ void SettingsScreen::tick(Uint32 now) {
         net = NetworkStatus::read();
         netRead = now;
     }
+    // a scrape or an account check under way: its progress twice a second
+    if ((watchRun || watchCheck) && (Sint32)(now - runRead) >= 500) {
+        const bool late = (Sint32)(now - watchSince) > 5000;    // gl-scrape never wrote a word
+        if (watchRun) {
+            run = ScraperRun::read();
+            if ((!run.state.empty() || late) && !run.running()) {
+                watchRun = false;
+                scrapeFolders = scraperFolders();
+            }
+        }
+        if (watchCheck) {
+            check = ScraperRun::readCheck();
+            if ((!check.state.empty() || late) && !check.running()) watchCheck = false;
+        }
+        runRead = now;
+    }
 }
 
 Uint32 SettingsScreen::wakeAt() const {
@@ -335,6 +366,7 @@ Uint32 SettingsScreen::wakeAt() const {
     if (watchUntil) earliest(nextWatch);
     if (page() == Page::DateTime) earliest(clockDrawn + 1000);
     if (page() == Page::Network) earliest(netRead + 2000);
+    if (watchRun || watchCheck) earliest(runRead + 500);
     return at;
 }
 

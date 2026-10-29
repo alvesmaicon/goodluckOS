@@ -7,4 +7,5 @@ source "../package/ppsspp/Config.in"
 source "../package/evsieve/Config.in"
 source "../package/credits/Config.in"
 source "../package/glos-setup/Config.in"
+source "../package/gl-scrape/Config.in"
 endmenu

@@ -11,7 +11,9 @@
 #include "model.h"
 #include "system/audio.h"
 #include "system/hud.h"
+#include "keyboard.h"
 #include "system/network.h"
+#include "system/scraper.h"
 #include "system/prefs.h"
 #include "system/storage.h"
 #include "system/sysinfo.h"
@@ -52,7 +54,7 @@ public:
     struct Hooks {
         std::function<void()> powerMenu;            // POWER, as in the launcher
         std::function<void()> fontChanged;          // what the launcher measured with the old font
-        std::function<void(bool)> closed;           // back to the launcher; true: the language changed
+        std::function<void(bool)> closed;           // back to the launcher; true: the language or the games' data changed
     };
     SettingsScreen(App& app, Model& launcher, Hooks hooks);
 
@@ -66,7 +68,8 @@ public:
 
 private:
     enum class Page { Display, Interface, Overlay, DateTime, Storage, System, Input,
-                      Tabs, Shortcuts, Info, Network, Resize, Credits };
+                      Tabs, Shortcuts, Info, Network, Scraper, ScraperSystems,
+                      ScraperRun, Resize, Credits };
     struct Cursor {
         int sel = -1;       // the selected row, -1 for none (a page with nothing to change scrolls)
         int scroll = 0;     // the first row on screen
@@ -93,6 +96,13 @@ private:
     SystemInfo info;
     NetworkStatus net;
     Uint32 netRead = 0;             // the Network page re-reads the network every 2 s
+    ScraperSettings scraper;
+    ScraperRun run, check;          // the last scrape and account check, re-read while one goes on
+    std::vector<ScraperFolder> scrapeFolders;
+    Uint32 runRead = 0, watchSince = 0;
+    bool watchRun = false, watchCheck = false;
+    Keyboard kb;                    // typing the ScreenScraper account
+    std::string typed;
     std::vector<std::pair<std::string, std::string>> credits;   // the Credits section only shows when there are some
     std::string startLanguage;
     Uint32 saveAt = 0;              // the brightness or volume changed: saved then (0: nothing to save)
@@ -134,6 +144,11 @@ private:
     std::vector<Row> systemPage();
     std::vector<Row> infoPage();
     std::vector<Row> networkPage();
+    std::vector<Row> scraperPage();
+    std::vector<Row> scraperSystemsPage();
+    std::vector<Row> scraperRunPage();
+    void startScraping();
+    void type(const char* prompt, const std::string& value, std::function<void(const std::string&)> done);
     std::vector<Row> inputPage();
     std::vector<Row> shortcutsPage();
     std::vector<Row> resizePage();

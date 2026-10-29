@@ -14,8 +14,9 @@ usage() {
 usage: dev/gl <command> [args]
   image                     (re)build the dev container image
   shell                     shell in the dev container
-  app puppy                 the launcher: armhf + native binaries
+  app puppy|gl-scrape       the launcher or the scraper: armhf + native binaries (gl-scrape: .env, see dev/README.md)
   deploy <overlay files>... dev/out/deploy.tar.gz: the built apps + rootfs-overlay files, console paths
+  scrape-test               gl-scrape's tests: its pieces under sanitizers, then the program against a fake ScreenScraper
   shot <app> <name> <keys>  native app in Xvfb, a screenshot at each "|" (keys: xdotool names, "_" waits 1 s)
   scenes [dir]              launcher scenes of dev/scenes, one screenshot each (default dev/out/scenes)
   scenes-diff <dir> <dir>   the scenes whose screenshots differ between two runs, pixel by pixel
@@ -54,8 +55,18 @@ if [ ! -f /.dockerenv ] && [ -z "${GL_NATIVE:-}" ]; then
             [ "$1" = image ] && exit 0
         fi
         tty=; [ -t 0 ] && tty=-t
+        # ScreenScraper's credentials for gl-scrape: .env in this checkout or in the main one, never in git
+        for env in "$REPO/.env" "$(git -C "$REPO" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)/../.env"; do
+            [ -f "$env" ] || continue
+            while IFS= read -r line || [ -n "$line" ]; do
+                case $line in SS_DEVID=*|SS_DEVPASSWORD=*|SS_USER=*|SS_PASSWORD=*)
+                    v=${line#*=}; v=${v%$'\r'}; v=${v#[\"\']}; v=${v%[\"\']}; export "${line%%=*}=$v" ;;
+                esac
+            done < "$env"
+            break
+        done
         exec docker run --rm -i $tty --privileged -v "$REPO:/repo" -v $VOLUME:/work \
-            -e GL_JOBS="${GL_JOBS:-}" $IMAGE /repo/dev/gl "$@"
+            -e GL_JOBS="${GL_JOBS:-}" -e SS_DEVID -e SS_DEVPASSWORD -e SS_USER -e SS_PASSWORD $IMAGE /repo/dev/gl "$@"
     fi
     command -v arm-linux-gnueabihf-g++ >/dev/null || { echo "no docker and no armhf cross compiler: see dev/README.md"; exit 1; }
     export GL_NATIVE=1
@@ -76,7 +87,16 @@ ARMFLAGS="-march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard"
 # Puppy as puppy.mk builds it
 build_app() {
     local app=$1
-    [ "$app" = puppy ] || { echo "unknown app: $app (the only one is puppy)"; exit 1; }
+    if [ "$app" = gl-scrape ]; then
+        local src=$PKG/gl-scrape/src inc=$WORK/gl-scrape-inc
+        mkdir -p "$inc"; "$PKG/gl-scrape/credentials.sh" > "$inc/credentials.h"
+        arm-linux-gnueabihf-g++ -O2 -std=c++17 $ARMFLAGS -I"$inc" "$src"/*.cpp -o "$OUT/$app.armhf"
+        arm-linux-gnueabihf-strip "$OUT/$app.armhf"
+        g++ -O2 -std=c++17 -I"$inc" "$src"/*.cpp -o "$OUT/$app.$ARCH"
+        echo "OK $app: $(stat -c %s "$OUT/$app.armhf") bytes armhf$([ -n "${SS_DEVID:-}" ] || echo ', NO ScreenScraper credentials (.env)'); native: dev/out/$app.$ARCH"
+        return
+    fi
+    [ "$app" = puppy ] || { echo "unknown app: $app (puppy or gl-scrape)"; exit 1; }
     local src inc="-I$PKG/puppy/src" libs="-lSDL2_image -lSDL2_ttf -lasound"
     src=$(ls "$PKG"/puppy/src/*.cpp "$PKG"/puppy/src/system/*.cpp)
     arm-linux-gnueabihf-g++ -O2 -std=c++17 $ARMFLAGS $inc $($PCA --cflags sdl2) $src \
@@ -363,7 +383,7 @@ kernel() {
 deploy() {
     local s=$WORK/deploy
     rm -rf "$s"; mkdir -p "$s/usr/bin"
-    for app in puppy; do
+    for app in puppy gl-scrape; do
         [ -f "$OUT/$app.armhf" ] && install -m 0755 "$OUT/$app.armhf" "$s/usr/bin/$app"
     done
     for f in "$@"; do
@@ -382,6 +402,7 @@ case $cmd in
     shell) exec bash ;;
     app) [ $# -ge 1 ] || usage; for a in "$@"; do build_app "$a"; done ;;
     shot) [ $# -eq 3 ] || usage; shot "$@" ;;
+    scrape-test) bash "$DEV/scrape-test/run.sh" ;;
     scenes) scenes "$@" ;;
     _scenes) scenes_run "$@" ;;
     scenes-diff) [ $# -eq 2 ] || usage; scenes_diff "$@" ;;
