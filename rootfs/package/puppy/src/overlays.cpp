@@ -17,8 +17,10 @@ static size_t nextLetter(const std::string& t, size_t pos) {
     return pos;
 }
 
-KeyboardScreen::KeyboardScreen(App& app, Keyboard& kb, std::string& text, bool rename, size_t maxLength, Hooks hooks)
-    : Screen(app), kb(kb), text(text), rename(rename), cursor(text.size()), maxLength(maxLength), hooks(std::move(hooks)) {}
+KeyboardScreen::KeyboardScreen(App& app, Keyboard& kb, std::string& text, bool rename, size_t maxLength, Hooks hooks,
+                               const char* prompt)
+    : Screen(app), kb(kb), text(text), rename(rename), cursor(text.size()), maxLength(maxLength), hooks(std::move(hooks)),
+      prompt(prompt) {}
 
 void KeyboardScreen::close(bool accept) {
     const auto done = hooks.done;
@@ -39,7 +41,7 @@ void KeyboardScreen::type(const std::string& key) {
         at = start;
     } else if (text.size() < maxLength) {
         std::string c = key == "space" ? " " : key;
-        if (kb.caps && c.size() == 1) c = upper(c);
+        if (kb.caps) c = kb.shifted(c);
         text.insert(at, c);
         at += c.size();
     }
@@ -87,9 +89,9 @@ void KeyboardScreen::render(Ui& ui) {
     ui.frame(kTile, panel, 2);
 
     // What is typed: the search, or the new name of a game's file; a long name shows its end
-    const std::string prompt = tr(rename ? "Rename:" : "Search:");
-    drawText(renderer, fonts.ui, prompt, panel.x + pad, panel.y + pad, kGrey);
-    const int textX = panel.x + pad + textWidth(fonts.ui, prompt) + 8;
+    const std::string label = tr(prompt ? prompt : rename ? "Rename:" : "Search:");
+    drawText(renderer, fonts.ui, label, panel.x + pad, panel.y + pad, kGrey);
+    const int textX = panel.x + pad + textWidth(fonts.ui, label) + 8;
     const int textMax = panel.x + panelW - pad - textX;
     if (rename) {
         // the name with a cursor bar, scrolled so the cursor stays in view
@@ -115,7 +117,7 @@ void KeyboardScreen::render(Ui& ui) {
             std::string label = key.label == "shift" ? (kb.caps ? "aA" : "Aa")
                               : key.label.size() > 1 ? tr(key.label) : key.label;   // space / del / ok
             TTF_Font* f = key.label.size() > 1 ? fonts.small : fonts.ui;
-            if (key.label.size() == 1) label = kb.caps ? upper(label) : label;
+            if (key.label.size() == 1 && kb.caps) label = kb.shifted(label);
             drawText(renderer, f, label, k.x + (k.w - textWidth(f, label)) / 2,
                      k.y + (k.h - TTF_FontHeight(f)) / 2, sel ? kBlack : kWhite);
         }
