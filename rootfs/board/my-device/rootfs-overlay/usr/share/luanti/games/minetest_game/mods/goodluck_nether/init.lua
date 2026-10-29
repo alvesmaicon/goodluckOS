@@ -289,6 +289,7 @@ ore({ore_type = "blob", ore = "default:gravel", clust_scarcity = 12 * 12 * 12, c
 	noise_params = {offset = 0, scale = 1, spread = {x = 5, y = 5, z = 5}, seed = 7432, octaves = 1, persistence = 0}})
 
 core.register_mapgen_script(core.get_modpath("goodluck_nether") .. "/mapgen.lua")
+dofile(core.get_modpath("goodluck_nether") .. "/portal.lua")
 
 -- inside: the Nether's red fog, as near as Minecraft's (it also keeps the A33 from drawing far into one big cave), no
 -- sun, moon, stars or clouds; soul sand walks at 40 %, magma burns half a heart every half second unless sneaking
