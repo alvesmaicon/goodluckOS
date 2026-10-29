@@ -14,7 +14,7 @@ struct Prefs {
     std::string accent;                     // an accents.h key ("": not chosen)
     std::string style;                      // a styles.h key ("": not chosen)
     bool loadingText = false;               // "Loading..." instead of the ASCII-art dog while an app starts
-    bool trailerSound = false;              // the Vitrine style's trailers play with their sound
+    bool trailerSound = false;              // the Showcase style's trailers play with their sound
     bool confirmBottom = false;             // B (bottom) confirms and A (right) goes back
 
     static Prefs load();

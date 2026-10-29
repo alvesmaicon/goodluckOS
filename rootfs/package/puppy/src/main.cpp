@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
     styles::choose(prefs.style);
     std::string font, bold;
     float fontScale;
-    fonts::choose(prefs.font, theme().modern, font, bold, fontScale);
+    fonts::choose(prefs.font, theme().showcase, font, bold, fontScale);
     accents::choose(prefs.accent);
     setConfirmBottom(nullptr, prefs.confirmBottom);    // sdl_controller.sh already mapped the pad
     if (prefs.confirmBottom) addRetroArchSwap();       // cards set to B before RetroArch followed it

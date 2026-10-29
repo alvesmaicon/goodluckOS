@@ -1,8 +1,8 @@
 #pragma once
-// The interface styles System Settings offers (Interface -> Style): retro, Puppy's own look; modern,
-// Vitrine's (Jeferson Lopes, upstream PR 51); and vitrine, modern in Vitrine's Shelf and Streaming
-// layouts. The choice is style=<key> in the settings file (see Prefs); layout.h's theme() returns the
-// current one's colours.
+// The interface styles System Settings offers (Interface -> Style): retro, Puppy's own look, and
+// showcase, after the Vitrine launcher (Jeferson Lopes, upstream PR 51): its look and its Shelf and
+// Streaming layouts. The choice is style=<key> in the settings file (see Prefs); layout.h's theme()
+// returns the current one's colours.
 #include <string>
 #include <vector>
 

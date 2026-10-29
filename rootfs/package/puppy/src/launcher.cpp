@@ -25,7 +25,7 @@ void LauncherScreen::onAction(Action a) {
     played.clear();
 
     const bool grid = model.view == View::Grid;
-    const bool streaming = grid && theme().vitrine;    // a row per tab: up and down change the tab
+    const bool streaming = grid && theme().showcase;    // a row per tab: up and down change the tab
 
     if (a == Action::GameMenu) {   // L2 + R2: rename or delete the selected game
         openGameMenu();
@@ -241,10 +241,10 @@ std::string LauncherScreen::playedText(const Entry& e, bool withDay) const {
     return text;
 }
 
-// The selected game's trailer, in the Vitrine style: it starts once the launcher has been on top
+// The selected game's trailer, in the Showcase style: it starts once the launcher has been on top
 // with no button pressed for kTrailerDelayMs, and plays once. Without the screen it waits for a button.
 void LauncherScreen::tick(Uint32 now) {
-    const Entry* e = theme().vitrine ? model.selected() : nullptr;
+    const Entry* e = theme().showcase ? model.selected() : nullptr;
     if (!app.onTop(this)) {
         stillSince = now;
         e = nullptr;
@@ -286,13 +286,13 @@ SDL_Rect LauncherScreen::trailerBox() const {
 
 void LauncherScreen::render(Ui& ui) {
     const bool grid = model.view == View::Grid;
-    if (grid && theme().vitrine) {
+    if (grid && theme().showcase) {
         renderStreaming(ui);    // its rows take the place of the tab strip
         return;
     }
     if (model.cur().visible.empty()) renderEmpty(ui);
     else if (grid) renderGrid(ui);
-    else if (theme().vitrine) renderShelf(ui);
+    else if (theme().showcase) renderShelf(ui);
     else renderList(ui);
     if (model.showTabs) renderTabs(ui);
 }
@@ -306,13 +306,13 @@ Header LauncherScreen::header() const {
     count += std::string(" ") + tr(c.media ? (one ? "item" : "items")
                                  : c.isArchive ? (one ? "game" : "games") : (one ? "app" : "apps"));
     if (!model.query.empty()) count += "  ·  \"" + model.query + "\"";
-    return {tr(c.name), count, !model.query.empty(), model.view == View::Grid && theme().vitrine};
+    return {tr(c.name), count, !model.query.empty(), model.view == View::Grid && theme().showcase};
 }
 
 Hints LauncherScreen::hints() const {
     const Entry* sel = model.selected();
     const bool fav = sel && model.isFavorite(*sel);
-    const bool streaming = model.view == View::Grid && theme().vitrine;
+    const bool streaming = model.view == View::Grid && theme().showcase;
     Hints hints = {{"L1/R1", tr(streaming ? "Skip 10" : "Tab")}, {"A", tr("Launch")},
                    {"Y", tr(fav ? "Remove" : "My List"), tr(fav ? "My List" : "Remove")}};
     // while searching, clearing the search is more useful than starting a new one
@@ -466,7 +466,7 @@ void LauncherScreen::renderRows(Ui& ui, int width) {
         }
         if (model.isAutoStart(e)) {
             right -= ui.pillWidth(tr("auto"));
-            ui.pill(tr("auto"), right, tagY, ui.accentOn(k == c.sel), k == c.sel && theme().modern ? accent() : theme().ink);
+            ui.pill(tr("auto"), right, tagY, ui.accentOn(k == c.sel), k == c.sel && theme().showcase ? accent() : theme().ink);
             right -= 8;
         }
         if (model.isFavorite(e)) ui.star(r.x + 12 + starW / 2, r.y + r.h / 2, 7, ui.accentOn(k == c.sel));
@@ -480,7 +480,7 @@ void LauncherScreen::renderRows(Ui& ui, int width) {
     }
 }
 
-// The Vitrine style's list (Shelf): the rows, an A-Z rail on the right, and between them the picture
+// The Showcase style's list (Shelf): the rows, an A-Z rail on the right, and between them the picture
 // over the game's name, system, data, play time and description.
 void LauncherScreen::renderShelf(Ui& ui) {
     SDL_Renderer* renderer = ui.sdl();
@@ -532,7 +532,7 @@ void LauncherScreen::renderShelf(Ui& ui) {
     drawText(renderer, fonts.small, pos, x + w - textWidth(fonts.small, pos), posY, theme().dim);
 }
 
-// The Vitrine style's grid (Streaming): the selected game's picture fading into the screen behind its
+// The Showcase style's grid (Streaming): the selected game's picture fading into the screen behind its
 // name and data, and under them the current tab's row of covers with the next tab's below it.
 void LauncherScreen::renderStreaming(Ui& ui) {
     SDL_Renderer* renderer = ui.sdl();
@@ -614,10 +614,10 @@ void LauncherScreen::renderTabs(Ui& ui) {
     const int pillH = TTF_FontHeight(fonts.small) + 4;
     const int pillY = top + (kTabsH - pillH) / 2;
 
-    // Arrows at the ends, as the tabs wrap around in both directions; the modern style shows L1 and R1
-    const bool modern = theme().modern;
-    const int endW = modern ? ui.keyWidth("L1") : 12;
-    if (modern) {
+    // Arrows at the ends, as the tabs wrap around in both directions; the Showcase style shows L1 and R1
+    const bool showcase = theme().showcase;
+    const int endW = showcase ? ui.keyWidth("L1") : 12;
+    if (showcase) {
         ui.keyGlyph("L1", kMargin, top + kTabsH / 2, theme().bg);
         ui.keyGlyph("R1", kScreenW - kMargin - endW, top + kTabsH / 2, theme().bg);
     } else {
@@ -656,7 +656,7 @@ void LauncherScreen::renderTabs(Ui& ui) {
     for (int k = -reach; k <= reach; ++k) {
         if (n < slots && (k < -(n - 1) / 2 || k > n / 2)) continue;
         const int t = at(k);
-        TTF_Font* f = modern && k == 0 ? fonts.smallBold : fonts.small;
+        TTF_Font* f = showcase && k == 0 ? fonts.smallBold : fonts.small;
         const std::string label = elided(f, tr(model.categories[t].label), slotW - 2 * pad);
         const int x = cx + k * slotW + (int)std::lround(tabOffset) - textWidth(f, label) / 2;
         drawText(renderer, f, label, x, pillY + 2, k == 0 ? theme().text : theme().muted);

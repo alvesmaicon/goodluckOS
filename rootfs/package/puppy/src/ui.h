@@ -62,7 +62,7 @@ private:
 struct Header {
     std::string title, count;
     bool highlight = false;
-    bool clear = false;     // see-through, over the screen's picture (the Vitrine style's grid)
+    bool clear = false;     // see-through, over the screen's picture (the Showcase style's grid)
 };
 
 // The top bar's items right of the title, the ones System Settings -> Overlay turns on for the launcher.
@@ -89,7 +89,7 @@ struct Fonts {
     TTF_Font* title = nullptr;
     TTF_Font* desc = nullptr;
     TTF_Font* small = nullptr;
-    TTF_Font* uiBold = nullptr;      // the modern style's titles and button names (retro: none)
+    TTF_Font* uiBold = nullptr;      // the Showcase style's titles and button names (retro: none)
     TTF_Font* titleBold = nullptr;
     TTF_Font* smallBold = nullptr;
     TTF_Font* keyBold = nullptr;     // the names in the footer's button outlines
@@ -108,7 +108,7 @@ public:
     const Fonts& font() const { return fonts; }
     IconCache& gridIcons() { return *gridCache; }
     IconCache& previewIcons() { return *previewCache; }
-    IconCache& cardIcons() { return *cardCache; }       // the Vitrine style's rows of covers
+    IconCache& cardIcons() { return *cardCache; }       // the Showcase style's rows of covers
     IconCache& heroIcons() { return *heroCache; }       // and the big picture above them
     void setFont(const std::string& path, const std::string& bold, float scale);   // bold: "" for none
 
@@ -132,7 +132,7 @@ public:
     void swatch(const SDL_Rect& r, SDL_Color c, bool selected);   // a colour to choose
     SDL_Color accentOn(bool selected) const;                 // the accent, or what shows over a selected row
     int keyWidth(const std::string& key);                    // a footer button as keyGlyph draws it
-    int keyGlyph(const std::string& key, int x, int cy, SDL_Color inside);   // modern: a button in an outline
+    int keyGlyph(const std::string& key, int x, int cy, SDL_Color inside);   // Showcase: a button in an outline
     void roundRect(const SDL_Rect& r, int radius, SDL_Color c);
 
     void setColor(SDL_Color c);

@@ -30,7 +30,7 @@ private:
     std::string dateFmt;        // the day a game was last played, as Date & Time shows it
     int lastTab = -1;           // tab drawn in the previous frame, to animate the strip
     float tabOffset = 0.0f;     // remaining slide of the tab strip, in pixels
-    Trailer trailer;            // the selected game's clip, in the Vitrine style
+    Trailer trailer;            // the selected game's clip, in the Showcase style
     Uint32 stillSince = 0;      // the last button press (or the launcher back on top)
     Uint32 trailerAt = 0;       // when the selected game's trailer starts (0: none to start)
     Uint32 frameDue = 0;        // when the playing trailer's frames are read next

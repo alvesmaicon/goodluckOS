@@ -235,7 +235,7 @@ void Ui::end() {
 
 void Ui::header(const Header& h, const TopBar& bar) {
     if (h.clear) shade({0, 0, kScreenW, kHeaderH}, theme().bg, 230, kBarShade);
-    else fill(theme().modern ? theme().bg : theme().bar, {0, 0, kScreenW, kHeaderH});
+    else fill(theme().showcase ? theme().bg : theme().bar, {0, 0, kScreenW, kHeaderH});
     const int nameY = (kHeaderH - TTF_FontHeight(fonts.ui)) / 2;
 
     // Right to left, 14 px apart: each item's text, then its icon (returns where the icon goes)
@@ -267,7 +267,7 @@ void Ui::header(const Header& h, const TopBar& bar) {
     if (bar.pmicTemp) temp(*bar.pmicTemp, &Ui::boltIcon);
     if (bar.cpuTemp) temp(*bar.cpuTemp, &Ui::chipIcon);
 
-    TTF_Font* titleFont = theme().modern ? fonts.uiBold : fonts.ui;
+    TTF_Font* titleFont = theme().showcase ? fonts.uiBold : fonts.ui;
     int countW = textWidth(fonts.small, h.count);
     int maxNameW = statusX - 24 - countW - 10 - kMargin;
     const std::string title = elided(titleFont, h.title, maxNameW);
@@ -289,7 +289,7 @@ void Ui::footer(const Hints& hints) {
     int textW = 0;
     for (const auto& h : hints) textW += textWidth(fonts.small, buttonLabel(h.key)) + keyGap + labelW(h);
     const int slots = std::max(1, (int)hints.size() - 1);
-    if (theme().modern) {   // Vitrine's: left to right, each button drawn, then what it does
+    if (theme().showcase) {   // Vitrine's: left to right, each button drawn, then what it does
         const int cy = top + kFooterH / 2;
         int w = 0;
         for (const auto& h : hints) w += keyWidth(buttonLabel(h.key)) + keyGap + labelW(h);
@@ -329,9 +329,9 @@ void Ui::status(const std::string& text) {
              (kScreenH - TTF_FontHeight(fonts.title)) / 2, theme().text);
 }
 
-// Retro: a band with the accent at its left edge. Modern: a pill, in the accent when the d-pad is on it.
+// Retro: a band with the accent at its left edge. Showcase: a pill, in the accent when the d-pad is on it.
 SDL_Color Ui::selection(const SDL_Rect& r, bool focused) {
-    if (theme().modern) {
+    if (theme().showcase) {
         roundRect(r, r.h / 2, focused ? accent() : theme().rowSel);
         return focused ? theme().ink : theme().text;
     }
@@ -341,11 +341,11 @@ SDL_Color Ui::selection(const SDL_Rect& r, bool focused) {
 }
 
 SDL_Color Ui::accentOn(bool selected) const {
-    return theme().modern && selected ? theme().ink : accent();
+    return theme().showcase && selected ? theme().ink : accent();
 }
 
 void Ui::panel(const SDL_Rect& r, SDL_Color inside, SDL_Color border) {
-    if (theme().modern) {   // a card: the border shows when it isn't the card's own colour (a notice's accent)
+    if (theme().showcase) {   // a card: the border shows when it isn't the card's own colour (a notice's accent)
         roundRect(r, 16, border);
         roundRect({r.x + 2, r.y + 2, r.w - 4, r.h - 4}, 14, theme().tile);
         return;
@@ -355,12 +355,12 @@ void Ui::panel(const SDL_Rect& r, SDL_Color inside, SDL_Color border) {
 }
 
 void Ui::key(const SDL_Rect& r, bool lit) {
-    if (theme().modern) roundRect(r, 8, lit ? accent() : theme().rowSel);
+    if (theme().showcase) roundRect(r, 8, lit ? accent() : theme().rowSel);
     else fill(lit ? accent() : theme().tile, r);
 }
 
 void Ui::tabHighlight(const SDL_Rect& r) {
-    if (theme().modern) {
+    if (theme().showcase) {
         roundRect({r.x + 16, r.y + r.h - 1, r.w - 32, 3}, 1, accent());
         return;
     }
@@ -369,7 +369,7 @@ void Ui::tabHighlight(const SDL_Rect& r) {
 }
 
 void Ui::toggle(const SDL_Rect& r, bool on, bool enabled, bool selected) {
-    if (theme().modern) {
+    if (theme().showcase) {
         const SDL_Color lit = enabled ? accentOn(selected) : theme().dim;
         roundRect(r, r.h / 2, on ? lit : theme().tile);
         roundRect({on ? r.x + r.w - 18 : r.x + 2, r.y + 2, 16, 16}, 8,
@@ -381,13 +381,13 @@ void Ui::toggle(const SDL_Rect& r, bool on, bool enabled, bool selected) {
 }
 
 void Ui::track(const SDL_Rect& r, SDL_Color c) {
-    if (theme().modern) roundRect(r, r.h / 2, c);
+    if (theme().showcase) roundRect(r, r.h / 2, c);
     else fill(c, r);
 }
 
-// Modern: rounded, and ringed on a selected row, whose pill may be the same colour
+// Showcase: rounded, and ringed on a selected row, whose pill may be the same colour
 void Ui::swatch(const SDL_Rect& r, SDL_Color c, bool selected) {
-    if (!theme().modern) {
+    if (!theme().showcase) {
         fill(c, r);
         return;
     }
@@ -599,7 +599,7 @@ void Ui::star(int cx, int cy, int r, SDL_Color c) {
 int Ui::pill(const std::string& text, int x, int y, SDL_Color bg, SDL_Color fg) {
     const int padX = 6, padY = 2;
     SDL_Rect r{x, y, textWidth(fonts.small, text) + padX * 2, TTF_FontHeight(fonts.small) + padY * 2};
-    if (theme().modern) roundRect(r, 5, bg);
+    if (theme().showcase) roundRect(r, 5, bg);
     else fill(bg, r);
     drawText(renderer, fonts.small, text, x + padX, y + padY, fg);
     return r.w;

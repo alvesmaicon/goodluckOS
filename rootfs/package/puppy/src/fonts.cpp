@@ -33,24 +33,24 @@ bool available(const Font& f) {
     return in.good();
 }
 
-// The modern style's default, after Vitrine's (SIL Open Font License, next to them)
-static const char* kModernFont = "AtkinsonHyperlegible-Regular.ttf";
-static const char* kModernBold = "AtkinsonHyperlegible-Bold.ttf";
+// The Showcase style's default, after Vitrine's (SIL Open Font License, next to them)
+static const char* kShowcaseFont = "AtkinsonHyperlegible-Regular.ttf";
+static const char* kShowcaseBold = "AtkinsonHyperlegible-Bold.ttf";
 
-void choose(const std::string& key, bool modern, std::string& file, std::string& bold, float& scale) {
+void choose(const std::string& key, bool showcase, std::string& file, std::string& bold, float& scale) {
     const Font& f = all()[find(key)];
     const fs::path dir = fs::path(cfg.font).parent_path();
     bold.clear();
-    if (modern && !f.file && std::ifstream(dir / kModernFont).good()) {
-        file = (dir / kModernFont).string();
-        bold = std::ifstream(dir / kModernBold).good() ? (dir / kModernBold).string() : file;
+    if (showcase && !f.file && std::ifstream(dir / kShowcaseFont).good()) {
+        file = (dir / kShowcaseFont).string();
+        bold = std::ifstream(dir / kShowcaseBold).good() ? (dir / kShowcaseBold).string() : file;
         scale = 1.0f;
         return;
     }
     const bool there = available(f);
     file = there ? path(f) : cfg.font;
     scale = there ? f.scale : 1.0f;
-    if (modern) bold = file;
+    if (showcase) bold = file;
 }
 
 }  // namespace fonts

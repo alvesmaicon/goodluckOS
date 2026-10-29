@@ -28,11 +28,11 @@ constexpr int kPreviewX             = kMargin + kListWidth + kMargin;
 constexpr int kPreviewW             = kScreenW - kPreviewX - kMargin;
 constexpr int kPreviewH             = kPreviewW * 3 / 4;
 
-// The Vitrine style's list (Shelf): a narrower list, the picture over the game's data, an A-Z rail.
+// The Showcase style's list (Shelf): a narrower list, the picture over the game's data, an A-Z rail.
 constexpr int kShelfListW           = 312;
 constexpr int kShelfCardX           = kScreenW - kMargin - 28 - kPreviewW;     // the rail's 28 px on its right
 
-// The Vitrine style's grid (Streaming): the selected game's picture at the top right, under the
+// The Showcase style's grid (Streaming): the selected game's picture at the top right, under the
 // see-through top bar, its base down beside the row's name and its top cut when it doesn't fit; one
 // row of covers per tab under it, the next tab's row peeking out at the bottom.
 constexpr int kHeroW                = 400;
@@ -81,8 +81,7 @@ SDL_Color accent();         // the highlight colour chosen in System Settings (a
 
 // The colours of the interface style (styles.h)
 struct Theme {
-    bool modern;
-    bool vitrine;                       // the launcher in Vitrine's layouts: Shelf (list) and Streaming (grid)
+    bool showcase;                      // Vitrine's look and its layouts: Shelf (list) and Streaming (grid)
     SDL_Color bg, bar, tile, rowSel;    // the screen, the top and bottom bars, tiles and tracks, a selected row
     SDL_Color text, muted, item, dim;   // titles and values, secondary text, a list's other entries, a row not usable now
     SDL_Color ink;                      // text on the accent colour

@@ -342,7 +342,7 @@ void SettingsScreen::levelsChanged() {
 void SettingsScreen::applyFont() {
     std::string path, bold;
     float scale;
-    fonts::choose(prefs.font, theme().modern, path, bold, scale);
+    fonts::choose(prefs.font, theme().showcase, path, bold, scale);
     app.painter().setFont(path, bold, scale);
     if (hooks.fontChanged) hooks.fontChanged();
 }
@@ -403,7 +403,7 @@ void SettingsScreen::renderPage(Ui& ui) {
     const int n = (int)list.size();
     if (p == Page::DateTime) clockDrawn = SDL_GetTicks();
 
-    drawText(renderer, theme().modern ? fonts.uiBold : fonts.ui, title(p), kPageX, kTop, theme().text, width);
+    drawText(renderer, theme().showcase ? fonts.uiBold : fonts.ui, title(p), kPageX, kTop, theme().text, width);
     const int top = kTop + TTF_FontHeight(fonts.ui) + 8;
 
     // the selected row's hint, else the page's, in the lines under the rows (on pages that have any)

@@ -8,7 +8,7 @@
 # VIDEO=/home/player/videos/some-application.mp4
 # COMMAND=launch-the-application --some-flag
 #
-# VIDEO is optional: a short clip that plays in place of the icon, as the entry's trailer in the Vitrine style.
+# VIDEO is optional: a short clip that plays in place of the icon, as the entry's trailer in the Showcase style.
 #
 # Example Archive:
 # Fields:

@@ -211,7 +211,7 @@ std::vector<Row> SettingsScreen::interfacePage() {
         prefs.style = styles::all()[i].key;
         prefs.save();
         styles::choose(prefs.style);
-        applyFont();    // the modern style has its own default font
+        applyFont();    // the Showcase style has its own default font
     }));
     rows.push_back(Row::choice("View", {"Grid", "List"}, launcher.view == View::List ? 1 : 0, [this](int i) {
         launcher.view = i ? View::List : View::Grid;
@@ -262,7 +262,7 @@ std::vector<Row> SettingsScreen::interfacePage() {
         prefs.trailerSound = on;
         prefs.save();
     });
-    sound.hint = "In the Vitrine style, a game's trailer plays with its sound, at the system volume.";
+    sound.hint = "In the Showcase style, a game's trailer plays with its sound, at the system volume.";
     rows.push_back(sound);
 
     rows.push_back(Row::section("Tabs"));

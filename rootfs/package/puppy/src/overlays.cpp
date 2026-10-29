@@ -176,7 +176,7 @@ void DialogScreen::render(Ui& ui) {
     SDL_Rect panel{(kScreenW - panelW) / 2, d.bodyY + (kScreenH - kFooterH - d.bodyY - panelH) / 2, panelW, panelH};
     ui.fill({0, 0, 0, 150}, {0, kHeaderH, kScreenW, kScreenH - kFooterH - kHeaderH});   // dim the screen behind
     ui.panel(panel, theme().bar, theme().tile);
-    drawText(renderer, theme().modern ? fonts.uiBold : fonts.ui, tr(d.title), panel.x + pad + 4, panel.y + pad, theme().text, textW);
+    drawText(renderer, theme().showcase ? fonts.uiBold : fonts.ui, tr(d.title), panel.x + pad + 4, panel.y + pad, theme().text, textW);
     if (!d.subtitle.empty())
         drawText(renderer, fonts.small, d.subtitle, panel.x + pad + 4, panel.y + pad + titleH - 4, theme().muted, textW);
     if (!message.empty())
