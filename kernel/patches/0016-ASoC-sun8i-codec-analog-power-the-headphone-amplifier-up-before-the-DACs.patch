@@ -1,0 +1,44 @@
+From: alvesmaicon <alvesmaiconn@gmail.com>
+Subject: [PATCH] ASoC: sun8i-codec-analog: power the headphone amplifier up before the DACs
+
+The headphone amplifier is an output driver, so DAPM powers it up last,
+after the DACs and the mixers feeding it. Its output ramp then goes out
+with the path already up, and the headphones hear it as a low thump at
+the start of every sound that finds the path down.
+
+Powered up first, with the DACs and the mixers still off, the same ramp
+is not heard. In a blind test on the console, three cold starts each
+way, the thump was there on all three with the amplifier last and on
+none with the amplifier first.
+
+Split the amplifier in two: a supply that enables it and waits for it to
+settle, which DAPM runs before the DACs, and the output driver, now
+without a register, which still disables it first on the way down.
+
+diff --git a/sound/soc/sunxi/sun8i-codec-analog.c b/sound/soc/sunxi/sun8i-codec-analog.c
+--- a/sound/soc/sunxi/sun8i-codec-analog.c
++++ b/sound/soc/sunxi/sun8i-codec-analog.c
+@@ -421,10 +421,11 @@ static int sun8i_headphone_amp_event(struct snd_soc_dapm_widget *w,
+ static const struct snd_soc_dapm_widget sun8i_codec_headphone_widgets[] = {
+ 	SND_SOC_DAPM_MUX("Headphone Source Playback Route",
+ 			 SND_SOC_NOPM, 0, 0, sun8i_codec_hp_src),
+-	SND_SOC_DAPM_OUT_DRV_E("Headphone Amp", SUN8I_ADDA_PAEN_HP_CTRL,
+-			       SUN8I_ADDA_PAEN_HP_CTRL_HPPAEN, 0, NULL, 0,
+-			       sun8i_headphone_amp_event,
+-			       SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_PRE_PMD),
++	/* Up first, before the DACs and mixers; down first, as an output driver */
++	SND_SOC_DAPM_SUPPLY("Headphone Amp Power", SND_SOC_NOPM, 0, 0,
++			    sun8i_headphone_amp_event, SND_SOC_DAPM_PRE_PMU),
++	SND_SOC_DAPM_OUT_DRV_E("Headphone Amp", SND_SOC_NOPM, 0, 0, NULL, 0,
++			       sun8i_headphone_amp_event, SND_SOC_DAPM_PRE_PMD),
+ 	SND_SOC_DAPM_SUPPLY("HPCOM Protection", SUN8I_ADDA_PAEN_HP_CTRL,
+ 			    SUN8I_ADDA_PAEN_HP_CTRL_COMPTEN, 0, NULL, 0),
+ 	SND_SOC_DAPM_REG(snd_soc_dapm_supply, "HPCOM", SUN8I_ADDA_PAEN_HP_CTRL,
+@@ -438,6 +439,7 @@ static const struct snd_soc_dapm_route sun8i_codec_headphone_routes[] = {
+ 	{ "Headphone Source Playback Route", "Mixer", "Left Mixer" },
+ 	{ "Headphone Source Playback Route", "Mixer", "Right Mixer" },
+ 	{ "Headphone Amp", NULL, "Headphone Source Playback Route" },
++	{ "Headphone Amp", NULL, "Headphone Amp Power" },
+ 	{ "HPCOM", NULL, "HPCOM Protection" },
+ 	{ "HP", NULL, "Headphone Amp" },
+ };
