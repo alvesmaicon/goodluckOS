@@ -46,11 +46,14 @@ jobs:
         working-directory: rootfs
         timeout-minutes: 320
         shell: bash
+        env:
+          SS_DEVID: ${{ secrets.SS_DEVID }}
+          SS_DEVPASSWORD: ${{ secrets.SS_DEVPASSWORD }}
         run: |
           mkdir -p dl ccache
           docker compose run --build --rm -T --name goodluck-ci \
             -v "$PWD/dl:/src/dl" -v "$PWD/ccache:/root/.buildroot-ccache" \
-            -e CCACHE_MAXSIZE=4G \
+            -e CCACHE_MAXSIZE=4G -e SS_DEVID -e SS_DEVPASSWORD \
             goodluck-builder bash -c "/src/scripts/configure.sh && /src/scripts/build.sh" \
             2>&1 | tee build.log | grep --line-buffered '^>>>'
 
