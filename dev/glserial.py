@@ -7,8 +7,8 @@
   glserial.py get --cmd "dmesg" <local>  save a command's output
 
 The port is found by the gadget's USB id (1d6b:0104); --port overrides it (/dev/cu.usbmodem*, COM3).
-Serial is slow (~10 KB/s): a 650 KB binary takes 1-2 min. Big files go through HOME (MTP or
-the card reader) instead. Needs pyserial (pip install pyserial).
+Serial is slow (~40 KB/s): a 10 MB package takes 4-5 min. When the port drops during a send, the
+send waits for it to come back and goes on from what reached the console. Needs pyserial (pip install pyserial).
 """
 import argparse, base64, gzip, hashlib, re, sys, time
 
@@ -65,9 +65,29 @@ class Console:
         sys.exit("no root prompt on the console")
 
     def close(self):
-        self.write("stty echo\n")
-        self.read_for(0.5, PROMPT)
-        self.s.close()
+        try:
+            self.write("stty echo\n")
+            self.read_for(0.5, PROMPT)
+            self.s.close()
+        except serial.SerialException:
+            pass
+
+    def reopen(self):
+        """The port drops now and then on a long send: wait for it to come back and log in again."""
+        try:
+            self.s.close()
+        except serial.SerialException:
+            pass
+        for _ in range(20):
+            time.sleep(3)
+            try:
+                self.s = serial.Serial(find_port(), 115200, timeout=0.05)
+                self.s.dtr = self.s.rts = True
+                self.login()
+                return
+            except (serial.SerialException, SystemExit):
+                pass
+        sys.exit("the serial did not come back")
 
     def run(self, cmd, timeout=30):
         marker = "@@DONE@@"
@@ -89,16 +109,27 @@ def cmd_send(c, args):
     c.read_for(1, PROMPT)
     chunk, n = 3000, (len(b64) + 2999) // 3000
     print(f"sending {len(data):,} bytes in {n} blocks", flush=True)
-    start, shown = time.time(), -1
-    for i in range(n):
-        c.write(f"printf '%s' '{b64[i * chunk:(i + 1) * chunk]}' >> {remote}.b64\n")
-        if not PROMPT.search(c.read_for(5, PROMPT)):
-            sys.exit(f"the console stopped answering at block {i + 1}/{n}")
-        pct = (i + 1) * 100 // n
+    start, shown, i, drops = time.time(), -1, 0, 0
+    while i < n:
+        try:
+            c.write(f"printf '%s' '{b64[i * chunk:(i + 1) * chunk]}' >> {remote}.b64\n")
+            if not PROMPT.search(c.read_for(5, PROMPT)):
+                sys.exit(f"the console stopped answering at block {i + 1}/{n}")
+            i += 1
+        except serial.SerialException:
+            # go on from the blocks that reached the file: a line cut short never ran
+            drops += 1
+            if drops > 20:
+                sys.exit("the serial dropped 20 times, giving up")
+            print(f"serial dropped at block {i + 1}/{n}, reconnecting", flush=True)
+            c.reopen()
+            i = int(c.run(f"wc -c < {remote}.b64").strip() or 0) // chunk
+            continue
+        pct = i * 100 // n
         if pct // 10 > shown:   # a line every 10 %, with the time left
             shown = pct // 10
-            left = int((time.time() - start) / (i + 1) * (n - i - 1))
-            sent = min(len(data), (i + 1) * chunk * 3 // 4)
+            left = int((time.time() - start) / i * (n - i))
+            sent = min(len(data), i * chunk * 3 // 4)
             print(f"{pct:3d}% ({sent / 1e6:.1f} of {len(data) / 1e6:.1f} MB), ~{left // 60}m{left % 60:02d}s left", flush=True)
     print("decoding on the console and checking the SHA-256", flush=True)
     out = c.run(f"base64 -d {remote}.b64 > {remote} && rm {remote}.b64 && sha256sum {remote}")
