@@ -262,7 +262,7 @@ for _, name in ipairs({"default:furnace", "default:furnace_active"}) do
 	})
 end
 
--- mobs killed by the player: monsters 5, adult animals 1 to 3
+-- mobs killed by the player: monsters 5 (or their own _goodluck_xp), adult animals 1 to 3
 if core.get_modpath("mobs") then
 	local check_for_death = mobs.mob_class.check_for_death
 	function mobs.mob_class.check_for_death(self, cause)
@@ -271,7 +271,7 @@ if core.get_modpath("mobs") then
 		local dead = check_for_death(self, cause)
 		local killer = cause and cause.puncher
 		if alive and self.state == "die" and not self.child and killer and killer:is_player() then
-			local xp = self.type == "monster" and 5 or self.type == "animal" and math.random(1, 3) or 0
+			local xp = self._goodluck_xp or self.type == "monster" and 5 or self.type == "animal" and math.random(1, 3) or 0
 			if pos and xp > 0 then
 				goodluck_xp.drop(pos, xp)
 			end

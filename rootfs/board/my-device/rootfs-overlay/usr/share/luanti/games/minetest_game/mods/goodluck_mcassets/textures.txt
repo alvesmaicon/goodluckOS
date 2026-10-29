@@ -304,6 +304,13 @@ goodluck_villages_job_librarian.png	{entity/villager/profession/librarian}
 goodluck_villages_job_farmer.png	{entity/villager/profession/farmer}
 goodluck_models_boat.png	{entity/boat/oak}
 goodluck_models_arrow.png	{entity/projectiles/arrow}
+# The Nether's monsters (the ghast's eyes and mouth open as it fires)
+goodluck_nether_ghast.png	{entity/ghast/ghast}
+goodluck_nether_ghast_shooting.png	{entity/ghast/ghast_shooting}
+goodluck_nether_blaze.png	{entity/blaze/blaze}
+goodluck_nether_magma_cube.png	{entity/slime/magmacube}
+goodluck_nether_zombified_piglin.png	{entity/piglin/zombified_piglin}
+goodluck_nether_wither_skeleton.png	{entity/skeleton/wither_skeleton}
 
 # Wool and dye
 wool_white.png	{block/white_wool}
@@ -431,6 +438,11 @@ goodluck_nether_glowstone_dust.png	{item/glowstone_dust}
 goodluck_nether_quartz.png	{item/quartz}
 goodluck_nether_brick.png	{item/nether_brick}
 goodluck_nether_wart.png	{item/nether_wart}
+goodluck_nether_blaze_rod.png	{item/blaze_rod}
+goodluck_nether_blaze_powder.png	{item/blaze_powder}
+goodluck_nether_ghast_tear.png	{item/ghast_tear}
+goodluck_nether_magma_cream.png	{item/magma_cream}
+goodluck_nether_fire_charge.png	{item/fire_charge}
 goodluck_monsters_bone.png	{item/bone}
 goodluck_monsters_rotten_flesh.png	{item/rotten_flesh}
 mobs_leather.png	{item/leather}
@@ -557,6 +569,11 @@ character.png	{entity/player/wide/steve}^[sheet:1x2:0,0
 goodluck_monsters_zombie_egg.png	{item/zombie_spawn_egg}
 goodluck_monsters_skeleton_egg.png	{item/skeleton_spawn_egg}
 goodluck_monsters_spider_egg.png	{item/spider_spawn_egg}
+goodluck_nether_ghast_egg.png	{item/ghast_spawn_egg}
+goodluck_nether_blaze_egg.png	{item/blaze_spawn_egg}
+goodluck_nether_magma_cube_egg.png	{item/magma_cube_spawn_egg}
+goodluck_nether_zombified_piglin_egg.png	{item/zombified_piglin_spawn_egg}
+goodluck_nether_wither_skeleton_egg.png	{item/wither_skeleton_spawn_egg}
 goodluck_horse_horse_egg.png	{item/horse_spawn_egg}
 goodluck_horse_donkey_egg.png	{item/donkey_spawn_egg}
 goodluck_horse_mule_egg.png	{item/mule_spawn_egg}
