@@ -2,7 +2,8 @@
 -- a glass bottle filled at any water, then brewed (brewing.lua) into the awkward potion and on into the rest, longer
 -- with redstone, stronger with glowstone, splash with gunpowder. Drunk, a potion gives its effects (goodluck_effects)
 -- and leaves its bottle; thrown, a splash potion breaks where it lands and gives them to whoever is within 4, less
--- the farther (Healing and Harming also on mobs). Fermented spider eyes, glistering melon slices and rabbit feet too
+-- the farther (Healing and Harming also on mobs). Fermented spider eyes, glistering melon slices and rabbit feet too,
+-- and the cauldron (cauldron.lua)
 local S = core.get_translator("goodluck_potions")
 local N = "goodluck_potions:"
 local E = goodluck_effects
@@ -341,3 +342,4 @@ if bunny and bunny.drops then
 end
 
 dofile(core.get_modpath("goodluck_potions") .. "/brewing.lua")
+dofile(core.get_modpath("goodluck_potions") .. "/cauldron.lua")

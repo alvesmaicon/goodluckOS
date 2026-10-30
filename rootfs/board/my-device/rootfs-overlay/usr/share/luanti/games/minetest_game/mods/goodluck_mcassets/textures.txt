@@ -716,3 +716,14 @@ goodluck_potions_slot_fuel.png	{gui/sprites/container/slot/brewing_fuel}
 # The witch (goodluck_monsters) and her egg
 goodluck_monsters_witch.png	{entity/witch/witch}
 goodluck_monsters_witch_egg.png	{item/witch_spawn_egg}
+
+# The cauldron (goodluck_potions; its content the still water's first frame, tinted by the game) and the witch's
+# swamp (goodluck_swamp): the vine in Minecraft's swamp foliage colour, the flower pot
+goodluck_potions_cauldron_side.png	{block/cauldron_side}
+goodluck_potions_cauldron_top.png	{block/cauldron_top}
+goodluck_potions_cauldron_bottom.png	{block/cauldron_bottom}
+goodluck_potions_cauldron_inner.png	{block/cauldron_inner}
+goodluck_potions_cauldron_content.png	{block/water_still}^[verticalframe:32:0
+goodluck_potions_cauldron_item.png	{item/cauldron}
+goodluck_swamp_vine.png	{block/vine}^[multiply:#6a7039
+goodluck_swamp_flower_pot.png	{block/flower_pot}
