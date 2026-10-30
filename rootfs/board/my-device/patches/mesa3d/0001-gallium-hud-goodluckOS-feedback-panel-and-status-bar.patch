@@ -140,7 +140,7 @@ default).
        s++;
     }
  
-@@ -485,6 +547,489 @@
+@@ -485,6 +547,512 @@
   * The texture is usually the back buffer being displayed.
   */
  static void
@@ -154,6 +154,29 @@ default).
 +   quads[num_quads].y2 = y1 + h;
 +   memcpy(quads[num_quads].color, color, sizeof(quads[0].color));
 +   num_quads++;
++}
++
++static unsigned
++pill_inset(float r, unsigned row)
++{
++   float dy = row + 0.5f - r;
++
++   return r - sqrtf(r * r - dy * dy) + 0.5f;
++}
++
++/* round ends, as runs of rows of the same width; a pixel is in when its centre is */
++static void
++hud_pill(unsigned x, unsigned y, unsigned w, unsigned h, const float *color)
++{
++   float r = MIN2(w, h) / 2.0f;
++
++   for (unsigned i = 0, n; i < h; i += n) {
++      unsigned inset = pill_inset(r, i);
++
++      for (n = 1; i + n < h && pill_inset(r, i + n) == inset; n++)
++         ;
++      hud_quad(x + inset, y + i, w - 2 * inset, n, color);
++   }
 +}
 +
 +static unsigned
@@ -483,7 +506,7 @@ default).
 +   unsigned th = hud_text_height(hud);
 +   unsigned bh = (th > 16 ? th : 16) + 8;
 +   unsigned y = 6, x, items = 0;
-+   unsigned clock_w = 0, vol_w = 0, bat_w = 0, cpu_w = 0, pmic_w = 0, total = 8 + 8;
++   unsigned clock_w = 0, vol_w = 0, bat_w = 0, cpu_w = 0, pmic_w = 0, total = 12 + 12;
 +   bool audio = status.show_audio && status.volume >= 0;
 +   float bg[] = {12 / 255.0, 12 / 255.0, 14 / 255.0, status.opacity};
 +
@@ -527,8 +550,8 @@ default).
 +   x = hud->fb_width - 8 - total;
 +
 +   if (status.opacity > 0)
-+      hud_quad(x, y, total, bh, bg);
-+   x += 8;
++      hud_pill(x, y, total, bh, bg);
++   x += 12;
 +   if (cpu_w) {
 +      chip_icon(x, y + (bh - 16) / 2, temp_color(status.cpu_temp));
 +      x += 20;
@@ -630,7 +653,7 @@ default).
  hud_draw_results(struct hud_context *hud, struct pipe_resource *tex)
  {
     struct cso_context *cso = hud->cso;
-@@ -496,9 +1041,12 @@
+@@ -496,9 +1064,12 @@
           { &hud->font_sampler_state };
     struct hud_pane *pane;
     struct pipe_resource *releasebuf[3] = { 0 };
@@ -644,7 +667,7 @@ default).
  
     hud->fb_width = tex->width0;
     hud->fb_height = tex->height0;
-@@ -606,18 +1154,31 @@
+@@ -606,18 +1177,31 @@
     }
     hud->bg.vbuf.buffer.resource = NULL;
  
@@ -678,7 +701,7 @@ default).
        goto done;
  
     /* draw accumulated vertices for white lines */
-@@ -650,6 +1211,7 @@
+@@ -650,6 +1234,7 @@
     }
  
  done:
@@ -686,7 +709,7 @@ default).
     pipe_resource_release(pipe, releasebuf[2]);
     pipe_resource_release(pipe, releasebuf[1]);
     pipe_resource_release(pipe, releasebuf[0]);
-@@ -745,12 +1307,16 @@
+@@ -745,12 +1330,16 @@
           }
        }
  
@@ -703,7 +726,7 @@ default).
     /* unmap the uploader's vertex buffer before drawing */
     u_upload_unmap(pipe->stream_uploader);
  }
-@@ -1774,13 +2340,14 @@
+@@ -1774,13 +2363,14 @@
        static const char *fragment_shader_text = {
           "FRAG\n"
           "DCL IN[0], GENERIC[0], LINEAR\n"
@@ -719,7 +742,7 @@ default).
           "END\n"
        };
  
-@@ -1845,6 +2412,7 @@
+@@ -1845,6 +2435,7 @@
           "DCL IN[0..1]\n"
           "DCL OUT[0], POSITION\n"
           "DCL OUT[1], GENERIC[0]\n" /* texcoord */
@@ -727,7 +750,7 @@ default).
           /* [0] = color,
            * [1] = (2/fb_width, 2/fb_height, xoffset, yoffset)
            * [2] = (xscale, yscale, 0, 0)
-@@ -1865,6 +2433,7 @@
+@@ -1865,6 +2456,7 @@
           "MOV OUT[0].zw, IMM[0]\n"
  
           "MUL OUT[1], IN[1], IMM[1]\n"
