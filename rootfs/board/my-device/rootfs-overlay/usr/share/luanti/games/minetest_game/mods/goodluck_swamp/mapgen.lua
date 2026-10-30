@@ -9,6 +9,16 @@ local WET = {[SWAMP] = true, [core.get_biome_id("swamp_shore")] = true}
 local REGION = 3
 local SEED = tonumber(core.get_mapgen_setting("seed")) or 0
 local W, D = 7, 9
+-- a hut and the ring around it keep off a chunk's edge, where a later neighbour's swamp oak reaches 4 nodes in
+local EDGE = 5
+-- what keeps a hut from a spot, and what it clears around itself
+local TRUNK, FOLIAGE, VINES = {}, {}, {}
+for name, def in pairs(core.registered_nodes) do
+	local g = def.groups or {}
+	TRUNK[name] = (g.tree or 0) > 0 or nil
+	FOLIAGE[name] = ((g.leaves or 0) > 0 or (g.leafdecay or 0) > 0 or (g.vine or 0) > 0) or nil
+	VINES[name] = (g.vine or 0) > 0 or nil
+end
 
 -- Minecraft's LeaveVineDecorator: on each side of each leaf with air there, one time in four, a vine hanging from it
 -- and down while there is air, 4 more at most. The leaves' rings are where the air is. A vine lets the light through,
@@ -143,6 +153,42 @@ local function width(dir)
 	return (dir == "north" or dir == "south") and W or D, (dir == "north" or dir == "south") and D or W
 end
 
+local function trunk(vm, x1, y1, z1, x2, y2, z2)
+	local p = {}
+	for x = x1, x2 do
+		for z = z1, z2 do
+			p.x, p.z = x, z
+			for y = y1, y2 do
+				p.y = y
+				if TRUNK[vm:get_node_at(p).name] then
+					return true
+				end
+			end
+		end
+	end
+	return false
+end
+
+-- before the hut: its footprint emptied up to the roof, the leaves gone from the ring around it up to 3 over the
+-- roof, and the vines from one ring further, where they may hang from those leaves
+local function clear(vm, x0, y0, z0, wx, wz)
+	local p, air = {}, {name = "air"}
+	for x = x0 - 2, x0 + wx + 1 do
+		for z = z0 - 2, z0 + wz + 1 do
+			local ring = math.max(x0 - x, x - x0 - wx + 1, z0 - z, z - z0 - wz + 1, 0)
+			p.x, p.z = x, z
+			for y = y0 - 4, y0 + 7 do
+				p.y = y
+				local name = vm:get_node_at(p).name
+				if name ~= "air" and (ring == 0 and y > y0 and y <= y0 + 4 or VINES[name] or
+						FOLIAGE[name] and ring <= 1 and y >= y0) then
+					vm:set_node_at(p, air)
+				end
+			end
+		end
+	end
+end
+
 local POTIONS = {"night_vision", "invisibility", "leaping", "fire_resistance", "swiftness", "slowness",
 	"water_breathing", "healing", "harming", "poison", "regeneration", "strength", "weakness"}
 local DIRS = {"north", "east", "south", "west"}
@@ -165,11 +211,13 @@ local function hut(vm, minp, maxp, rand)
 	if #swamp < 64 then
 		return
 	end
-	-- a few tries at a spot in the swamp whose footprint is mostly swamp and not too uneven, within the chunk
+	-- a few tries at a spot in the swamp whose footprint is mostly swamp and not too uneven, with no trunk in it or
+	-- around it, out of reach of the chunks around
 	for _ = 1, 12 do
 		local i = swamp[rand:next(1, #swamp)] - 1
-		local x0 = math.max(minp.x + 2, math.min(maxp.x - wx - 2, minp.x + i % sx - math.floor(wx / 2)))
-		local z0 = math.max(minp.z + 2, math.min(maxp.z - wz - 2, minp.z + math.floor(i / sx) - math.floor(wz / 2)))
+		local x0 = math.max(minp.x + EDGE, math.min(maxp.x - EDGE - wx + 1, minp.x + i % sx - math.floor(wx / 2)))
+		local z0 = math.max(minp.z + EDGE, math.min(maxp.z - EDGE - wz + 1,
+			minp.z + math.floor(i / sx) - math.floor(wz / 2)))
 		local sum, n, wet, lo, hi = 0, 0, 0, math.huge, -math.huge
 		for z = z0, z0 + wz - 1 do
 			for x = x0, x0 + wx - 1 do
@@ -184,7 +232,8 @@ local function hut(vm, minp, maxp, rand)
 			end
 		end
 		local y0 = math.floor(sum / n)
-		if wet * 2 >= n and hi - lo <= 4 and y0 + 7 <= maxp.y and lo - 8 >= minp.y then
+		if wet * 2 >= n and hi - lo <= 4 and y0 + 7 <= maxp.y and lo - 8 >= minp.y and
+				not trunk(vm, x0 - 1, y0, z0 - 1, x0 + wx, y0 + 7, z0 + wz) then
 			local at, face = frame(dir, x0, z0)
 			local p = {}
 			local cauldron = "goodluck_potions:cauldron_" .. POTIONS[rand:next(1, #POTIONS)] .. "_" .. rand:next(1, 3)
@@ -205,6 +254,7 @@ local function hut(vm, minp, maxp, rand)
 				end
 				vm:set_node_at(p, core.registered_nodes[node.name] and node or {name = "air"})
 			end
+			clear(vm, x0, y0, z0, wx, wz)
 			boxes(set)
 			-- the stilts: logs from under the floor down to the ground (through water and air)
 			for _, c in ipairs({{1, 2}, {5, 2}, {1, 7}, {5, 7}}) do
@@ -219,9 +269,9 @@ local function hut(vm, minp, maxp, rand)
 					vm:set_node_at(p, {name = LOG})
 				end
 			end
-			-- its shade, down to the ground
-			vm:calc_lighting({x = x0 - 1, y = math.max(minp.y, lo - 2), z = z0 - 1},
-				{x = x0 + wx, y = y0 + 6, z = z0 + wz})
+			-- its shade, down to the ground, and the light where the leaves were
+			vm:calc_lighting({x = x0 - 2, y = math.min(lo, y0 - 4) - 1, z = z0 - 2},
+				{x = x0 + wx + 1, y = y0 + 7, z = z0 + wz + 1})
 			local wxp, wzp = at(2, 5)
 			return {x = wxp, y = y0 + 2, z = wzp}, dir
 		end
@@ -259,7 +309,8 @@ core.register_on_generated(function(vm, minp, maxp, blockseed)
 	local made
 	if minp.y <= 1 and maxp.y >= 1 and cx == rx * REGION + pick:next(0, REGION - 2) and
 			cz == rz * REGION + pick:next(0, REGION - 2) then
-		local witch, dir = hut(vm, minp, maxp, rand)
+		-- its own random: the vines' depends on which chunks around were generated first
+		local witch, dir = hut(vm, minp, maxp, PcgRandom(blockseed % 2147483647))
 		if witch then
 			made = witch
 			core.save_gen_notify(N .. "hut", {witch = witch, dir = dir})
