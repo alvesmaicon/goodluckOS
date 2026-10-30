@@ -256,14 +256,14 @@ Left out of mobs, mobs_animal, mobs_monster, stamina, mobs_npc and mob_horse:
 screenshot.jpg, made on textstudio.com, whose terms are unclear. The game
 doesn't use them.
 
-goodluck_* mods (but goodluck_villages' buildings and villagers' textures,
-goodluck_monsters' skins and spider eye, goodluck_chest's halves,
-goodluck_models' chests, minecart, boat, arrow and farm animals' textures,
-goodluck_horse's, goodluck_nether's, goodluck_effects', goodluck_potions',
-goodluck_swamp's and goodluck_end's textures and goodluck_food's pufferfish,
-above), and the stamina, mobs_animal, mobs_monster, x_enchanting, mobs_npc and
-x_bows media above (but
-the half-drawn bow, CC BY-SA 4.0)
+goodluck_* mods and invisibility (but goodluck_villages' buildings and
+villagers' textures, goodluck_monsters' skins and spider eye, goodluck_chest's
+halves, goodluck_models' chests, minecart, boat, arrow and farm animals'
+textures, goodluck_horse's, goodluck_nether's, goodluck_effects',
+goodluck_potions', goodluck_swamp's and goodluck_end's textures and
+goodluck_food's pufferfish, above), and the stamina, mobs_animal,
+mobs_monster, x_enchanting, mobs_npc and x_bows media above (but the
+half-drawn bow, CC BY-SA 4.0)
   Code, pixel art, the rat's and the bomb mushroom's models, and the item
   pickup, experience, bow, monster, horse equip and anvil sounds made for
   goodluckOS, under goodluckOS's license, GPL-2.0.
