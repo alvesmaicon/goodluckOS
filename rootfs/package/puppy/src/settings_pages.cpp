@@ -119,6 +119,8 @@ std::string SettingsScreen::pageHint(Page p) const {
     switch (p) {
         case Page::Tabs: return tr("Tabs switched off are hidden; their games still show in All Games and My List.");
         case Page::System: return tr(powerProfiles()[profile].hint);
+        case Page::Network:
+            return net.networkMode ? "" : tr("Set the USB cable to Network, on the System page, to use it.");
         case Page::ScraperRun: return tr("Starting a game pauses the scraper. Start goes on from where it stopped.");
         case Page::Resize:
             if (resize.pending)
@@ -481,6 +483,15 @@ std::vector<Row> SettingsScreen::systemPage() {
         profile = i;
         setPowerProfile(i);
     }));
+    Row mode = Row::choice("USB cable", {"Files (MTP)", "Network"}, net.networkMode ? 1 : 0, [this](int i) {
+        setUsbMode(i == 1);
+        net = NetworkStatus::read();
+        netRead = SDL_GetTicks();
+    });
+    mode.hint = "Network: the PC or phone on the cable shares its connection with the console (Internet Sharing on a Mac, "
+                "the adapter's Sharing tab on Windows, Ethernet tethering on a phone). Files: HOME shows up on it as a drive. "
+                "Not both at once.";
+    rows.push_back(mode);
     rows.push_back(Row::link("System Info", [this] {
         info = SystemInfo::read();
         home = homeUsage();
@@ -555,19 +566,9 @@ std::vector<Row> SettingsScreen::infoPage() {
     return rows;
 }
 
-// The USB cable as a network: the PC or phone on it shares its internet with the console
+// The USB cable as a network (System > USB cable): the PC or phone on it shares its internet with the console
 std::vector<Row> SettingsScreen::networkPage() {
     std::vector<Row> rows;
-    Row mode = Row::choice("USB cable", {"Files (MTP)", "Network"}, net.networkMode ? 1 : 0, [this](int i) {
-        setUsbMode(i == 1);
-        net = NetworkStatus::read();
-        netRead = SDL_GetTicks();
-    });
-    mode.hint = "Network: the PC or phone on the cable shares its connection with the console (Internet Sharing on a Mac, "
-                "the adapter's Sharing tab on Windows, Ethernet tethering on a phone). Files: HOME shows up on it as a drive. "
-                "Not both at once.";
-    rows.push_back(mode);
-
     const char* status = "Off (the cable is for files)";
     if (net.networkMode) {
         if (!net.hostUp) status = "No PC or phone on the cable";

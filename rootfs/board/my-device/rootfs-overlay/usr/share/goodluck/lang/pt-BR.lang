@@ -81,6 +81,7 @@ Files (MTP) = Arquivos (MTP)
 Network: the PC or phone on the cable shares its connection with the console (Internet Sharing on a Mac, the adapter's Sharing tab on Windows, Ethernet tethering on a phone). Files: HOME shows up on it as a drive. Not both at once. = Rede: o PC ou celular no cabo compartilha a conexão com o console (Compartilhamento de Internet no Mac, aba Compartilhamento do adaptador no Windows, tethering por Ethernet no celular). Arquivos: a HOME aparece nele como um drive. Nunca os dois ao mesmo tempo.
 Status = Estado
 Off (the cable is for files) = Desligada (o cabo é para arquivos)
+Set the USB cable to Network, on the System page, to use it. = Para usar, ponha o Cabo USB em Rede, na página Sistema.
 No PC or phone on the cable = Nenhum PC ou celular no cabo
 Connected, waiting for an address = Conectado, esperando um endereço
 Connected = Conectado

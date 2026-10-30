@@ -503,6 +503,7 @@ void SettingsScreen::renderPage(Ui& ui) {
         SDL_Rect r{kPageX, y, width, h - 2};
         const SDL_Color picked = sel ? ui.selection(r, true) : theme().item;
         const SDL_Color text = !row.enabled ? theme().dim : picked;
+        const SDL_Color quiet = sel && theme().showcase ? text : theme().muted;    // a value on Showcase's pill is ink
         const int right = r.x + r.w - 8;
         const int mid = r.y + r.h / 2;
         const int fontH = TTF_FontHeight(fonts.desc);
@@ -545,13 +546,13 @@ void SettingsScreen::renderPage(Ui& ui) {
                 ui.sideTriangle(right - 4, mid, 5, false, row.enabled ? (sel ? ui.accentOn(true) : theme().muted) : theme().dim);
                 const int vw = textWidth(fonts.small, row.value);
                 valueW = 16 + (vw ? vw + 8 : 0);
-                drawText(renderer, fonts.small, row.value, right - valueW + 4, mid - TTF_FontHeight(fonts.small) / 2, theme().muted);
+                drawText(renderer, fonts.small, row.value, right - valueW + 4, mid - TTF_FontHeight(fonts.small) / 2, quiet);
                 break;
             }
             case Row::Kind::Action: {
                 const int vw = textWidth(fonts.small, row.value);
                 valueW = vw;
-                drawText(renderer, fonts.small, row.value, right - vw, mid - TTF_FontHeight(fonts.small) / 2, theme().muted);
+                drawText(renderer, fonts.small, row.value, right - vw, mid - TTF_FontHeight(fonts.small) / 2, quiet);
                 break;
             }
             default: break;
