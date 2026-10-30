@@ -10,7 +10,7 @@ A full image takes 1-2 hours and is only needed for a new card. Use `dev/gl` (se
 - Overlay files (`rootfs/board/my-device/rootfs-overlay/...`): no build, just `dev/gl deploy <paths>`.
 - Mesa patch: `dev/gl rootfs mesa3d-rebuild`, then copy `libgallium-*.so`.
 - Kernel/DTS: `dev/gl kernel`, then write `android_boot_a33.img` at sector 172032.
-- Luanti (`feat/luanti*`): `dev/gl luanti-pkg <commit>`, then `dev/luanti-console.sh send <card> <package>` runs Update Luanti on the console.
+- Luanti (in `develop`; a task on a short-lived `feat/luanti-<x>`): `dev/gl luanti-pkg <commit>`, then `dev/luanti-console.sh send <card> <package>` runs Update Luanti on the console.
 - The scraper, gl-scrape (`rootfs/package/gl-scrape`): `dev/gl app gl-scrape`, then `dev/gl deploy`. ScreenScraper's developer credentials come from `.env` (dev/README), never from git; the native build scrapes in the container.
 - UI check without the console: `dev/gl shot puppy <name> "<keys> |"`, then look at the PNG.
 - Regression check: `dev/gl scenes <dir>` before and after a change, then `dev/gl scenes-diff <dir> <dir>` (pixel for pixel, `dev/scenes/scenes.txt`). Its games are fake; README screenshots need the real covers (the owner's `readme-shots.sh` set).

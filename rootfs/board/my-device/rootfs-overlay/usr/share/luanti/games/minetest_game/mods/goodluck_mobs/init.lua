@@ -72,7 +72,8 @@ function mobs:spawn_abm_check(pos, node, name)
 end
 
 -- As on Minecraft Java, a monster 32 nodes or more from every player for 30 s goes away at 1 in 40 a second, and
--- at once past 128: the monsters stay where the player is, and those left far behind stop running their AI
+-- at once past 128: the monsters stay where the player is, and those left far behind stop running their AI. One
+-- that must stay (mobs_redo's lifetimer of 20000, as a witch hut's) stays
 local timer = 0
 core.register_globalstep(function(dtime)
 	timer = timer + dtime
@@ -80,7 +81,7 @@ core.register_globalstep(function(dtime)
 	timer = 0
 	local players = core.get_connected_players()
 	for _, ent in pairs(core.luaentities) do
-		local pos = is_monster(ent) and not ent._nametag and ent.object:get_pos()
+		local pos = is_monster(ent) and not ent._nametag and (ent.lifetimer or 0) < 20000 and ent.object:get_pos()
 		if pos then
 			local far = math.huge
 			for _, player in ipairs(players) do

@@ -712,3 +712,46 @@ goodluck_potions_progress.png	{gui/sprites/container/brewing_stand/brew_progress
 goodluck_potions_fuel.png	{gui/sprites/container/brewing_stand/fuel_length}
 goodluck_potions_slot_bottle.png	{gui/sprites/container/slot/potion}
 goodluck_potions_slot_fuel.png	{gui/sprites/container/slot/brewing_fuel}
+
+# The witch (goodluck_monsters) and her egg
+goodluck_monsters_witch.png	{entity/witch/witch}
+goodluck_monsters_witch_egg.png	{item/witch_spawn_egg}
+
+# The cauldron (goodluck_potions; its content the still water's first frame, tinted by the game) and the witch's
+# swamp (goodluck_swamp): the vine in Minecraft's swamp foliage colour, the flower pot
+goodluck_potions_cauldron_side.png	{block/cauldron_side}
+goodluck_potions_cauldron_top.png	{block/cauldron_top}
+goodluck_potions_cauldron_bottom.png	{block/cauldron_bottom}
+goodluck_potions_cauldron_inner.png	{block/cauldron_inner}
+goodluck_potions_cauldron_content.png	{block/water_still}^[verticalframe:32:0
+goodluck_potions_cauldron_item.png	{item/cauldron}
+goodluck_swamp_vine.png	{block/vine}^[multiply:#6a7039
+goodluck_swamp_flower_pot.png	{block/flower_pot}
+
+# The End (goodluck_end): its creatures, blocks and items, the dragon and the sky; the end portal's surface stays the
+# game's own (Minecraft draws it with a shader)
+goodluck_end_enderman.png	{entity/enderman/enderman}
+goodluck_end_enderman_eyes.png	{entity/enderman/enderman_eyes}
+goodluck_end_silverfish.png	{entity/silverfish/silverfish}
+goodluck_end_dragon.png	{entity/enderdragon/dragon}
+goodluck_end_dragon_eyes.png	{entity/enderdragon/dragon_eyes}
+goodluck_end_dragon_fireball.png	{entity/enderdragon/dragon_fireball}
+goodluck_end_end_crystal.png	{entity/end_crystal/end_crystal}
+goodluck_end_sky.png	{environment/end_sky}
+goodluck_end_ender_pearl.png	{item/ender_pearl}
+goodluck_end_ender_eye.png	{item/ender_eye}
+goodluck_end_end_crystal_item.png	{item/end_crystal}
+goodluck_end_enderman_egg.png	{item/enderman_spawn_egg}
+goodluck_end_silverfish_egg.png	{item/silverfish_spawn_egg}
+goodluck_end_dragon_egg_item.png	{item/ender_dragon_spawn_egg}
+goodluck_end_end_stone.png	{block/end_stone}
+goodluck_end_end_stone_bricks.png	{block/end_stone_bricks}
+goodluck_end_dragon_egg.png	{block/dragon_egg}
+goodluck_end_frame_top.png	{block/end_portal_frame_top}
+goodluck_end_frame_side.png	{block/end_portal_frame_side}
+goodluck_end_frame_bottom.png	{block/end_portal_frame_bottom}
+goodluck_end_frame_eye.png	{block/end_portal_frame_eye}
+goodluck_end_stonebrick_mossy.png	{block/mossy_stone_bricks}
+goodluck_end_stonebrick_cracked.png	{block/cracked_stone_bricks}
+goodluck_end_stonebrick_chiseled.png	{block/chiseled_stone_bricks}
+goodluck_end_iron_bars.png	{block/iron_bars}

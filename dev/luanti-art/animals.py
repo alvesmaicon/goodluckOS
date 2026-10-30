@@ -206,16 +206,16 @@ def quad(corners, uv):
 
 def humanoid(thin, held=None):
     # Minecraft's humanoid: the head and the body hang from y 0, the arms from the shoulders, the legs from the hips;
-    # the skeleton's limbs 2 pixels wide (its left ones the right ones mirrored, 64x32), the zombie's 4 (64x64); held
-    # in place of the skeleton's bow
+    # the skeleton's limbs 2 pixels wide (64x32), the zombie's 4 (64x64, where the player's left limbs are blank),
+    # both's left ones the right ones mirrored; held in place of the skeleton's bow
     head = box(0, 0, -4, -8, -4, 8, 8, 8) + box(32, 0, -4, -8, -4, 8, 8, 8, grow=0.5)
     if thin:
         right_arm, left_arm = box(40, 16, -1, -2, -1, 2, 12, 2), box(40, 16, -1, -2, -1, 2, 12, 2, mirror=True)
         right_leg, left_leg = box(0, 16, -1, 0, -1, 2, 12, 2), box(0, 16, -1, 0, -1, 2, 12, 2, mirror=True)
         hip = 2
     else:
-        right_arm, left_arm = box(40, 16, -3, -2, -2, 4, 12, 4), box(32, 48, -1, -2, -2, 4, 12, 4)
-        right_leg, left_leg = box(0, 16, -2, 0, -2, 4, 12, 4), box(16, 48, -2, 0, -2, 4, 12, 4)
+        right_arm, left_arm = box(40, 16, -3, -2, -2, 4, 12, 4), box(40, 16, -1, -2, -2, 4, 12, 4, mirror=True)
+        right_leg, left_leg = box(0, 16, -2, 0, -2, 4, 12, 4), box(0, 16, -2, 0, -2, 4, 12, 4, mirror=True)
         hip = 1.9
     # the skeleton's bow: its item image on a square in the right hand, across the arm, drawn by the second texture
     bow = quad([(8, 10, -8), (-8, 10, -8), (-8, 10, 8), (8, 10, 8)], (0, 0, 64, 32)) if thin else ()
@@ -435,6 +435,49 @@ MAGMA_CUBE = [(0, 1, None), (1, 1.0, hop), (4, 1, die)]
 VILLAGER = [(0, 1, None), (1, 1.0, stride(0.7, 0, 1.0)), (3, 0.5, stride(1.4, 0, 0.5)), (4, 1, die), (8, 0.1, lay)]
 
 
+# The witch (goodluck_monsters), 64x128: stands 0-1, walks 1-2, runs 3-3.5, dies 4-5; drinking it stands 6-6.1 and
+# walks 7-8, its nose up with the potion at it (the second texture, blank but then)
+def witch():
+    # Minecraft's witch: the villager's body as VillagerModel.createBodyModel has it in 26.x (the robe 20 long, the
+    # crossed arms from (0, 3, -1)) under a head without the villager's hat layer; the hat a brim and three tiers, each
+    # on the one below it, a little turned; the nose with its mole, and the potion in front of it when it drinks
+    hat = posed(box(0, 95, 0, 0, 0, 1, 2, 1, grow=0.25), (1.75, -2, 2), (-0.20943952, 0, 0.10471976))
+    hat = posed(box(0, 87, 0, 0, 0, 4, 4, 4) + hat, (1.75, -4, 2), (-0.10471976, 0, 0.05235988))
+    hat = posed(box(0, 76, 0, 0, 0, 7, 4, 7) + hat, (1.75, -4, 2), (-0.05235988, 0, 0.02617994))
+    hat = posed(box(0, 64, 0, 0, 0, 10, 2, 10) + hat, (-5, -10.03125, -5))
+    nose = box(24, 0, -1, -1, -6, 2, 4, 2) + posed(box(0, 0, 0, 3, -6.75, 1, 1, 1, grow=-0.25), (0, -2, 0))
+    arms = box(44, 22, -8, -2, -2, 4, 8, 4) + box(44, 22, 4, -2, -2, 4, 8, 4, mirror=True) + \
+        box(40, 38, -4, 2, -2, 8, 4, 4)
+    return [part("head", (0, 0, 0), box(0, 0, -4, -10, -4, 8, 10, 8) + hat),
+            part("nose", (0, -2, 0), nose, gear=potion((64, 128)), parent="head"),
+            part("body", (0, 0, 0), box(16, 20, -4, 0, -3, 8, 12, 6) + box(0, 38, -4, 0, -3, 8, 20, 6, grow=0.5)),
+            part("arms", (0, 3, -1), arms, rot=(-0.75, 0, 0)),
+            part("right_leg", (-2, 12, 0), box(0, 22, -2, 0, -2, 4, 12, 4)),
+            part("left_leg", (2, 12, 0), box(0, 22, -2, 0, -2, 4, 12, 4, mirror=True))]
+
+
+def potion(tex):
+    # the potion held at the nose as WitchItemLayer draws it: 1 and 4 pixels from the nose's pivot, turned 180 about
+    # z, 140 about x, 10 about z and 180 about x, then item/generated's ground display (2 up, half its size) about its
+    # middle; its image on a two-sided square, as held() draws an item
+    at = affine(("t", 1 / 16, 4 / 16, 0), ("r", 2, 180), ("r", 0, 140), ("r", 2, 10), ("r", 0, 180),
+                ("t", 0, 2 / 16, 0), ("s", 0.5), ("t", -0.5, -0.5, -0.5))
+    tr, tl, bl, br = (at((x, y, 0.5)) for x, y in ((1, 1), (0, 1), (0, 0), (1, 0)))
+    w, h = tex
+    mid = at((0.5, 0.5, 0.5))
+    return [([tr, tl, bl, br], (0, 0, w, h)), ([tl, tr, br, bl], (w, 0, 0, h))] + [([mid] * 4, (0, 0, w, h))] * 4
+
+
+def sip(t):
+    # holding a potion its nose goes to (0, 1, -1.5) and turns -0.9 about x
+    return {"nose": (mc_x(-0.9), (0, 3, -1.5))}
+
+
+# its legs swing half as far as the player's, as the villager's
+WITCH = [(0, 1, None), (1, 1.0, stride(0.7, 0, 1.0)), (3, 0.5, stride(0.7, 0, 0.5)), (4, 1, die), (6, 0.1, sip),
+         (7, 1.0, both(sip, stride(0.7, 0, 1.0)))]
+
+
 def boat():
     # Minecraft's boat since 1.14, its bow at +x in its model, turned a quarter so that the bow leads, and 18 down so
     # that the entity sits at the waterline (its renderer lifts the model 6 pixels): the floor's underside on it, the
@@ -505,7 +548,216 @@ ANIMALS = {
     "zombified_piglin": ((64, 64), zombified_piglin(), PIGLIN),
     # the wither skeleton is the skeleton with a stone sword (the renderer draws it 1.2 times as big)
     "wither_skeleton": ((64, 32), humanoid(True, held((64, 32), 1)), WITHER_SKELETON),
+    "witch": ((64, 128), witch(), WITCH),
 }
+
+
+# The End's creatures (goodluck_end), as 26.x has them: the enderman, whose head lifts off its jaw when angry
+# (run 3-3.5, hit 6-6.5), and the silverfish, wriggling all the time
+
+
+def enderman():
+    # Minecraft's enderman: the humanoid 14 up, its limbs 2 a side and 30 long; the hat layer is the jaw the head
+    # leaves behind
+    limb = lambda m, y: box(56, 0, -1, y, -1, 2, 30, 2, mirror=m)
+    return [part("head", (0, -13, 0), box(0, 0, -4, -8, -4, 8, 8, 8)),
+            part("jaw", (0, -13, 0), box(0, 16, -4, -8, -4, 8, 8, 8, grow=-0.5)),
+            part("body", (0, -14, 0), box(32, 16, -4, 0, -2, 8, 12, 4)),
+            part("right_arm", (-5, -12, 0), limb(False, -2)), part("left_arm", (5, -12, 0), limb(True, -2)),
+            part("right_leg", (-2, -5, 0), limb(False, 0)), part("left_leg", (2, -5, 0), limb(True, 0))]
+
+
+def angry(t):
+    return {"head": (None, (0, -5, 0))}
+
+
+def ender_hit(t):
+    # the right arm swung down from forward, as HumanoidModel's attack, with the head up
+    f = math.sin(t / 0.5 * PI)
+    return {"head": (None, (0, -5, 0)), "right_arm": (mc_x(-f * 1.2), None)}
+
+
+# its walk is the humanoid's at half the swing, never past 0.4
+ENDERMAN = [(0, 1, None), (1, 1.0, stride(0.4, 0.4, 1.0)), (3, 0.5, both(angry, stride(0.4, 0.4, 0.5))), (4, 1, die),
+            (6, 0.5, ender_hit)]
+
+SILVERFISH_SIZES = [(3, 2, 2), (4, 3, 2), (6, 4, 3), (3, 3, 3), (2, 2, 3), (2, 1, 2), (1, 1, 2)]
+SILVERFISH_UV = [(0, 0), (0, 4), (0, 9), (0, 16), (0, 22), (11, 0), (13, 4)]
+
+
+def silverfish_z():
+    z, out = -3.5, []
+    for i, (_, _, d) in enumerate(SILVERFISH_SIZES):
+        out.append(z)
+        if i < 6:
+            z += (d + SILVERFISH_SIZES[i + 1][2]) * 0.5
+    return out
+
+
+def silverfish():
+    # Minecraft's silverfish: seven segments from the head (-z) on the ground, three bristle layers over 2, 4 and 1
+    z = silverfish_z()
+    parts = []
+    for i, ((w, h, d), (u, v)) in enumerate(zip(SILVERFISH_SIZES, SILVERFISH_UV)):
+        parts.append(part("segment%d" % i, (0, 24 - h, z[i]), box(u, v, -w * 0.5, 0, -d * 0.5, w, h, d)))
+    d2, d4, d1 = SILVERFISH_SIZES[2][2], SILVERFISH_SIZES[4][2], SILVERFISH_SIZES[1][2]
+    parts.append(part("layer0", (0, 16, z[2]), box(20, 0, -5, 0, -d2 * 0.5, 10, 8, d2)))
+    parts.append(part("layer1", (0, 20, z[4]), box(20, 11, -3, 0, -d4 * 0.5, 6, 4, d4)))
+    parts.append(part("layer2", (0, 19, z[1]), box(20, 18, -3, 0, -d4 * 0.5, 6, 5, d1)))
+    return parts
+
+
+def wriggle(t):
+    # each segment turns cos(age * 0.9 + i * 0.15 pi) * pi * 0.05 * (1 + |i - 2|) and sways sin(...) * pi * 0.2 *
+    # |i - 2|, three times a second (Minecraft's 0.35 s); the layers go with their segments
+    pose = {}
+    for i in range(7):
+        a = 2 * PI * 3 * t + i * 0.15 * PI
+        pose["segment%d" % i] = (mc_y(math.cos(a) * PI * 0.05 * (1 + abs(i - 2))), (math.sin(a) * PI * 0.2 * abs(i - 2), 0, 0))
+    for layer, seg in (("layer0", 2), ("layer1", 4), ("layer2", 1)):
+        pose[layer] = pose["segment%d" % seg]
+    return pose
+
+
+SILVERFISH = [(0, 1, wriggle), (1, 1.0, wriggle), (4, 1, both(die, wriggle))]
+
+
+def axis_quat(axis, a):
+    s = math.sin(a / 2)
+    return (axis[0] * s, axis[1] * s, axis[2] * s, math.cos(a / 2))
+
+
+# the crystal's tilt: 60 degrees about Minecraft's (sin 45, 0, sin 45), glTF's (-sin 45, 0, sin 45)
+TILT = axis_quat((-math.sin(PI / 4), 0, math.sin(PI / 4)), PI / 3)
+
+
+def end_crystal():
+    # Minecraft's end crystal (drawn at twice its size, the mob's visual_size): its base 12x4x12 sunk half a node
+    # under it, the outer glass, the inner glass (0.875 of it) and the cube (0.766 of that) about one middle
+    glass = lambda u, grow: box(u, 0, -4, -4, -4, 8, 8, 8, grow=grow)
+    return [part("base", (0, 0, 0), box(0, 16, -6, 28, -6, 12, 4, 12)),
+            part("outer", (0, 16, 0), glass(0, 0)),
+            part("inner", (0, 16, 0), glass(0, -0.5), parent="outer"),
+            part("cube", (0, 16, 0), glass(32, 4 * 0.875 * 0.765625 - 4), parent="inner")]
+
+
+def spin(t):
+    # 3 degrees a tick about y, the glass bobbing (Minecraft's sin(age * 0.2), here 4 times in the 6 s loop)
+    a = math.radians(t * FPS * 3)
+    f = math.sin(2 * PI * 4 * t / 6) / 2 + 0.5
+    y = (f * f + f) * 0.4 - 1.4
+    ry = mc_y(a)
+    return {"outer": (qmul(ry, TILT), (0, -8 - 8 * y, 0)), "inner": (qmul(TILT, ry), None), "cube": (qmul(TILT, ry), None)}
+
+
+def dragon_box(x, y, z, w, h, d, u, v, mirror=False):
+    return box(u, v, x, y, z, w, h, d, mirror=mirror)
+
+
+def pitch_off(off, rx):
+    # a child's offset turned by its parent's rest pitch, as posed() turns a box
+    x, y, z = off
+    return (x, y * math.cos(rx) - z * math.sin(rx), y * math.sin(rx) + z * math.cos(rx))
+
+
+def add(a, b):
+    return tuple(i + j for i, j in zip(a, b))
+
+
+NECK_REST = [(0, 20, -12 - i * 10) for i in range(5)]
+TAIL_REST = [(0, 10, 60 + i * 10) for i in range(12)]
+HEAD_REST = (0, 20, -62)
+
+
+def ender_dragon():
+    # Minecraft's ender dragon (EnderDragonModel, 256x256): the head with its jaw, five neck and twelve tail
+    # segments (each a joint of its own, placed by the animation as Minecraft chains them), the body with its wings
+    # and their tips, and the legs in three parts, each turned on from the one before; all under the root, which the
+    # animation lifts, moves 48 forward and tilts
+    head = dragon_box(-6, -1, -24, 12, 5, 16, 176, 44) + dragon_box(-8, -8, -10, 16, 16, 16, 112, 30) + \
+        dragon_box(-5, -12, -4, 2, 4, 6, 0, 0, True) + dragon_box(-5, -3, -22, 2, 2, 4, 112, 0, True) + \
+        dragon_box(3, -12, -4, 2, 4, 6, 0, 0, True) + dragon_box(3, -3, -22, 2, 2, 4, 112, 0, True)
+    segment = lambda: dragon_box(-5, -5, -5, 10, 10, 10, 192, 104) + dragon_box(-1, -9, -3, 2, 4, 6, 48, 0)
+    parts = [part("head", HEAD_REST, head),
+             part("jaw", add(HEAD_REST, (0, 4, -8)), dragon_box(-6, 0, -16, 12, 4, 16, 176, 65), parent="head")]
+    parts += [part("neck%d" % i, NECK_REST[i], segment()) for i in range(5)]
+    parts += [part("tail%d" % i, TAIL_REST[i], segment()) for i in range(12)]
+    body_at = (0, 20, 8)
+    body = dragon_box(-12, -16, -16, 24, 24, 64, 0, 0) + sum(
+        (dragon_box(-1, -22, z, 2, 6, 12, 220, 53) for z in (-10, 10, 30)), [])
+    parts.append(part("body", body_at, body))
+    for side, k in (("left", 1), ("right", -1)):
+        m = side == "left"
+        x0 = 0 if m else -56
+        wing = add(body_at, (12 * k, -15, -6))
+        parts.append(part(side + "_wing", wing, dragon_box(x0, -4, -4, 56, 8, 8, 112, 88, m) +
+                          dragon_box(x0, 0, 2, 56, 0, 56, -56, 88, m), parent="body"))
+        parts.append(part(side + "_wing_tip", add(wing, (56 * k, 0, 0)), dragon_box(x0, -2, -2, 56, 4, 4, 112, 136, m) +
+                          dragon_box(x0, 0, 2, 56, 0, 56, -56, 144, m), parent=side + "_wing"))
+        for leg, at, legs in (("front", (12 * k, 0, -6), ((1.3, (-4, -4, -4, 8, 24, 8, 112, 104)),
+                                                       ((0, 20, -1), -0.5, (-3, -1, -3, 6, 24, 6, 226, 138)),
+                                                       ((0, 23, 0), 0.75, (-4, 0, -12, 8, 4, 16, 144, 104)))),
+                              ("hind", (16 * k, -4, 34), ((1.0, (-8, -4, -8, 16, 32, 16, 0, 0)),
+                                                        ((0, 32, -4), 0.5, (-6, -2, 0, 12, 32, 12, 196, 0)),
+                                                        ((0, 31, 4), 0.75, (-9, 0, -20, 18, 6, 24, 112, 0))))):
+            rx, b = legs[0]
+            pivot = add(body_at, at)
+            names = [side + "_" + leg + "_leg", side + "_" + leg + "_leg_tip", side + "_" + leg + "_foot"]
+            parts.append(part(names[0], pivot, dragon_box(*b), rot=(rx, 0, 0), parent="body"))
+            for j, (off, drx, b) in enumerate(legs[1:], 1):
+                pivot = add(pivot, pitch_off(off, rx))
+                rx += drx
+                parts.append(part(names[j], pivot, dragon_box(*b), rot=(rx, 0, 0), parent=names[j - 1]))
+    return parts
+
+
+def dragon_pose(period):
+    # EnderDragonModel.setupAnim in a straight, level flight (its flight history all alike): the wings beat, the jaw
+    # opens and shuts, the body heaves and the legs with it, the neck and the tail wave as they are chained segment by
+    # segment, 10 apart
+    def pose(t):
+        f = 2 * PI * t / period
+        out = {"jaw": (mc_x((math.sin(f) + 1) * 0.2), None)}
+        l3 = math.sin(f - 1) + 1
+        l3 = (l3 * l3 + l3 * 2) * 0.05
+        out["root"] = (mc_x(math.radians(l3 * 2)), (0, (l3 - 2) * 16, -48))
+        x, y, z = NECK_REST[0]
+        for i in range(5):
+            rx = math.cos(i * 0.45 + f) * 0.15
+            out["neck%d" % i] = (mc_x(rx), (x - NECK_REST[i][0], y - NECK_REST[i][1], z - NECK_REST[i][2]))
+            y += math.sin(rx) * 10
+            z -= math.cos(rx) * 10
+        out["head"] = (None, (x - HEAD_REST[0], y - HEAD_REST[1], z - HEAD_REST[2]))
+        wx, wz = 0.125 - math.cos(f) * 0.2, -(math.sin(f) + 0.125) * 0.8
+        tip = (math.sin(f + 2) + 0.5) * 0.75
+        out["left_wing"] = (mc_rot(wx, -0.25, wz), None)
+        out["right_wing"] = (mc_rot(wx, 0.25, -wz), None)
+        out["left_wing_tip"] = (mc_z(tip), None)
+        out["right_wing_tip"] = (mc_z(-tip), None)
+        for side in ("left", "right"):
+            out[side + "_front_leg"] = (mc_x(l3 * 0.1), None)
+            out[side + "_front_leg_tip"] = (mc_x(-l3 * 0.1), None)
+            out[side + "_front_foot"] = (mc_x(l3 * 0.1), None)
+            for k in ("_hind_leg", "_hind_leg_tip", "_hind_foot"):
+                out[side + k] = (mc_x(l3 * 0.1), None)
+        x, y, z = TAIL_REST[0]
+        sway = 0.0
+        for i in range(12):
+            sway += math.sin(i * 0.45 + f) * 0.05
+            out["tail%d" % i] = (mc_x(-sway), (x - TAIL_REST[i][0], y - TAIL_REST[i][1], z - TAIL_REST[i][2]))
+            y += math.sin(sway) * 10
+            z += math.cos(sway) * 10
+        return out
+    return pose
+
+
+# flying 0-1.75 (Minecraft's beat at full speed), perched 2-2.5 (its 0.1 a tick)
+DRAGON = [(0, 1.75, dragon_pose(1.75)), (2, 0.5, dragon_pose(0.5))]
+
+
+ANIMALS.update({"enderman": ((64, 32), enderman(), ENDERMAN), "silverfish": ((64, 32), silverfish(), SILVERFISH),
+                "end_crystal": ((64, 32), end_crystal(), [(0, 6, spin)]),
+                "ender_dragon": ((256, 256), ender_dragon(), DRAGON)})
 
 
 def normal(a, b, c):

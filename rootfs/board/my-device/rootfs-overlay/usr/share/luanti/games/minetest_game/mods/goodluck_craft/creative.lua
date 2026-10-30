@@ -36,14 +36,15 @@ local function natural(name, def, g)
 		"^farming:cotton_wild$", "^flowers:", "^mobs:cobweb$", "^mobs:beehive$", "^mobs:hearing_vines$",
 		"^goodluck_amethyst:", "^goodluck_nether:netherrack$", "^goodluck_nether:bedrock$", "^goodluck_nether:glowstone$",
 		"^goodluck_nether:soul_sand$", "^goodluck_nether:magma$", "^goodluck_nether:%a+_ore$",
-		"^goodluck_nether:blackstone$", "^goodluck_nether:crying_obsidian$"))
+		"^goodluck_nether:blackstone$", "^goodluck_nether:crying_obsidian$", "^goodluck_end:end_stone$"))
 end
 
 local function functional(name)
 	return matches(name, "^goodluck_craft:crafting_table$", "^default:furnace$", "^default:chest", "^default:bookshelf$",
 		"^default:torch$", "^goodluck_redstone:lamp$", "^default:ladder_", "^default:sign_wall_",
 		"^beds:", "^bones:", "^vessels:", "^fireflies:firefly_bottle$", "^mobs:spawner$", "^goodluck_potions:brewing_stand$", "^mobs:mob_repellent$",
-		"^fire:permanent_flame$", "^goodluck_food:jack_o_lantern$", "^goodluck_nether:wither_skeleton_skull$") and
+		"^fire:permanent_flame$", "^goodluck_food:jack_o_lantern$", "^goodluck_nether:wither_skeleton_skull$",
+		"^goodluck_end:frame$", "^goodluck_end:dragon_egg$") and
 		name ~= "vessels:glass_fragments"
 end
 
@@ -63,7 +64,7 @@ end
 local function tools(name, def, g)
 	return not combat(name, def, g) and (def.type == "tool" or any_group(g, "tool", "rail") or
 		matches(name, "^boats:", "^carts:", "^mobs:saddle$", "^mobs:nametag$", "^mobs:protector",
-		"^goodluck_nether:fire_charge$"))
+		"^goodluck_nether:fire_charge$", "^goodluck_end:ender_pearl$", "^goodluck_end:ender_eye$"))
 end
 
 local function food(name, def, g)

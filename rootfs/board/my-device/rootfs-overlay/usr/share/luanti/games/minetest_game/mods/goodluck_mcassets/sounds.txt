@@ -153,3 +153,31 @@ goodluck_potions_throw	random/bow
 goodluck_potions_break	random/glass1 random/glass2 random/glass3
 goodluck_potions_fill	item/bottle/fill1 item/bottle/fill2 item/bottle/fill3 item/bottle/fill4
 goodluck_potions_brew	block/brewing_stand/brew1 block/brewing_stand/brew2
+
+# The witch (goodluck_monsters): her cackle, hurt, death, drinking and throwing
+goodluck_monsters_witch	entity/witch/ambient1 entity/witch/ambient2 entity/witch/ambient3 entity/witch/ambient4 entity/witch/ambient5
+goodluck_monsters_witch_hurt	entity/witch/hurt1 entity/witch/hurt2 entity/witch/hurt3
+goodluck_monsters_witch_death	entity/witch/death1 entity/witch/death2 entity/witch/death3
+goodluck_monsters_witch_drink	entity/witch/drink1 entity/witch/drink2 entity/witch/drink3 entity/witch/drink4
+goodluck_monsters_witch_throw	entity/witch/throw1 entity/witch/throw2 entity/witch/throw3
+
+# The End (goodluck_end): the enderman, its teleports and stare, the silverfish, the pearl and the eye, the portal,
+# the dragon
+goodluck_end_enderman	mob/endermen/idle1 mob/endermen/idle2 mob/endermen/idle3 mob/endermen/idle4 mob/endermen/idle5
+goodluck_end_enderman_scream	mob/endermen/scream1 mob/endermen/scream2 mob/endermen/scream3 mob/endermen/scream4
+goodluck_end_enderman_stare	mob/endermen/stare
+goodluck_end_enderman_hurt	mob/endermen/hit1 mob/endermen/hit2 mob/endermen/hit3 mob/endermen/hit4
+goodluck_end_enderman_death	mob/endermen/death
+goodluck_end_teleport	mob/endermen/portal mob/endermen/portal2
+goodluck_end_silverfish	mob/silverfish/say1 mob/silverfish/say2 mob/silverfish/say3 mob/silverfish/say4
+goodluck_end_silverfish_hurt	mob/silverfish/hit1 mob/silverfish/hit2 mob/silverfish/hit3
+goodluck_end_silverfish_death	mob/silverfish/kill
+goodluck_end_pearl_throw	random/bow
+goodluck_end_eye_launch	entity/endereye/endereye_launch1 entity/endereye/endereye_launch2
+goodluck_end_eye_death	entity/endereye/dead1 entity/endereye/dead2
+goodluck_end_eye_place	block/end_portal/eyeplace1 block/end_portal/eyeplace2 block/end_portal/eyeplace3
+goodluck_end_portal_open	block/end_portal/endportal
+goodluck_end_dragon	mob/enderdragon/growl1 mob/enderdragon/growl2 mob/enderdragon/growl3 mob/enderdragon/growl4
+goodluck_end_dragon_hurt	mob/enderdragon/hit1 mob/enderdragon/hit2 mob/enderdragon/hit3 mob/enderdragon/hit4
+goodluck_end_dragon_wings	mob/enderdragon/wings1 mob/enderdragon/wings2 mob/enderdragon/wings3 mob/enderdragon/wings4 mob/enderdragon/wings5 mob/enderdragon/wings6
+goodluck_end_dragon_death	mob/enderdragon/end
