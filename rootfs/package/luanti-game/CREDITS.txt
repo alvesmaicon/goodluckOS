@@ -225,6 +225,18 @@ goodluck_potions
   goodluck_food_pufferfish.png, is Pixel Perfection Legacy's too, by the same
   script.
 
+goodluck_end
+  Its textures (the enderman, the silverfish, the ender dragon, the end crystal,
+  their spawn eggs, the ender pearl, the eye of ender, the end crystal item, end
+  stone and its bricks, the end portal frame, the dragon egg, mossy, cracked and
+  chiseled stone bricks, iron bars, the End's sky and the star field its portal
+  is cut from) are Pixel Perfection Legacy's by Nova Wostra, after XSSheep's
+  Pixel Perfection (26.3-97.2,
+  https://modrinth.com/resourcepack/pixel-perfection-legacy), CC BY-SA 4.0,
+  copied by dev/luanti-art/end.py, and so under CC BY-SA 4.0. Its creatures are
+  goodluck_models' meshes of Minecraft's. Its code and its strongholds, laid out
+  as Minecraft's, are goodluckOS's own (see goodluck_* below).
+
 Left out of mobs, mobs_animal, mobs_monster, stamina, mobs_npc and mob_horse:
 screenshot.jpg, made on textstudio.com, whose terms are unclear. The game
 doesn't use them.
@@ -232,8 +244,8 @@ doesn't use them.
 goodluck_* mods (but goodluck_villages' buildings and villagers' textures,
 goodluck_monsters' skins and spider eye, goodluck_chest's halves,
 goodluck_models' chests, minecart, boat, arrow and farm animals' textures,
-goodluck_horse's, goodluck_nether's, goodluck_effects' and goodluck_potions'
-textures and goodluck_food's pufferfish, above), and the stamina,
+goodluck_horse's, goodluck_nether's, goodluck_effects', goodluck_potions' and
+goodluck_end's textures and goodluck_food's pufferfish, above), and the stamina,
 mobs_animal, mobs_monster, x_enchanting, mobs_npc and x_bows media above (but
 the half-drawn bow, CC BY-SA 4.0)
   Code, pixel art, the rat's and the bomb mushroom's models, and the item

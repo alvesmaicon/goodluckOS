@@ -508,6 +508,77 @@ ANIMALS = {
 }
 
 
+# The End's creatures (goodluck_end), as 26.x has them: the enderman, whose head lifts off its jaw when angry
+# (run 3-3.5, hit 6-6.5), and the silverfish, wriggling all the time
+
+
+def enderman():
+    # Minecraft's enderman: the humanoid 14 up, its limbs 2 a side and 30 long; the hat layer is the jaw the head
+    # leaves behind
+    limb = lambda m, y: box(56, 0, -1, y, -1, 2, 30, 2, mirror=m)
+    return [part("head", (0, -13, 0), box(0, 0, -4, -8, -4, 8, 8, 8)),
+            part("jaw", (0, -13, 0), box(0, 16, -4, -8, -4, 8, 8, 8, grow=-0.5)),
+            part("body", (0, -14, 0), box(32, 16, -4, 0, -2, 8, 12, 4)),
+            part("right_arm", (-5, -12, 0), limb(False, -2)), part("left_arm", (5, -12, 0), limb(True, -2)),
+            part("right_leg", (-2, -5, 0), limb(False, 0)), part("left_leg", (2, -5, 0), limb(True, 0))]
+
+
+def angry(t):
+    return {"head": (None, (0, -5, 0))}
+
+
+def ender_hit(t):
+    # the right arm swung down from forward, as HumanoidModel's attack, with the head up
+    f = math.sin(t / 0.5 * PI)
+    return {"head": (None, (0, -5, 0)), "right_arm": (mc_x(-f * 1.2), None)}
+
+
+# its walk is the humanoid's at half the swing, never past 0.4
+ENDERMAN = [(0, 1, None), (1, 1.0, stride(0.4, 0.4, 1.0)), (3, 0.5, both(angry, stride(0.4, 0.4, 0.5))), (4, 1, die),
+            (6, 0.5, ender_hit)]
+
+SILVERFISH_SIZES = [(3, 2, 2), (4, 3, 2), (6, 4, 3), (3, 3, 3), (2, 2, 3), (2, 1, 2), (1, 1, 2)]
+SILVERFISH_UV = [(0, 0), (0, 4), (0, 9), (0, 16), (0, 22), (11, 0), (13, 4)]
+
+
+def silverfish_z():
+    z, out = -3.5, []
+    for i, (_, _, d) in enumerate(SILVERFISH_SIZES):
+        out.append(z)
+        if i < 6:
+            z += (d + SILVERFISH_SIZES[i + 1][2]) * 0.5
+    return out
+
+
+def silverfish():
+    # Minecraft's silverfish: seven segments from the head (-z) on the ground, three bristle layers over 2, 4 and 1
+    z = silverfish_z()
+    parts = []
+    for i, ((w, h, d), (u, v)) in enumerate(zip(SILVERFISH_SIZES, SILVERFISH_UV)):
+        parts.append(part("segment%d" % i, (0, 24 - h, z[i]), box(u, v, -w * 0.5, 0, -d * 0.5, w, h, d)))
+    d2, d4, d1 = SILVERFISH_SIZES[2][2], SILVERFISH_SIZES[4][2], SILVERFISH_SIZES[1][2]
+    parts.append(part("layer0", (0, 16, z[2]), box(20, 0, -5, 0, -d2 * 0.5, 10, 8, d2)))
+    parts.append(part("layer1", (0, 20, z[4]), box(20, 11, -3, 0, -d4 * 0.5, 6, 4, d4)))
+    parts.append(part("layer2", (0, 19, z[1]), box(20, 18, -3, 0, -d4 * 0.5, 6, 5, d1)))
+    return parts
+
+
+def wriggle(t):
+    # each segment turns cos(age * 0.9 + i * 0.15 pi) * pi * 0.05 * (1 + |i - 2|) and sways sin(...) * pi * 0.2 *
+    # |i - 2|, three times a second (Minecraft's 0.35 s); the layers go with their segments
+    pose = {}
+    for i in range(7):
+        a = 2 * PI * 3 * t + i * 0.15 * PI
+        pose["segment%d" % i] = (mc_y(math.cos(a) * PI * 0.05 * (1 + abs(i - 2))), (math.sin(a) * PI * 0.2 * abs(i - 2), 0, 0))
+    for layer, seg in (("layer0", 2), ("layer1", 4), ("layer2", 1)):
+        pose[layer] = pose["segment%d" % seg]
+    return pose
+
+
+SILVERFISH = [(0, 1, wriggle), (1, 1.0, wriggle), (4, 1, both(die, wriggle))]
+ANIMALS.update({"enderman": ((64, 32), enderman(), ENDERMAN), "silverfish": ((64, 32), silverfish(), SILVERFISH)})
+
+
 def normal(a, b, c):
     u = [b[i] - a[i] for i in range(3)]
     v = [c[i] - a[i] for i in range(3)]
