@@ -513,7 +513,7 @@ void LauncherScreen::renderShelf(Ui& ui) {
     ui.roundCorners(box, 10, theme().bg);
     int y = box.y + box.h + 10;
     if (!e->meta.empty()) {
-        drawText(renderer, fonts.small, e->meta, x, y, theme().text, w);
+        drawText(renderer, fonts.small, e->meta, x, y, accent(), w);
         y += TTF_FontLineSkip(fonts.small);
     }
     const std::string played = playedText(*e, true);
