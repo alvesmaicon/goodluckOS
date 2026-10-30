@@ -327,7 +327,7 @@ local function boom(pos, power, by)
 	for _, obj in ipairs(core.get_objects_inside_radius(pos, radius)) do
 		local ent = obj:get_luaentity()
 		local p = obj:get_pos()
-		if p and (obj:is_player() or ent and (ent._cmi_is_mob or ent._goodluck_dragon)) then
+		if p and (obj:is_player() or ent and ent._cmi_is_mob) then
 			local i = 1 - vector.distance(p, pos) / radius
 			if i > 0 and core.line_of_sight(pos, vector.offset(p, 0, 1, 0)) then
 				local dir = vector.direction(pos, vector.offset(p, 0, 1, 0))

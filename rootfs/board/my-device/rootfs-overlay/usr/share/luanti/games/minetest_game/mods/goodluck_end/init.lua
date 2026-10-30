@@ -2,7 +2,7 @@
 -- leads to the nearest stronghold, and the silverfish of the strongholds' spawners (items.lua, mobs.lua); where the
 -- strongholds are and how they are laid out (strongholds.lua, stronghold.lua, drawn in the map generator's threads),
 -- their blocks, the end portal frame and the portal (portal.lua). The End itself, its island, pillars and crystals,
--- far over the world (realm.lua, endgen.lua in the map generator's threads)
+-- far over the world (realm.lua, endgen.lua in the map generator's threads), and its dragon (dragon.lua)
 goodluck_end = {}
 local E = goodluck_end
 local path = core.get_modpath("goodluck_end")
@@ -23,3 +23,4 @@ dofile(path .. "/items.lua")
 dofile(path .. "/mobs.lua")
 E.spawn_endermen()
 dofile(path .. "/portal.lua")
+dofile(path .. "/dragon.lua")

@@ -44,7 +44,7 @@ local function functional(name)
 		"^default:torch$", "^goodluck_redstone:lamp$", "^default:ladder_", "^default:sign_wall_",
 		"^beds:", "^bones:", "^vessels:", "^fireflies:firefly_bottle$", "^mobs:spawner$", "^goodluck_potions:brewing_stand$", "^mobs:mob_repellent$",
 		"^fire:permanent_flame$", "^goodluck_food:jack_o_lantern$", "^goodluck_nether:wither_skeleton_skull$",
-		"^goodluck_end:frame$") and
+		"^goodluck_end:frame$", "^goodluck_end:dragon_egg$") and
 		name ~= "vessels:glass_fragments"
 end
 
