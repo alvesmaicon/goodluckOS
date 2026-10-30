@@ -551,7 +551,11 @@ void LauncherScreen::renderStreaming(Ui& ui) {
 
         const int x = kMargin, w = 300;
         int y = kHeaderH + 2;
-        y += ui.drawWrapped(fonts.titleBold ? fonts.titleBold : fonts.title, e->name, x, y, theme().text, w) + 2;
+        TTF_Font* titleFont = fonts.titleBold ? fonts.titleBold : fonts.title;
+        const int overflow = textWidth(titleFont, e->name) - w;   // one line: a long name scrolls, as in the list
+        drawText(renderer, titleFont, e->name, x, y, theme().text, w,
+                 overflow > 0 ? ui.marqueeOffset("streaming\x1f" + e->category + "\x1f" + e->id, overflow) : 0);
+        y += TTF_FontHeight(titleFont) + 2;
         if (!e->meta.empty()) {
             drawText(renderer, fonts.small, e->meta, x, y, theme().muted, w);
             y += TTF_FontLineSkip(fonts.small);
