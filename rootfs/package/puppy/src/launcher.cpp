@@ -481,7 +481,7 @@ void LauncherScreen::renderRows(Ui& ui, int width) {
 }
 
 // The Showcase style's list (Shelf): the rows, an A-Z rail on the right, and between them the picture
-// over the game's name, system, data, play time and description.
+// over the game's system, data, play time and description (the selected row shows its name).
 void LauncherScreen::renderShelf(Ui& ui) {
     SDL_Renderer* renderer = ui.sdl();
     const Fonts& fonts = ui.font();
@@ -513,7 +513,6 @@ void LauncherScreen::renderShelf(Ui& ui) {
     if (!ui.drawFrame(trailer.frame(), box)) ui.drawIcon(ui.previewIcons(), e->iconPath, box);
     ui.roundCorners(box, 10, theme().bg);
     int y = box.y + box.h + 10;
-    y += ui.drawWrapped(fonts.uiBold, e->name, x, y, theme().text, w);
     drawText(renderer, fonts.small, c.mixed ? e->tag : tr(c.label), x, y, theme().muted, w);
     y += TTF_FontLineSkip(fonts.small) + 6;
     if (!e->meta.empty()) {
@@ -549,9 +548,13 @@ void LauncherScreen::renderStreaming(Ui& ui) {
         }
         SDL_RenderSetClipRect(renderer, nullptr);
 
-        const int x = kMargin, w = 300;
+        const int x = kMargin, w = kScreenW * 3 / 5 - kMargin;
         int y = kHeaderH + 2;
-        y += ui.drawWrapped(fonts.titleBold ? fonts.titleBold : fonts.title, e->name, x, y, theme().text, w) + 2;
+        TTF_Font* titleFont = fonts.titleBold ? fonts.titleBold : fonts.title;
+        const int overflow = textWidth(titleFont, e->name) - w;   // one line: a long name scrolls, as in the list
+        drawText(renderer, titleFont, e->name, x, y, theme().text, w,
+                 overflow > 0 ? ui.marqueeOffset("streaming\x1f" + e->category + "\x1f" + e->id, overflow) : 0);
+        y += TTF_FontHeight(titleFont) + 2;
         if (!e->meta.empty()) {
             drawText(renderer, fonts.small, e->meta, x, y, theme().muted, w);
             y += TTF_FontLineSkip(fonts.small);
