@@ -138,7 +138,7 @@ The 21 `goodluck_*` mods are goodluckOS's, under its license (GPL-2.0):
 
 ![Stardew Valley on the console: the farm on a rainy morning](stardew-valley.png)
 
-The PC build from Steam's "compatibility" branch (1.6.15) is a .NET Framework program, so it runs on Mono, built here for 32-bit ARM. PortMaster's port supplies the rest: JohnnyonFlame's MonoGame, which streams the music from the card instead of RAM, and gl4es, which turns the game's OpenGL into OpenGL ES 2. Our patches cut work the game repeats every frame, and the save serializers are generated ahead of time. About 19 FPS on the farm, the title screen in ~25 s, a save loaded in ~75 s.
+The PC build from Steam's "compatibility" branch (1.6.15) is a .NET Framework program, so it runs on Mono, built here for 32-bit ARM. PortMaster's port supplies the rest: JohnnyonFlame's MonoGame, which streams the music from the card instead of RAM, and gl4es, which turns the game's OpenGL into OpenGL ES 2. Our patches cut work the game repeats every frame, and the save serializers are generated ahead of time. About 19 FPS on the farm, the title screen in ~20 s, a save loaded in ~55 s.
 
 **You supply:** Stardew Valley on Steam, switched to the compatibility branch (Properties > Betas > compatibility), in its macOS or Linux version (the one with `StardewValley.exe`). Tested with the macOS one.
 
@@ -146,7 +146,7 @@ The PC build from Steam's "compatibility" branch (1.6.15) is a .NET Framework pr
 
 ```sh
 dev/stardew/build.sh          # the port in dev/out/stardew/stardewvalley, its patches built against your game
-dev/stardew/build.sh game     # your game's files in dev/out/stardew/gamedata
+dev/stardew/build.sh game     # your game's files in dev/out/stardew/gamedata, the .xnb ones recompressed as LZ4
 dev/stardew/build.sh xmlgen   # the save serializers, into gamedata
 mkdir -p /Volumes/HOME/ports
 cp -R dev/out/stardew/stardewvalley /Volumes/HOME/ports/

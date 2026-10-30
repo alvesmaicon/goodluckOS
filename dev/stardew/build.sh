@@ -4,10 +4,11 @@
 # gl4es, OpenAL Soft, the lz4 shim, PortMaster's managed MonoGame and patches, the HelloMG test.
 #   dev/stardew/build.sh          build into dev/out/stardew/stardewvalley
 #   (dev/out/stardew/altone: a 1 s OpenAL tone, for the console's /tmp)
-#   dev/stardew/build.sh game     dev/out/stardew/gamedata from your own game (SDV_GAME, default: Steam on macOS)
+#   dev/stardew/build.sh game     dev/out/stardew/gamedata from your own game (SDV_GAME, default: Steam on macOS),
+#                                 its .xnb files recompressed from LZX to LZ4 (SdvXnb.exe)
 #   dev/stardew/build.sh smoke    run Mono armhf under qemu-arm (no display): assemblies and native libs load
-#   dev/stardew/build.sh patches  rebuild only stardew.sh, StardewPatches.dll, SVLoader.exe and SdvIcon.exe
-#   dev/stardew/build.sh xmlgen   StardewValley.XmlSerializers.dll (+ its AOT image) in gamedata: the save's
+#   dev/stardew/build.sh patches  rebuild only stardew.sh, StardewPatches.dll and the small tools (Sdv*.exe, SVLoader)
+#   dev/stardew/build.sh xmlgen   StardewValley.XmlSerializers*.dll (+ AOT images) in gamedata: the save's
 #                                 serializers pregenerated from your game, installed by SdvLoader before the game
 #                                 starts (the console builds them at run time in ~60 s and reads saves ~3x slower)
 #   dev/stardew/build.sh aot      AOT-compile (Mono armhf under qemu-arm) the class libraries, the port's DLLs and
@@ -143,6 +144,7 @@ build_patches() {
     cp "$HERE/stardew.sh" "$P/"
     mcs -nologo -optimize+ -out:"$P/SVLoader.exe" "$HERE/patches/SVLoader.cs"
     mcs -nologo -optimize+ -r:"$P/dlls/MonoGame.Framework.dll" -out:"$P/SdvIcon.exe" "$HERE/patches/SdvIcon.cs"
+    mcs -nologo -optimize+ -r:"$P/dlls/MonoGame.Framework.dll" -out:"$P/SdvXnb.exe" "$HERE/patches/SdvXnb.cs"
     mcs -nologo -optimize+ -out:"$P/SdvLoader.exe" "$HERE/patches/SdvLoader.cs"
     mcs -nologo -optimize+ -r:System.Xml -out:"$P/SdvXmlGen.exe" "$HERE/patches/SdvXmlGen.cs"
     if ! game_dirs 2>/dev/null; then
@@ -150,7 +152,7 @@ build_patches() {
         return
     fi
     mcs -nologo -target:library -optimize+ -lib:"$BIN" -lib:"$P/dlls" -r:"$BIN/StardewValley.exe" -r:xTile.dll \
-        -r:MonoGame.Framework.dll -r:0Harmony.dll -out:"$P/dlls/StardewPatches.dll" "$HERE/patches/StardewPatches.cs" \
+        -r:MonoGame.Framework.dll -r:0Harmony.dll -r:System.Xml -out:"$P/dlls/StardewPatches.dll" "$HERE/patches/StardewPatches.cs" \
         "$HERE/patches/SpeedPatches.cs"
     MONO_PATH=$P/dlls mono "$P/SdvIcon.exe" "$CONTENT/Minigames/TitleButtons.xnb" "$P/icon.png"
     echo "StardewPatches.dll built against $(strings "$BIN/StardewValley.exe" | grep -m1 -oE '^1\.[0-9]+\.[0-9]+' || echo '?')"
@@ -170,6 +172,7 @@ build_game() {
         cp "$f" "$g/"
     done
     cp -r "$CONTENT" "$g/Content"
+    MONO_PATH=$P/dlls mono "$P/SdvXnb.exe" "$g/Content"
     ls "$g"
     du -sh "$g"
 }
@@ -203,13 +206,14 @@ build_aot() {
 # The serializer DLL is IL; its AOT image is fine here (one-off code, where AOT's slower steady state does not count)
 build_xmlgen() {
     local m=$P/mono g=/repo/dev/out/stardew/gamedata f
-    f=$g/StardewValley.XmlSerializers.dll
     export LD_LIBRARY_PATH=$P/lib:$m/lib MONO_PATH=$P/dlls:$P:$g HOME=/tmp
-    rm -f "$f" "$f.so"
+    rm -f "$g"/StardewValley.XmlSerializers*
     (cd "$g" && qemu-arm "$m/bin/mono" "$P/SdvXmlGen.exe" "$g")
-    qemu-arm "$m/bin/mono" -O=all --aot=tool-prefix=arm-linux-gnueabihf- "$f" > "$BLD/aot-xmlserializers.log" 2>&1
-    arm-linux-gnueabihf-strip --strip-debug "$f.so"
-    ls -la "$f" "$f.so"
+    for f in "$g"/StardewValley.XmlSerializers*.dll; do
+        qemu-arm "$m/bin/mono" -O=all --aot=tool-prefix=arm-linux-gnueabihf- "$f" > "$BLD/aot-$(basename "$f").log" 2>&1
+        arm-linux-gnueabihf-strip --strip-debug "$f.so"
+        ls -la "$f" "$f.so"
+    done
 }
 
 fetch_portmaster() {
