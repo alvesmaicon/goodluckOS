@@ -119,7 +119,7 @@ std::string SettingsScreen::pageHint(Page p) const {
     switch (p) {
         case Page::Tabs: return tr("Tabs switched off are hidden; their games still show in All Games and My List.");
         case Page::System: return tr(powerProfiles()[profile].hint);
-        case Page::ScraperRun: return tr("Puppy must stay open: starting a game stops the scraper. It goes on from there next time.");
+        case Page::ScraperRun: return tr("Starting a game pauses the scraper. Start goes on from where it stopped.");
         case Page::Resize:
             if (resize.pending)
                 return tr("A resize is already scheduled for the next boot.") + std::string(" ") +
@@ -690,14 +690,16 @@ std::vector<Row> SettingsScreen::scraperPage() {
 
     rows.push_back(Row::section("Scrape"));
     if (busy) {
-        rows.push_back(Row::link("Scraping", [this] { open(Page::ScraperRun); }, scrapedShare(run)));
+        Row going = Row::link("Scraping", [this] { open(Page::ScraperRun); }, scrapedShare(run));
+        going.hint = "Starting a game pauses the scraper. Start goes on from where it stopped.";
+        rows.push_back(going);
         return rows;
     }
     const std::string last = run.state == "done" ? tr("Done") : run.state == "stopped" ? tr("Stopped")
                            : run.state == "error" ? tr("Error") : "";
     Row go = Row::action("Start", [this] { startScraping(); }, last);
     go.enabled = account && !net.address.empty() && chosen > 0;
-    go.hint = *needs ? needs : "Puppy must stay open: starting a game stops the scraper. It goes on from there next time.";
+    go.hint = *needs ? needs : "Starting a game pauses the scraper. Start goes on from where it stopped.";
     rows.push_back(go);
     if (!run.state.empty()) rows.push_back(Row::link("Last run", [this] { open(Page::ScraperRun); }));
     return rows;
