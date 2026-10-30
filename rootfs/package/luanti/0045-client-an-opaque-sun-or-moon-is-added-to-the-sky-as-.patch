@@ -1,0 +1,118 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Fri, 30 Oct 2026 19:33:22 -0300
+Subject: [PATCH 45/45] client: an opaque sun or moon is added to the sky, as
+ Minecraft draws them
+
+Minecraft's sun and moon are drawn on black, no transparency in them, and
+Minecraft adds them to the sky, so the black adds nothing and the glow around
+them lights it. Luanti blended them over the sky by their alpha, which is all
+opaque there: with a player's Minecraft textures in place of sun.png and
+moon.png both stood in a black square.
+
+A sun or moon texture that is opaque in every pixel is now added (one, one),
+and one with an alpha channel is blended as before, so Luanti's own sun and
+moon look the same. TextureSource::isTextureOpaque checks the image the
+texture string makes on the CPU, as getTextureAverageColor does, once per
+texture change.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/src/client/sky.cpp b/src/client/sky.cpp
+index 23f3fb4dc..1dcd38c66 100644
+--- a/src/client/sky.cpp
++++ b/src/client/sky.cpp
+@@ -45,6 +45,20 @@ static inline void disableTextureFiltering(video::SMaterial &mat)
+ 	});
+ }
+ 
++// A sun or moon with no transparency (Minecraft's, black around it) is added to the sky, as Minecraft draws them;
++// one with an alpha channel is blended over it
++static void setSkyBodyBlend(video::SMaterial &mat, bool add)
++{
++	if (!add) {
++		mat.MaterialType = video::EMT_TRANSPARENT_ALPHA_CHANNEL;
++		return;
++	}
++	mat.MaterialType = video::EMT_ONETEXTURE_BLEND;
++	mat.MaterialTypeParam = video::pack_textureBlendFunc(video::EBF_ONE, video::EBF_ONE,
++			video::EMFN_MODULATE_1X, video::EAS_TEXTURE | video::EAS_VERTEX_COLOR);
++	mat.BlendOperation = video::EBO_ADD;
++}
++
+ Sky::Sky(s32 id, RenderingEngine *rendering_engine, ITextureSource *tsrc, IShaderSource *ssrc) :
+ 		scene::ISceneNode(rendering_engine->get_scene_manager()->getRootSceneNode(),
+ 			rendering_engine->get_scene_manager(), id)
+@@ -750,7 +764,7 @@ void Sky::setSunTexture(const std::string &sun_texture,
+ 	if (m_sun_texture) {
+ 		m_materials[3] = baseMaterial();
+ 		m_materials[3].setTexture(0, m_sun_texture);
+-		m_materials[3].MaterialType = video::EMT_TRANSPARENT_ALPHA_CHANNEL;
++		setSkyBodyBlend(m_materials[3], tsrc->isTextureOpaque(sun_texture));
+ 		disableTextureFiltering(m_materials[3]);
+ 	}
+ }
+@@ -793,7 +807,7 @@ void Sky::setMoonTexture(const std::string &moon_texture,
+ 	if (m_moon_texture) {
+ 		m_materials[4] = baseMaterial();
+ 		m_materials[4].setTexture(0, m_moon_texture);
+-		m_materials[4].MaterialType = video::EMT_TRANSPARENT_ALPHA_CHANNEL;
++		setSkyBodyBlend(m_materials[4], tsrc->isTextureOpaque(moon_texture));
+ 		disableTextureFiltering(m_materials[4]);
+ 	}
+ }
+diff --git a/src/client/texturesource.cpp b/src/client/texturesource.cpp
+index 79f03d072..8d5b4e8b8 100644
+--- a/src/client/texturesource.cpp
++++ b/src/client/texturesource.cpp
+@@ -116,6 +116,8 @@ class TextureSource final : public IWritableTextureSource
+ 
+ 	video::SColor getTextureAverageColor(const std::string &name);
+ 
++	bool isTextureOpaque(const std::string &name);
++
+ 	core::dimension2du getTextureDimensions(const std::string &image);
+ 
+ 	void setImageCaching(bool enabled);
+@@ -651,6 +653,27 @@ video::SColor TextureSource::getTextureAverageColor(const std::string &name)
+ 	return c;
+ }
+ 
++bool TextureSource::isTextureOpaque(const std::string &name)
++{
++	assert(std::this_thread::get_id() == m_main_thread);
++	if (name.empty())
++		return false;
++
++	std::set<std::string> unused;
++	auto *image = getOrGenerateImage(name, unused);
++	if (!image)
++		return false;
++
++	bool opaque = true;
++	const core::dimension2du dim = image->getDimension();
++	for (u32 y = 0; y < dim.Height && opaque; y++)
++		for (u32 x = 0; x < dim.Width && opaque; x++)
++			opaque = image->getPixel(x, y).getAlpha() == 255;
++	image->drop();
++
++	return opaque;
++}
++
+ core::dimension2du TextureSource::getTextureDimensions(const std::string &name)
+ {
+ 	assert(std::this_thread::get_id() == m_main_thread);
+diff --git a/src/client/texturesource.h b/src/client/texturesource.h
+index 7cb09828a..d6b73c801 100644
+--- a/src/client/texturesource.h
++++ b/src/client/texturesource.h
+@@ -104,6 +104,9 @@ class ITextureSource : public ISimpleTextureSource
+ 	/// @brief Return average color of a texture string
+ 	virtual video::SColor getTextureAverageColor(const std::string &image)=0;
+ 
++	/// @brief Whether every pixel of a texture string is opaque
++	virtual bool isTextureOpaque(const std::string &image)=0;
++
+ 	// Note: this method is here because caching is the decision of the
+ 	// API user, even if his access is read-only.
+ 
