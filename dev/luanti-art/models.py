@@ -98,4 +98,63 @@ def arm(angle):
 write("goodluck_models_brewing_stand.obj", None, (16, 16), lift=-0.5, groups=[
     ("rod", element((7, 0, 7), (9, 14, 9), ROD)), ("base", plates), ("arm0", arm(0)), ("arm1", arm(-45)),
     ("arm2", arm(45))])
+
+
+# The cauldron (goodluck_potions) and the witch hut's potted red mushroom (goodluck_swamp), as their block models
+# have them; a face with no uv takes its own place on the texture, as Minecraft's do
+def auto(frm, to, faces):
+    (x, y, z), (x1, y1, z1) = frm, to
+    uv = {"down": (x, 16 - z1, x1, 16 - z), "up": (x, z, x1, z1), "north": (16 - x1, 16 - y1, 16 - x, 16 - y),
+          "south": (x, 16 - y1, x1, 16 - y), "west": (z, 16 - y1, z1, 16 - y), "east": (16 - z1, 16 - y1, 16 - z, 16 - y)}
+    return {tex: element(frm, to, {f: uv[f] for f in fs}) for tex, fs in faces.items()}
+
+
+SIDES = ("north", "east", "south", "west")
+CAULDRON = [auto((0, 3, 0), (2, 16, 16), {"side": SIDES, "top": ("up",), "inside": ("down",)}),
+            auto((2, 3, 2), (14, 4, 14), {"inside": ("up", "down")}),
+            auto((14, 3, 0), (16, 16, 16), {"side": SIDES, "top": ("up",), "inside": ("down",)}),
+            auto((2, 3, 0), (14, 16, 2), {"side": ("north", "south"), "top": ("up",), "inside": ("down",)}),
+            auto((2, 3, 14), (14, 16, 16), {"side": ("north", "south"), "top": ("up",), "inside": ("down",)})]
+for frm, to, sides in (((0, 0, 0), (4, 3, 2), SIDES), ((0, 0, 2), (2, 3, 4), ("east", "south", "west")),
+                       ((12, 0, 0), (16, 3, 2), SIDES), ((14, 0, 2), (16, 3, 4), ("east", "south", "west")),
+                       ((0, 0, 14), (4, 3, 16), SIDES), ((0, 0, 12), (2, 3, 14), ("north", "east", "west")),
+                       ((12, 0, 14), (16, 3, 16), SIDES), ((14, 0, 12), (16, 3, 14), ("north", "east", "west"))):
+    CAULDRON.append(auto(frm, to, {"side": sides, "bottom": ("down",)}))
+body = [(tex, sum((e.get(tex, []) for e in CAULDRON), [])) for tex in ("side", "top", "bottom", "inside")]
+write("goodluck_models_cauldron.obj", None, (16, 16), lift=-0.5, groups=body)
+for level, top in ((1, 9), (2, 12), (3, 15)):
+    write(f"goodluck_models_cauldron_{level}.obj", None, (16, 16), lift=-0.5,
+          groups=body + [("content", auto((2, 4, 2), (14, top, 14), {"content": ("up",)})["content"])])
+
+POT = [((5, 0, 5), (6, 6, 11), {"down": (5, 5, 6, 11), "up": (5, 5, 6, 11), "north": (10, 10, 11, 16),
+                                 "south": (5, 10, 6, 16), "west": (5, 10, 11, 16), "east": (5, 10, 11, 16)}),
+       ((10, 0, 5), (11, 6, 11), {"down": (10, 5, 11, 11), "up": (10, 5, 11, 11), "north": (5, 10, 6, 16),
+                                   "south": (10, 10, 11, 16), "west": (5, 10, 11, 16), "east": (5, 10, 11, 16)}),
+       ((6, 0, 5), (10, 6, 6), {"down": (6, 10, 10, 11), "up": (6, 5, 10, 6), "north": (6, 10, 10, 16),
+                                 "south": (6, 10, 10, 16)}),
+       ((6, 0, 10), (10, 6, 11), {"down": (6, 5, 10, 6), "up": (6, 10, 10, 11), "north": (6, 10, 10, 16),
+                                   "south": (6, 10, 10, 16)}),
+       ((6, 0, 6), (10, 4, 10), {"down": (6, 12, 10, 16)})]
+
+
+def crossed(frm, to, faces):
+    # flower_pot_cross's plant: a plane turned 45 degrees about y at the block's middle and stretched back to its
+    # width (rescale)
+    k = math.sqrt(2)
+    out = []
+    for c, uv in element(frm, to, faces):
+        moved = []
+        for x, y, z in c:
+            x, z = x - 8, z - 8
+            x, z = x * math.cos(math.pi / 4) + z * math.sin(math.pi / 4), -x * math.sin(math.pi / 4) + z * math.cos(math.pi / 4)
+            moved.append((x * k + 8, y, z * k + 8))
+        out.append((moved, uv))
+    return out
+
+
+write("goodluck_models_potted_plant.obj", None, (16, 16), lift=-0.5, groups=[
+    ("pot", sum((element(f, t, uv) for f, t, uv in POT), [])),
+    ("dirt", element((6, 0, 6), (10, 4, 10), {"up": (6, 6, 10, 10)})),
+    ("plant", crossed((2.6, 4, 8), (13.4, 16, 8), {"north": (0, 0, 16, 16), "south": (0, 0, 16, 16)}) +
+     crossed((8, 4, 2.6), (8, 16, 13.4), {"west": (0, 0, 16, 16), "east": (0, 0, 16, 16)}))])
 print("meshes in", os.path.relpath(OUT, ROOT))

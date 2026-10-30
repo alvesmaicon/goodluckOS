@@ -115,8 +115,10 @@ goodluck_monsters
   _spider.png, are Pixel Perfection Legacy's (see goodluck_models), CC BY-SA
   4.0, the spider's with its eyes over it. Their arrow is goodluck_models'.
   The spider eye, goodluck_monsters_spider_eye.png, is Pixel Perfection
-  Legacy's too (dev/luanti-art/potions.py). The bomb mushroom's model, every
-  other texture and the sounds are goodluckOS's own (see goodluck_* below).
+  Legacy's too (dev/luanti-art/potions.py), and so are the witch's skin and
+  egg, goodluck_monsters_witch.png and _witch_egg.png (dev/luanti-art/witch.py),
+  on goodluck_models' witch. The bomb mushroom's model, every other texture
+  and the sounds are goodluckOS's own (see goodluck_* below).
 
 goodluck_chest
   The big chest's halves, goodluck_chest_{front,top,back,inside}_{left,right}.png,
@@ -166,7 +168,9 @@ goodluck_models
   _job_armorer, _toolsmith, _cleric, _librarian, _farmer), the oak boat
   (goodluck_models_boat.png) and the arrow (goodluck_models_arrow.png) are
   Pixel Perfection Legacy's (the villager's two laid together by
-  pixelperfection.py), and so under CC BY-SA 4.0.
+  pixelperfection.py), and so under CC BY-SA 4.0. The witch's mesh is
+  goodluckOS's own too (animals.py), worn in Pixel Perfection Legacy's skin
+  (see goodluck_monsters).
 
 goodluck_villages
   Built on villages_mtg 1.0.3 by Drix03,
@@ -223,7 +227,18 @@ goodluck_potions
   fuel bar, its code and the stand's mesh (goodluck_models) are goodluckOS's
   own (see goodluck_* below). goodluck_food's pufferfish,
   goodluck_food_pufferfish.png, is Pixel Perfection Legacy's too, by the same
-  script.
+  script. The cauldron's textures (goodluck_potions_cauldron_side, _top,
+  _bottom, _inner, _item.png, and _content.png, the first frame of its still
+  water) are Pixel Perfection Legacy's, copied by dev/luanti-art/witch.py, and
+  so under CC BY-SA 4.0; its meshes (goodluck_models) are goodluckOS's own.
+
+goodluck_swamp
+  The flower pot (goodluck_swamp_flower_pot.png) and the vine
+  (goodluck_swamp_vine.png, in Minecraft's swamp foliage colour) are Pixel
+  Perfection Legacy's, copied by dev/luanti-art/witch.py, and so under CC BY-SA
+  4.0. Its grass and leaves are Minetest Game's in other colours. Its code,
+  the hut's layout (after Minecraft's, written as code) and the potted plant's
+  mesh (goodluck_models) are goodluckOS's own.
 
 Left out of mobs, mobs_animal, mobs_monster, stamina, mobs_npc and mob_horse:
 screenshot.jpg, made on textstudio.com, whose terms are unclear. The game
@@ -232,8 +247,8 @@ doesn't use them.
 goodluck_* mods (but goodluck_villages' buildings and villagers' textures,
 goodluck_monsters' skins and spider eye, goodluck_chest's halves,
 goodluck_models' chests, minecart, boat, arrow and farm animals' textures,
-goodluck_horse's, goodluck_nether's, goodluck_effects' and goodluck_potions'
-textures and goodluck_food's pufferfish, above), and the stamina,
+goodluck_horse's, goodluck_nether's, goodluck_effects', goodluck_potions' and
+goodluck_swamp's textures and goodluck_food's pufferfish, above), and the stamina,
 mobs_animal, mobs_monster, x_enchanting, mobs_npc and x_bows media above (but
 the half-drawn bow, CC BY-SA 4.0)
   Code, pixel art, the rat's and the bomb mushroom's models, and the item

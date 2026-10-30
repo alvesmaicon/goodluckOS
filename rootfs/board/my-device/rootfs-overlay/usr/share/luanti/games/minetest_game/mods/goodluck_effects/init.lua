@@ -129,11 +129,12 @@ local function stop(player, effect)
 end
 
 -- Instant Health heals 4 and Instant Damage takes 6, twice that a level up, times share (a splash's nearness); on
--- the undead each does the other
+-- the undead each does the other; a mob's _magic_resist is the share of the harm that gets through (the witch's)
 function E.instant(obj, effect, level, share)
-	local amount = math.floor((effect == "instant_health" and 4 or 6) * 2 ^ ((level or 1) - 1) * (share or 1) + 0.5)
 	local ent = not obj:is_player() and obj:get_luaentity()
 	local heal = (effect == "instant_health") ~= (ent and E.undead[ent.name] or false)
+	local amount = math.floor((effect == "instant_health" and 4 or 6) * 2 ^ ((level or 1) - 1) * (share or 1) *
+		(not heal and ent and ent._magic_resist or 1) + 0.5)
 	if obj:is_player() then
 		if heal or not core.is_creative_enabled(obj:get_player_name()) then
 			obj:set_hp(obj:get_hp() + (heal and amount or -amount),

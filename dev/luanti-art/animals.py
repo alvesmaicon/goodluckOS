@@ -435,6 +435,49 @@ MAGMA_CUBE = [(0, 1, None), (1, 1.0, hop), (4, 1, die)]
 VILLAGER = [(0, 1, None), (1, 1.0, stride(0.7, 0, 1.0)), (3, 0.5, stride(1.4, 0, 0.5)), (4, 1, die), (8, 0.1, lay)]
 
 
+# The witch (goodluck_monsters), 64x128: stands 0-1, walks 1-2, runs 3-3.5, dies 4-5; drinking it stands 6-6.1 and
+# walks 7-8, its nose up with the potion at it (the second texture, blank but then)
+def witch():
+    # Minecraft's witch: the villager's body as VillagerModel.createBodyModel has it in 26.x (the robe 20 long, the
+    # crossed arms from (0, 3, -1)) under a head without the villager's hat layer; the hat a brim and three tiers, each
+    # on the one below it, a little turned; the nose with its mole, and the potion in front of it when it drinks
+    hat = posed(box(0, 95, 0, 0, 0, 1, 2, 1, grow=0.25), (1.75, -2, 2), (-0.20943952, 0, 0.10471976))
+    hat = posed(box(0, 87, 0, 0, 0, 4, 4, 4) + hat, (1.75, -4, 2), (-0.10471976, 0, 0.05235988))
+    hat = posed(box(0, 76, 0, 0, 0, 7, 4, 7) + hat, (1.75, -4, 2), (-0.05235988, 0, 0.02617994))
+    hat = posed(box(0, 64, 0, 0, 0, 10, 2, 10) + hat, (-5, -10.03125, -5))
+    nose = box(24, 0, -1, -1, -6, 2, 4, 2) + posed(box(0, 0, 0, 3, -6.75, 1, 1, 1, grow=-0.25), (0, -2, 0))
+    arms = box(44, 22, -8, -2, -2, 4, 8, 4) + box(44, 22, 4, -2, -2, 4, 8, 4, mirror=True) + \
+        box(40, 38, -4, 2, -2, 8, 4, 4)
+    return [part("head", (0, 0, 0), box(0, 0, -4, -10, -4, 8, 10, 8) + hat),
+            part("nose", (0, -2, 0), nose, gear=potion((64, 128)), parent="head"),
+            part("body", (0, 0, 0), box(16, 20, -4, 0, -3, 8, 12, 6) + box(0, 38, -4, 0, -3, 8, 20, 6, grow=0.5)),
+            part("arms", (0, 3, -1), arms, rot=(-0.75, 0, 0)),
+            part("right_leg", (-2, 12, 0), box(0, 22, -2, 0, -2, 4, 12, 4)),
+            part("left_leg", (2, 12, 0), box(0, 22, -2, 0, -2, 4, 12, 4, mirror=True))]
+
+
+def potion(tex):
+    # the potion held at the nose as WitchItemLayer draws it: 1 and 4 pixels from the nose's pivot, turned 180 about
+    # z, 140 about x, 10 about z and 180 about x, then item/generated's ground display (2 up, half its size) about its
+    # middle; its image on a two-sided square, as held() draws an item
+    at = affine(("t", 1 / 16, 4 / 16, 0), ("r", 2, 180), ("r", 0, 140), ("r", 2, 10), ("r", 0, 180),
+                ("t", 0, 2 / 16, 0), ("s", 0.5), ("t", -0.5, -0.5, -0.5))
+    tr, tl, bl, br = (at((x, y, 0.5)) for x, y in ((1, 1), (0, 1), (0, 0), (1, 0)))
+    w, h = tex
+    mid = at((0.5, 0.5, 0.5))
+    return [([tr, tl, bl, br], (0, 0, w, h)), ([tl, tr, br, bl], (w, 0, 0, h))] + [([mid] * 4, (0, 0, w, h))] * 4
+
+
+def sip(t):
+    # holding a potion its nose goes to (0, 1, -1.5) and turns -0.9 about x
+    return {"nose": (mc_x(-0.9), (0, 3, -1.5))}
+
+
+# its legs swing half as far as the player's, as the villager's
+WITCH = [(0, 1, None), (1, 1.0, stride(0.7, 0, 1.0)), (3, 0.5, stride(0.7, 0, 0.5)), (4, 1, die), (6, 0.1, sip),
+         (7, 1.0, both(sip, stride(0.7, 0, 1.0)))]
+
+
 def boat():
     # Minecraft's boat since 1.14, its bow at +x in its model, turned a quarter so that the bow leads, and 18 down so
     # that the entity sits at the waterline (its renderer lifts the model 6 pixels): the floor's underside on it, the
@@ -505,6 +548,7 @@ ANIMALS = {
     "zombified_piglin": ((64, 64), zombified_piglin(), PIGLIN),
     # the wither skeleton is the skeleton with a stone sword (the renderer draws it 1.2 times as big)
     "wither_skeleton": ((64, 32), humanoid(True, held((64, 32), 1)), WITHER_SKELETON),
+    "witch": ((64, 128), witch(), WITCH),
 }
 
 
