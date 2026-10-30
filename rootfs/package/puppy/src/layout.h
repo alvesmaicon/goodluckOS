@@ -37,7 +37,7 @@ constexpr int kShelfCardX           = kScreenW - kMargin - 28 - kPreviewW;     /
 // row of covers per tab under it, the next tab's row peeking out at the bottom.
 constexpr int kHeroW                = 400;
 constexpr int kHeroH                = 300;
-constexpr int kHeroFadeW            = 64;   // the picture's left edge fading into the screen
+constexpr int kHeroFadeW            = 160;  // the picture's left edge fading into the screen
 constexpr int kHeroFadeH            = 56;   // and its bottom one
 constexpr int kCardW                = 136;
 constexpr int kCardH                = 102;

@@ -549,7 +549,7 @@ void LauncherScreen::renderStreaming(Ui& ui) {
         }
         SDL_RenderSetClipRect(renderer, nullptr);
 
-        const int x = kMargin, w = 300;
+        const int x = kMargin, w = kScreenW * 3 / 5 - kMargin;
         int y = kHeaderH + 2;
         TTF_Font* titleFont = fonts.titleBold ? fonts.titleBold : fonts.title;
         const int overflow = textWidth(titleFont, e->name) - w;   // one line: a long name scrolls, as in the list
