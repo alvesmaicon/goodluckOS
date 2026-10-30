@@ -36,6 +36,11 @@ static std::string twoDigits(int v) {
     return s;
 }
 
+// How far a scraper run is through the games of all its systems, e.g. 10%
+static std::string scrapedShare(const ScraperRun& run) {
+    return run.games ? std::to_string(run.done * 100 / run.games) + "%" : "";
+}
+
 // From /etc/triggerhappy/triggers.d, the launcher, the RetroArch config (hotkey = FN) and /etc/mpv/input.conf
 static const char* const kShortcuts[][2] = {
     {"Any app", nullptr},
@@ -492,7 +497,7 @@ std::vector<Row> SettingsScreen::systemPage() {
         scraper = ScraperSettings::load();
         scrapeFolders = scraperFolders();
         open(Page::Scraper);
-    }, run.running() ? std::to_string(run.index) + "/" + std::to_string(run.total) : ""));
+    }, run.running() ? scrapedShare(run) : ""));
     // Overlay, Date & Time, the launcher's view, tabs, font and accent, and the power mode; the language,
     // the confirm button, the time zone and the clock stay
     rows.push_back(Row::action("Restore default settings", [this] {
@@ -685,8 +690,7 @@ std::vector<Row> SettingsScreen::scraperPage() {
 
     rows.push_back(Row::section("Scrape"));
     if (busy) {
-        rows.push_back(Row::link("Scraping", [this] { open(Page::ScraperRun); },
-                                 run.total ? std::to_string(run.index) + "/" + std::to_string(run.total) : ""));
+        rows.push_back(Row::link("Scraping", [this] { open(Page::ScraperRun); }, scrapedShare(run)));
         return rows;
     }
     const std::string last = run.state == "done" ? tr("Done") : run.state == "stopped" ? tr("Stopped")
@@ -727,6 +731,13 @@ std::vector<Row> SettingsScreen::scraperRunPage() {
                             : run.steps > 1 ? run.system + " (" + fill2("%s of %s", std::to_string(run.step), std::to_string(run.steps)) + ")"
                             : run.system;
     rows.push_back(Row::info("Status", state));
+    if (run.games > 0) {
+        Row all = Row::info("Total", fill2("%s of %s", std::to_string(run.done), std::to_string(run.games)) + " (" +
+                                         scrapedShare(run) + ")");
+        all.current = run.done;
+        all.max = run.games;
+        rows.push_back(all);
+    }
     if (busy && run.total > 0) {
         rows.push_back(Row::info("Game", fill2("%s of %s", std::to_string(run.index), std::to_string(run.total))));
         Row now = Row::info(run.game, "");

@@ -100,6 +100,8 @@ static ScraperRun readStatus(const char* path) {
         else if (k == "steps") r.steps = n;
         else if (k == "index") r.index = n;
         else if (k == "total") r.total = n;
+        else if (k == "done") r.done = n;
+        else if (k == "games") r.games = n;
         else if (k == "found") r.found = n;
         else if (k == "notfound") r.notFound = n;
         else if (k == "failed") r.failed = n;

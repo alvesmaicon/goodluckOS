@@ -26,6 +26,7 @@ struct ScraperRun {
     std::string state;      // running, done, stopped, error; empty when there was none
     std::string message, detail, system, game, requests;
     int pid = 0, step = 0, steps = 0, index = 0, total = 0, found = 0, notFound = 0, failed = 0, skipped = 0;
+    int done = 0, games = 0;    // over every system of the run
 
     bool running() const;
     static ScraperRun read();           // the last run

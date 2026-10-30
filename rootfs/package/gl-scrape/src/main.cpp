@@ -130,6 +130,7 @@ static void readSettings(Options& o) {
 struct Progress {
     std::string state = "running", message, detail, system, game, requests;
     int step = 0, steps = 0, index = 0, total = 0, found = 0, notFound = 0, failed = 0, skipped = 0;
+    int done = 0, games = 0;    // over every folder of the run
 };
 
 static void report(const Options& o, const Progress& p) {
@@ -138,9 +139,9 @@ static void report(const Options& o, const Progress& p) {
     FILE* f = fopen(tmp.c_str(), "w");
     if (!f) return;
     fprintf(f, "state=%s\npid=%d\nmessage=%s\ndetail=%s\nsystem=%s\nstep=%d\nsteps=%d\nindex=%d\ntotal=%d\n"
-               "game=%s\nfound=%d\nnotfound=%d\nfailed=%d\nskipped=%d\nrequests=%s\n",
+               "done=%d\ngames=%d\ngame=%s\nfound=%d\nnotfound=%d\nfailed=%d\nskipped=%d\nrequests=%s\n",
             p.state.c_str(), (int)getpid(), p.message.c_str(), p.detail.c_str(), p.system.c_str(), p.step, p.steps,
-            p.index, p.total, p.game.c_str(), p.found, p.notFound, p.failed, p.skipped, p.requests.c_str());
+            p.index, p.total, p.done, p.games, p.game.c_str(), p.found, p.notFound, p.failed, p.skipped, p.requests.c_str());
     fclose(f);
     rename(tmp.c_str(), o.status.c_str());
 }
@@ -412,6 +413,7 @@ int main(int argc, char** argv) {
 
     const std::vector<Folder> work = folders(o);
     p.steps = (int)work.size();
+    for (const Folder& f : work) p.games += (int)f.roms.size();
     int offline = 0;
     for (const Folder& f : work) {
         ++p.step;
@@ -432,6 +434,7 @@ int main(int argc, char** argv) {
         for (const std::string& rom : f.roms) {
             if (stopping) break;
             ++p.index;
+            ++p.done;
             p.game = stem(rom);
             if (!needed(o, f, main, local, rom)) {
                 ++p.skipped;

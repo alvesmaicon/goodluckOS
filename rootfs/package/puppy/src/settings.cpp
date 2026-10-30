@@ -489,6 +489,13 @@ void SettingsScreen::renderPage(Ui& ui) {
             drawText(renderer, fonts.small, label, kPageX + 16, ty, theme().muted, width / 2);
             const int valueX = std::max(kPageX + 16 + lw + 16, kPageRight - 8 - textWidth(fonts.small, row.value));
             drawText(renderer, fonts.small, row.value, valueX, ty, theme().text, kPageRight - 8 - valueX);
+            const int barX = kPageX + 16 + lw + 16;
+            if (row.max > 0 && valueX - 16 > barX) {
+                SDL_Rect bar{barX, y + h / 2 - 4, valueX - 16 - barX, 8};
+                ui.track(bar, theme().tile);
+                const int filled = bar.w * std::clamp(row.current, 0, row.max) / row.max;
+                if (filled > 0) ui.track({bar.x, bar.y, filled, bar.h}, ui.accentOn(false));
+            }
             y += h;
             continue;
         }
