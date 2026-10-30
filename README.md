@@ -227,8 +227,14 @@ System Settings
 │   ├── Power mode: Battery saver / Balanced / Performance
 │   ├── USB cable: Files (MTP) / Network
 │   ├── System Info
-│   ├── Network ─ status, address, gateway, DNS, Check the internet, Ask for an address
-│   ├── Scraper ─ ScreenScraper account; Games, Picture, Videos, Region, Systems; Start / Stop and the progress
+│   ├── Network ─ the USB network, with USB cable on Network
+│   │   ├── Status, Address, Gateway, DNS, Internet
+│   │   ├── Check the internet
+│   │   └── Ask for an address
+│   ├── Scraper
+│   │   ├── ScreenScraper account: User, Password, Check the account
+│   │   ├── What to get: Games (Missing only / All), Picture, Videos, Region, Systems ─ which ROM folders
+│   │   └── Scrape: Start, Last run; while it runs, Scraping ─ Stop, Total (a bar over all the chosen systems), the system and game, the counts
 │   └── Restore default settings
 ├── Input Settings
 │   ├── Confirm button: A (right) / B (bottom)
