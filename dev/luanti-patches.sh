@@ -11,6 +11,6 @@ out=rootfs/package/luanti
 git -C "$repo" rev-parse --verify -q "$ver^{commit}" >/dev/null || { echo "$repo has no tag $ver"; exit 1; }
 git -C "$repo" rev-parse --verify -q "$branch" >/dev/null || { echo "$repo has no branch $branch"; exit 1; }
 rm -f $out/[0-9][0-9][0-9][0-9]-*.patch
-git -C "$repo" format-patch -q --zero-commit --no-signature --no-stat -o "$PWD/$out" "$ver..$branch" -- . ':!README.md' ':!doc/handheld' ':!.github'
+git -C "$repo" format-patch -q --zero-commit --no-signature --no-stat -o "$PWD/$out" "$ver..$branch" -- . ':!README.md' ':!doc/handheld' ':!.github' ':!util/ci'
 ls $out/*.patch | sed 's|.*/||'
 echo "== from $(git -C "$repo" rev-parse --short "$branch") ($branch on $ver)"
