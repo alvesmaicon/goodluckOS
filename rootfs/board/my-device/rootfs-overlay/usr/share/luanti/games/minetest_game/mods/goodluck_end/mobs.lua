@@ -172,17 +172,20 @@ end
 
 -- 2 tries a second at a block 2 about and up to 3 up that it can see; 1 in 50 a second it puts it down on top of a
 -- whole block next to it, where nothing stands
+-- (Minecraft's block corners are Luanti's node middles: its floor(v) + 0.5 is round(v) here)
+local function round(v)
+	return math.floor(v + 0.5)
+end
 local function take(self)
 	local p = self.object:get_pos()
-	local x, y, z = math.floor(p.x - 2 + math.random() * 4), math.floor(p.y + math.random() * 3),
-		math.floor(p.z - 2 + math.random() * 4)
+	local x, y, z = round(p.x - 2 + math.random() * 4), round(p.y + math.random() * 3), round(p.z - 2 + math.random() * 4)
 	local at = {x = x, y = y, z = z}
 	local node = core.get_node(at)
 	if not HOLDABLE[node.name] or core.is_protected(at, "") then
 		return
 	end
-	local from = {x = math.floor(p.x) + 0.5, y = y + 0.5, z = math.floor(p.z) + 0.5}
-	for hit in core.raycast(from, {x = x + 0.5, y = y + 0.5, z = z + 0.5}, false, false) do
+	local from = {x = round(p.x), y = y, z = round(p.z)}
+	for hit in core.raycast(from, at, false, false) do
 		if hit.type == "node" then
 			if not vector.equals(hit.under, at) then
 				return
@@ -198,8 +201,8 @@ end
 
 local function put(self)
 	local p = self.object:get_pos()
-	local at = {x = math.floor(p.x - 1 + math.random() * 2), y = math.floor(p.y + math.random() * 2),
-		z = math.floor(p.z - 1 + math.random() * 2)}
+	local at = {x = round(p.x - 1 + math.random() * 2), y = round(p.y + math.random() * 2),
+		z = round(p.z - 1 + math.random() * 2)}
 	local below = core.registered_nodes[core.get_node(vector.offset(at, 0, -1, 0)).name]
 	if core.get_node(at).name ~= "air" or not below or not below.walkable or below.drawtype ~= "normal" or
 			core.get_node(vector.offset(at, 0, -1, 0)).name:find("bedrock") or core.is_protected(at, "") or
