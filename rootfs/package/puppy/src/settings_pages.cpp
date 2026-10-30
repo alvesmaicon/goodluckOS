@@ -36,6 +36,11 @@ static std::string twoDigits(int v) {
     return s;
 }
 
+// How far a scraper run is through the games of all its systems, e.g. 10%
+static std::string scrapedShare(const ScraperRun& run) {
+    return run.games ? std::to_string(run.done * 100 / run.games) + "%" : "";
+}
+
 // From /etc/triggerhappy/triggers.d, the launcher, the RetroArch config (hotkey = FN) and /etc/mpv/input.conf
 static const char* const kShortcuts[][2] = {
     {"Any app", nullptr},
@@ -114,7 +119,7 @@ std::string SettingsScreen::pageHint(Page p) const {
     switch (p) {
         case Page::Tabs: return tr("Tabs switched off are hidden; their games still show in All Games and My List.");
         case Page::System: return tr(powerProfiles()[profile].hint);
-        case Page::ScraperRun: return tr("Puppy must stay open: starting a game stops the scraper. It goes on from there next time.");
+        case Page::ScraperRun: return tr("Starting a game pauses the scraper. Start goes on from where it stopped.");
         case Page::Resize:
             if (resize.pending)
                 return tr("A resize is already scheduled for the next boot.") + std::string(" ") +
@@ -492,7 +497,7 @@ std::vector<Row> SettingsScreen::systemPage() {
         scraper = ScraperSettings::load();
         scrapeFolders = scraperFolders();
         open(Page::Scraper);
-    }, run.running() ? std::to_string(run.index) + "/" + std::to_string(run.total) : ""));
+    }, run.running() ? scrapedShare(run) : ""));
     // Overlay, Date & Time, the launcher's view, tabs, font and accent, and the power mode; the language,
     // the confirm button, the time zone and the clock stay
     rows.push_back(Row::action("Restore default settings", [this] {
@@ -685,15 +690,16 @@ std::vector<Row> SettingsScreen::scraperPage() {
 
     rows.push_back(Row::section("Scrape"));
     if (busy) {
-        rows.push_back(Row::link("Scraping", [this] { open(Page::ScraperRun); },
-                                 run.total ? std::to_string(run.index) + "/" + std::to_string(run.total) : ""));
+        Row going = Row::link("Scraping", [this] { open(Page::ScraperRun); }, scrapedShare(run));
+        going.hint = "Starting a game pauses the scraper. Start goes on from where it stopped.";
+        rows.push_back(going);
         return rows;
     }
     const std::string last = run.state == "done" ? tr("Done") : run.state == "stopped" ? tr("Stopped")
                            : run.state == "error" ? tr("Error") : "";
     Row go = Row::action("Start", [this] { startScraping(); }, last);
     go.enabled = account && !net.address.empty() && chosen > 0;
-    go.hint = *needs ? needs : "Puppy must stay open: starting a game stops the scraper. It goes on from there next time.";
+    go.hint = *needs ? needs : "Starting a game pauses the scraper. Start goes on from where it stopped.";
     rows.push_back(go);
     if (!run.state.empty()) rows.push_back(Row::link("Last run", [this] { open(Page::ScraperRun); }));
     return rows;
@@ -727,6 +733,13 @@ std::vector<Row> SettingsScreen::scraperRunPage() {
                             : run.steps > 1 ? run.system + " (" + fill2("%s of %s", std::to_string(run.step), std::to_string(run.steps)) + ")"
                             : run.system;
     rows.push_back(Row::info("Status", state));
+    if (run.games > 0) {
+        Row all = Row::info("Total", fill2("%s of %s", std::to_string(run.done), std::to_string(run.games)) + " (" +
+                                         scrapedShare(run) + ")");
+        all.current = run.done;
+        all.max = run.games;
+        rows.push_back(all);
+    }
     if (busy && run.total > 0) {
         rows.push_back(Row::info("Game", fill2("%s of %s", std::to_string(run.index), std::to_string(run.total))));
         Row now = Row::info(run.game, "");
