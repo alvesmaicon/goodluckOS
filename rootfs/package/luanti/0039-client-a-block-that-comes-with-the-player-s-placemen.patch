@@ -1,0 +1,128 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Thu, 29 Oct 2026 01:45:43 -0300
+Subject: [PATCH 39/40] client: a block that comes with the player's placement
+ keeps its detail mesh
+
+The far blocks acked at once and the neighbour updates left out (bc2523d3e) measure their
+distance from the map's camera, which the game sets once a frame from the player. The server
+places the player and sends the first blocks right after, and they reach the client in the same
+step, before a frame has moved the camera from the origin: every block around the player counted
+as far. They were acked without a detail mesh, the meshes their neighbours already had were
+dropped, and the world opened with holes where the walls and the ceiling should be, until a turn
+or a dig made the culler visit those blocks and ask for them again. With the terrain wait
+(loading_terrain_radius) the whole first sweep came in that way, so the holes were the rule.
+
+The distance is now measured from the player, whose position comes with the placement, and no
+block is far before the player is placed.
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+
+diff --git a/src/client/client.cpp b/src/client/client.cpp
+index 4f13cec20..618d0e8d1 100644
+--- a/src/client/client.cpp
++++ b/src/client/client.cpp
+@@ -1817,9 +1817,13 @@ void Client::addUpdateMeshTaskWithEdge(v3s16 blockpos, bool ack_to_server, bool
+ {
+ 	ClientMap &map = m_env.getClientMap();
+ 	map.markLodDirty(blockpos);
+-	if (ack_to_server && map.skipDetailMesh(m_mesh_grid.getMeshPos(blockpos))) {
+-		m_far_blocks_to_ack.push_back(blockpos);
+-		ack_to_server = false;
++	// Far from the player, who is placed before the map's camera is: the first blocks come in the same step
++	if (ack_to_server && m_player_pos_received) {
++		const v3f from = m_env.getLocalPlayer()->getPosition();
++		if (map.skipDetailMesh(m_mesh_grid.getMeshPos(blockpos), &from)) {
++			m_far_blocks_to_ack.push_back(blockpos);
++			ack_to_server = false;
++		}
+ 	}
+ 	m_mesh_update_manager->updateBlock(&m_env.getMap(), blockpos, ack_to_server, urgent, true);
+ }
+diff --git a/src/client/clientmap.cpp b/src/client/clientmap.cpp
+index 2e69efa54..386e2e497 100644
+--- a/src/client/clientmap.cpp
++++ b/src/client/clientmap.cpp
+@@ -398,12 +398,12 @@ static const v3s16 lod_face_dirs[6] = {
+ 	v3s16(-1, 0, 0), v3s16(0, 0, 1), v3s16(0, 0, -1),
+ };
+ 
+-f32 ClientMap::lodDistance(v3s16 region_pos) const
++f32 ClientMap::lodDistanceFrom(v3s16 region_pos, const v3f &from) const
+ {
+ 	constexpr s16 R = LodMeshGenerator::REGION;
+ 	const v3f center = intToFloat(region_pos * MAP_BLOCKSIZE, BS) +
+ 			v3f((R * MAP_BLOCKSIZE * 0.5f - 0.5f) * BS);
+-	return center.getDistanceFrom(m_camera_position);
++	return center.getDistanceFrom(from);
+ }
+ 
+ bool ClientMap::detailMeshesMade(v3s16 region_pos)
+@@ -488,14 +488,14 @@ void ClientMap::dropDetailMesh(MapBlock *block)
+ 	block->detail_mesh = MapBlock::DetailMesh::LeftOut;
+ }
+ 
+-bool ClientMap::skipDetailMesh(v3s16 mesh_pos)
++bool ClientMap::skipDetailMesh(v3s16 mesh_pos, const v3f *from)
+ {
+ 	constexpr s16 R = LodMeshGenerator::REGION;
+ 	// Only the BFS culler draws simplified meshes
+ 	if (m_cache_lod_distance <= 0 || m_control.range_all || m_loops_occlusion_culler ||
+ 			R % m_client->getMeshGrid().cell_size != 0)
+ 		return false;
+-	if (lodDistance(getContainerPos(mesh_pos, R) * R) <=
++	if (lodDistanceFrom(getContainerPos(mesh_pos, R) * R, from ? *from : m_camera_position) <=
+ 			(m_cache_lod_distance + LOD_DETAIL_MARGIN) * BS)
+ 		return false;
+ 	MapBlock *block = getBlockNoCreateNoEx(mesh_pos);
+diff --git a/src/client/clientmap.h b/src/client/clientmap.h
+index 7015a4bcc..6c818e737 100644
+--- a/src/client/clientmap.h
++++ b/src/client/clientmap.h
+@@ -126,7 +126,7 @@ class ClientMap : public Map, public scene::ISceneNode
+ 	// The block's data changed: regions that use it need a new simplified mesh
+ 	void markLodDirty(v3s16 blockpos);
+ 	// Whether the mesh at mesh_pos is far enough to be drawn simplified only
+-	bool skipDetailMesh(v3s16 mesh_pos);
++	bool skipDetailMesh(v3s16 mesh_pos, const v3f *from = nullptr);
+ 
+ 	// For debug printing
+ 	void PrintInfo(std::ostream &out) override;
+@@ -164,7 +164,8 @@ class ClientMap : public Map, public scene::ISceneNode
+ 	};
+ 
+ 	// Distance from the camera to a region's center, in BS
+-	f32 lodDistance(v3s16 region_pos) const;
++	f32 lodDistance(v3s16 region_pos) const { return lodDistanceFrom(region_pos, m_camera_position); }
++	f32 lodDistanceFrom(v3s16 region_pos, const v3f &from) const;
+ 	// Whether a region at distance d is drawn from its simplified mesh
+ 	bool useLod(v3s16 region_pos, f32 d, u64 now_ms);
+ 	bool detailMeshesMade(v3s16 region_pos);
+diff --git a/src/client/mesh_generator_thread.cpp b/src/client/mesh_generator_thread.cpp
+index a7617df0f..c3fbb3f54 100644
+--- a/src/client/mesh_generator_thread.cpp
++++ b/src/client/mesh_generator_thread.cpp
+@@ -6,6 +6,8 @@
+ #include "settings.h"
+ #include "profiler.h"
+ #include "client.h"
++#include "clientenvironment.h"
++#include "localplayer.h"
+ #include "clientmap.h"
+ #include "mapblock.h"
+ #include "mapblock_mesh.h"
+@@ -117,9 +119,11 @@ bool MeshUpdateQueue::addBlock(Map *map, v3s16 p, bool ack_block_to_server,
+ 	const v3s16 mesh_position = mesh_grid.getMeshPos(p);
+ 
+ 	// Far away blocks are drawn from the simplified mesh of their region
+-	if (!m_lod && !ack_block_to_server &&
+-			m_client->getEnv().getClientMap().skipDetailMesh(mesh_position))
+-		return true;
++	if (!m_lod && !ack_block_to_server && m_client->playerPosReceived()) {
++		const v3f from = m_client->getEnv().getLocalPlayer()->getPosition();
++		if (m_client->getEnv().getClientMap().skipDetailMesh(mesh_position, &from))
++			return true;
++	}
+ 
+ 	MutexAutoLock lock(m_mutex);
+ 

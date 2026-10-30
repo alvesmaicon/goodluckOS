@@ -40,6 +40,27 @@ DESCRIPTION=It's Doom.
 ICON=/usr/share/icons/chocolate-doom.png
 COMMAND=chocolate-doom
 
+[ENTRY]
+CATEGORY=Games
+NAME=Luanti
+DESCRIPTION=A world of blocks: build, mine, craft and survive
+ICON=/usr/share/icons/luanti.png
+COMMAND=luanti.sh
+
+[ENTRY]
+CATEGORY=Games
+NAME=Update Luanti
+DESCRIPTION=Install the Luanti update copied to the updates folder over USB
+TERMINAL=1
+COMMAND=doas /usr/local/bin/luanti-update.sh apply
+
+[ENTRY]
+CATEGORY=Games
+NAME=Undo Luanti update
+DESCRIPTION=Go back to the Luanti from before the last update, or undo again to return
+TERMINAL=1
+COMMAND=doas /usr/local/bin/luanti-update.sh undo
+
 [ARCHIVE]
 NAME=Playstation
 TAB=PS1

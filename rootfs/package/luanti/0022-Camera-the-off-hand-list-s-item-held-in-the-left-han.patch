@@ -1,0 +1,179 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Fri, 16 Oct 2026 13:35:35 -0300
+Subject: [PATCH 22/22] Camera: the off-hand list's item held in the left hand
+
+A game can give a player an "offhand" inventory list; its first item is
+drawn in first person in the left hand, next to the wielded one, in the
+same wield scene, so it never shows in third person. It is lowered at
+the bottom left and goes up beside the crosshair while the item's meta
+field "raised" is "1", in 0.2 s (eased, rotation slerped). It rises into
+view when it changes and sways and bobs as the right hand, mirrored,
+but stays still while digging.
+
+goodluckOS's shield mod copies the worn 3d_armor shield there and sets
+"raised" while it is held up, which on a gamepad had no other way to
+show (a HUD image also covered the third person view). The poses are
+settings (offhand_position, offhand_rotation, offhand_raised_position,
+offhand_raised_rotation), tuned at 640x480 with the 72 degree wield
+camera.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/builtin/settingtypes.txt b/builtin/settingtypes.txt
+index 7d840f5e2..b33be6531 100644
+--- a/builtin/settingtypes.txt
++++ b/builtin/settingtypes.txt
+@@ -526,6 +526,14 @@ undersampling (Undersampling) int 1 1 8
+ #    the arm when the camera moves.
+ arm_inertia (Arm inertia) bool true
+ 
++#    Where the item of the player's "offhand" inventory list (a shield) is held in
++#    first person: position and rotation in degrees, lowered and raised (while its
++#    meta field "raised" is "1").
++offhand_position (Off-hand position) v3f (-41, -32, 65)
++offhand_rotation (Off-hand rotation) v3f (0, -25, 0)
++offhand_raised_position (Raised off-hand position) v3f (-22, -18, 50)
++offhand_raised_rotation (Raised off-hand rotation) v3f (0, 10, 0)
++
+ #    Enable view bobbing and amount of view bobbing.
+ #    For example: 0 for no view bobbing; 1.0 for normal; 2.0 for double.
+ view_bobbing_amount (View bobbing factor) float 1.0 0.0 7.9
+diff --git a/src/client/camera.cpp b/src/client/camera.cpp
+index a1b98484c..0d843f95f 100644
+--- a/src/client/camera.cpp
++++ b/src/client/camera.cpp
+@@ -36,7 +36,8 @@ static constexpr f32 CAMERA_OFFSET_STEP = 200;
+ 
+ static const char *setting_names[] = {
+ 	"view_bobbing_amount", "fov", "arm_inertia",
+-	"show_nametag_backgrounds",
++	"show_nametag_backgrounds", "offhand_position", "offhand_rotation",
++	"offhand_raised_position", "offhand_raised_rotation",
+ };
+ 
+ Camera::Camera(MapDrawControl &draw_control, Client *client, RenderingEngine *rendering_engine):
+@@ -60,6 +61,10 @@ Camera::Camera(MapDrawControl &draw_control, Client *client, RenderingEngine *re
+ 	m_wieldnode = new WieldMeshSceneNode(m_wieldmgr, -1);
+ 	m_wieldnode->setItem(ItemStack(), m_client);
+ 	m_wieldnode->drop(); // m_wieldmgr grabbed it
++	m_offhand_node = new WieldMeshSceneNode(m_wieldmgr, -1);
++	m_offhand_node->setItem(ItemStack(), m_client);
++	m_offhand_node->setVisible(false);
++	m_offhand_node->drop();
+ 
+ 	m_nametags.clear();
+ 
+@@ -86,6 +91,10 @@ void Camera::readSettings()
+ 	m_cache_fov                 = g_settings->getFloat("fov", 45.0f, 160.0f);
+ 	m_arm_inertia               = g_settings->getBool("arm_inertia");
+ 	m_show_nametag_backgrounds  = g_settings->getBool("show_nametag_backgrounds");
++	m_offhand_position[0] = g_settings->getV3F("offhand_position").value_or(v3f(-41, -32, 65));
++	m_offhand_rotation[0] = g_settings->getV3F("offhand_rotation").value_or(v3f(0, -25, 0));
++	m_offhand_position[1] = g_settings->getV3F("offhand_raised_position").value_or(v3f(-22, -18, 50));
++	m_offhand_rotation[1] = g_settings->getV3F("offhand_raised_rotation").value_or(v3f(0, 10, 0));
+ }
+ 
+ Camera::~Camera()
+@@ -546,6 +555,7 @@ void Camera::update(LocalPlayer* player, f32 frametime, f32 tool_reload_ratio)
+ 	m_player_light_color = player->light_color;
+ 	m_wieldnode->setLightColorAndAnimation(m_player_light_color,
+ 			m_client->getAnimationTime());
++	updateOffhand(player, frametime);
+ 
+ 	// Set render distance
+ 	updateViewingRange();
+@@ -763,6 +773,49 @@ std::array<core::plane3d<f32>, 4> Camera::getFrustumCullPlanes() const
+ 	};
+ }
+ 
++void Camera::updateOffhand(LocalPlayer *player, f32 frametime)
++{
++	const InventoryList *list = player->inventory.getList("offhand");
++	const ItemStack item = list && list->getSize() > 0 ? list->getItem(0) : ItemStack();
++	if (item.name != m_offhand_name) {
++		m_offhand_name = item.name;
++		m_offhand_node->setItem(item, m_client);
++		m_offhand_equip = 0.0f;
++	}
++	m_offhand_node->setVisible(!item.empty());
++	if (item.empty())
++		return;
++
++	// The server sets the meta field "raised"; it goes up and down in 0.2 s
++	const f32 target = item.metadata.getString("raised") == "1" ? 1.0f : 0.0f;
++	const f32 step = frametime / 0.2f;
++	m_offhand_raise = target > m_offhand_raise ? std::min(target, m_offhand_raise + step)
++			: std::max(target, m_offhand_raise - step);
++	m_offhand_equip = std::min(1.0f, m_offhand_equip + frametime / 0.25f);
++
++	const f32 t = easeCurve(m_offhand_raise);
++	v3f pos = m_offhand_position[0] + (m_offhand_position[1] - m_offhand_position[0]) * t;
++	core::quaternion q;
++	q.slerp(core::quaternion(m_offhand_rotation[0] * core::DEGTORAD),
++			core::quaternion(m_offhand_rotation[1] * core::DEGTORAD), t);
++	v3f rot;
++	q.toEuler(rot);
++	rot *= core::RADTODEG;
++
++	// rises into view when it changes, and sways and bobs as the right hand, mirrored
++	pos.Y -= (1.0f - easeCurve(m_offhand_equip)) * 40.0f;
++	pos.X -= m_wieldmesh_offset.X - WIELDMESH_OFFSET_X;
++	pos.Y += m_wieldmesh_offset.Y - WIELDMESH_OFFSET_Y;
++	if (m_digging_button == -1) {
++		f32 bobfrac = my_modf(m_view_bobbing_anim);
++		pos.X += std::sin(bobfrac * M_PI * 2.0) * 3.0;
++		pos.Y += std::sin(my_modf(bobfrac * 2.0) * M_PI) * 3.0;
++	}
++	m_offhand_node->setPosition(pos);
++	m_offhand_node->setRotation(rot);
++	m_offhand_node->setLightColorAndAnimation(m_player_light_color, m_client->getAnimationTime());
++}
++
+ void Camera::updateWieldedTool()
+ {
+ 	m_wieldnode->setItem(m_wield_item_next, m_client);
+diff --git a/src/client/camera.h b/src/client/camera.h
+index 03e4f1931..874730265 100644
+--- a/src/client/camera.h
++++ b/src/client/camera.h
+@@ -188,6 +188,9 @@ class Camera
+ 
+ 	void updateWieldedTool();
+ 
++	// The first item of the player's "offhand" list, held in the left hand
++	void updateOffhand(LocalPlayer *player, f32 frametime);
++
+ 	// Nodes
+ 	scene::ISceneNode *m_playernode = nullptr;
+ 	scene::ISceneNode *m_headnode = nullptr;
+@@ -195,6 +198,14 @@ class Camera
+ 
+ 	scene::ISceneManager *m_wieldmgr = nullptr;
+ 	WieldMeshSceneNode *m_wieldnode = nullptr;
++	WieldMeshSceneNode *m_offhand_node = nullptr;
++	std::string m_offhand_name;
++	// 0 lowered .. 1 raised, and 0 .. 1 while it comes up into view
++	f32 m_offhand_raise = 0.0f;
++	f32 m_offhand_equip = 0.0f;
++	// lowered and raised
++	v3f m_offhand_position[2];
++	v3f m_offhand_rotation[2];
+ 
+ 	// draw control
+ 	MapDrawControl& m_draw_control;
+diff --git a/src/defaultsettings.cpp b/src/defaultsettings.cpp
+index 5e740a5d8..70e28323a 100644
+--- a/src/defaultsettings.cpp
++++ b/src/defaultsettings.cpp
+@@ -307,6 +307,10 @@ void set_default_settings()
+ 	settings->setDefault("show_entity_selectionbox", "false");
+ 	settings->setDefault("ambient_occlusion_gamma", "1.8");
+ 	settings->setDefault("arm_inertia", "true");
++	settings->setDefault("offhand_position", "(-41, -32, 65)");
++	settings->setDefault("offhand_rotation", "(0, -25, 0)");
++	settings->setDefault("offhand_raised_position", "(-22, -18, 50)");
++	settings->setDefault("offhand_raised_rotation", "(0, 10, 0)");
+ 	settings->setDefault("hurt_flash_enabled", "true");
+ 	settings->setDefault("show_nametag_backgrounds", "true");
+ 	settings->setDefault("show_block_bounds_radius_near", "4");

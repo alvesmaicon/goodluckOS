@@ -1,0 +1,22 @@
+# textdomain: goodluck_effects
+Speed=Velocidade
+Slowness=Lentidão
+Jump Boost=Supersalto
+Slow Falling=Queda lenta
+Poison=Veneno
+Wither=Decomposição
+Regeneration=Regeneração
+Strength=Força
+Weakness=Fraqueza
+Fire Resistance=Resistência ao fogo
+Water Breathing=Respiração aquática
+Invisibility=Invisibilidade
+Night Vision=Visão noturna
+Instant Health=Vida instantânea
+Instant Damage=Dano instantâneo
+<effect> [<seconds>] [<level>] | clear [<effect>]=<efeito> [<segundos>] [<nível>] | clear [<efeito>]
+Give yourself a status effect, or take them away=Aplica um efeito em você, ou remove os efeitos
+Unknown effect: @1=Efeito desconhecido: @1
+Removed effect @1 from @2=Você removeu o efeito @1 de @2
+Removed every effect from @1=Você removeu todos os efeitos de @1
+Applied effect @1 to @2=Você aplicou o efeito @1 a @2

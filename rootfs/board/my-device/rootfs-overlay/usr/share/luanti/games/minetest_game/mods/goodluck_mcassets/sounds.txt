@@ -1,0 +1,155 @@
+# Luanti sound   Minecraft files (minecraft/sounds/<name>.ogg, found by the asset index), played at random as Minecraft does
+# Update Luanti (luanti-update.sh) copies them under the game's file names (name.ogg, name.1.ogg...), so they play in
+# place of the game's; when Minecraft has more, the rest go on as name.<n>.ogg. Luanti's gains stay as they are.
+
+# Blocks: Minecraft walks on and hits a block with its step/* files, breaks and places it with dig/*
+default_hard_footstep	step/stone1 step/stone2 step/stone3 step/stone4 step/stone5 step/stone6
+default_dig_cracky	step/stone1 step/stone2 step/stone3 step/stone4 step/stone5 step/stone6
+default_place_node_hard	dig/stone1 dig/stone2 dig/stone3 dig/stone4
+default_dug_node	dig/stone1 dig/stone2 dig/stone3 dig/stone4
+default_metal_footstep	step/stone1 step/stone2 step/stone3 step/stone4 step/stone5 step/stone6
+default_dig_metal	step/stone1 step/stone2 step/stone3 step/stone4 step/stone5 step/stone6
+default_dug_metal	dig/stone1 dig/stone2 dig/stone3 dig/stone4
+default_place_node_metal	dig/stone1 dig/stone2 dig/stone3 dig/stone4
+default_glass_footstep	step/stone1 step/stone2 step/stone3 step/stone4 step/stone5 step/stone6
+default_break_glass	random/glass1 random/glass2 random/glass3
+default_ice_footstep	step/stone1 step/stone2 step/stone3 step/stone4 step/stone5 step/stone6
+default_ice_dig	step/stone1 step/stone2 step/stone3 step/stone4 step/stone5 step/stone6
+default_ice_dug	random/glass1 random/glass2 random/glass3
+default_dirt_footstep	step/gravel1 step/gravel2 step/gravel3 step/gravel4
+default_dig_crumbly	step/gravel1 step/gravel2 step/gravel3 step/gravel4
+default_place_node	dig/gravel1 dig/gravel2 dig/gravel3 dig/gravel4
+default_gravel_footstep	step/gravel1 step/gravel2 step/gravel3 step/gravel4
+default_gravel_dig	step/gravel1 step/gravel2 step/gravel3 step/gravel4
+default_gravel_dug	dig/gravel1 dig/gravel2 dig/gravel3 dig/gravel4
+default_sand_footstep	step/sand1 step/sand2 step/sand3 step/sand4 step/sand5
+default_grass_footstep	step/grass1 step/grass2 step/grass3 step/grass4 step/grass5 step/grass6
+default_dig_snappy	step/grass1 step/grass2 step/grass3 step/grass4 step/grass5 step/grass6
+default_dig_oddly_breakable_by_hand	step/grass1 step/grass2 step/grass3 step/grass4 step/grass5 step/grass6
+default_dig_dig_immediate	step/grass1 step/grass2 step/grass3 step/grass4 step/grass5 step/grass6
+default_wood_footstep	step/wood1 step/wood2 step/wood3 step/wood4 step/wood5 step/wood6
+default_dig_choppy	step/wood1 step/wood2 step/wood3 step/wood4 step/wood5 step/wood6
+default_snow_footstep	step/snow1 step/snow2 step/snow3 step/snow4
+default_water_footstep	liquid/swim1 liquid/swim2 liquid/swim3 liquid/swim4
+x_enchanting_wood_footstep	step/wood1 step/wood2 step/wood3 step/wood4 step/wood5 step/wood6
+x_enchanting_wood_hit	step/wood1 step/wood2 step/wood3 step/wood4 step/wood5 step/wood6
+x_enchanting_wood_place	dig/wood1 dig/wood2 dig/wood3 dig/wood4
+
+# Breaking and placing by material: the mod gives these to the nodes whose dug sound is their footstep (wool by its
+# group), as Minecraft breaks and places with its dig/* files
+goodluck_mc_break_stone	dig/stone1 dig/stone2 dig/stone3 dig/stone4
+goodluck_mc_break_wood	dig/wood1 dig/wood2 dig/wood3 dig/wood4
+goodluck_mc_break_gravel	dig/gravel1 dig/gravel2 dig/gravel3 dig/gravel4
+goodluck_mc_break_sand	dig/sand1 dig/sand2 dig/sand3 dig/sand4
+goodluck_mc_break_grass	dig/grass1 dig/grass2 dig/grass3 dig/grass4
+goodluck_mc_break_snow	dig/snow1 dig/snow2 dig/snow3 dig/snow4
+goodluck_mc_break_cloth	dig/cloth1 dig/cloth2 dig/cloth3 dig/cloth4
+goodluck_mc_step_cloth	step/cloth1 step/cloth2 step/cloth3 step/cloth4
+# a node that names its own (_goodluck_mc_sound) is also walked on and hit with its step files
+goodluck_mc_break_netherrack	block/netherrack/break1 block/netherrack/break2 block/netherrack/break3 block/netherrack/break4 block/netherrack/break5 block/netherrack/break6
+goodluck_mc_step_netherrack	block/netherrack/step1 block/netherrack/step2 block/netherrack/step3 block/netherrack/step4 block/netherrack/step5 block/netherrack/step6
+goodluck_mc_break_soul_sand	block/soul_sand/break1 block/soul_sand/break2 block/soul_sand/break3 block/soul_sand/break4 block/soul_sand/break5 block/soul_sand/break6 block/soul_sand/break7 block/soul_sand/break8 block/soul_sand/break9
+goodluck_mc_step_soul_sand	block/soul_sand/step1 block/soul_sand/step2 block/soul_sand/step3 block/soul_sand/step4 block/soul_sand/step5
+goodluck_mc_break_nether_bricks	block/nether_bricks/break1 block/nether_bricks/break2 block/nether_bricks/break3 block/nether_bricks/break4 block/nether_bricks/break5 block/nether_bricks/break6
+goodluck_mc_step_nether_bricks	block/nether_bricks/step1 block/nether_bricks/step2 block/nether_bricks/step3 block/nether_bricks/step4 block/nether_bricks/step5 block/nether_bricks/step6
+goodluck_mc_break_nether_ore	block/nether_ore/break1 block/nether_ore/break2 block/nether_ore/break3 block/nether_ore/break4
+goodluck_mc_step_nether_ore	block/nether_ore/step1 block/nether_ore/step2 block/nether_ore/step3 block/nether_ore/step4 block/nether_ore/step5
+
+# The nether portal: its hum, the whoosh on stepping in, the arrival
+goodluck_nether_portal_ambient	portal/portal
+goodluck_nether_portal_trigger	portal/trigger
+goodluck_nether_portal_travel	portal/travel
+
+# Chests, doors, furnace, fire, carts
+default_chest_open	block/chest/open
+default_chest_close	block/chest/close1 block/chest/close2 block/chest/close3
+doors_door_open	block/wooden_door/open1 block/wooden_door/open2
+doors_door_close	block/wooden_door/close1 block/wooden_door/close2 block/wooden_door/close3
+doors_glass_door_open	block/wooden_door/open1 block/wooden_door/open2
+doors_glass_door_close	block/wooden_door/close1 block/wooden_door/close2 block/wooden_door/close3
+doors_steel_door_open	block/iron_door/open1 block/iron_door/open2 block/iron_door/open3 block/iron_door/open4
+doors_steel_door_close	block/iron_door/close1 block/iron_door/close2 block/iron_door/close3 block/iron_door/close4
+xpanes_steel_bar_door_open	block/iron_door/open1 block/iron_door/open2 block/iron_door/open3 block/iron_door/open4
+xpanes_steel_bar_door_close	block/iron_door/close1 block/iron_door/close2 block/iron_door/close3 block/iron_door/close4
+doors_fencegate_open	block/fence_gate/open1 block/fence_gate/open2
+doors_fencegate_close	block/fence_gate/close1 block/fence_gate/close2
+default_furnace_active	fire/fire
+default_cool_lava	random/fizz
+default_item_smoke	random/fizz
+default_tool_breaks	random/break
+env_sounds_water	liquid/water
+env_sounds_lava	liquid/lava
+fire_fire	fire/fire
+fire_small	fire/fire
+fire_large	fire/fire
+fire_extinguish_flame	random/fizz
+fire_flint_and_steel	fire/ignite
+tnt_explode	random/explode1 random/explode2 random/explode3 random/explode4
+tnt_ignite	random/fuse
+tnt_gunpowder_burning	random/fuse
+carts_cart_moving	minecart/base
+
+# The player
+player_damage	damage/hit1 damage/hit2 damage/hit3
+player_falling_damage	damage/fallbig
+stamina_eat	random/eat1 random/eat2 random/eat3
+stamina_sip	random/drink
+goodluck_xp_orb	random/orb
+goodluck_xp_levelup	random/levelup
+goodluck_item_drop_pop	random/pop
+goodluck_anvil_use	random/anvil_use
+goodluck_anvil_land	random/anvil_land
+goodluck_anvil_destroy	random/anvil_break
+x_enchanting_enchant	block/enchantment_table/enchant1 block/enchantment_table/enchant2 block/enchantment_table/enchant3
+x_enchanting_disenchant	block/grindstone/grindstone1 block/grindstone/grindstone2 block/grindstone/grindstone3
+x_enchanting_scroll	item/book/open_flip1 item/book/open_flip2 item/book/open_flip3
+x_bows_bow_shoot	random/bow
+x_bows_bow_shoot_crit	random/bow
+x_bows_arrow_hit	random/bowhit1 random/bowhit2 random/bowhit3 random/bowhit4
+x_bows_arrow_successful_hit	random/successful_hit
+mobs_punch	entity/player/attack/strong1 entity/player/attack/strong2 entity/player/attack/strong3 entity/player/attack/strong4 entity/player/attack/strong5 entity/player/attack/strong6
+
+# Animals and monsters
+mobs_cow	mob/cow/say1 mob/cow/say2 mob/cow/say3 mob/cow/say4
+mobs_pig	mob/pig/say1 mob/pig/say2 mob/pig/say3
+mobs_sheep	mob/sheep/say1 mob/sheep/say2 mob/sheep/say3
+mobs_chicken	mob/chicken/say1 mob/chicken/say2 mob/chicken/say3
+mobs_kitten	mob/cat/meow1 mob/cat/meow2 mob/cat/meow3 mob/cat/meow4
+mobs_panda	mob/panda/idle1 mob/panda/idle2 mob/panda/idle3 mob/panda/idle4
+mobs_bee	mob/bee/loop1 mob/bee/loop2 mob/bee/loop3 mob/bee/loop4 mob/bee/loop5
+mob_horse	mob/horse/idle1 mob/horse/idle2 mob/horse/idle3
+mob_horse_whinny	mob/horse/hit1 mob/horse/hit2 mob/horse/hit3 mob/horse/hit4
+goodluck_horse_equip	mob/horse/leather
+goodluck_monsters_zombie	mob/zombie/say1 mob/zombie/say2 mob/zombie/say3
+goodluck_monsters_zombie_hurt	mob/zombie/hurt1 mob/zombie/hurt2
+goodluck_monsters_skeleton	mob/skeleton/say1 mob/skeleton/say2 mob/skeleton/say3
+mobs_spider	mob/spider/say1 mob/spider/say2 mob/spider/say3 mob/spider/say4
+goodluck_monsters_mushroom_fuse	random/fuse
+# The Nether's monsters; the blaze shoots with the ghast's fireball, as in Minecraft
+goodluck_nether_ghast	mob/ghast/moan1 mob/ghast/moan2 mob/ghast/moan3 mob/ghast/moan4 mob/ghast/moan5 mob/ghast/moan6 mob/ghast/moan7
+goodluck_nether_ghast_hurt	mob/ghast/scream1 mob/ghast/scream2 mob/ghast/scream3 mob/ghast/scream4 mob/ghast/scream5
+goodluck_nether_ghast_death	mob/ghast/death
+goodluck_nether_ghast_warn	mob/ghast/charge
+goodluck_nether_fireball	mob/ghast/fireball4
+goodluck_nether_blaze	mob/blaze/breathe1 mob/blaze/breathe2 mob/blaze/breathe3 mob/blaze/breathe4
+goodluck_nether_blaze_hurt	mob/blaze/hit1 mob/blaze/hit2 mob/blaze/hit3 mob/blaze/hit4
+goodluck_nether_blaze_death	mob/blaze/death
+goodluck_nether_magma_cube_jump	mob/magmacube/jump1 mob/magmacube/jump2 mob/magmacube/jump3 mob/magmacube/jump4
+goodluck_nether_magma_cube_squish	mob/magmacube/big1 mob/magmacube/big2 mob/magmacube/big3 mob/magmacube/big4
+goodluck_nether_magma_cube_squish_small	mob/magmacube/small1 mob/magmacube/small2 mob/magmacube/small3 mob/magmacube/small4 mob/magmacube/small5
+goodluck_nether_magma_cube_hurt	mob/slime/big1 mob/slime/big2 mob/slime/big3 mob/slime/big4
+goodluck_nether_magma_cube_hurt_small	mob/slime/small1 mob/slime/small2 mob/slime/small3 mob/slime/small4 mob/slime/small5
+goodluck_nether_zombified_piglin	mob/zombified_piglin/zpig1 mob/zombified_piglin/zpig2 mob/zombified_piglin/zpig3 mob/zombified_piglin/zpig4
+goodluck_nether_zombified_piglin_angry	mob/zombified_piglin/zpigangry1 mob/zombified_piglin/zpigangry2 mob/zombified_piglin/zpigangry3 mob/zombified_piglin/zpigangry4
+goodluck_nether_zombified_piglin_hurt	mob/zombified_piglin/zpighurt1 mob/zombified_piglin/zpighurt2
+goodluck_nether_zombified_piglin_death	mob/zombified_piglin/zpigdeath
+goodluck_nether_wither_skeleton	mob/wither_skeleton/idle1 mob/wither_skeleton/idle2 mob/wither_skeleton/idle3
+goodluck_nether_wither_skeleton_hurt	mob/wither_skeleton/hurt1 mob/wither_skeleton/hurt2 mob/wither_skeleton/hurt3 mob/wither_skeleton/hurt4
+goodluck_nether_wither_skeleton_death	mob/wither_skeleton/death1 mob/wither_skeleton/death2
+
+# Potions (goodluck_potions): drunk, thrown, broken, a bottle filled, a brew done
+goodluck_potions_drink	random/drink
+goodluck_potions_throw	random/bow
+goodluck_potions_break	random/glass1 random/glass2 random/glass3
+goodluck_potions_fill	item/bottle/fill1 item/bottle/fill2 item/bottle/fill3 item/bottle/fill4
+goodluck_potions_brew	block/brewing_stand/brew1 block/brewing_stand/brew2

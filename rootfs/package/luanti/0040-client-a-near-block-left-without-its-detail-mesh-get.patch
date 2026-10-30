@@ -1,0 +1,32 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Thu, 29 Oct 2026 02:03:09 -0300
+Subject: [PATCH 40/40] client: a near block left without its detail mesh gets
+ it back
+
+The culler asks for the detail mesh of a block left out as far only when its traversal reaches
+the block; one it never reaches, behind a wall whose own mesh is missing too, stays a hole. The
+touch of the blocks in range, every four seconds, now asks for the detail mesh of any block left
+out that is within the detail distance, as the loops culler already did on every draw list.
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+
+diff --git a/src/client/clientmap.cpp b/src/client/clientmap.cpp
+index 386e2e497..f16197ec0 100644
+--- a/src/client/clientmap.cpp
++++ b/src/client/clientmap.cpp
+@@ -1015,6 +1015,14 @@ void ClientMap::touchMapBlocks()
+ 
+ 			blocks_in_range++;
+ 
++			// Left without its detail mesh while it counted as far: asked again once it is near
++			if (block->detail_mesh == MapBlock::DetailMesh::LeftOut && m_cache_lod_distance > 0 &&
++					lodDistance(getContainerPos(block->getPos(), LodMeshGenerator::REGION) * LodMeshGenerator::REGION) <=
++					(m_cache_lod_distance + LOD_DETAIL_MARGIN) * BS) {
++				block->detail_mesh = MapBlock::DetailMesh::Asked;
++				m_client->addUpdateMeshTask(block->getPos());
++			}
++
+ 			if (m_cache_unload_out_of_view) {
+ 				// Out of view: let it expire like a block out of range
+ 				v3f to_block = mesh_sphere_center - m_camera_position;

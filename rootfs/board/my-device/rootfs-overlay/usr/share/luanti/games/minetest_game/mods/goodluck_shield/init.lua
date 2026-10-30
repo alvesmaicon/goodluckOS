@@ -1,0 +1,141 @@
+-- With a 3d_armor shield on, L1 (place) held with nothing to place in hand, or sneaking as on Bedrock, raises it; after
+-- 0.25 s, as in Minecraft, hits and arrows from the front half do no damage and wear only the shield. Attacking lowers
+-- it, as on Bedrock. The engine (patch 0022) holds the "offhand" list's item in the left hand, raised by its meta
+local RAISE_DELAY = 0.25 * 1e6
+-- raised, it walks as slow as sneaking, which already is
+local SLOW = (tonumber(core.settings:get("movement_speed_crouch")) or 1.35) /
+	(tonumber(core.settings:get("movement_speed_walk")) or 4)
+-- a mob that hits it is pushed back as mobs_redo's own knockback does
+local PUSH, PUSH_UP, PUSH_PAUSE = 5, 2, 0.25
+local sprint = core.get_modpath("goodluck_sprint") and goodluck_sprint
+local since, up_now, raised, slowed = {}, {}, {}, {}
+
+local function shield_slot(name)
+	local inv = core.get_inventory({type = "detached", name = name .. "_armor"})
+	if not inv then
+		return
+	end
+	for i, stack in ipairs(inv:get_list("armor")) do
+		if core.get_item_group(stack:get_name(), "armor_shield") > 0 then
+			return i, stack
+		end
+	end
+end
+
+-- as Minecraft's main hand wins: a block or an item with its own place keeps L1, a sword, a tool or the hand don't
+local function places(stack)
+	local def = stack:get_definition()
+	return def.type == "node" or rawget(def, "on_place") ~= nil or rawget(def, "on_secondary_use") ~= nil
+end
+
+-- the attacker, or the arrow touching the player, stands in the half the player looks at
+local function blocks(player, hitter)
+	if not raised[player:get_player_name()] or type(hitter) ~= "userdata" then
+		return false
+	end
+	local from = hitter:get_pos()
+	if not from then
+		return false
+	end
+	local d, look = vector.subtract(from, player:get_pos()), player:get_look_dir()
+	return d.x * look.x + d.z * look.z > 0
+end
+
+local function set_slowed(player, name, on)
+	if (slowed[name] or false) == on then
+		return
+	end
+	slowed[name] = on or nil
+	goodluck_physics.set(player, "goodluck_shield", on and {speed = SLOW} or nil)
+end
+
+-- the shield worn, copied to the left hand, raised or not
+local function show(player, name)
+	local inv = player:get_inventory()
+	if inv:get_size("offhand") ~= 1 then
+		inv:set_size("offhand", 1)
+	end
+	local _, stack = shield_slot(name)
+	local shown = ItemStack(stack and stack:get_name() or "")
+	if up_now[name] and not shown:is_empty() then
+		shown:get_meta():set_string("raised", "1")
+	end
+	if not inv:get_stack("offhand", 1):equals(shown) then
+		inv:set_stack("offhand", 1, shown)
+	end
+end
+
+local function set_up(player, name, on)
+	if (up_now[name] or false) == on then
+		return
+	end
+	up_now[name] = on or nil
+	if sprint then
+		sprint.stop(player, on, "shield")
+	end
+	show(player, name)
+end
+
+core.register_globalstep(function()
+	local now = core.get_us_time()
+	for _, player in ipairs(core.get_connected_players()) do
+		local name = player:get_player_name()
+		local ctrl = player:get_player_control()
+		local up = (ctrl.sneak or ctrl.place and not places(player:get_wielded_item())) and not ctrl.dig and
+			player:get_hp() > 0 and shield_slot(name) ~= nil
+		if not up then
+			since[name] = nil
+		elseif not since[name] then
+			since[name] = now
+		end
+		set_up(player, name, up)
+		raised[name] = up and now - since[name] >= RAISE_DELAY or nil
+		set_slowed(player, name, up and not ctrl.sneak)
+	end
+end)
+
+-- 3d_armor wears every piece on a punch: a blocked one wears only the shield, below
+local armor_punch = armor.punch
+armor.punch = function(self, player, hitter, ...)
+	if blocks(player, hitter) then
+		return
+	end
+	return armor_punch(self, player, hitter, ...)
+end
+
+local knockback = core.calculate_knockback
+function core.calculate_knockback(player, hitter, ...)
+	if blocks(player, hitter) then
+		return 0
+	end
+	return knockback(player, hitter, ...)
+end
+
+core.register_on_punchplayer(function(player, hitter)
+	if not blocks(player, hitter) then
+		return
+	end
+	local name = player:get_player_name()
+	local i, stack = shield_slot(name)
+	local use = stack and core.get_item_group(stack:get_name(), "armor_use") or 0
+	-- the shield's on_damage plays its material's sound
+	if use > 0 and not core.is_creative_enabled(name) then
+		armor:damage(player, i, stack, use)
+	end
+	local mob = hitter:get_luaentity()
+	if mob and mob._cmi_is_mob then
+		local dir = vector.direction(player:get_pos(), hitter:get_pos())
+		hitter:set_velocity(vector.new(dir.x * PUSH, PUSH_UP, dir.z * PUSH))
+		mob.pause_timer = PUSH_PAUSE
+	end
+	return true
+end)
+
+armor:register_on_update(function(player)
+	show(player, player:get_player_name())
+end)
+
+core.register_on_leaveplayer(function(player)
+	local name = player:get_player_name()
+	since[name], up_now[name], raised[name], slowed[name] = nil, nil, nil, nil
+end)

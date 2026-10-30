@@ -1,0 +1,234 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Sat, 24 Oct 2026 02:15:56 -0300
+Subject: [PATCH 35/35] client: the player's jump and fall as in Minecraft
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The jump rose at 6.5 m/s against a gravity of 19.6 m/s² (the setting
+times the factor 2 the code calls a hack): 1.08 nodes high, at its top
+after 0.33 s. Minecraft's jump is 0.42 a tick, and its air takes 0.08 a
+tick off the vertical speed and then keeps 98 % of it: 1.25 high, at its
+top after 0.3 s, and a fall that ends at 78.4 m/s.
+
+The player's air is now Minecraft's, in continuous time: v -> V + (v - V)
+* 0.98^(20 t), the gravity override scaling the end speed V. The jump is
+the speed whose path goes through Minecraft's position at every tick
+(9.28 m/s: 0.42, 0.75, 1.00, 1.17, 1.25 at ticks 1 to 5), times the jump
+override. Jump held waits 10 ticks before the next jump, as Minecraft's
+noJumpDelay, and the wait ends when jump is let go. movement_speed_jump
+and movement_gravity no longer move the player.
+
+Fall damage is Minecraft's: a point for each node of the fall beyond 3,
+times fall_damage_add_percent, the fall's height taken from the landing
+speed in that air. It was the speed over 14 m/s: nothing up to 5 nodes,
+14 for 20 (Minecraft: 1 for 4, 17 for 20).
+
+A wall pushed on in the water lifts the player at Minecraft's 0.3 a tick
+as a speed of that air (6.85 m/s, it was 6), and only at the surface, as
+Minecraft's jumpOutOfFluid: when the box 0.6 higher, a tick on, has no
+water. It lifted along every wall under water.
+
+Checked in the native build, keys pressed by xdotool and the position
+logged every frame, at 30 and 15 FPS (Minecraft in brackets): the jump
+1.26 nodes high (1.25), back on the ground after 0.54 s (0.55 to 0.6),
+jump held on flat ground every 0.57 s (0.6); falls of 3, 3.5, 4, 5, 10
+and 20 nodes: 0, 1, 1, 2, 7 and 17 HP (the same). Out of deep water at a
+wall the feet rise 0.69 over the water's top (0.59 to 0.93), onto a slab
+but not onto a whole block, as in Minecraft. The water's own numbers
+(walking, swimming, sinking, the current) don't change; jump and forward
+at the surface 2.36 m/s (2.33, it was 2.57).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/src/client/clientenvironment.cpp b/src/client/clientenvironment.cpp
+index 89bf7d3c9..f663c0627 100644
+--- a/src/client/clientenvironment.cpp
++++ b/src/client/clientenvironment.cpp
+@@ -127,10 +127,9 @@ void ClientEnvironment::step(float dtime)
+ 		// Apply physics (Minecraft's water has its own, in applyControl)
+ 		lplayer->gravity = 0;
+ 		if (!free_move && !lplayer->water_move) {
+-			// Gravity
++			// Gravity, Minecraft's air
+ 			if (!is_climbing && !lplayer->in_liquid)
+-				// HACK the factor 2 for gravity is arbitrary and should be removed eventually
+-				lplayer->gravity = 2 * lplayer->movement_gravity * lplayer->physics_override.gravity;
++				lplayer->gravity = lplayer->getAirGravity(dtime_part);
+ 
+ 			// Liquid floating / sinking
+ 			if (!is_climbing && lplayer->in_liquid &&
+@@ -204,8 +203,7 @@ void ClientEnvironment::step(float dtime)
+ 		// Get rid of other components
+ 		speed_diff.X = 0;
+ 		speed_diff.Z = 0;
+-		f32 pre_factor = 1; // 1 hp per node/s
+-		f32 tolerance = BS*14; // 5 without damage
++		f32 pre_factor = 1;
+ 		if (info.type == COLLISION_NODE) {
+ 			const ContentFeatures &f = m_client->ndef()->
+ 				get(m_map->getNode(info.node_p));
+@@ -216,11 +214,12 @@ void ClientEnvironment::step(float dtime)
+ 			// combine both player fall damage modifiers
+ 			pre_factor = node_fall_factor * player_fall_factor;
+ 		}
+-		float speed = pre_factor * speed_diff.getLength();
++		// As in Minecraft: a point for each node of the fall beyond 3, times the modifiers
++		f32 damage_f = (lplayer->getFallHeight(speed_diff.getLength()) - 3.0f) * pre_factor;
+ 
+-		if (speed > tolerance && !player_immortal && pre_factor > 0.0f) {
+-			f32 damage_f = (speed - tolerance) / BS;
+-			u16 damage = (u16)MYMIN(damage_f + 0.5, U16_MAX);
++		if (damage_f > 0.0f && !player_immortal && pre_factor > 0.0f) {
++			// less than a hundredth of a node over is the integration's, not the fall's
++			u16 damage = (u16)MYMIN(std::ceil(damage_f - 0.01f), U16_MAX);
+ 			if (damage != 0) {
+ 				damageLocalPlayer(damage, true);
+ 				m_client->getEventManager()->put(
+diff --git a/src/client/localplayer.cpp b/src/client/localplayer.cpp
+index afacd2a6a..d4e186d05 100644
+--- a/src/client/localplayer.cpp
++++ b/src/client/localplayer.cpp
+@@ -208,6 +208,42 @@ bool LocalPlayer::updateSneakNode(Map *map, const v3f &position,
+ 	return true;
+ }
+ 
++// Minecraft's air: each 20 Hz tick 0.08 down, then 98 % of the vertical speed kept, so a fall ends at 3.92 a tick
++static const f32 MC_AIR_KEEP = 0.98f;
++static const f32 MC_AIR_TERMINAL = 20.0f * 0.08f * MC_AIR_KEEP / (1.0f - MC_AIR_KEEP);
++
++// A speed of Minecraft's (a tick) as the speed whose path in continuous time goes through
++// Minecraft's position at every tick of its air
++f32 LocalPlayer::getAirSpeed(f32 per_tick) const
++{
++	const f32 terminal = MC_AIR_TERMINAL * physics_override.gravity;
++	const f32 rate = -std::log(MC_AIR_KEEP) / (1.0f - MC_AIR_KEEP);
++	return ((20.0f * per_tick + terminal) * rate - terminal) * BS;
++}
++
++// Minecraft's jump, 0.42 a tick
++f32 LocalPlayer::getJumpSpeed() const
++{
++	return physics_override.jump == 0.0f ? 0.0f : getAirSpeed(0.42f * physics_override.jump);
++}
++
++// The same air in continuous time, v -> V + (v - V) * 0.98^(20 t): the pull that gives that speed after dtime
++f32 LocalPlayer::getAirGravity(f32 dtime) const
++{
++	if (dtime <= 0.0f)
++		return 0.0f;
++	const f32 terminal = -MC_AIR_TERMINAL * BS * physics_override.gravity;
++	return (m_speed.Y - terminal) * (1.0f - std::pow(MC_AIR_KEEP, 20.0f * dtime)) / dtime;
++}
++
++// How far a fall in that air drops before it lands at this speed
++f32 LocalPlayer::getFallHeight(f32 speed) const
++{
++	const f32 terminal = MC_AIR_TERMINAL * std::max(physics_override.gravity, 0.01f);
++	const f32 u = std::min(speed / BS, terminal * 0.9999f);
++	return (terminal * std::log(terminal / (terminal - u)) - u) / (-20.0f * std::log(MC_AIR_KEEP));
++}
++
+ static bool is_water(const ContentFeatures &f)
+ {
+ 	return f.liquid_type != LIQUID_NONE && itemgroup_get(f.groups, "water") > 0;
+@@ -451,14 +487,16 @@ void LocalPlayer::move(f32 dtime, Environment *env,
+ 		m_collisionbox, player_stepheight, dtime,
+ 		&position, &m_speed, accel_f, m_cao, true, step_up_mode);
+ 
+-	// As in Minecraft, pushing on a wall in the water lifts the player, unless something is above
++	// As in Minecraft, pushing on a wall at the surface lifts the player, at 0.3 a tick in its air,
++	// when the box 0.6 higher (and a tick on) has no water and nothing solid
+ 	if (water_move) {
+ 		bool wall = false;
+ 		for (const auto &colinfo : result.collisions)
+ 			wall |= colinfo.type == COLLISION_NODE && colinfo.axis != COLLISION_AXIS_Y;
+-		if (wall && !collision_check_intersection(env, m_client, m_collisionbox,
++		if (wall && water_depth <= 0.6f + m_speed.Y / (20.0f * BS) &&
++				!collision_check_intersection(env, m_client, m_collisionbox,
+ 				position + v3f(0.0f, 0.6f * BS, 0.0f), m_cao))
+-			m_speed.Y = 0.3f * 20.0f * BS;
++			m_speed.Y = getAirSpeed(0.3f);
+ 	}
+ 
+ 	bool could_sneak = control.sneak && !free_move && !in_liquid &&
+@@ -625,7 +663,7 @@ void LocalPlayer::move(f32 dtime, Environment *env,
+ 		itemgroup_get(f1.groups, "disable_descend");
+ 
+ 	// Jump/Sneak key pressed while bouncing from a bouncy block
+-	float jumpspeed = movement_speed_jump * physics_override.jump;
++	float jumpspeed = getJumpSpeed();
+ 	if (m_can_jump && (control.jump || control.sneak) && standing_node_bouncy > 0) {
+ 		// controllable (>0) bouncy block
+ 		if (!control.jump) {
+@@ -666,6 +704,9 @@ void LocalPlayer::applyControl(float dtime, Environment *env)
+ 	setPitch(control.pitch);
+ 	setYaw(control.yaw);
+ 
++	// Minecraft counts the wait between jumps only while jump is held
++	m_jump_delay = control.jump ? m_jump_delay - dtime : 0.0f;
++
+ 	// Nullify speed and don't run positioning code if the player is attached
+ 	if (getParent()) {
+ 		setSpeed(v3f(0.0f));
+@@ -801,9 +842,10 @@ void LocalPlayer::applyControl(float dtime, Environment *env)
+ 				at its starting value
+ 			*/
+ 			v3f speedJ = getSpeed();
+-			if (speedJ.Y >= -0.5f * BS) {
+-				speedJ.Y = movement_speed_jump * physics_override.jump;
++			if (speedJ.Y >= -0.5f * BS && m_jump_delay <= 0.0f) {
++				speedJ.Y = std::max(getJumpSpeed(), speedJ.Y);
+ 				setSpeed(speedJ);
++				m_jump_delay = 0.5f;
+ 				m_client->getEventManager()->put(new SimpleTriggerEvent(MtEvent::PLAYER_JUMP));
+ 			}
+ 		} else if (in_liquid && !m_disable_jump && !control.sneak) {
+@@ -985,8 +1027,9 @@ void LocalPlayer::applyWaterControl(float dtime, Environment *env)
+ 	if (control.jump && !m_disable_jump && (!touching_ground || water_depth > 0.4f)) {
+ 		push += 0.04f;
+ 		swimming_vertical = true;
+-	} else if (control.jump && m_can_jump) {
+-		m_speed.Y = movement_speed_jump * physics_override.jump;
++	} else if (control.jump && m_can_jump && m_jump_delay <= 0.0f) {
++		m_speed.Y = getJumpSpeed();
++		m_jump_delay = 0.5f;
+ 		m_client->getEventManager()->put(new SimpleTriggerEvent(MtEvent::PLAYER_JUMP));
+ 	}
+ 	if (control.sneak && !m_disable_descend) {
+@@ -1417,7 +1460,7 @@ void LocalPlayer::handleAutojump(f32 dtime, Environment *env,
+ 		}
+ 	}
+ 
+-	float jumpspeed = movement_speed_jump * physics_override.jump;
++	float jumpspeed = getJumpSpeed();
+ 	float peak_dtime = jumpspeed / gravity; // at the peak of the jump v = gt <=> t = v / g
+ 	float jump_height = (jumpspeed - 0.5f * gravity * peak_dtime) * peak_dtime; // s = vt - 1/2 gt^2
+ 	v3f jump_pos = initial_position + v3f(0.0f, jump_height, 0.0f);
+diff --git a/src/client/localplayer.h b/src/client/localplayer.h
+index cdea8af87..6b9626a9f 100644
+--- a/src/client/localplayer.h
++++ b/src/client/localplayer.h
+@@ -64,6 +64,12 @@ class LocalPlayer : public Player
+ 
+ 	f32 gravity = 0; // total downwards acceleration
+ 
++	// Minecraft's jump and air (see localplayer.cpp)
++	f32 getAirSpeed(f32 per_tick) const;
++	f32 getJumpSpeed() const;
++	f32 getAirGravity(f32 dtime) const;
++	f32 getFallHeight(f32 speed) const;
++
+ 	void move(f32 dtime, Environment *env);
+ 	void move(f32 dtime, Environment *env,
+ 			std::vector<CollisionInfo> *collision_info);
+@@ -202,6 +208,8 @@ class LocalPlayer : public Player
+ 	// ***** End of variables for temporary option *****
+ 
+ 	bool m_can_jump = false;
++	// Minecraft's wait before the next jump while jump is held
++	f32 m_jump_delay = 0.0f;
+ 	// Airborne since the water moved the player
+ 	bool m_water_air = false;
+ 	// The water's current, a push per Minecraft tick

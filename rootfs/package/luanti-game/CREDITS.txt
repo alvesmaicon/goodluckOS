@@ -1,0 +1,241 @@
+Minetest Game and the mods goodluckOS adds to it
+================================================
+
+Every mod keeps its own license file in its folder. This file says where each
+one comes from, under which licenses, and what goodluckOS leaves out or
+replaces.
+
+minetest_game: the game and every mod in mods/ not listed below
+  https://github.com/luanti-org/minetest_game, commit @LUANTI_GAME_VERSION@
+  Code LGPL-2.1+, media CC BY-SA 3.0 and others: LICENSE.txt and each mod's
+  license.txt
+
+mobs (mobs_redo)
+  https://codeberg.org/tenplus1/mobs_redo, commit @MOBS_REDO_VERSION@
+  Code MIT; media CC0 and CC BY-SA 3.0: mods/mobs/license.txt
+
+mobs_animal
+  https://codeberg.org/tenplus1/mobs_animal, commit @MOBS_ANIMAL_VERSION@
+  Code MIT; media CC0, WTFPL, MIT, CC BY-SA 3.0: mods/mobs_animal/license.txt
+  Replaced by Pixel Perfection's (see goodluck_models below): the cow's, the
+  warthog's, the chickens' and the sheep's textures, for goodluck_models'
+  meshes (the sheep's own four were CC BY-NC-SA 4.0, non-commercial use only).
+  Replaced by goodluckOS's own (see goodluck_* below): the rat's model and
+  textures, credited only as "CCPL" with no version; and every file its
+  credits don't name: the black and killer bunnies and the black kitten
+  (recoloured from the credited grey and white bunnies, CC0, and the striped
+  kitten, WTFPL), the egg icons, the cooked rat, and the beehive, butter,
+  chicken, fried egg, feather, milk, hairball, honey and rabbit hide items.
+  Left out: mobs_chicken_white.png, which nothing uses.
+
+mobs_monster
+  https://codeberg.org/tenplus1/mobs_monster, commit @MOBS_MONSTER_VERSION@
+  Code MIT; media CC0, WTFPL, MIT, CC BY-SA 3.0 and 4.0:
+  mods/mobs_monster/license.txt
+  Replaced by goodluckOS's own: every file its credits don't name: the
+  third dungeon master, land guards 4 to 8 and oerkki 2 and 3 (recoloured
+  from the credited dungeon master and oerkki, WTFPL, and land guard, CC0),
+  the cobweb, the lava pick, the sand particles, and the fire spirit (an
+  empty image, as it was). Redrawn by goodluckOS: the stone monster's four
+  textures, and the dirt and sand monsters' two each. mobs_spider.ogg is the
+  sound mobs_animal's license.txt credits: Cyberpangolin, WTFPL. Added: an
+  empty spawn.lua, so its monsters no longer spawn (goodluck_monsters spawns
+  Minecraft's classic ones); they stay registered, their eggs out of the
+  creative inventory.
+
+stamina
+  https://codeberg.org/tenplus1/stamina, commit @STAMINA_VERSION@
+  Code LGPL-2.1+; media CC BY 3.0, WTFPL, CC0: mods/stamina/license.txt
+  Left out: stamina_burp.ogg, from freesfx.co.uk, whose terms are not the
+  CC BY 3.0 its credits give. It only plays for a drunk player, and nothing in
+  this game makes one drunk.
+  Replaced: stamina_hud_fg.png, stamina_hud_bg.png and stamina_hud_poison.png,
+  by goodluckOS's own (see goodluck_* below).
+
+mobs_npc
+  https://codeberg.org/tenplus1/mobs_npc, commit @MOBS_NPC_VERSION@
+  Code MIT; model CC BY-SA 3.0, textures CC BY-SA 3.0 and 4.0 and CC0:
+  mods/mobs_npc/license.txt
+  Replaced by goodluckOS's own: gui_arrow_blank.png and mobs_npc_shop_icon.png,
+  which its credits don't name. Added: an empty spawn.lua, so mobs_npc spawns
+  nothing by itself (goodluck_villages places the villagers), and the pt_BR
+  translation. Its character model and skins ship unused: goodluck_villages
+  puts Minecraft's villager on its NPC and trader (see goodluck_models).
+
+3d_armor
+  https://github.com/minetest-mods/3d_armor, commit @3D_ARMOR_VERSION@
+  Only these mods of the modpack, without the .blend files: @3D_ARMOR_MODS@
+  Code LGPL-2.1; armor textures CC BY-SA 3.0 (davidthecreator); sounds CC0:
+  mods/3d_armor/LICENSE.md
+
+x_enchanting
+  https://bitbucket.org/minetest_gamers/x_enchanting, commit @X_ENCHANTING_VERSION@
+  Code LGPL-2.1+; textures and models CC BY-SA 4.0 (some derived from
+  CC BY-SA 3.0 and 4.0 ones, each named), sounds CC0, CC BY 3.0 and CC BY 4.0:
+  mods/x_enchanting/LICENSE.txt
+  Replaced by goodluckOS's own: x_enchanting_image_trade_1.png to _3.png, the
+  enchanting table's cost, mese crystals there and lapis lazuli here. Added:
+  the pt_BR translation.
+
+x_bows
+  https://bitbucket.org/minetest_gamers/x_bows, commit @X_BOWS_VERSION@
+  Code LGPL-2.1+; textures and models CC BY-SA 4.0 and CC BY-SA 3.0, the
+  arrows' flyby sounds CC0: mods/x_bows/LICENSE.txt
+  Replaced by goodluckOS's own: the bow's sounds (drawing, fully drawn,
+  shooting, the critical shot, the arrow hitting, the hit on a player), which
+  its credits give to freesound.org authors with no particular Creative
+  Commons license; and x_bows_bow_wood_semi_charged.png, which its credits
+  don't name, redrawn from its x_bows_bow_wood.png and
+  x_bows_bow_wood_charged.png and so under their CC BY-SA 4.0. Left out:
+  the quiver's sounds (same credits as above; goodluck_bow takes the quiver
+  out of the game) and smoke_puff.png (not credited, empty, unused). Added:
+  the pt_BR translation. Its arrow model and x_bows_arrow_mesh.png ship
+  unused: goodluck_models puts Minecraft's arrow on its arrow entity.
+
+mob_horse
+  https://codeberg.org/tenplus1/mob_horse, commit @MOB_HORSE_VERSION@
+  Code MIT (TenPlus1); model mobs_horse.x MIT (Krupnov Pavel); sounds CC BY
+  3.0: mob_horse.1.ogg by blazecon0 (freesound.org/people/blazecon0/sounds/99222),
+  mob_horse.2.ogg by Gingerhoney (freesound.org/people/Gingerhoney/sounds/655070),
+  mob_horse_whinny.ogg by GoodListener
+  (freesound.org/people/GoodListener/sounds/322445): mods/mob_horse/license.txt
+  and sounds/license.txt.
+  Left out: its textures (the coats, CC BY-SA 3.0 by Mjollna, the horseshoes
+  and the saddle overlay), as goodluck_horse wears goodluck_models' meshes
+  and Pixel Perfection Legacy's coats (see goodluck_models) and takes the
+  horseshoes out of the game, and spawn_example.lua; its model ships unused.
+  Added: a spawn.lua that spawns nothing: goodluck_horse registers its own
+  horse, donkey and mule with these sounds, and mob_horse's horse never
+  appears.
+
+goodluck_monsters
+  The zombie, the skeleton and the spider are goodluck_models' meshes of
+  Minecraft's, the spider with mobs_monster's mobs_spider.ogg (see
+  mobs_monster); their skins, goodluck_monsters_zombie.png, _skeleton.png and
+  _spider.png, are Pixel Perfection Legacy's (see goodluck_models), CC BY-SA
+  4.0, the spider's with its eyes over it. Their arrow is goodluck_models'.
+  The spider eye, goodluck_monsters_spider_eye.png, is Pixel Perfection
+  Legacy's too (dev/luanti-art/potions.py). The bomb mushroom's model, every
+  other texture and the sounds are goodluckOS's own (see goodluck_* below).
+
+goodluck_chest
+  The big chest's halves, goodluck_chest_{front,top,back,inside}_{left,right}.png,
+  are Minetest Game's default_chest_front, _top, _side and _inside.png (see
+  Minetest Game, mods/default/license.txt) cut and joined by a script, and so
+  under CC BY-SA 3.0. Its page numbers, goodluck_chest_page_1 and _2.png, are
+  goodluckOS's own (see goodluck_* below).
+
+goodluck_models
+  Its meshes are goodluckOS's own, drawn by dev/luanti-art/models.py in the
+  shapes Minecraft's textures take. goodluck_models_chest.png,
+  _chest_left.png and _chest_right.png are Pixel Perfection by XSSheep, CC BY-SA
+  4.0, as Mineclonia carries them (https://codeberg.org/mineclonia/mineclonia,
+  commit 7410cf1, mods/ITEMS/mcl_chests; its LEGAL.md), turned to Minecraft's
+  chest layout since 1.15 and the double one split into its halves by
+  dev/luanti-art/pixelperfection.py, and so under CC BY-SA 4.0;
+  goodluck_models_minecart.png and _minecart_item.png are XSSheep's minecart and
+  its item from the same checkout (mods/ENTITIES/mcl_minecarts, CC BY-SA 3.0 by
+  its README), unchanged. The bed's and the signs' textures are goodluckOS's own
+  (dev/luanti-art/furniture.py, see goodluck_* below). The farm animals' meshes
+  are goodluckOS's own too (dev/luanti-art/animals.py); their textures, under
+  mobs_animal's names (mods/mobs_animal/textures: mobs_cow, mobs_cow2,
+  mobs_pumba, mobs_chicken, _brown, _black, mobs_chick and mobs_sheep_base,
+  _wool, _shaved, _horns), are Pixel Perfection's cow, pig, sheep, sheared
+  sheep and wool by XSSheep and its chicken by kingoscargames, CC BY-SA 4.0, as
+  the same checkout carries them (mods/ENTITIES/mobs_mc, its
+  LICENSE-media.md), moved to Minecraft 26.x's layouts by
+  dev/luanti-art/pixelperfection.py (the cow's muzzle taken from its nose, the
+  wool made grey), and so under CC BY-SA 4.0; the horns are an empty image.
+  The horses' and the spider's meshes are goodluckOS's own too (animals.py);
+  the horses' textures, under goodluck_horse's names
+  (mods/goodluck_horse/textures: the seven coats, the four markings, the
+  donkey, the mule, the saddle, the chest and the horse armor), and the
+  spider's skin (mods/goodluck_monsters/textures/goodluck_monsters_spider.png)
+  are Pixel Perfection Legacy's by Nova Wostra, after XSSheep's Pixel
+  Perfection, CC BY-SA 4.0
+  (https://modrinth.com/resourcepack/pixel-perfection-legacy, 26.3-97.2), the
+  horses' cut by pixelperfection.py into what each texture draws (the coats
+  without the saddle and the chest, the saddle without the chest, the chest
+  from the donkey's), the spider's eyes laid over it, and so under CC BY-SA
+  4.0; the blank gear is an empty image. The zombie's, the skeleton's, the
+  villager's, the boat's and the arrow's meshes are goodluckOS's own too
+  (animals.py; the boat's and the arrow's take the place of boats' and
+  x_bows' models); their textures, the zombie's and the skeleton's skins
+  (goodluck_monsters), the villager's with its plains clothes and each job's
+  over it (mods/goodluck_villages/textures: goodluck_villages_villager.png and
+  _job_armorer, _toolsmith, _cleric, _librarian, _farmer), the oak boat
+  (goodluck_models_boat.png) and the arrow (goodluck_models_arrow.png) are
+  Pixel Perfection Legacy's (the villager's two laid together by
+  pixelperfection.py), and so under CC BY-SA 4.0.
+
+goodluck_villages
+  Built on villages_mtg 1.0.3 by Drix03,
+  https://content.luanti.org/packages/Drix03/villages_mtg/, MIT:
+  mods/goodluck_villages/LICENSE-villages_mtg.md. Its eight buildings
+  (schems/) are unchanged; the village code is reworked by goodluckOS. The
+  villagers wear goodluck_models' villager, in Pixel Perfection Legacy's
+  textures (see goodluck_models).
+
+goodluck_recipes
+  Its Recipes book is Minetest Game's mtg_craftguide, MIT (Jean-Patrick
+  Guerrero and contributors, pauloue):
+  mods/goodluck_recipes/LICENSE-mtg_craftguide.txt. Its code is reworked by
+  goodluckOS to show what the player has learnt, with mtg_craftguide's strings
+  and textures; the notice's box is goodluckOS's own (dev/luanti-art/toast.py,
+  see goodluck_* below).
+
+goodluck_nether
+  Its textures are Pixel Perfection's by XSSheep and Pixel Perfection Legacy's
+  by Nova Wostra, CC BY-SA 4.0, as Mineclonia 0.124.0 carries them
+  (https://codeberg.org/mineclonia/mineclonia, mods/ITEMS/mcl_nether,
+  mcl_blackstone, mcl_portals' portal and its particle, and mcl_core's bedrock,
+  crying obsidian and its tear; its LEGAL.md), copied under goodluck_nether's
+  names by dev/luanti-art/nether.py, and so under CC BY-SA 4.0. Its monsters
+  (the ghast, the blaze, the magma cube, the zombified piglin and the wither
+  skeleton) are goodluck_models' meshes of Minecraft's; their skins, their
+  spawn eggs and the blaze rod, blaze powder, ghast tear, magma cream and fire
+  charge are Pixel Perfection Legacy's by Nova Wostra (26.3-97.2,
+  https://modrinth.com/resourcepack/pixel-perfection-legacy), CC BY-SA 4.0,
+  copied by dev/luanti-art/nether_mobs.py. Its monster spawner wears mobs'
+  mob_spawner.png (above). Its code, its ruined portals' shapes and its
+  fortresses, laid out as Minecraft's, are goodluckOS's own (see goodluck_*
+  below).
+
+goodluck_effects
+  Its textures are Pixel Perfection's by XSSheep and Pixel Perfection Legacy's
+  by Nova Wostra, CC BY-SA 4.0, as Mineclonia 0.124.0 carries them
+  (https://codeberg.org/mineclonia/mineclonia, mcl_potions' effect icons,
+  withered heart and swirl, mcl_hunger's poisoned heart and mcl_mobitems'
+  feather; its LEGAL.md), copied under goodluck_effects' names by
+  dev/luanti-art/effects.py, and so under CC BY-SA 4.0. Its code is goodluckOS's
+  own (see goodluck_* below).
+
+goodluck_potions
+  The potions' bottle and liquid, the splash potion, the fermented spider eye,
+  the glistering melon slice and the rabbit's foot are Pixel Perfection
+  Legacy's by Nova Wostra (26.3-97.2,
+  https://modrinth.com/resourcepack/pixel-perfection-legacy), CC BY-SA 4.0. The
+  brewing stand's textures, its item, and its window's bubbles and slots are
+  Pixel Perfection's by XSSheep as Mineclonia 0.124.0 carries them
+  (https://codeberg.org/mineclonia/mineclonia, mcl_brewing; its LEGAL.md),
+  CC BY-SA 4.0, the stand's put together in Minecraft's layout. All copied by
+  dev/luanti-art/potions.py, and so under CC BY-SA 4.0. Its window's arrow and
+  fuel bar, its code and the stand's mesh (goodluck_models) are goodluckOS's
+  own (see goodluck_* below). goodluck_food's pufferfish,
+  goodluck_food_pufferfish.png, is Pixel Perfection Legacy's too, by the same
+  script.
+
+Left out of mobs, mobs_animal, mobs_monster, stamina, mobs_npc and mob_horse:
+screenshot.jpg, made on textstudio.com, whose terms are unclear. The game
+doesn't use them.
+
+goodluck_* mods (but goodluck_villages' buildings and villagers' textures,
+goodluck_monsters' skins and spider eye, goodluck_chest's halves,
+goodluck_models' chests, minecart, boat, arrow and farm animals' textures,
+goodluck_horse's, goodluck_nether's, goodluck_effects' and goodluck_potions'
+textures and goodluck_food's pufferfish, above), and the stamina,
+mobs_animal, mobs_monster, x_enchanting, mobs_npc and x_bows media above (but
+the half-drawn bow, CC BY-SA 4.0)
+  Code, pixel art, the rat's and the bomb mushroom's models, and the item
+  pickup, experience, bow, monster, horse equip and anvil sounds made for
+  goodluckOS, under goodluckOS's license, GPL-2.0.

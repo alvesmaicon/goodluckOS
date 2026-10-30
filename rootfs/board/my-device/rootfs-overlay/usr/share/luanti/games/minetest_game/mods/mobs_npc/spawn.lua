@@ -1,0 +1,2 @@
+-- goodluckOS: villagers are born only in the villages (goodluck_villages); this file being here turns off
+-- mobs_npc's own spawning of its NPC, Igor and trader

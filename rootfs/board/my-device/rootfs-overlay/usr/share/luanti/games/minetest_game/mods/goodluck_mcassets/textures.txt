@@ -1,0 +1,714 @@
+# Luanti texture   what draws it instead: {path} = assets/minecraft/textures/<path>.png in the player's own client jar
+# Update Luanti (luanti-update.sh) copies each {path} as mc_<path with _>.png and lists what it found; a line whose
+# file the player's version lacks keeps the game's texture. "length=" sets a tile animation's length, "file" makes
+# the importer copy the image under the Luanti name too (for images the game draws from code), "leaves" puts a dark
+# shade behind the holes when leaves are opaque.
+# Biome colours are Minecraft's plains/forest ones: grass #91bd59, leaves #77ab2f, water #3f76e4.
+
+# Ground
+default_stone.png	{block/stone}
+default_cobble.png	{block/cobblestone}
+default_mossycobble.png	{block/mossy_cobblestone}
+default_stone_brick.png	{block/stone_bricks}
+default_stone_block.png	{block/smooth_stone}
+default_dirt.png	{block/dirt}
+default_grass.png	{block/grass_block_top}^[multiply:#91bd59
+default_grass_side.png	{block/grass_block_side_overlay}^[multiply:#91bd59
+default_dry_grass.png	{block/grass_block_top}^[multiply:#bfb755
+default_dry_grass_side.png	{block/grass_block_side_overlay}^[multiply:#bfb755
+default_dry_dirt.png	{block/coarse_dirt}
+default_snow.png	{block/snow}
+default_snow_side.png	{block/grass_block_snow}
+default_coniferous_litter.png	{block/podzol_top}
+default_coniferous_litter_side.png	{block/podzol_side}
+default_rainforest_litter.png	{block/podzol_top}
+default_rainforest_litter_side.png	{block/podzol_side}
+default_moss.png	{block/moss_block}
+default_sand.png	{block/sand}
+default_desert_sand.png	{block/sand}
+default_silver_sand.png	{block/sand}^[hsl:0:-70:12
+default_permafrost.png	{block/coarse_dirt}^[hsl:0:-45:-8
+default_gravel.png	{block/gravel}
+default_clay.png	{block/clay}
+default_sandstone.png	{block/sandstone}
+default_sandstone_brick.png	{block/cut_sandstone}
+default_sandstone_block.png	{block/sandstone_top}
+default_desert_sandstone.png	{block/red_sandstone}
+default_desert_sandstone_brick.png	{block/cut_red_sandstone}
+default_desert_sandstone_block.png	{block/red_sandstone_top}
+default_desert_stone.png	{block/sandstone}
+default_desert_stone_block.png	{block/sandstone_top}
+default_desert_stone_brick.png	{block/cut_sandstone}
+default_silver_sandstone.png	{block/sandstone}^[hsl:0:-70:12
+default_silver_sandstone_brick.png	{block/cut_sandstone}^[hsl:0:-70:12
+default_silver_sandstone_block.png	{block/sandstone_top}^[hsl:0:-70:12
+default_obsidian.png	{block/obsidian}
+default_obsidian_block.png	{block/obsidian}
+default_ice.png	{block/ice}
+default_brick.png	{block/bricks}
+default_glass.png	{block/glass}
+default_glass_detail.png	blank.png
+default_obsidian_glass.png	{block/tinted_glass}
+default_obsidian_glass_detail.png	blank.png
+default_bookshelf.png	{block/bookshelf}
+
+# Trees
+default_tree.png	{block/oak_log}
+default_tree_top.png	{block/oak_log_top}
+default_wood.png	{block/oak_planks}
+default_fence_wood.png	{block/oak_planks}
+default_fence_rail_wood.png	{block/oak_planks}
+default_leaves.png	{block/oak_leaves}^[multiply:#77ab2f	leaves
+default_leaves_simple.png	{block/oak_leaves}^[multiply:#77ab2f	leaves
+default_sapling.png	{block/oak_sapling}
+default_apple.png	{item/apple}
+default_bush_stem.png	{block/oak_log}
+default_jungletree.png	{block/jungle_log}
+default_jungletree_top.png	{block/jungle_log_top}
+default_junglewood.png	{block/jungle_planks}
+default_fence_junglewood.png	{block/jungle_planks}
+default_fence_rail_junglewood.png	{block/jungle_planks}
+default_jungleleaves.png	{block/jungle_leaves}^[multiply:#30bb0b	leaves
+default_jungleleaves_simple.png	{block/jungle_leaves}^[multiply:#30bb0b	leaves
+default_junglesapling.png	{block/jungle_sapling}
+default_emergent_jungle_sapling.png	{block/jungle_sapling}
+default_pine_tree.png	{block/spruce_log}
+default_pine_tree_top.png	{block/spruce_log_top}
+default_pine_wood.png	{block/spruce_planks}
+default_fence_pine_wood.png	{block/spruce_planks}
+default_fence_rail_pine_wood.png	{block/spruce_planks}
+default_pine_needles.png	{block/spruce_leaves}^[multiply:#619961	leaves
+default_pine_sapling.png	{block/spruce_sapling}
+default_pine_bush_stem.png	{block/spruce_log}
+default_acacia_tree.png	{block/acacia_log}
+default_acacia_tree_top.png	{block/acacia_log_top}
+default_acacia_wood.png	{block/acacia_planks}
+default_fence_acacia_wood.png	{block/acacia_planks}
+default_fence_rail_acacia_wood.png	{block/acacia_planks}
+default_acacia_leaves.png	{block/acacia_leaves}^[multiply:#aea42a	leaves
+default_acacia_leaves_simple.png	{block/acacia_leaves}^[multiply:#aea42a	leaves
+default_acacia_sapling.png	{block/acacia_sapling}
+default_acacia_bush_stem.png	{block/acacia_log}
+default_aspen_tree.png	{block/birch_log}
+default_aspen_tree_top.png	{block/birch_log_top}
+default_aspen_wood.png	{block/birch_planks}
+default_fence_aspen_wood.png	{block/birch_planks}
+default_fence_rail_aspen_wood.png	{block/birch_planks}
+default_aspen_leaves.png	{block/birch_leaves}^[multiply:#80a755	leaves
+default_aspen_sapling.png	{block/birch_sapling}
+
+# Plants
+default_grass_1.png	{block/short_grass}^[multiply:#91bd59
+default_grass_2.png	{block/short_grass}^[multiply:#91bd59
+default_grass_3.png	{block/short_grass}^[multiply:#91bd59
+default_grass_4.png	{block/short_grass}^[multiply:#91bd59
+default_grass_5.png	{block/short_grass}^[multiply:#91bd59
+default_dry_grass_1.png	{block/short_grass}^[multiply:#bfb755
+default_dry_grass_2.png	{block/short_grass}^[multiply:#bfb755
+default_dry_grass_3.png	{block/short_grass}^[multiply:#bfb755
+default_dry_grass_4.png	{block/short_grass}^[multiply:#bfb755
+default_dry_grass_5.png	{block/short_grass}^[multiply:#bfb755
+default_fern_1.png	{block/fern}^[multiply:#91bd59
+default_fern_2.png	{block/fern}^[multiply:#91bd59
+default_fern_3.png	{block/fern}^[multiply:#91bd59
+default_junglegrass.png	{block/fern}^[multiply:#59c93c
+default_dry_shrub.png	{block/dead_bush}
+default_cactus_top.png	{block/cactus_top}
+default_cactus_side.png	{block/cactus_side}
+default_papyrus.png	{block/sugar_cane}
+default_blueberries.png	{item/sweet_berries}
+flowers_rose.png	{block/poppy}
+flowers_dandelion_yellow.png	{block/dandelion}
+flowers_dandelion_white.png	{block/oxeye_daisy}
+flowers_tulip.png	{block/orange_tulip}
+flowers_geranium.png	{block/blue_orchid}
+flowers_viola.png	{block/allium}
+flowers_mushroom_red.png	{block/red_mushroom}
+flowers_mushroom_brown.png	{block/brown_mushroom}
+flowers_waterlily.png	{block/lily_pad}^[multiply:#208030
+flowers_waterlily_bottom.png	{block/lily_pad}^[multiply:#208030
+
+# Liquids and fire
+default_water_source_animated.png	{block/water_still}^[multiply:#3f76e4	length=3.2
+default_water_flowing_animated.png	{block/water_flow}^[multiply:#3f76e4	length=1.6
+default_water.png	{block/water_still}^[verticalframe:32:0^[multiply:#3f76e4
+default_river_water_source_animated.png	{block/water_still}^[multiply:#3f76e4	length=3.2
+default_river_water_flowing_animated.png	{block/water_flow}^[multiply:#3f76e4	length=1.6
+default_river_water.png	{block/water_still}^[verticalframe:32:0^[multiply:#3f76e4
+default_lava_source_animated.png	{block/lava_still}
+default_lava_flowing_animated.png	{block/lava_flow}
+default_lava.png	{block/lava_still}^[verticalframe:20:0
+fire_basic_flame_animated.png	{block/fire_0}	length=1.6
+fire_basic_flame.png	{block/fire_0}^[verticalframe:32:0
+
+# Ores and metal
+default_mineral_coal.png	{block/coal_ore}
+default_mineral_iron.png	{block/iron_ore}
+default_mineral_copper.png	{block/copper_ore}
+default_mineral_gold.png	{block/gold_ore}
+default_mineral_diamond.png	{block/diamond_ore}
+goodluck_lapis_mineral.png	{block/lapis_ore}
+goodluck_emerald_mineral.png	{block/emerald_ore}
+goodluck_redstone_mineral.png	{block/redstone_ore}
+default_coal_block.png	{block/coal_block}
+default_steel_block.png	{block/iron_block}
+default_copper_block.png	{block/copper_block}
+default_gold_block.png	{block/gold_block}
+default_diamond_block.png	{block/diamond_block}
+goodluck_lapis_block.png	{block/lapis_block}
+goodluck_emerald_block.png	{block/emerald_block}
+goodluck_redstone_block.png	{block/redstone_block}
+goodluck_redstone_lamp.png	{block/redstone_lamp}
+goodluck_redstone_lamp_on.png	{block/redstone_lamp_on}
+goodluck_amethyst_block.png	{block/amethyst_block}
+goodluck_amethyst_calcite.png	{block/calcite}
+goodluck_amethyst_cluster.png	{block/amethyst_cluster}
+
+# The Nether (goodluck_nether)
+goodluck_nether_netherrack.png	{block/netherrack}
+goodluck_nether_bedrock.png	{block/bedrock}
+goodluck_nether_glowstone.png	{block/glowstone}
+goodluck_nether_soul_sand.png	{block/soul_sand}
+goodluck_nether_magma.png	{block/magma}	length=1.2
+goodluck_nether_quartz_ore.png	{block/nether_quartz_ore}
+goodluck_nether_gold_ore.png	{block/nether_gold_ore}
+goodluck_nether_quartz_block_top.png	{block/quartz_block_top}
+goodluck_nether_quartz_block_side.png	{block/quartz_block_side}
+goodluck_nether_quartz_block_bottom.png	{block/quartz_block_bottom}
+goodluck_nether_quartz_pillar_top.png	{block/quartz_pillar_top}
+goodluck_nether_quartz_pillar_side.png	{block/quartz_pillar_side}
+goodluck_nether_quartz_chiseled_top.png	{block/chiseled_quartz_block_top}
+goodluck_nether_quartz_chiseled_side.png	{block/chiseled_quartz_block}
+goodluck_nether_bricks.png	{block/nether_bricks}
+goodluck_nether_wart_0.png	{block/nether_wart_stage0}
+goodluck_nether_wart_1.png	{block/nether_wart_stage1}
+goodluck_nether_wart_2.png	{block/nether_wart_stage2}
+goodluck_nether_portal.png	{block/nether_portal}	length=1.6
+goodluck_nether_crying_obsidian.png	{block/crying_obsidian}
+goodluck_nether_blackstone.png	{block/blackstone}
+goodluck_nether_blackstone_top.png	{block/blackstone_top}
+goodluck_nether_polished_blackstone.png	{block/polished_blackstone}
+goodluck_nether_polished_blackstone_bricks.png	{block/polished_blackstone_bricks}
+
+# Workstations and other blocks
+default_furnace_top.png	{block/furnace_top}
+default_furnace_bottom.png	{block/furnace_top}
+default_furnace_side.png	{block/furnace_side}
+default_furnace_front.png	{block/furnace_front}
+default_furnace_front_active.png	{block/furnace_front_on}
+goodluck_craft_table_top.png	{block/crafting_table_top}
+goodluck_craft_table_side.png	{block/crafting_table_side}
+goodluck_anvil_base.png	{block/anvil}
+goodluck_anvil_side.png	{block/anvil}
+goodluck_anvil_top.png	{block/anvil_top}
+goodluck_anvil_top_chipped.png	{block/chipped_anvil_top}
+goodluck_anvil_top_damaged.png	{block/damaged_anvil_top}
+default_torch_on_floor.png	{block/torch}
+default_torch_on_floor_animated.png	{block/torch}
+default_torch_animated.png	{block/torch}
+default_ladder_wood.png	{block/ladder}
+doors_trapdoor.png	{block/oak_trapdoor}
+doors_trapdoor_steel.png	{block/iron_trapdoor}
+xpanes_bar.png	{block/iron_bars}
+xpanes_item_steel_bar.png	{block/iron_bars}
+tnt_top.png	{block/tnt_top}
+tnt_side.png	{block/tnt_side}
+tnt_bottom.png	{block/tnt_bottom}
+carts_rail_straight.png	{block/rail}
+carts_rail_curved.png	{block/rail_corner}
+carts_rail_straight_pwr.png	{block/powered_rail_on}
+farming_soil.png	{block/farmland}
+farming_soil_wet.png	{block/farmland_moist}
+farming_straw.png	{block/hay_block_side}
+x_bows_target.png	{block/target_side}
+mobs_cobweb.png	{block/cobweb}
+mob_spawner.png	{block/spawner}
+mobs_honey_block.png	{block/honey_block_side}
+
+# Minecraft's shapes (goodluck_models): chests from its entity textures (its left half is the right one seen from
+# the front), beds and signs from its block faces, doors put together from its two halves in the door mesh's layout
+# (front, edge, back mirrored, edge)
+goodluck_models_chest.png	{entity/chest/normal}
+goodluck_models_chest_left.png	{entity/chest/normal_right}
+goodluck_models_chest_right.png	{entity/chest/normal_left}
+goodluck_models_minecart.png	{entity/minecart/minecart}
+goodluck_models_minecart_item.png	{item/minecart}
+goodluck_models_bed_red_head_up.png	{block/red_bed_head_up}
+goodluck_models_bed_red_head_east.png	{block/red_bed_head_east}
+goodluck_models_bed_red_head_west.png	{block/red_bed_head_west}
+goodluck_models_bed_red_foot_up.png	{block/red_bed_foot_up}
+goodluck_models_bed_red_foot_east.png	{block/red_bed_foot_east}
+goodluck_models_bed_red_foot_west.png	{block/red_bed_foot_west}
+goodluck_models_bed_red_foot_south.png	{block/red_bed_foot_south}
+goodluck_models_bed_blue_head_up.png	{block/blue_bed_head_up}
+goodluck_models_bed_blue_head_east.png	{block/blue_bed_head_east}
+goodluck_models_bed_blue_head_west.png	{block/blue_bed_head_west}
+goodluck_models_bed_blue_foot_up.png	{block/blue_bed_foot_up}
+goodluck_models_bed_blue_foot_east.png	{block/blue_bed_foot_east}
+goodluck_models_bed_blue_foot_west.png	{block/blue_bed_foot_west}
+goodluck_models_bed_blue_foot_south.png	{block/blue_bed_foot_south}
+goodluck_models_bed_head_north.png	{block/bed_head_north}
+goodluck_models_bed_down.png	{block/bed_down}
+goodluck_models_sign_wood.png	{block/oak_sign}
+default_sign_wood.png	{item/oak_sign}
+doors_door_wood.png	[combine:38x32:16,0={block/oak_door_top}:16,16={block/oak_door_bottom}:35,0={block/oak_door_top}:35,16={block/oak_door_bottom}:0,0={block/oak_door_top}:0,16={block/oak_door_bottom}:19,0={block/oak_door_top}\^[transformFX:19,16={block/oak_door_bottom}\^[transformFX
+doors_door_steel.png	[combine:38x32:16,0={block/iron_door_top}:16,16={block/iron_door_bottom}:35,0={block/iron_door_top}:35,16={block/iron_door_bottom}:0,0={block/iron_door_top}:0,16={block/iron_door_bottom}:19,0={block/iron_door_top}\^[transformFX:19,16={block/iron_door_bottom}\^[transformFX
+doors_trapdoor_side.png	{block/oak_trapdoor}
+doors_trapdoor_steel_side.png	{block/iron_trapdoor}
+
+# The farm animals (goodluck_models' meshes, mobs_animal's names): the plains' kind of each, the sheep's body over its
+# wool on one texture (the wool tinted as the sheep is), nothing over a sheared sheep
+mobs_cow.png	{entity/cow/cow_temperate}
+mobs_cow2.png	{entity/cow/cow_temperate}
+mobs_pumba.png	{entity/pig/pig_temperate}
+mobs_chicken.png	{entity/chicken/chicken_temperate}
+mobs_chicken_brown.png	{entity/chicken/chicken_temperate}
+mobs_chicken_black.png	{entity/chicken/chicken_temperate}
+mobs_chick.png	{entity/chicken/chicken_temperate}
+mobs_sheep_base.png	[combine:64x64:0,0={entity/sheep/sheep}
+mobs_sheep_wool.png	[combine:64x64:0,32={entity/sheep/sheep_wool}
+mobs_sheep_shaved.png	[combine:64x64
+
+# The horses and the spider (goodluck_models' meshes too): the coat, the markings and the armor on the first texture;
+# the saddle, the bridle and the chest on the second, which only their own parts read (the chest's region is the
+# donkey texture's); the spider with its eyes over it
+goodluck_horse_white.png	{entity/horse/horse_white}
+goodluck_horse_creamy.png	{entity/horse/horse_creamy}
+goodluck_horse_chestnut.png	{entity/horse/horse_chestnut}
+goodluck_horse_brown.png	{entity/horse/horse_brown}
+goodluck_horse_black.png	{entity/horse/horse_black}
+goodluck_horse_gray.png	{entity/horse/horse_gray}
+goodluck_horse_darkbrown.png	{entity/horse/horse_darkbrown}
+goodluck_horse_markings_white.png	{entity/horse/horse_markings_white}
+goodluck_horse_markings_whitefield.png	{entity/horse/horse_markings_whitefield}
+goodluck_horse_markings_whitedots.png	{entity/horse/horse_markings_whitedots}
+goodluck_horse_markings_blackdots.png	{entity/horse/horse_markings_blackdots}
+goodluck_horse_donkey.png	{entity/horse/donkey}
+goodluck_horse_mule.png	{entity/horse/mule}
+goodluck_horse_armor_leather.png	{entity/equipment/horse_body/leather}
+goodluck_horse_armor_leather_trim.png	{entity/equipment/horse_body/leather_overlay}
+goodluck_horse_armor_iron.png	{entity/equipment/horse_body/iron}
+goodluck_horse_armor_gold.png	{entity/equipment/horse_body/gold}
+goodluck_horse_armor_diamond.png	{entity/equipment/horse_body/diamond}
+goodluck_horse_saddle.png	{entity/equipment/horse_saddle/saddle}
+goodluck_horse_chest.png	{entity/horse/donkey}
+goodluck_monsters_spider.png	{entity/spider/spider}^{entity/spider/spider_eyes}
+# The zombie, the skeleton, the villagers (the plains skin, a job's clothes over it), the boat and the arrow
+goodluck_monsters_zombie.png	{entity/zombie/zombie}
+goodluck_monsters_skeleton.png	{entity/skeleton/skeleton}
+goodluck_villages_villager.png	{entity/villager/villager}^{entity/villager/type/plains}
+goodluck_villages_job_armorer.png	{entity/villager/profession/armorer}
+goodluck_villages_job_toolsmith.png	{entity/villager/profession/toolsmith}
+goodluck_villages_job_cleric.png	{entity/villager/profession/cleric}
+goodluck_villages_job_librarian.png	{entity/villager/profession/librarian}
+goodluck_villages_job_farmer.png	{entity/villager/profession/farmer}
+goodluck_models_boat.png	{entity/boat/oak}
+goodluck_models_arrow.png	{entity/projectiles/arrow}
+# The Nether's monsters (the ghast's eyes and mouth open as it fires)
+goodluck_nether_ghast.png	{entity/ghast/ghast}
+goodluck_nether_ghast_shooting.png	{entity/ghast/ghast_shooting}
+goodluck_nether_blaze.png	{entity/blaze/blaze}
+goodluck_nether_magma_cube.png	{entity/slime/magmacube}
+goodluck_nether_zombified_piglin.png	{entity/piglin/zombified_piglin}
+goodluck_nether_wither_skeleton.png	{entity/skeleton/wither_skeleton}
+
+# Wool and dye
+wool_white.png	{block/white_wool}
+wool_grey.png	{block/light_gray_wool}
+wool_dark_grey.png	{block/gray_wool}
+wool_black.png	{block/black_wool}
+wool_red.png	{block/red_wool}
+wool_orange.png	{block/orange_wool}
+wool_yellow.png	{block/yellow_wool}
+wool_green.png	{block/lime_wool}
+wool_dark_green.png	{block/green_wool}
+wool_cyan.png	{block/cyan_wool}
+wool_blue.png	{block/blue_wool}
+wool_violet.png	{block/purple_wool}
+wool_magenta.png	{block/magenta_wool}
+wool_pink.png	{block/pink_wool}
+wool_brown.png	{block/brown_wool}
+dye_white.png	{item/white_dye}
+dye_grey.png	{item/light_gray_dye}
+dye_dark_grey.png	{item/gray_dye}
+dye_black.png	{item/black_dye}
+dye_red.png	{item/red_dye}
+dye_orange.png	{item/orange_dye}
+dye_yellow.png	{item/yellow_dye}
+dye_green.png	{item/lime_dye}
+dye_dark_green.png	{item/green_dye}
+dye_cyan.png	{item/cyan_dye}
+dye_blue.png	{item/blue_dye}
+dye_violet.png	{item/purple_dye}
+dye_magenta.png	{item/magenta_dye}
+dye_pink.png	{item/pink_dye}
+dye_brown.png	{item/brown_dye}
+
+# Crops
+farming_wheat_1.png	{block/wheat_stage0}
+farming_wheat_2.png	{block/wheat_stage1}
+farming_wheat_3.png	{block/wheat_stage2}
+farming_wheat_4.png	{block/wheat_stage3}
+farming_wheat_5.png	{block/wheat_stage4}
+farming_wheat_6.png	{block/wheat_stage5}
+farming_wheat_7.png	{block/wheat_stage6}
+farming_wheat_8.png	{block/wheat_stage7}
+farming_wheat.png	{item/wheat}
+farming_wheat_seed.png	{item/wheat_seeds}
+farming_bread.png	{item/bread}
+farming_string.png	{item/string}
+goodluck_food_carrots_1.png	{block/carrots_stage0}
+goodluck_food_carrots_2.png	{block/carrots_stage1}
+goodluck_food_carrots_3.png	{block/carrots_stage2}
+goodluck_food_carrots_4.png	{block/carrots_stage3}
+goodluck_food_potatoes_1.png	{block/potatoes_stage0}
+goodluck_food_potatoes_2.png	{block/potatoes_stage1}
+goodluck_food_potatoes_3.png	{block/potatoes_stage2}
+goodluck_food_potatoes_4.png	{block/potatoes_stage3}
+goodluck_food_beetroots_1.png	{block/beetroots_stage0}
+goodluck_food_beetroots_2.png	{block/beetroots_stage1}
+goodluck_food_beetroots_3.png	{block/beetroots_stage2}
+goodluck_food_beetroots_4.png	{block/beetroots_stage3}
+goodluck_food_carrot.png	{item/carrot}
+goodluck_food_golden_carrot.png	{item/golden_carrot}
+goodluck_food_potato.png	{item/potato}
+goodluck_food_baked_potato.png	{item/baked_potato}
+goodluck_food_poisonous_potato.png	{item/poisonous_potato}
+goodluck_food_beetroot.png	{item/beetroot}
+goodluck_food_beetroot_seeds.png	{item/beetroot_seeds}
+goodluck_food_beetroot_soup.png	{item/beetroot_soup}
+goodluck_food_mushroom_stew.png	{item/mushroom_stew}
+goodluck_food_bowl.png	{item/bowl}
+goodluck_food_sugar.png	{item/sugar}
+goodluck_food_gold_nugget.png	{item/gold_nugget}
+goodluck_food_pumpkin_top.png	{block/pumpkin_top}
+goodluck_food_pumpkin_side.png	{block/pumpkin_side}
+goodluck_food_jack_o_lantern.png	{block/jack_o_lantern}
+goodluck_food_melon_top.png	{block/melon_top}
+goodluck_food_melon_side.png	{block/melon_side}
+goodluck_food_stem_1.png	{block/pumpkin_stem}^[multiply:#00ff00
+goodluck_food_stem_2.png	{block/pumpkin_stem}^[multiply:#20f704
+goodluck_food_stem_3.png	{block/pumpkin_stem}^[multiply:#40ef08
+goodluck_food_stem_4.png	{block/pumpkin_stem}^[multiply:#60e70c
+goodluck_food_stem_5.png	{block/pumpkin_stem}^[multiply:#80df10
+goodluck_food_stem_6.png	{block/pumpkin_stem}^[multiply:#a0d714
+goodluck_food_stem_7.png	{block/pumpkin_stem}^[multiply:#c0cf18
+goodluck_food_stem_8.png	{block/pumpkin_stem}^[multiply:#e0c71c
+goodluck_food_stem_attached.png	{block/attached_pumpkin_stem}^[transformFX^[multiply:#e0c71c
+goodluck_food_pumpkin_seeds.png	{item/pumpkin_seeds}
+goodluck_food_melon_seeds.png	{item/melon_seeds}
+goodluck_food_melon_slice.png	{item/melon_slice}
+goodluck_food_pumpkin_pie.png	{item/pumpkin_pie}
+goodluck_food_cocoa_beans.png	{item/cocoa_beans}
+goodluck_food_cookie.png	{item/cookie}
+goodluck_food_cake.png	{item/cake}
+goodluck_food_cake_top.png	{block/cake_top}
+goodluck_food_cake_side.png	{block/cake_side}
+goodluck_food_cake_inner.png	{block/cake_inner}
+goodluck_food_cake_bottom.png	{block/cake_bottom}
+goodluck_food_fishing_rod.png	{item/fishing_rod}
+goodluck_food_bobber.png	{entity/fishing/fishing_hook}
+goodluck_food_cod.png	{item/cod}
+goodluck_food_cooked_cod.png	{item/cooked_cod}
+goodluck_food_salmon.png	{item/salmon}
+goodluck_food_cooked_salmon.png	{item/cooked_salmon}
+goodluck_food_pufferfish.png	{item/pufferfish}
+
+# Materials
+default_stick.png	{item/stick}
+default_coal_lump.png	{item/coal}
+default_iron_lump.png	{item/raw_iron}
+default_copper_lump.png	{item/raw_copper}
+default_gold_lump.png	{item/raw_gold}
+default_steel_ingot.png	{item/iron_ingot}
+default_copper_ingot.png	{item/copper_ingot}
+default_gold_ingot.png	{item/gold_ingot}
+goodluck_metals_copper_nugget.png	{item/copper_nugget}
+default_diamond.png	{item/diamond}
+default_flint.png	{item/flint}
+default_clay_lump.png	{item/clay_ball}
+default_clay_brick.png	{item/brick}
+default_paper.png	{item/paper}
+default_book.png	{item/book}
+default_snowball.png	{item/snowball}
+goodluck_lapis.png	{item/lapis_lazuli}
+goodluck_emerald.png	{item/emerald}
+goodluck_redstone_dust.png	{item/redstone}
+goodluck_amethyst_shard.png	{item/amethyst_shard}
+goodluck_nether_glowstone_dust.png	{item/glowstone_dust}
+goodluck_nether_quartz.png	{item/quartz}
+goodluck_nether_brick.png	{item/nether_brick}
+goodluck_nether_wart.png	{item/nether_wart}
+goodluck_nether_blaze_rod.png	{item/blaze_rod}
+goodluck_nether_blaze_powder.png	{item/blaze_powder}
+goodluck_nether_ghast_tear.png	{item/ghast_tear}
+goodluck_nether_magma_cream.png	{item/magma_cream}
+goodluck_nether_fire_charge.png	{item/fire_charge}
+goodluck_monsters_bone.png	{item/bone}
+goodluck_monsters_rotten_flesh.png	{item/rotten_flesh}
+goodluck_monsters_spider_eye.png	{item/spider_eye}
+goodluck_potions_fermented_spider_eye.png	{item/fermented_spider_eye}
+goodluck_potions_glistering_melon_slice.png	{item/glistering_melon_slice}
+goodluck_potions_rabbit_foot.png	{item/rabbit_foot}
+mobs_leather.png	{item/leather}
+mobs_chicken_feather.png	{item/feather}
+mobs_chicken_egg.png	{item/egg}
+mobs_rabbit_hide.png	{item/rabbit_hide}
+tnt_gunpowder_inventory.png	{item/gunpowder}
+
+# Food
+mobs_meat_raw.png	{item/beef}
+mobs_meat.png	{item/cooked_beef}
+mobs_pork_raw.png	{item/porkchop}
+mobs_pork_cooked.png	{item/cooked_porkchop}
+mobs_chicken_raw.png	{item/chicken}
+mobs_chicken_cooked.png	{item/cooked_chicken}
+mobs_mutton_raw.png	{item/mutton}
+mobs_mutton_cooked.png	{item/cooked_mutton}
+mobs_rabbit_raw.png	{item/rabbit}
+mobs_rabbit_cooked.png	{item/cooked_rabbit}
+mobs_bucket_milk.png	{item/milk_bucket}
+goodluck_horse_golden_apple.png	{item/golden_apple}
+
+# Tools and other items
+default_tool_woodpick.png	{item/wooden_pickaxe}
+default_tool_woodaxe.png	{item/wooden_axe}
+default_tool_woodshovel.png	{item/wooden_shovel}
+default_tool_woodsword.png	{item/wooden_sword}
+default_tool_stonepick.png	{item/stone_pickaxe}
+default_tool_stoneaxe.png	{item/stone_axe}
+default_tool_stoneshovel.png	{item/stone_shovel}
+default_tool_stonesword.png	{item/stone_sword}
+default_tool_steelpick.png	{item/iron_pickaxe}
+default_tool_steelaxe.png	{item/iron_axe}
+default_tool_steelshovel.png	{item/iron_shovel}
+default_tool_steelsword.png	{item/iron_sword}
+default_tool_diamondpick.png	{item/diamond_pickaxe}
+default_tool_diamondaxe.png	{item/diamond_axe}
+default_tool_diamondshovel.png	{item/diamond_shovel}
+default_tool_diamondsword.png	{item/diamond_sword}
+goodluck_metals_pick_copper.png	{item/copper_pickaxe}
+goodluck_metals_shovel_copper.png	{item/copper_shovel}
+goodluck_metals_axe_copper.png	{item/copper_axe}
+goodluck_metals_sword_copper.png	{item/copper_sword}
+goodluck_metals_hoe_copper.png	{item/copper_hoe}
+goodluck_metals_pick_gold.png	{item/golden_pickaxe}
+goodluck_metals_shovel_gold.png	{item/golden_shovel}
+goodluck_metals_axe_gold.png	{item/golden_axe}
+goodluck_metals_sword_gold.png	{item/golden_sword}
+goodluck_metals_hoe_gold.png	{item/golden_hoe}
+farming_tool_woodhoe.png	{item/wooden_hoe}
+farming_tool_stonehoe.png	{item/stone_hoe}
+farming_tool_steelhoe.png	{item/iron_hoe}
+farming_tool_diamondhoe.png	{item/diamond_hoe}
+fire_flint_steel.png	{item/flint_and_steel}
+bucket.png	{item/bucket}
+bucket_water.png	{item/water_bucket}
+bucket_river_water.png	{item/water_bucket}
+bucket_lava.png	{item/lava_bucket}
+vessels_glass_bottle.png	{item/glass_bottle}
+doors_item_wood.png	{item/oak_door}
+doors_item_steel.png	{item/iron_door}
+boats_inventory.png	{item/oak_boat}
+boats_wield.png	{item/oak_boat}
+mobs_shears.png	{item/shears}
+mobs_nametag.png	{item/name_tag}
+x_bows_bow_wood.png	{item/bow}
+x_bows_arrow_wood.png	{item/arrow}
+goodluck_spyglass_item.png	{item/spyglass}
+goodluck_map_empty.png	{item/map}
+goodluck_compass_0.png	{item/compass_00}
+goodluck_horse_saddle_item.png	{item/saddle}
+goodluck_horse_armor_iron_item.png	{item/iron_horse_armor}
+goodluck_horse_armor_gold_item.png	{item/golden_horse_armor}
+goodluck_horse_armor_diamond_item.png	{item/diamond_horse_armor}
+3d_armor_inv_helmet_steel.png	{item/iron_helmet}
+3d_armor_inv_chestplate_steel.png	{item/iron_chestplate}
+3d_armor_inv_leggings_steel.png	{item/iron_leggings}
+3d_armor_inv_boots_steel.png	{item/iron_boots}
+3d_armor_inv_helmet_copper.png	{item/copper_helmet}
+3d_armor_inv_chestplate_copper.png	{item/copper_chestplate}
+3d_armor_inv_leggings_copper.png	{item/copper_leggings}
+3d_armor_inv_boots_copper.png	{item/copper_boots}
+3d_armor_inv_helmet_leather.png	{item/leather_helmet}^[multiply:#a06540^{item/leather_helmet_overlay}
+3d_armor_inv_chestplate_leather.png	{item/leather_chestplate}^[multiply:#a06540^{item/leather_chestplate_overlay}
+3d_armor_inv_leggings_leather.png	{item/leather_leggings}^[multiply:#a06540^{item/leather_leggings_overlay}
+3d_armor_inv_boots_leather.png	{item/leather_boots}^[multiply:#a06540^{item/leather_boots_overlay}
+3d_armor_inv_helmet_gold.png	{item/golden_helmet}
+3d_armor_inv_chestplate_gold.png	{item/golden_chestplate}
+3d_armor_inv_leggings_gold.png	{item/golden_leggings}
+3d_armor_inv_boots_gold.png	{item/golden_boots}
+3d_armor_inv_helmet_diamond.png	{item/diamond_helmet}
+3d_armor_inv_chestplate_diamond.png	{item/diamond_chestplate}
+3d_armor_inv_leggings_diamond.png	{item/diamond_leggings}
+3d_armor_inv_boots_diamond.png	{item/diamond_boots}
+
+# The armor worn: Minecraft's layers are drawn in the skin's layout, 3d_armor's character model paints the helmet in
+# the hat's place (x 32-64) and the boots at 16-32, 0-12 (sides 4-12, top and sole above), the chestplate and the
+# leggings where the layers have them; masks (dev/luanti-art/armor_masks.py) keep each piece's part. Leather dyed as
+# its items. The leggings go under the chestplate as in Minecraft (init.lua puts them first)
+3d_armor_helmet_steel.png	[combine:64x32:32,0={entity/equipment/humanoid/iron}^[mask:goodluck_mcassets_mask_helmet.png
+3d_armor_chestplate_steel.png	{entity/equipment/humanoid/iron}^[mask:goodluck_mcassets_mask_chestplate.png
+3d_armor_leggings_steel.png	{entity/equipment/humanoid_leggings/iron}^[mask:goodluck_mcassets_mask_leggings.png
+3d_armor_boots_steel.png	([combine:64x32:16,-20={entity/equipment/humanoid/iron}^[mask:goodluck_mcassets_mask_boots.png)^([combine:64x32:16,-16={entity/equipment/humanoid/iron}^[mask:goodluck_mcassets_mask_boots_top.png)
+3d_armor_helmet_copper.png	[combine:64x32:32,0={entity/equipment/humanoid/copper}^[mask:goodluck_mcassets_mask_helmet.png
+3d_armor_chestplate_copper.png	{entity/equipment/humanoid/copper}^[mask:goodluck_mcassets_mask_chestplate.png
+3d_armor_leggings_copper.png	{entity/equipment/humanoid_leggings/copper}^[mask:goodluck_mcassets_mask_leggings.png
+3d_armor_boots_copper.png	([combine:64x32:16,-20={entity/equipment/humanoid/copper}^[mask:goodluck_mcassets_mask_boots.png)^([combine:64x32:16,-16={entity/equipment/humanoid/copper}^[mask:goodluck_mcassets_mask_boots_top.png)
+3d_armor_helmet_leather.png	[combine:64x32:32,0={entity/equipment/humanoid/leather}^[multiply:#a06540^([combine:64x32:32,0={entity/equipment/humanoid/leather_overlay})^[mask:goodluck_mcassets_mask_helmet.png
+3d_armor_chestplate_leather.png	{entity/equipment/humanoid/leather}^[multiply:#a06540^{entity/equipment/humanoid/leather_overlay}^[mask:goodluck_mcassets_mask_chestplate.png
+3d_armor_leggings_leather.png	{entity/equipment/humanoid_leggings/leather}^[multiply:#a06540^{entity/equipment/humanoid_leggings/leather_overlay}^[mask:goodluck_mcassets_mask_leggings.png
+3d_armor_boots_leather.png	([combine:64x32:16,-20={entity/equipment/humanoid/leather}^[multiply:#a06540^([combine:64x32:16,-20={entity/equipment/humanoid/leather_overlay})^[mask:goodluck_mcassets_mask_boots.png)^([combine:64x32:16,-16={entity/equipment/humanoid/leather}^[multiply:#a06540^([combine:64x32:16,-16={entity/equipment/humanoid/leather_overlay})^[mask:goodluck_mcassets_mask_boots_top.png)
+3d_armor_helmet_gold.png	[combine:64x32:32,0={entity/equipment/humanoid/gold}^[mask:goodluck_mcassets_mask_helmet.png
+3d_armor_chestplate_gold.png	{entity/equipment/humanoid/gold}^[mask:goodluck_mcassets_mask_chestplate.png
+3d_armor_leggings_gold.png	{entity/equipment/humanoid_leggings/gold}^[mask:goodluck_mcassets_mask_leggings.png
+3d_armor_boots_gold.png	([combine:64x32:16,-20={entity/equipment/humanoid/gold}^[mask:goodluck_mcassets_mask_boots.png)^([combine:64x32:16,-16={entity/equipment/humanoid/gold}^[mask:goodluck_mcassets_mask_boots_top.png)
+3d_armor_helmet_diamond.png	[combine:64x32:32,0={entity/equipment/humanoid/diamond}^[mask:goodluck_mcassets_mask_helmet.png
+3d_armor_chestplate_diamond.png	{entity/equipment/humanoid/diamond}^[mask:goodluck_mcassets_mask_chestplate.png
+3d_armor_leggings_diamond.png	{entity/equipment/humanoid_leggings/diamond}^[mask:goodluck_mcassets_mask_leggings.png
+3d_armor_boots_diamond.png	([combine:64x32:16,-20={entity/equipment/humanoid/diamond}^[mask:goodluck_mcassets_mask_boots.png)^([combine:64x32:16,-16={entity/equipment/humanoid/diamond}^[mask:goodluck_mcassets_mask_boots_top.png)
+# The player: Steve, the top half of the skin being the layout the character model has (no second layer)
+character.png	{entity/player/wide/steve}^[sheet:1x2:0,0
+
+# Spawn eggs
+goodluck_monsters_zombie_egg.png	{item/zombie_spawn_egg}
+goodluck_monsters_skeleton_egg.png	{item/skeleton_spawn_egg}
+goodluck_monsters_spider_egg.png	{item/spider_spawn_egg}
+goodluck_nether_ghast_egg.png	{item/ghast_spawn_egg}
+goodluck_nether_blaze_egg.png	{item/blaze_spawn_egg}
+goodluck_nether_magma_cube_egg.png	{item/magma_cube_spawn_egg}
+goodluck_nether_zombified_piglin_egg.png	{item/zombified_piglin_spawn_egg}
+goodluck_nether_wither_skeleton_egg.png	{item/wither_skeleton_spawn_egg}
+goodluck_horse_horse_egg.png	{item/horse_spawn_egg}
+goodluck_horse_donkey_egg.png	{item/donkey_spawn_egg}
+goodluck_horse_mule_egg.png	{item/mule_spawn_egg}
+mobs_chicken_inv.png	{item/chicken_spawn_egg}
+mobs_cow_inv.png	{item/cow_spawn_egg}
+mobs_sheep_inv.png	{item/sheep_spawn_egg}
+mobs_pumba_inv.png	{item/pig_spawn_egg}
+mobs_bunny_inv.png	{item/rabbit_spawn_egg}
+mobs_kitten_inv.png	{item/cat_spawn_egg}
+mobs_bee_inv.png	{item/bee_spawn_egg}
+mobs_panda_inv.png	{item/panda_spawn_egg}
+
+# Interface. The HUD's bars (swapped in hud_replace_builtin, hud_add and hud_change), the hotbar (cut to the slots it
+# has), the inventory's slots and window (swapped in every formspec, the window a 9-slice made of the chest window's title band), the sun,
+# the moon and the crosshair (the engine's own files, so "file"), and particles
+heart.png	{gui/sprites/hud/heart/container}^{gui/sprites/hud/heart/full}
+heart_gone.png	{gui/sprites/hud/heart/container}
+bubble.png	{gui/sprites/hud/air}
+bubble_gone.png	{gui/sprites/hud/air_empty}
+stamina_hud_fg.png	{gui/sprites/hud/food_empty}^{gui/sprites/hud/food_full}
+stamina_hud_bg.png	{gui/sprites/hud/food_empty}
+stamina_hud_poison.png	{gui/sprites/hud/food_empty_hunger}^{gui/sprites/hud/food_full_hunger}
+goodluck_armor.png	{gui/sprites/hud/armor_empty}^{gui/sprites/hud/armor_full}
+goodluck_armor_bg.png	{gui/sprites/hud/armor_empty}
+goodluck_xp_bar_bg.png	{gui/sprites/hud/experience_bar_background}^[resize:454x10
+goodluck_xp_bar.png	{gui/sprites/hud/experience_bar_progress}^[resize:454x10
+gui_hotbar.png	{gui/sprites/hud/hotbar}
+gui_hotbar_selected.png	{gui/sprites/hud/hotbar_selection}
+gui_hb_bg.png	{gui/sprites/container/slot}
+gui_formbg.png	{gui/container/generic_54}
+sun.png	{environment/celestial/sun}	file
+moon.png	{environment/celestial/moon/full_moon}	file
+crosshair.png	{gui/sprites/hud/crosshair}	file
+tnt_blast.png	{particle/explosion_0}
+mobs_heart_particle.png	{particle/heart}
+
+# Status effects (goodluck_effects): the icons and their frame in the top right, the poisoned and withered hearts,
+# the swirl around the player
+goodluck_effects_background.png	{gui/sprites/hud/effect_background}
+goodluck_effects_speed.png	{mob_effect/speed}
+goodluck_effects_slowness.png	{mob_effect/slowness}
+goodluck_effects_jump_boost.png	{mob_effect/jump_boost}
+goodluck_effects_slow_falling.png	{mob_effect/slow_falling}
+goodluck_effects_poison.png	{mob_effect/poison}
+goodluck_effects_wither.png	{mob_effect/wither}
+goodluck_effects_regeneration.png	{mob_effect/regeneration}
+goodluck_effects_strength.png	{mob_effect/strength}
+goodluck_effects_weakness.png	{mob_effect/weakness}
+goodluck_effects_fire_resistance.png	{mob_effect/fire_resistance}
+goodluck_effects_water_breathing.png	{mob_effect/water_breathing}
+goodluck_effects_invisibility.png	{mob_effect/invisibility}
+goodluck_effects_night_vision.png	{mob_effect/night_vision}
+goodluck_effects_hunger.png	{mob_effect/hunger}
+goodluck_effects_heart_poisoned.png	{gui/sprites/hud/heart/container}^{gui/sprites/hud/heart/poisoned_full}
+goodluck_effects_heart_withered.png	{gui/sprites/hud/heart/container}^{gui/sprites/hud/heart/withered_full}
+goodluck_effects_particle.png	{particle/effect_4}
+
+# The inventory's tabs (goodluck_craft, 9-sliced and flipped for the lower row) and the enchanting table (x_enchanting):
+# the creative inventory's tabs, the window again, the enchantment slots and their level marks, the slots, the lapis
+# slot with its mark, the grindstone's cross, and the glyphs that fly to the table as Minecraft's
+goodluck_craft_tab.png	{gui/sprites/container/creative_inventory/tab_top_unselected_2}
+goodluck_craft_tab_selected.png	{gui/sprites/container/creative_inventory/tab_top_selected_2}
+x_enchanting_gui_formbg.png	{gui/container/generic_54}
+x_enchanting_image_button.png	{gui/sprites/container/enchanting_table/enchantment_slot}
+x_enchanting_image_button_disabled.png	{gui/sprites/container/enchanting_table/enchantment_slot_disabled}
+x_enchanting_image_trade_1.png	{gui/sprites/container/enchanting_table/level_1}
+x_enchanting_image_trade_2.png	{gui/sprites/container/enchanting_table/level_2}
+x_enchanting_image_trade_3.png	{gui/sprites/container/enchanting_table/level_3}
+x_enchanting_gui_hb_bg.png	{gui/sprites/container/slot}
+x_enchanting_gui_slot_bg.png	{gui/sprites/container/slot}
+x_enchanting_gui_cloth_bg.png	{gui/sprites/container/slot}
+x_enchanting_gui_cloth_trade_bg.png	[combine:18x18:0,0={gui/sprites/container/slot}:1,1={gui/sprites/container/slot/lapis_lazuli}
+x_enchanting_gui_cloth_bg_corssed.png	{gui/sprites/container/grindstone/error}
+x_enchanting_scroll_particle.png	{particle/enchanted_hit}
+x_enchanting_symbol_1.png	{particle/sga_a}
+x_enchanting_symbol_2.png	{particle/sga_b}
+x_enchanting_symbol_3.png	{particle/sga_c}
+x_enchanting_symbol_4.png	{particle/sga_d}
+x_enchanting_symbol_5.png	{particle/sga_e}
+x_enchanting_symbol_6.png	{particle/sga_f}
+x_enchanting_symbol_7.png	{particle/sga_g}
+x_enchanting_symbol_8.png	{particle/sga_h}
+x_enchanting_symbol_9.png	{particle/sga_i}
+x_enchanting_symbol_10.png	{particle/sga_j}
+x_enchanting_symbol_11.png	{particle/sga_k}
+x_enchanting_symbol_12.png	{particle/sga_l}
+x_enchanting_symbol_13.png	{particle/sga_m}
+x_enchanting_symbol_14.png	{particle/sga_n}
+x_enchanting_symbol_15.png	{particle/sga_o}
+x_enchanting_symbol_16.png	{particle/sga_p}
+x_enchanting_symbol_17.png	{particle/sga_q}
+x_enchanting_symbol_18.png	{particle/sga_r}
+x_enchanting_symbol_19.png	{particle/sga_s}
+x_enchanting_symbol_20.png	{particle/sga_t}
+x_enchanting_symbol_21.png	{particle/sga_u}
+x_enchanting_symbol_22.png	{particle/sga_v}
+x_enchanting_symbol_23.png	{particle/sga_w}
+x_enchanting_symbol_24.png	{particle/sga_x}
+x_enchanting_symbol_25.png	{particle/sga_y}
+x_enchanting_symbol_26.png	{particle/sga_z}
+
+# The rest with a piece in Minecraft: the bow being drawn, the wet soil's side, the dead and three live corals, the
+# written book, honey, the beehive, mobs_monster's lava orb and fireball, the mapping kit, leather horse armor's item,
+# a pane's edge. What is left has none (bushes, cotton, glass stairs and doors, bones, the quiver...)
+x_bows_bow_wood_semi_charged.png	{item/bow_pulling_1}
+x_bows_bow_wood_charged.png	{item/bow_pulling_2}
+farming_soil_wet_side.png	{block/dirt}
+default_coral_skeleton.png	{block/dead_tube_coral_block}
+default_coral_cyan.png	{block/tube_coral_block}
+default_coral_pink.png	{block/brain_coral_block}
+default_coral_orange.png	{block/fire_coral_block}
+default_book_written.png	{item/written_book}
+mobs_honey_inv.png	{item/honey_bottle}
+mobs_beehive.png	{block/beehive_front}
+zmobs_lava_orb.png	{item/magma_cream}
+mobs_fireball.png	{item/fire_charge}
+map_mapping_kit.png	{item/map}
+goodluck_horse_armor_leather_item.png	{item/leather_horse_armor}
+xpanes_edge.png	{block/glass_pane_top}
+
+# Potions and the brewing stand (goodluck_potions): the bottle and the liquid the game tints, the stand's arms and rod
+# and its base, its item, and its window's bubbles, arrow, fuel bar and empty slots
+goodluck_potions_potion.png	{item/potion}
+goodluck_potions_overlay.png	{item/potion_overlay}
+goodluck_potions_splash.png	{item/splash_potion}
+goodluck_potions_brewing_stand.png	{block/brewing_stand}
+goodluck_potions_brewing_stand_base.png	{block/brewing_stand_base}
+goodluck_potions_brewing_stand_item.png	{item/brewing_stand}
+goodluck_potions_bubbles.png	{gui/sprites/container/brewing_stand/bubbles}
+goodluck_potions_progress.png	{gui/sprites/container/brewing_stand/brew_progress}
+goodluck_potions_fuel.png	{gui/sprites/container/brewing_stand/fuel_length}
+goodluck_potions_slot_bottle.png	{gui/sprites/container/slot/potion}
+goodluck_potions_slot_fuel.png	{gui/sprites/container/slot/brewing_fuel}

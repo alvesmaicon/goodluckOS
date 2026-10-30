@@ -1,0 +1,122 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Thu, 29 Oct 2026 17:45:23 -0300
+Subject: [PATCH 42/42] mainmenu: the handheld shows a world's seed and
+ re-creates it
+
+A world's seed was only in its map_meta.txt, so the player couldn't see it to make the same world
+again, and typing a 20-digit seed with the gamepad's on-screen keyboard is slow. The handheld's world
+list now shows the selected world's seed under it, and a Re-create button, as Minecraft's, opens the
+New dialog with that world's seed, game mode, "Allow changing the game mode" and bonus chest already
+filled in. Both read the world's files when the list is drawn; a world without map_meta.txt shows no
+seed and no Re-create. The list is 0.55 shorter for the line; Delete and Re-create share the space
+left of New. pt_BR: "Semente: $1", "Recriar".
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/builtin/mainmenu/dlg_create_world.lua b/builtin/mainmenu/dlg_create_world.lua
+index e52894e77..edef9f9bb 100644
+--- a/builtin/mainmenu/dlg_create_world.lua
++++ b/builtin/mainmenu/dlg_create_world.lua
+@@ -505,7 +505,8 @@ local function create_world_buttonhandler(this, fields)
+ end
+ 
+ 
+-function create_create_world_dlg()
++-- from_world: Minecraft's Re-create, the new world starts with that world's seed and game mode
++function create_create_world_dlg(from_world)
+ 	local retval = dialog_create("sp_create_world",
+ 					create_world_formspec,
+ 					create_world_buttonhandler,
+@@ -529,5 +530,13 @@ function create_create_world_dlg()
+ 		}
+ 	}
+ 
++	if from_world then
++		local conf = Settings(from_world.path .. DIR_DELIM .. "world.mt")
++		retval.data.seed = Settings(from_world.path .. DIR_DELIM .. "map_meta.txt"):get("seed") or ""
++		retval.data.creative = conf:get_bool("creative_mode", false)
++		retval.data.mode_change = conf:get_bool("allow_mode_change", false)
++		retval.data.bonus_chest = conf:get_bool("bonus_chest", false)
++	end
++
+ 	return retval
+ end
+diff --git a/builtin/mainmenu/tab_local.lua b/builtin/mainmenu/tab_local.lua
+index 315c38c9f..fca6334f4 100644
+--- a/builtin/mainmenu/tab_local.lua
++++ b/builtin/mainmenu/tab_local.lua
+@@ -211,15 +211,21 @@ local function get_formspec(tabview, name, tabdata)
+ 
+ 	-- a handheld whose game shows none of these settings gives the world list the whole width, and its buttons one row
+ 	if core.settings:get_bool("menu_handheld") and creative .. damage .. host == "" then
++		-- the selected world's seed, to make that world again
++		local seed = world and Settings(world.path .. DIR_DELIM .. "map_meta.txt"):get("seed")
+ 		retval = retval ..
+ 				"container[0.375,0.375]" ..
+ 				"label[0,0.2;" .. fgettext("Select World:") .. "]" ..
+-				"textlist[0,0.5;" .. tabview.width - 0.75 .. ",4.95;sp_worlds;" ..
++				"textlist[0,0.5;" .. tabview.width - 0.75 .. ",4.4;sp_worlds;" ..
+ 				menu_render_worldlist() ..
+ 				";" .. index .. "]" ..
++				(seed and "label[0,5.2;" .. fgettext("Seed: $1", seed) .. "]" or "") ..
+ 				"container_end[]"
+ 		if world then
+-			retval = retval .. "button[0.375,5.925;3.225,0.8;world_delete;" .. fgettext("Delete") .. "]"
++			retval = retval .. "button[0.375,5.925;3.14375,0.8;world_delete;" .. fgettext("Delete") .. "]"
++		end
++		if seed then
++			retval = retval .. "button[3.61875,5.925;3.14375,0.8;world_recreate;" .. fgettext("Re-create") .. "]"
+ 		end
+ 		retval = retval .. "button[6.8625,5.925;3.225,0.8;world_create;" .. fgettext("New") .. "]"
+ 		if world then
+@@ -426,9 +432,14 @@ local function main_button_handler(this, fields, name, tabdata)
+ 		return true
+ 	end
+ 
+-	if fields["world_create"] ~= nil then
++	if fields["world_create"] ~= nil or fields["world_recreate"] ~= nil then
+ 		this.dlg_create_world_closed_at = 0
+-		local create_world_dlg = create_create_world_dlg()
++		local from
++		if fields["world_recreate"] then
++			local selected = core.get_textlist_index("sp_worlds")
++			from = selected and menudata.worldlist:get_list()[selected]
++		end
++		local create_world_dlg = create_create_world_dlg(from)
+ 		create_world_dlg:set_parent(this)
+ 		this:hide()
+ 		create_world_dlg:show()
+diff --git a/builtin/settingtypes.txt b/builtin/settingtypes.txt
+index 50f0f4ed9..66e8cfd49 100644
+--- a/builtin/settingtypes.txt
++++ b/builtin/settingtypes.txt
+@@ -944,7 +944,8 @@ menu_theme (Menu theme) enum light dark,light
+ 
+ #    A main menu for a handheld with no network and no keyboard: no Join Game or Content tabs,
+ #    nothing from ContentDB, no Select Mods, and a new world asks only for its name, seed and game
+-#    mode (it keeps the game's mapgen).
++#    mode (it keeps the game's mapgen). The selected world shows its seed, and Re-create makes a new
++#    world with that seed and game mode.
+ menu_handheld (Handheld main menu) bool false
+ 
+ [**HUD]
+diff --git a/po/pt_BR/luanti.po b/po/pt_BR/luanti.po
+index 1d3b1526e..1f2d6a2de 100644
+--- a/po/pt_BR/luanti.po
++++ b/po/pt_BR/luanti.po
+@@ -1084,6 +1084,14 @@ msgstr "Permitir trocar de modo"
+ msgid "Bonus chest"
+ msgstr "Baú inicial"
+ 
++#: builtin/mainmenu/tab_local.lua
++msgid "Seed: $1"
++msgstr "Semente: $1"
++
++#: builtin/mainmenu/tab_local.lua
++msgid "Re-create"
++msgstr "Recriar"
++
+ #: src/client/game.cpp
+ msgid "Loading terrain..."
+ msgstr "Carregando terreno..."

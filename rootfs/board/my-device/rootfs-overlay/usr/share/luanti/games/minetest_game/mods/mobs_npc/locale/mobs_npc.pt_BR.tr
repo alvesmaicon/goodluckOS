@@ -1,0 +1,14 @@
+# textdomain:mobs_npc
+Igor=Igor
+NPC=Aldeão
+Npc=Aldeão
+NPC dropped you an item for gold!=O aldeão te deu um item pelo ouro!
+NPC stands still.=O aldeão vai ficar parado.
+NPC will follow you.=O aldeão vai te seguir.
+NPC will wander.=O aldeão vai passear.
+Place this and punch to spawn Trader=Coloque e bata para chamar um comerciante
+Trader=Comerciante
+Trader @1=Comerciante @1
+Trader @1's stock:=Mercadorias de @1:
+[MOD] Mobs Redo NPCs loaded=[MOD] Aldeões do Mobs Redo carregados
+[NPC] <Trader @1> Hello, @2, have a look at my wares.=[Aldeão] <Comerciante @1> Olá, @2, veja as minhas mercadorias.
