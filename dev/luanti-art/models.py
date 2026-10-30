@@ -98,4 +98,15 @@ def arm(angle):
 write("goodluck_models_brewing_stand.obj", None, (16, 16), lift=-0.5, groups=[
     ("rod", element((7, 0, 7), (9, 14, 9), ROD)), ("base", plates), ("arm0", arm(0)), ("arm1", arm(-45)),
     ("arm2", arm(45))])
+# the end portal frame (goodluck_end), 13 high, and with its eye on top: the top, the sides, the bottom and the eye
+# each a group, so that each takes its own texture
+SIDES = {f: (0, 3, 16, 16) for f in ("north", "south", "west", "east")}
+EYE = {f: (4, 0, 12, 3) for f in ("north", "south", "west", "east")}
+EYE["up"] = (4, 4, 12, 12)
+frame = [("top", element((0, 0, 0), (16, 13, 16), {"up": (0, 0, 16, 16)})),
+         ("side", element((0, 0, 0), (16, 13, 16), SIDES)),
+         ("bottom", element((0, 0, 0), (16, 13, 16), {"down": (0, 0, 16, 16)}))]
+write("goodluck_models_end_portal_frame.obj", None, (16, 16), lift=-0.5, groups=frame)
+write("goodluck_models_end_portal_frame_eye.obj", None, (16, 16), lift=-0.5,
+      groups=frame + [("eye", element((4, 13, 4), (12, 16, 12), EYE))])
 print("meshes in", os.path.relpath(OUT, ROOT))
