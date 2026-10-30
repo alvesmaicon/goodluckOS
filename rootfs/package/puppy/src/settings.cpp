@@ -332,12 +332,14 @@ void SettingsScreen::tick(Uint32 now) {
             card = externalCard();
             home = homeUsage();
             nextWatch = now + 500;
+            app.redraw();
         }
         if ((Sint32)(now - watchUntil) >= 0) watchUntil = 0;
     }
     if (page() == Page::Network && (Sint32)(now - netRead) >= 2000) {
         net = NetworkStatus::read();
         netRead = now;
+        app.redraw();
     }
     // a scrape or an account check under way: its progress twice a second
     if ((watchRun || watchCheck) && (Sint32)(now - runRead) >= 500) {
@@ -354,6 +356,7 @@ void SettingsScreen::tick(Uint32 now) {
             if ((!check.state.empty() || late) && !check.running()) watchCheck = false;
         }
         runRead = now;
+        app.redraw();
     }
 }
 
