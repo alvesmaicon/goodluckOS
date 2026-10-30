@@ -750,7 +750,7 @@ end
 -- the fight: the first time a player comes into the End (its podium made), the dragon comes over the middle
 local function dragon_entity()
 	for _, ent in pairs(core.luaentities) do
-		if ent.name == D then
+		if ent.name == D and ent.object:get_pos() then
 			return ent
 		end
 	end
@@ -782,6 +782,23 @@ function E.spawn_dragon()
 		core.log("action", "[goodluck_end] the ender dragon comes")
 	end
 end
+-- the pillars' tops kept active during the fight, so that their crystals heal it out of the players' reach too, as
+-- the whole End is loaded in Minecraft
+local pillars_held = false
+local function hold_pillars(on)
+	if on == pillars_held then
+		return
+	end
+	pillars_held = on
+	for _, sp in ipairs(E.spikes) do
+		local p = {x = sp.x, y = E.ymin + sp.height + 1, z = sp.z}
+		if on then
+			core.forceload_block(p, true, -1)
+		else
+			core.forceload_free_block(p, true)
+		end
+	end
+end
 local fight_timer = 0
 core.register_globalstep(function(dtime)
 	fight_timer = fight_timer + dtime
@@ -789,7 +806,9 @@ core.register_globalstep(function(dtime)
 		return
 	end
 	fight_timer = 0
-	if #players_in_end() > 0 then
+	local here = #players_in_end() > 0
+	hold_pillars(here and storage:get_string("dragon") ~= "dead" and storage:get_string("dragon") ~= "")
+	if here then
 		E.spawn_dragon()
 	end
 end)
