@@ -37,7 +37,7 @@ An uncompromisingly fast, small, modern, and feature-rich custom firmware for A2
 - FN+DPAD_DOWN switches the sound between the speaker and the headphones only (the console can't detect the headphone jack)
 - If the screen is on, the LEDs are off. Nothing blinding you while you're playing in the dark
 - Comes stock with Chocolate Doom, ready to play
-- Comes with Luanti, a block-building game in the style of Minecraft, with Minetest Game and farm animals, played with the console's buttons (see [Luanti](#luanti))
+- Comes with Luanti, a block-building game in the style of Minecraft: Minetest Game with mods that bring it close to Minecraft, from its monsters, villages and horses to the Nether and the End, played with the console's buttons (see [Luanti](#luanti))
 - Second SD card (TF-2 slot) for more games, with its own launcher tab
 - Music and video player (mpv): Music and Videos tabs in the launcher, played full screen with the console's buttons, with speed (0.25x to 2x) and zoom (up to 4x, moved with the right stick) for videos
 - Comes stock with Retroarch and several optimized cores (PCSX-ReArmed, Snes9x, QuickNES, DOSbox, Genesis Plus GX, mGBA, etc)
@@ -218,7 +218,7 @@ Clicking a text field (a world's name, a setting, a sign, a book, the creative i
 | Right stick | Look around | Scroll (lists with a scrollbar, wherever the cursor is) |
 | B (bottom) | Jump (on a horse: held, it charges the jump bar; let go to jump) | Click (on a text field: the keyboard) |
 | A (right) | Sneak (with a shield on: hold it up; on a horse: get off) | Back |
-| X / Y | Inventory | X: right click (half a stack), Y: click |
+| X / Y | Inventory | Y: half a stack, X: the stack straight to the other side |
 | R1 / L1 | Dig, eat, look through the spyglass (held) / place, draw a bow (held; let go to shoot; with a shield on and no block in hand, L1 holds it up), get on a horse (with A held: its inventory) | Scroll |
 | R2 / L2 | Next / previous item | |
 | L3 | Run | |
@@ -420,7 +420,7 @@ The Allwinner A23/A33 is a 32-bit SoC. This means that 64-bit software simply _c
 With that said, most of the games people actually care about (Stardew Valley, Half-Life 1, n64 re-comps, Android GameMaker games, OpenMW, OpenRCT2, + more) are 32-bit games, and therefore should theoretically work if anyone cares to create 32-bit ports.
 
 ### Ports in this fork
-Four ports are in progress here (Luanti still on its own branch, `feat/luanti`). Apart from Luanti, they need your own copy of the game, so each one is built on a PC from your files: [Ports](docs/ports/README.md) says how, and how each one runs.
+Four ports are in progress here. Luanti is part of the system image; the others need your own copy of the game, so each one is built on a PC from your files: [Ports](docs/ports/README.md) says how, and how each one runs.
 
 | [Luanti](docs/ports/README.md#luanti) | [Stardew Valley](docs/ports/README.md#stardew-valley) | [Ocarina of Time](docs/ports/README.md#ocarina-of-time) | [Majora's Mask](docs/ports/README.md#majoras-mask) |
 | --- | --- | --- | --- |
