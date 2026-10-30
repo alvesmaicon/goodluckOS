@@ -413,7 +413,6 @@ void LauncherScreen::renderList(Ui& ui) {
     SDL_Rect box{kPreviewX, top, kPreviewW, kPreviewH};
     ui.drawIcon(ui.previewIcons(), e->iconPath, box);
     int y = box.y + box.h + 10;
-    y += ui.drawWrapped(fonts.ui, e->name, kPreviewX, y, theme().text, kPreviewW) + 4;
     if (!e->meta.empty()) {
         drawText(renderer, fonts.small, e->meta, kPreviewX, y, accent(), kPreviewW);
         y += TTF_FontLineSkip(fonts.small) + 4;
@@ -481,7 +480,7 @@ void LauncherScreen::renderRows(Ui& ui, int width) {
 }
 
 // The Showcase style's list (Shelf): the rows, an A-Z rail on the right, and between them the picture
-// over the game's system, data, play time and description (the selected row shows its name).
+// over the game's data, play time and description.
 void LauncherScreen::renderShelf(Ui& ui) {
     SDL_Renderer* renderer = ui.sdl();
     const Fonts& fonts = ui.font();
@@ -513,8 +512,6 @@ void LauncherScreen::renderShelf(Ui& ui) {
     if (!ui.drawFrame(trailer.frame(), box)) ui.drawIcon(ui.previewIcons(), e->iconPath, box);
     ui.roundCorners(box, 10, theme().bg);
     int y = box.y + box.h + 10;
-    drawText(renderer, fonts.small, c.mixed ? e->tag : tr(c.label), x, y, theme().muted, w);
-    y += TTF_FontLineSkip(fonts.small) + 6;
     if (!e->meta.empty()) {
         drawText(renderer, fonts.small, e->meta, x, y, theme().text, w);
         y += TTF_FontLineSkip(fonts.small);
