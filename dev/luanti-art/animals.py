@@ -204,10 +204,10 @@ def quad(corners, uv):
     return [(corners, uv), ([corners[1], corners[0], corners[3], corners[2]], uv)] + [([m, m, m, m], uv)] * 4
 
 
-def humanoid(thin, held=None):
+def humanoid(thin, item=()):
     # Minecraft's humanoid: the head and the body hang from y 0, the arms from the shoulders, the legs from the hips;
     # the skeleton's limbs 2 pixels wide (64x32), the zombie's 4 (64x64, where the player's left limbs are blank),
-    # both's left ones the right ones mirrored; held in place of the skeleton's bow
+    # both's left ones the right ones mirrored; item in the right hand, drawn by the second texture
     head = box(0, 0, -4, -8, -4, 8, 8, 8) + box(32, 0, -4, -8, -4, 8, 8, 8, grow=0.5)
     if thin:
         right_arm, left_arm = box(40, 16, -1, -2, -1, 2, 12, 2), box(40, 16, -1, -2, -1, 2, 12, 2, mirror=True)
@@ -217,10 +217,8 @@ def humanoid(thin, held=None):
         right_arm, left_arm = box(40, 16, -3, -2, -2, 4, 12, 4), box(40, 16, -1, -2, -2, 4, 12, 4, mirror=True)
         right_leg, left_leg = box(0, 16, -2, 0, -2, 4, 12, 4), box(0, 16, -2, 0, -2, 4, 12, 4, mirror=True)
         hip = 1.9
-    # the skeleton's bow: its item image on a square in the right hand, across the arm, drawn by the second texture
-    bow = quad([(8, 10, -8), (-8, 10, -8), (-8, 10, 8), (8, 10, 8)], (0, 0, 64, 32)) if thin else ()
     return [part("head", (0, 0, 0), head), part("body", (0, 0, 0), box(16, 16, -4, 0, -2, 8, 12, 4)),
-            part("right_arm", (-5, 2, 0), right_arm, gear=bow if held is None else held),
+            part("right_arm", (-5, 2, 0), right_arm, gear=item),
             part("left_arm", (5, 2, 0), left_arm),
             part("right_leg", (-hip, 12, 0), right_leg), part("left_leg", (hip, 12, 0), left_leg)]
 
@@ -242,14 +240,19 @@ def affine(*steps):
     return lambda p: tuple(16 * sum(m[i][k] * v for k, v in enumerate(p + (1,))) for i in range(3))
 
 
-def held(tex, inward=0):
-    # an item in the right hand as Minecraft draws it (ItemInHandLayer, item/handheld's thirdperson_righthand): from
-    # the arm's pivot (the skeleton's moved inward 1) turned -90 about x and 180 about y, moved 1, 2 and -10 sixteenths,
-    # then the display's 4 up and 0.5 ahead, 55 about z and -90 about y, 0.85 its size about its middle; its image on a
-    # square at the middle of its thickness, each side as Minecraft's extruded item shows it, drawn whole by the second
-    # texture (tex: the model's texture size, the unit of its uv)
+# item models' thirdperson_righthand displays: moved, turned about x, then y, then z, scaled; item/handheld's (tools,
+# swords) and item/bow's
+HANDHELD = (("t", 0, 4 / 16, 0.5 / 16), ("r", 1, -90), ("r", 2, 55), ("s", 0.85))
+BOW = (("t", -1 / 16, -2 / 16, 2.5 / 16), ("r", 0, -80), ("r", 1, 260), ("r", 2, -40), ("s", 0.9))
+
+
+def held(tex, inward=0, display=HANDHELD):
+    # an item in the right hand as Minecraft draws it (ItemInHandLayer, then the item model's display): from the arm's
+    # pivot (the skeleton's moved inward 1) turned -90 about x and 180 about y, moved 1, 2 and -10 sixteenths, then the
+    # display about the item's middle; its image on a square at the middle of its thickness, each side as Minecraft's
+    # extruded item shows it, drawn whole by the second texture (tex: the model's texture size, the unit of its uv)
     at = affine(("t", inward / 16, 0, 0), ("r", 0, -90), ("r", 1, 180), ("t", 1 / 16, 2 / 16, -10 / 16),
-                ("t", 0, 4 / 16, 0.5 / 16), ("r", 1, -90), ("r", 2, 55), ("s", 0.85), ("t", -0.5, -0.5, -0.5))
+                *display, ("t", -0.5, -0.5, -0.5))
     tr, tl, bl, br = (at((x, y, 0.5)) for x, y in ((1, 1), (0, 1), (0, 0), (1, 0)))
     w, h = tex
     mid = at((0.5, 0.5, 0.5))
@@ -404,8 +407,9 @@ def zombie_arms(up, hit=None):
 
 
 def aim(t):
-    # the skeleton's bow up: both arms straight ahead, the right one a little in
-    return {"right_arm": (mc_rot(-PI / 2, -0.1, 0), None), "left_arm": (mc_rot(-PI / 2, 0.1, 0), None)}
+    # the skeleton's bow up (HumanoidModel's BOW_AND_ARROW): both arms straight ahead, the right one a little in, the
+    # left one turned in to the string
+    return {"right_arm": (mc_rot(-PI / 2, -0.1, 0), None), "left_arm": (mc_rot(-PI / 2, 0.5, 0), None)}
 
 
 def lay(t):
@@ -538,7 +542,7 @@ ANIMALS = {
     "donkey": ((64, 64), horse(True), HORSE),
     "spider": ((64, 32), spider(), SPIDER),
     "zombie": ((64, 64), humanoid(False), ZOMBIE),
-    "skeleton": ((64, 32), humanoid(True), SKELETON),
+    "skeleton": ((64, 32), humanoid(True, held((64, 32), 1, BOW)), SKELETON),
     "villager": ((64, 64), villager(), VILLAGER),
     "boat": ((128, 64), boat(), [(0, 1, None)]),
     "arrow": ((32, 32), arrow(), [(0, 1, None)]),
@@ -546,7 +550,7 @@ ANIMALS = {
     "blaze": ((64, 32), blaze(), BLAZE),
     "magma_cube": ((64, 64), magma_cube(), MAGMA_CUBE),
     "zombified_piglin": ((64, 64), zombified_piglin(), PIGLIN),
-    # the wither skeleton is the skeleton with a stone sword (the renderer draws it 1.2 times as big)
+    # the skeleton holds its bow, the wither skeleton a stone sword (drawn 1.2 times as big by its renderer)
     "wither_skeleton": ((64, 32), humanoid(True, held((64, 32), 1)), WITHER_SKELETON),
     "witch": ((64, 128), witch(), WITCH),
 }

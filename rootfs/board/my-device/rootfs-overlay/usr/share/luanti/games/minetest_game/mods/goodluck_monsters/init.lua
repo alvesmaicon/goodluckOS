@@ -74,17 +74,6 @@ local function ambient(self, dtime)
 	end
 end
 
--- the arms held straight out, on top of whatever the animation does (the bow up at someone)
-local function arms_out(self, on)
-	if self._arms == on or not self.object.set_bone_override then
-		return
-	end
-	self._arms = on
-	local rot = on and {vec = vector.new(math.rad(90), 0, 0), absolute = false} or nil
-	self.object:set_bone_override("left_arm", rot and {rotation = rot} or nil)
-	self.object:set_bone_override("right_arm", rot and {rotation = rot} or nil)
-end
-
 mobs:register_mob(MOD .. "zombie", {
 	type = "monster",
 	description = S("Zombie"),
@@ -160,7 +149,6 @@ mobs:register_mob(MOD .. "skeleton", {
 	fear_height = 4,
 	animation = HUMANOID,
 	after_activate = function(self)
-		self._arms = nil
 		dress(self, {"goodluck_monsters_skeleton.png", bows and "x_bows_bow_wood.png" or BLANK})
 	end,
 	do_custom = function(self, dtime)
@@ -168,8 +156,10 @@ mobs:register_mob(MOD .. "skeleton", {
 			return false
 		end
 		ambient(self, dtime)
-		-- the bow up while it has someone in its sights
-		arms_out(self, self.state == "attack")
+		-- the bow up while it has someone in its sights (mobs_redo plays the shoot frames only as it shoots)
+		if self.state == "attack" then
+			self:set_animation("shoot")
+		end
 	end,
 })
 
