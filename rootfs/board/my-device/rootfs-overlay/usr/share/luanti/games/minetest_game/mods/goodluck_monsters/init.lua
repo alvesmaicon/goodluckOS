@@ -1,6 +1,7 @@
 -- Minecraft's classic monsters: the zombie, the skeleton and the spider in its models (goodluck_models' meshes,
 -- Pixel Perfection Legacy's skins) and, in the creeper's place, the bomb mushroom of our own. They come out in the
--- dark, on the surface and in caves (mobs_monster's own spawn no more); the zombie and the skeleton burn in the sun
+-- dark, on the surface and in caves (mobs_monster's own spawn no more); the zombie and the skeleton burn in the sun.
+-- The witch (witch.lua) throws potions
 local S = core.get_translator("goodluck_monsters")
 local MOD = "goodluck_monsters:"
 local BLANK = "goodluck_monsters_blank.png"
@@ -365,7 +366,9 @@ if core.get_modpath("dye") then
 	core.register_craft({output = "dye:white 3", recipe = {{MOD .. "bone"}}})
 end
 
-for _, name in ipairs({"zombie", "skeleton", "spider", "mushroom"}) do
+dofile(core.get_modpath("goodluck_monsters") .. "/witch.lua")
+
+for _, name in ipairs({"zombie", "skeleton", "spider", "mushroom", "witch"}) do
 	mobs:register_egg(MOD .. name, core.registered_entities[MOD .. name].description,
 		"goodluck_monsters_" .. name .. "_egg.png", 0)
 end
@@ -375,15 +378,17 @@ end
 local GROUND = {"group:soil", "group:sand", "group:stone", "default:gravel", "default:snow", "default:snowblock",
 	"default:permafrost", "default:permafrost_with_stones", "default:permafrost_with_moss", "default:dry_dirt",
 	"default:dry_dirt_with_dry_grass"}
-for _, name in ipairs({"zombie", "skeleton", "spider", "mushroom"}) do
+-- the witch 20 times rarer, as Minecraft's 5 to the others' 95 or 100
+local RARE = {witch = 20}
+for _, name in ipairs({"zombie", "skeleton", "spider", "mushroom", "witch"}) do
 	mobs:spawn({
 		name = MOD .. name,
 		nodes = GROUND,
 		neighbors = {"air"},
 		max_light = 7,
 		interval = 30,
-		chance = 6000,
-		active_object_count = 3,
+		chance = 6000 * (RARE[name] or 1),
+		active_object_count = RARE[name] and 1 or 3,
 		min_height = -31000,
 		max_height = 31000,
 	})

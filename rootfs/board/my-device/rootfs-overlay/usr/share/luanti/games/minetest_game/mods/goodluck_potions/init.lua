@@ -203,7 +203,7 @@ local function splash(self, pos, direct)
 				y = math.max(p.y + box[2], math.min(pos.y, p.y + box[5])),
 				z = math.max(p.z + box[3], math.min(pos.z, p.z + box[6]))}
 			local d = obj == direct and 0 or vector.distance(pos, near)
-			if d < 4 and math.abs(near.y - pos.y) <= 2 + (box[5] - box[2]) then
+			if d < 4 and math.abs(near.y - pos.y) <= 2 + (box[5] - box[2]) and obj ~= self._thrower then
 				P.apply(obj, id, 1 - d / 4)
 			end
 		end
@@ -247,7 +247,7 @@ core.register_entity(N .. "thrown", {
 					return
 				end
 			elseif hit.type == "object" and hit.ref ~= self.object then
-				local owner = hit.ref:is_player() and hit.ref:get_player_name() == self._owner
+				local owner = hit.ref == self._thrower or hit.ref:is_player() and hit.ref:get_player_name() == self._owner
 				if not (owner and self._age < 0.25) then
 					splash(self, hit.intersection_point, hit.ref)
 					return
@@ -256,6 +256,18 @@ core.register_entity(N .. "thrown", {
 		end
 	end,
 })
+
+-- a splash potion thrown by a mob (the witch): it misses its thrower and leaves it out of its splash
+function P.launch(from, item, vel, thrower)
+	local obj = core.add_entity(from, N .. "thrown", item)
+	if obj then
+		obj:set_velocity(vel)
+		obj:set_acceleration({x = 0, y = -20, z = 0})
+		obj:get_luaentity()._thrower = thrower
+	end
+	core.sound_play("goodluck_potions_throw", {pos = from, gain = 0.5, max_hear_distance = 16}, true)
+	return obj
+end
 
 -- an empty bottle fills at any water, as in Minecraft (the water stays); elsewhere it is placed as before
 local bottle = core.registered_items[BOTTLE]

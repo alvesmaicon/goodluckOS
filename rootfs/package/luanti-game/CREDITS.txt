@@ -115,8 +115,10 @@ goodluck_monsters
   _spider.png, are Pixel Perfection Legacy's (see goodluck_models), CC BY-SA
   4.0, the spider's with its eyes over it. Their arrow is goodluck_models'.
   The spider eye, goodluck_monsters_spider_eye.png, is Pixel Perfection
-  Legacy's too (dev/luanti-art/potions.py). The bomb mushroom's model, every
-  other texture and the sounds are goodluckOS's own (see goodluck_* below).
+  Legacy's too (dev/luanti-art/potions.py), and so are the witch's skin and
+  egg, goodluck_monsters_witch.png and _witch_egg.png (dev/luanti-art/witch.py),
+  on goodluck_models' witch. The bomb mushroom's model, every other texture
+  and the sounds are goodluckOS's own (see goodluck_* below).
 
 goodluck_chest
   The big chest's halves, goodluck_chest_{front,top,back,inside}_{left,right}.png,
@@ -166,7 +168,9 @@ goodluck_models
   _job_armorer, _toolsmith, _cleric, _librarian, _farmer), the oak boat
   (goodluck_models_boat.png) and the arrow (goodluck_models_arrow.png) are
   Pixel Perfection Legacy's (the villager's two laid together by
-  pixelperfection.py), and so under CC BY-SA 4.0.
+  pixelperfection.py), and so under CC BY-SA 4.0. The witch's mesh is
+  goodluckOS's own too (animals.py), worn in Pixel Perfection Legacy's skin
+  (see goodluck_monsters).
 
 goodluck_villages
   Built on villages_mtg 1.0.3 by Drix03,

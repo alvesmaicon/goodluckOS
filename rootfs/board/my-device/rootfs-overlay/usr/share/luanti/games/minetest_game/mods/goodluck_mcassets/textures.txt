@@ -712,3 +712,7 @@ goodluck_potions_progress.png	{gui/sprites/container/brewing_stand/brew_progress
 goodluck_potions_fuel.png	{gui/sprites/container/brewing_stand/fuel_length}
 goodluck_potions_slot_bottle.png	{gui/sprites/container/slot/potion}
 goodluck_potions_slot_fuel.png	{gui/sprites/container/slot/brewing_fuel}
+
+# The witch (goodluck_monsters) and her egg
+goodluck_monsters_witch.png	{entity/witch/witch}
+goodluck_monsters_witch_egg.png	{item/witch_spawn_egg}
