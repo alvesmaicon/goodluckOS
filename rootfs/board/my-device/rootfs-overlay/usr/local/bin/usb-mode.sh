@@ -6,6 +6,9 @@
 
 case "$1" in
     get) [ "$(cat /etc/player-flags/usb-mode 2>/dev/null)" = network ] && echo network || echo files ;;
-    files|network) exec /etc/init.d/S30usb-gadget switch "$1" ;;
+    files|network)
+        # out of appd's launcher group, which it empties when a game starts: umtprd and udhcpc must stay
+        echo $$ > /sys/fs/cgroup/cgroup.procs 2>/dev/null
+        exec /etc/init.d/S30usb-gadget switch "$1" ;;
     *) echo "usage: $0 get|files|network" >&2; exit 2 ;;
 esac
