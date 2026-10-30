@@ -576,7 +576,38 @@ def wriggle(t):
 
 
 SILVERFISH = [(0, 1, wriggle), (1, 1.0, wriggle), (4, 1, both(die, wriggle))]
-ANIMALS.update({"enderman": ((64, 32), enderman(), ENDERMAN), "silverfish": ((64, 32), silverfish(), SILVERFISH)})
+
+
+def axis_quat(axis, a):
+    s = math.sin(a / 2)
+    return (axis[0] * s, axis[1] * s, axis[2] * s, math.cos(a / 2))
+
+
+# the crystal's tilt: 60 degrees about Minecraft's (sin 45, 0, sin 45), glTF's (-sin 45, 0, sin 45)
+TILT = axis_quat((-math.sin(PI / 4), 0, math.sin(PI / 4)), PI / 3)
+
+
+def end_crystal():
+    # Minecraft's end crystal (drawn at twice its size, the mob's visual_size): its base 12x4x12 sunk half a node
+    # under it, the outer glass, the inner glass (0.875 of it) and the cube (0.766 of that) about one middle
+    glass = lambda u, grow: box(u, 0, -4, -4, -4, 8, 8, 8, grow=grow)
+    return [part("base", (0, 0, 0), box(0, 16, -6, 28, -6, 12, 4, 12)),
+            part("outer", (0, 16, 0), glass(0, 0)),
+            part("inner", (0, 16, 0), glass(0, -0.5), parent="outer"),
+            part("cube", (0, 16, 0), glass(32, 4 * 0.875 * 0.765625 - 4), parent="inner")]
+
+
+def spin(t):
+    # 3 degrees a tick about y, the glass bobbing (Minecraft's sin(age * 0.2), here 4 times in the 6 s loop)
+    a = math.radians(t * FPS * 3)
+    f = math.sin(2 * PI * 4 * t / 6) / 2 + 0.5
+    y = (f * f + f) * 0.4 - 1.4
+    ry = mc_y(a)
+    return {"outer": (qmul(ry, TILT), (0, -8 - 8 * y, 0)), "inner": (qmul(TILT, ry), None), "cube": (qmul(TILT, ry), None)}
+
+
+ANIMALS.update({"enderman": ((64, 32), enderman(), ENDERMAN), "silverfish": ((64, 32), silverfish(), SILVERFISH),
+                "end_crystal": ((64, 32), end_crystal(), [(0, 6, spin)])})
 
 
 def normal(a, b, c):
