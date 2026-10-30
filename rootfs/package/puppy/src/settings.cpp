@@ -539,7 +539,12 @@ void SettingsScreen::renderPage(Ui& ui) {
                 const std::string pct = std::to_string(row.max > 0 ? row.current * 100 / row.max : 0) + "%";
                 const int pctW = textWidth(fonts.small, "100%");
                 SDL_Rect bar{right - kValueW, mid - 6, kValueW - pctW - 10, 12};
-                ui.track(bar, theme().tile);
+                SDL_Color groove = theme().tile;
+                if (sel && theme().showcase) {     // on the accent pill: a darker accent, so the ink level shows
+                    const SDL_Color a = accent(), k = theme().ink;
+                    groove = {Uint8((a.r * 2 + k.r) / 3), Uint8((a.g * 2 + k.g) / 3), Uint8((a.b * 2 + k.b) / 3), 255};
+                }
+                ui.track(bar, groove);
                 const int filled = row.max > 0 ? bar.w * std::clamp(row.current, 0, row.max) / row.max : 0;
                 if (filled > 0) ui.track({bar.x, bar.y, filled, bar.h}, sel ? ui.accentOn(true) : theme().muted);
                 drawText(renderer, fonts.small, pct, right - textWidth(fonts.small, pct), mid - TTF_FontHeight(fonts.small) / 2, text);
