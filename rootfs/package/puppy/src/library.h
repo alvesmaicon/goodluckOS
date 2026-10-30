@@ -27,3 +27,4 @@ void extractSystemMenu(Model& m);
 void applySettingsCommand(Model& m);
 std::vector<PowerItem> powerItems();
 void loadSettings(Model& m);
+bool hideable(const Category& c);
