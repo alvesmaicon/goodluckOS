@@ -157,4 +157,17 @@ write("goodluck_models_potted_plant.obj", None, (16, 16), lift=-0.5, groups=[
     ("dirt", element((6, 0, 6), (10, 4, 10), {"up": (6, 6, 10, 10)})),
     ("plant", crossed((2.6, 4, 8), (13.4, 16, 8), {"north": (0, 0, 16, 16), "south": (0, 0, 16, 16)}) +
      crossed((8, 4, 2.6), (8, 16, 13.4), {"west": (0, 0, 16, 16), "east": (0, 0, 16, 16)}))])
+
+
+# the end portal frame (goodluck_end), 13 high, and with its eye on top: the top, the sides, the bottom and the eye
+# each a group, so that each takes its own texture
+FRAME_SIDES = {f: (0, 3, 16, 16) for f in ("north", "south", "west", "east")}
+EYE = {f: (4, 0, 12, 3) for f in ("north", "south", "west", "east")}
+EYE["up"] = (4, 4, 12, 12)
+frame = [("top", element((0, 0, 0), (16, 13, 16), {"up": (0, 0, 16, 16)})),
+         ("side", element((0, 0, 0), (16, 13, 16), FRAME_SIDES)),
+         ("bottom", element((0, 0, 0), (16, 13, 16), {"down": (0, 0, 16, 16)}))]
+write("goodluck_models_end_portal_frame.obj", None, (16, 16), lift=-0.5, groups=frame)
+write("goodluck_models_end_portal_frame_eye.obj", None, (16, 16), lift=-0.5,
+      groups=frame + [("eye", element((4, 13, 4), (12, 16, 12), EYE))])
 print("meshes in", os.path.relpath(OUT, ROOT))

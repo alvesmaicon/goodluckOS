@@ -217,7 +217,9 @@ end
 
 core.register_on_generated(function(minp, maxp)
 	local nether = maxp.y >= R.ymin and minp.y <= R.ymax
-	if not nether and minp.y < -200 then
+	-- nor in goodluck_end's End, far over the world
+	local the_end = rawget(_G, "goodluck_end") and goodluck_end.inside and goodluck_end.inside(minp)
+	if not nether and (minp.y < -200 or the_end) then
 		return
 	end
 	local n = nether and 5 or 6
