@@ -206,16 +206,16 @@ def quad(corners, uv):
 
 def humanoid(thin, held=None):
     # Minecraft's humanoid: the head and the body hang from y 0, the arms from the shoulders, the legs from the hips;
-    # the skeleton's limbs 2 pixels wide (its left ones the right ones mirrored, 64x32), the zombie's 4 (64x64); held
-    # in place of the skeleton's bow
+    # the skeleton's limbs 2 pixels wide (64x32), the zombie's 4 (64x64, where the player's left limbs are blank),
+    # both's left ones the right ones mirrored; held in place of the skeleton's bow
     head = box(0, 0, -4, -8, -4, 8, 8, 8) + box(32, 0, -4, -8, -4, 8, 8, 8, grow=0.5)
     if thin:
         right_arm, left_arm = box(40, 16, -1, -2, -1, 2, 12, 2), box(40, 16, -1, -2, -1, 2, 12, 2, mirror=True)
         right_leg, left_leg = box(0, 16, -1, 0, -1, 2, 12, 2), box(0, 16, -1, 0, -1, 2, 12, 2, mirror=True)
         hip = 2
     else:
-        right_arm, left_arm = box(40, 16, -3, -2, -2, 4, 12, 4), box(32, 48, -1, -2, -2, 4, 12, 4)
-        right_leg, left_leg = box(0, 16, -2, 0, -2, 4, 12, 4), box(16, 48, -2, 0, -2, 4, 12, 4)
+        right_arm, left_arm = box(40, 16, -3, -2, -2, 4, 12, 4), box(40, 16, -1, -2, -2, 4, 12, 4, mirror=True)
+        right_leg, left_leg = box(0, 16, -2, 0, -2, 4, 12, 4), box(0, 16, -2, 0, -2, 4, 12, 4, mirror=True)
         hip = 1.9
     # the skeleton's bow: its item image on a square in the right hand, across the arm, drawn by the second texture
     bow = quad([(8, 10, -8), (-8, 10, -8), (-8, 10, 8), (8, 10, 8)], (0, 0, 64, 32)) if thin else ()
