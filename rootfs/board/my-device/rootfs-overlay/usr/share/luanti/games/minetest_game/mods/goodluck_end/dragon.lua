@@ -337,7 +337,7 @@ local function fly_toward(e, target, speed, dt)
 	e.object:set_velocity(e._v)
 	local h = math.sqrt(e._v.x ^ 2 + e._v.z ^ 2)
 	if h > 0.5 then
-		e.object:set_rotation({x = -math.atan2(e._v.y, h) * 0.5, y = core.dir_to_yaw(e._v), z = 0})
+		e.object:set_rotation({x = math.atan2(e._v.y, h) * 0.5, y = core.dir_to_yaw(e._v), z = 0})
 	end
 	return len
 end
