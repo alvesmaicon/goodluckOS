@@ -65,7 +65,8 @@ blocks({"default:sign_wall_steel", "goodluck_models:sign_standing_steel"}, {1, P
 blocks({"default:glass", "default:obsidian_glass", "goodluck_redstone:lamp", "goodluck_redstone:lamp_on",
 	"xpanes:pane", "xpanes:pane_flat", "xpanes:obsidian_pane", "xpanes:obsidian_pane_flat",
 	"goodluck_nether:glowstone"}, {0.3})
-blocks({"goodluck_food:pumpkin", "goodluck_food:melon", "goodluck_food:jack_o_lantern"}, {1, AXE})
+blocks({"goodluck_food:pumpkin", "goodluck_food:carved_pumpkin", "goodluck_food:melon", "goodluck_food:jack_o_lantern"},
+	{1, AXE})
 blocks({"goodluck_food:cocoa_1", "goodluck_food:cocoa_2", "goodluck_food:cocoa_3"}, {0.2, AXE})
 blocks({"goodluck_food:cake", "goodluck_food:cake_1", "goodluck_food:cake_2", "goodluck_food:cake_3",
 	"goodluck_food:cake_4", "goodluck_food:cake_5", "goodluck_food:cake_6"}, {0.5})

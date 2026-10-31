@@ -88,6 +88,7 @@ tnt_explode	random/explode1 random/explode2 random/explode3 random/explode4
 tnt_ignite	random/fuse
 tnt_gunpowder_burning	random/fuse
 carts_cart_moving	minecart/base
+goodluck_food_pumpkin_carve	block/pumpkin/carve1 block/pumpkin/carve2
 
 # The player
 player_damage	damage/hit1 damage/hit2 damage/hit3

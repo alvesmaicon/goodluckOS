@@ -26,8 +26,8 @@ local function matches(name, ...)
 end
 
 local function natural(name, def, g)
-	return matches(name, "^goodluck_food:[%a_]*seeds$", "^goodluck_food:pumpkin$", "^goodluck_food:melon$",
-		"^goodluck_food:cocoa_beans$") or
+	return matches(name, "^goodluck_food:[%a_]*seeds$", "^goodluck_food:pumpkin$", "^goodluck_food:carved_pumpkin$",
+		"^goodluck_food:jack_o_lantern$", "^goodluck_food:melon$", "^goodluck_food:cocoa_beans$") or
 		def.type == "node" and (any_group(g, "soil", "sand", "leaves", "sapling", "flora", "flower", "grass",
 		"mushroom", "tree", "seed", "snowy", "catchable") or matches(name, "^default:ice$", ":stone_with_",
 		"^default:[%a_]*stone$", "^default:gravel$", "^default:clay$", "^default:obsidian$", "^default:cactus$",
@@ -43,7 +43,7 @@ local function functional(name)
 	return matches(name, "^goodluck_craft:crafting_table$", "^default:furnace$", "^default:chest", "^default:bookshelf$",
 		"^default:torch$", "^goodluck_redstone:lamp$", "^default:ladder_", "^default:sign_wall_",
 		"^beds:", "^bones:", "^vessels:", "^fireflies:firefly_bottle$", "^mobs:spawner$", "^goodluck_potions:brewing_stand$", "^mobs:mob_repellent$",
-		"^fire:permanent_flame$", "^goodluck_food:jack_o_lantern$", "^goodluck_nether:wither_skeleton_skull$",
+		"^fire:permanent_flame$", "^goodluck_nether:wither_skeleton_skull$",
 		"^goodluck_end:frame$", "^goodluck_end:dragon_egg$") and
 		name ~= "vessels:glass_fragments"
 end
@@ -57,8 +57,8 @@ local function building(name, def, g)
 end
 
 local function combat(name, def, g)
-	return name:find(":sword_") ~= nil or name == "tnt:tnt" or any_group(g, "armor_head", "armor_torso", "armor_legs",
-		"armor_feet", "armor_shield")
+	return name:find(":sword_") ~= nil or name == "tnt:tnt" or def.type == "tool" and any_group(g, "armor_head",
+		"armor_torso", "armor_legs", "armor_feet", "armor_shield")
 end
 
 local function tools(name, def, g)
@@ -90,7 +90,8 @@ local CATEGORIES = {
 		"permafrost", "sand$", "^gravel$", "^clay$", "snow", "^ice$", "stone$", "^stone_with_", "^obsidian$", "^calcite$", "^amethyst", "tree$",
 		"leaves", "needles$", "sapling$", "seedling$", "stem$", "grass", "fern", "^dry_shrub$", "^cactus$", "vines$",
 		"^papyrus$", "^seed_", "^cotton_wild$", "^rose$", "^tulip", "^dandelion", "^chrysanthemum", "^geranium$",
-		"^viola$", "^mushroom", "^waterlily$", "^coral", "kelp$", "^bee", "^cobweb$", "^butterfly", "^firefly$",
+		"^viola$", "^mushroom", "^waterlily$", "^coral", "kelp$", "^melon$", "^pumpkin$", "^carved_pumpkin$",
+		"^jack_o_lantern$", "^bee", "^cobweb$", "^butterfly", "^firefly$",
 		"_source$"}},
 	{"functional_blocks", S("Functional Blocks"), "default:sign_wall_wood", 1, 4, functional, {"^crafting_table$",
 		"^furnace$", "^chest", "shelf$", "^torch$", "lamp$", "light", "^ladder", "^sign", "bed"}},

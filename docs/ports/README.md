@@ -126,7 +126,7 @@ The 45 `goodluck_*` mods and `invisibility` are goodluckOS's, under its license 
 | --- | --- |
 | goodluck_amethyst | Amethyst geodes underground: calcite, amethyst and clusters that give shards |
 | goodluck_anvil | The anvil: rename, repair with the material or another of the kind, join enchantments, paid in levels |
-| goodluck_armor | Minecraft's armor: leather armor in place of wood and cactus armor, one shield in place of eleven |
+| goodluck_armor | Minecraft's armor: leather armor in place of wood and cactus armor, one shield in place of eleven, the carved pumpkin worn on the head |
 | goodluck_bonus_chest | Minecraft's bonus chest by the spawn, when the world is made with it |
 | goodluck_bow | x_bows' bow played as Minecraft's: L1 held draws it, letting go shoots; arrows come from the inventory and are picked up by walking into them |
 | goodluck_chest | Two chests side by side make one big chest of 64 slots, shown 32 a page; no keys for locked ones |
@@ -140,7 +140,7 @@ The 45 `goodluck_*` mods and `invisibility` are goodluckOS's, under its license 
 | goodluck_enchanting | The enchanting table paid in lapis lazuli and levels, Fortune only on ores |
 | goodluck_end | The End: the enderman and the silverfish, the ender pearl and the eye of ender, strongholds with their end portal, the End's island and pillars, and the ender dragon |
 | goodluck_farming | Crops grow on dry farmland too (slower) and by night under the sky, and give their seed back when picked green |
-| goodluck_food | Minecraft's foods and crops: carrots, potatoes, beetroots, pumpkins and melons, soups and stew, the golden carrot, the pumpkin pie, cocoa and cookies, the cake, and fishing |
+| goodluck_food | Minecraft's foods and crops: carrots, potatoes, beetroots, pumpkins and melons, the carved pumpkin, soups and stew, the golden carrot, the pumpkin pie, cocoa and cookies, the cake, and fishing |
 | goodluck_held | The item in hand on the player seen from outside, held as Minecraft draws it |
 | goodluck_horse | Horses, donkeys and mules: tamed by riding, a saddle, horse armor, an inventory, a charged jump, herds and foals |
 | goodluck_hud | Minecraft's survival HUD: armor above the hearts, hunger beside them, breath above hunger, the XP bar below |

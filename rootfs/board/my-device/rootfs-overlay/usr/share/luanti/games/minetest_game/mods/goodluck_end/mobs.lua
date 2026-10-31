@@ -7,6 +7,7 @@ local S = core.get_translator("goodluck_end")
 local E = goodluck_end
 local N = "goodluck_end:"
 local TICK = 0.05
+local disguise = core.global_exists("goodluck_armor") and goodluck_armor
 
 local function creative(obj)
 	return obj:is_player() and core.is_creative_enabled(obj:get_player_name())
@@ -88,8 +89,12 @@ local function teleport_toward(self, obj)
 		p.z + (math.random() - 0.5) * 8 - d.z * 16)
 end
 
--- a player looking it in the face: their view within 0.025 (less, further away) of its eyes, nothing in between
+-- a player looking it in the face: their view within 0.025 (less, further away) of its eyes, nothing in between, and
+-- no carved pumpkin on their head
 local function stared_by(self, player)
+	if disguise and disguise.disguised(player) then
+		return false
+	end
 	local eye = vector.offset(self.object:get_pos(), 0, 2.55, 0)
 	local from = vector.offset(player:get_pos(), 0, player:get_properties().eye_height, 0)
 	local to = vector.subtract(eye, from)

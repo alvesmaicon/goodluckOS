@@ -384,6 +384,12 @@ goodluck_food_gold_nugget.png	{item/gold_nugget}
 goodluck_food_pumpkin_top.png	{block/pumpkin_top}
 goodluck_food_pumpkin_side.png	{block/pumpkin_side}
 goodluck_food_jack_o_lantern.png	{block/jack_o_lantern}
+goodluck_food_carved_pumpkin.png	{block/carved_pumpkin}
+# worn on the head: its faces where the skin has its hat, the skin's layout at twice its size; the blur over the
+# screen, and the crosshair drawn over it
+goodluck_food_carved_pumpkin_worn.png	[combine:128x64:80,0={block/pumpkin_top}:96,0={block/pumpkin_top}:64,16={block/pumpkin_side}:80,16={block/carved_pumpkin}:96,16={block/pumpkin_side}:112,16={block/pumpkin_side}
+goodluck_food_pumpkin_blur.png	{misc/pumpkinblur}
+goodluck_food_pumpkin_crosshair.png	{gui/sprites/hud/crosshair}
 goodluck_food_melon_top.png	{block/melon_top}
 goodluck_food_melon_side.png	{block/melon_side}
 goodluck_food_stem_1.png	{block/pumpkin_stem}^[multiply:#00ff00
