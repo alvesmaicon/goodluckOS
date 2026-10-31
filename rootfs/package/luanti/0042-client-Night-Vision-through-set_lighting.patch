@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Thu, 29 Oct 2026 20:17:58 -0300
-Subject: [PATCH 43/43] client: Night Vision through set_lighting
+Subject: [PATCH 42/44] client: Night Vision through set_lighting
 
 A player's lighting gets night_vision, from 0 (off) to 1: everything they see
 is as lit as its brightest light, Minecraft's Night Vision. Minecraft scales
@@ -71,13 +71,13 @@ index 00e0dd7ce..1c539bad0 100644
  	// Emphase blue a bit in darker places
  	// See C++ implementation in mapblock_mesh.cpp final_color_blend()
 diff --git a/doc/lua_api.md b/doc/lua_api.md
-index 20ec6d025..1f63599b7 100644
+index 168294493..1ffaae24c 100644
 --- a/doc/lua_api.md
 +++ b/doc/lua_api.md
-@@ -9695,6 +9695,9 @@ You **must not** mix names and track numbers to refer to the same animation.
-             * Currently, bloom `intensity` and `strength_factor` affect volumetric
-               lighting `strength` and vice versa. This behavior is to be changed
-               in the future, do not rely on it.
+@@ -9804,6 +9804,9 @@ You **must not** mix names and track numbers to refer to the same animation.
+         * `ao_gamma`: Strength of node ambient-occlusion shading. Lower is darker, Higher is lighter.
+           * Recommended range: from 0.25 to 3.0, default: 1.8
+           * A value of 0.0 will disable this shading entirely.
 +      * `night_vision`: from 0 (off, default) to 1, everything the player sees
 +        as lit as its brightest light, faces still shaded (Minecraft's Night
 +        Vision; handheld fork)
@@ -85,7 +85,7 @@ index 20ec6d025..1f63599b7 100644
  * `get_lighting()`: returns the current state of lighting for the player.
      * Result is a table with the same fields as `light_definition` in `set_lighting`.
 diff --git a/src/client/game.cpp b/src/client/game.cpp
-index 91e744d10..19f17dfb8 100644
+index 9ed3b260c..003c960fe 100644
 --- a/src/client/game.cpp
 +++ b/src/client/game.cpp
 @@ -101,6 +101,7 @@ class GameGlobalShaderUniformSetter : public IShaderUniformSetter
@@ -107,24 +107,24 @@ index 91e744d10..19f17dfb8 100644
  			// Map directional light to screen space
  			auto camera_node = m_client->getCamera()->getCameraNode();
 diff --git a/src/lighting.h b/src/lighting.h
-index d3144a7ef..339e196d1 100644
+index 577ab6f5e..14439c600 100644
 --- a/src/lighting.h
 +++ b/src/lighting.h
-@@ -53,4 +53,6 @@ struct Lighting
- 	float bloom_strength_factor {1.0f};
- 	float bloom_radius {1.0f};
+@@ -80,4 +80,6 @@ struct Lighting
  	v3f shadow_direction;
+ 
+ 	StaticLighting static_;
 +	/// @brief Night Vision: 0 none, 1 everything as lit as the brightest light
 +	float night_vision {0.0f};
  };
 diff --git a/src/network/clientpackethandler.cpp b/src/network/clientpackethandler.cpp
-index 5321dc565..1b28e4a13 100644
+index 4ed52571d..83498c4d8 100644
 --- a/src/network/clientpackethandler.cpp
 +++ b/src/network/clientpackethandler.cpp
-@@ -1923,5 +1923,10 @@ void Client::handleCommand_SetLighting(NetworkPacket *pkt)
- 			break;
- 		// >= 5.16.0-dev
- 		*pkt >> lighting.shadow_direction;
+@@ -1939,5 +1939,10 @@ void Client::handleCommand_SetLighting(NetworkPacket *pkt)
+ 		if (s.light_curve_set)
+ 			pkt->readRawString(reinterpret_cast<char*>(s.light_curve), sizeof(s.light_curve));
+ 		*pkt >> s.ao_gamma;
 +
 +		if (!pkt->hasRemainingBytes())
 +			break;
@@ -133,35 +133,35 @@ index 5321dc565..1b28e4a13 100644
  	} while (0);
  }
 diff --git a/src/script/lua_api/l_object.cpp b/src/script/lua_api/l_object.cpp
-index d21ea6c94..0b7bbf7ba 100644
+index decb96d06..e6611496c 100644
 --- a/src/script/lua_api/l_object.cpp
 +++ b/src/script/lua_api/l_object.cpp
-@@ -2876,6 +2876,9 @@ int ObjectRef::l_set_lighting(lua_State *L)
- 			lighting.bloom_radius          = getfloatfield_default(L, -1, "radius",          lighting.bloom_radius);
- 		}
- 		lua_pop(L, 1); // bloom
-+
-+		lighting.night_vision = rangelim(getfloatfield_default(L, 2, "night_vision", lighting.night_vision),
-+				0.0f, 1.0f);
- }
+@@ -2905,6 +2905,9 @@ int ObjectRef::l_set_lighting(lua_State *L)
+ 	}
+ 	lua_pop(L, 1); // static
  
++	lighting.night_vision = rangelim(getfloatfield_default(L, 2, "night_vision", lighting.night_vision),
++			0.0f, 1.0f);
++
  	getServer(L)->setLighting(player, lighting);
-@@ -2930,6 +2933,8 @@ int ObjectRef::l_get_lighting(lua_State *L)
- 	lua_pushnumber(L, lighting.bloom_radius);
- 	lua_setfield(L, -2, "radius");
- 	lua_setfield(L, -2, "bloom");
+ 	return 0;
+ }
+@@ -2976,6 +2979,8 @@ int ObjectRef::l_get_lighting(lua_State *L)
+ 	lua_setfield(L, -2, "ao_gamma");
+ 	lua_setfield(L, -2, "static");
+ 
 +	lua_pushnumber(L, lighting.night_vision);
 +	lua_setfield(L, -2, "night_vision");
  	return 1;
  }
  
 diff --git a/src/server.cpp b/src/server.cpp
-index 061ba06d8..f9f2c483a 100644
+index 81e0b9315..1de041023 100644
 --- a/src/server.cpp
 +++ b/src/server.cpp
-@@ -2078,6 +2078,8 @@ void Server::SendSetLighting(session_t peer_id, const Lighting &lighting)
- 
- 	pkt << lighting.shadow_direction;
+@@ -2079,6 +2079,8 @@ void Server::SendSetLighting(session_t peer_id, const Lighting &lighting)
+ 		pkt.putRawString(reinterpret_cast<const char*>(s.light_curve), sizeof(s.light_curve));
+ 	pkt << s.ao_gamma;
  
 +	pkt << lighting.night_vision;
 +

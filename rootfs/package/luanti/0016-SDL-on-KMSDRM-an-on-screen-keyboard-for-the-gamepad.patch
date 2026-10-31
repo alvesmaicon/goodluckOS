@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Tue, 13 Oct 2026 22:36:15 -0300
-Subject: [PATCH 16/17] SDL: on KMSDRM, an on-screen keyboard for the gamepad
+Subject: [PATCH 16/44] SDL: on KMSDRM, an on-screen keyboard for the gamepad
 
 A handheld without a keyboard could not type anywhere: world names,
 settings, a sign, a book, the creative inventory's search. With the
@@ -51,7 +51,7 @@ index c8136bb0d..fa4bfc35a 100644
  	/** Causes a EGET_ELEMENT_FOCUS_LOST event followed by a
  	EGET_ELEMENT_FOCUSED event. If someone absorbed either of the events,
 diff --git a/irr/src/CGUIEnvironment.cpp b/irr/src/CGUIEnvironment.cpp
-index b66f206c5..5b1de7419 100644
+index 09813c753..e0c4b87bc 100644
 --- a/irr/src/CGUIEnvironment.cpp
 +++ b/irr/src/CGUIEnvironment.cpp
 @@ -112,6 +112,8 @@ CGUIEnvironment::~CGUIEnvironment()
@@ -477,10 +477,10 @@ index 000000000..d5a82745b
 +
 +} // end namespace gui
 diff --git a/irr/src/CIrrDeviceSDL.cpp b/irr/src/CIrrDeviceSDL.cpp
-index 9b30cce64..a6016ff55 100644
+index b4d815d0f..d03d4146e 100644
 --- a/irr/src/CIrrDeviceSDL.cpp
 +++ b/irr/src/CIrrDeviceSDL.cpp
-@@ -1245,6 +1245,13 @@ bool CIrrDeviceSDL::run()
+@@ -1170,6 +1170,13 @@ bool CIrrDeviceSDL::run()
  //! A/Y, X, B/START, L1/R1 and the D-pad act as the mouse while the cursor is visible
  bool CIrrDeviceSDL::gamepadButtonAsMouse(GamepadButton button, bool down)
  {
@@ -494,7 +494,7 @@ index 9b30cce64..a6016ff55 100644
  	switch (button) {
  	case GamepadButton::SOUTH:
  	case GamepadButton::WEST:
-@@ -1262,7 +1269,6 @@ bool CIrrDeviceSDL::gamepadButtonAsMouse(GamepadButton button, bool down)
+@@ -1187,7 +1194,6 @@ bool CIrrDeviceSDL::gamepadButtonAsMouse(GamepadButton button, bool down)
  		return false;
  	}
  
@@ -502,7 +502,7 @@ index 9b30cce64..a6016ff55 100644
  	if (down) {
  		if (!CursorControl->isVisible())
  			return false;
-@@ -1277,6 +1283,9 @@ bool CIrrDeviceSDL::gamepadButtonAsMouse(GamepadButton button, bool down)
+@@ -1202,6 +1208,9 @@ bool CIrrDeviceSDL::gamepadButtonAsMouse(GamepadButton button, bool down)
  	case GamepadButton::SOUTH:
  	case GamepadButton::NORTH:
  		postGamepadClick(SDL_BUTTON_LEFT, down);
@@ -512,7 +512,7 @@ index 9b30cce64..a6016ff55 100644
  		break;
  	case GamepadButton::WEST:
  		postGamepadClick(SDL_BUTTON_RIGHT, down);
-@@ -1296,6 +1305,24 @@ bool CIrrDeviceSDL::gamepadButtonAsMouse(GamepadButton button, bool down)
+@@ -1221,6 +1230,24 @@ bool CIrrDeviceSDL::gamepadButtonAsMouse(GamepadButton button, bool down)
  	return true;
  }
  
@@ -537,7 +537,7 @@ index 9b30cce64..a6016ff55 100644
  //! Either stick moves the cursor (slowly near the center, a screen height per second at full tilt);
  //! the D-pad nudges it
  void CIrrDeviceSDL::moveCursorWithGamepad()
-@@ -1304,6 +1331,15 @@ void CIrrDeviceSDL::moveCursorWithGamepad()
+@@ -1229,6 +1256,15 @@ void CIrrDeviceSDL::moveCursorWithGamepad()
  	const f32 dt = core::clamp((now - GamepadCursorTime) / 1000.0f, 0.0f, 0.1f);
  	GamepadCursorTime = now;
  
@@ -554,10 +554,10 @@ index 9b30cce64..a6016ff55 100644
  		GamepadCursorShown = false;
  		return;
 diff --git a/irr/src/CIrrDeviceSDL.h b/irr/src/CIrrDeviceSDL.h
-index c0ac2a087..ac4c36a70 100644
+index 5e54bf716..ac1286f40 100644
 --- a/irr/src/CIrrDeviceSDL.h
 +++ b/irr/src/CIrrDeviceSDL.h
-@@ -339,7 +339,11 @@ class CIrrDeviceSDL : public CIrrDeviceStub
+@@ -319,7 +319,11 @@ class CIrrDeviceSDL : public CIrrDeviceStub
  	u32 GamepadMouseButtons = 0; // pressed as the mouse, so their release goes the same way
  	u32 GamepadCursorTime = 0;
  	f32 GamepadCursorX = 0.0f, GamepadCursorY = 0.0f;
@@ -570,10 +570,10 @@ index c0ac2a087..ac4c36a70 100644
  	void postGamepadClick(u32 button, bool down);
  	void postGamepadMouse(EMOUSE_INPUT_EVENT event, f32 wheel = 0.0f);
 diff --git a/irr/src/CMakeLists.txt b/irr/src/CMakeLists.txt
-index e1759e30f..a11d3d43d 100644
+index 938816be9..1e7b3d825 100644
 --- a/irr/src/CMakeLists.txt
 +++ b/irr/src/CMakeLists.txt
-@@ -427,6 +427,7 @@ add_library(IRRGUIOBJ OBJECT
+@@ -429,6 +429,7 @@ add_library(IRRGUIOBJ OBJECT
  	CGUITabControl.h
  	CGUISpriteBank.h
  	CGUIImageList.h
@@ -581,7 +581,7 @@ index e1759e30f..a11d3d43d 100644
  
  	CGUIButton.cpp
  	CGUICheckBox.cpp
-@@ -443,6 +444,7 @@ add_library(IRRGUIOBJ OBJECT
+@@ -445,6 +446,7 @@ add_library(IRRGUIOBJ OBJECT
  	CGUITabControl.cpp
  	CGUISpriteBank.cpp
  	CGUIImageList.cpp
@@ -590,10 +590,10 @@ index e1759e30f..a11d3d43d 100644
  
  # Library
 diff --git a/po/pt_BR/luanti.po b/po/pt_BR/luanti.po
-index d0483347a..402bb9c7c 100644
+index 370fa2fc0..d0d2f4ad8 100644
 --- a/po/pt_BR/luanti.po
 +++ b/po/pt_BR/luanti.po
-@@ -1060,6 +1060,22 @@ msgstr "Criativo"
+@@ -1063,6 +1063,22 @@ msgstr "Criativo"
  msgid "Allow changing the game mode"
  msgstr "Permitir trocar de modo"
  
@@ -617,7 +617,7 @@ index d0483347a..402bb9c7c 100644
  msgid "Mapgen flags"
  msgstr "Opções de geração de mundo"
 diff --git a/src/client/clientlauncher.cpp b/src/client/clientlauncher.cpp
-index 8d0eaf7bd..6cfe2411a 100644
+index 0a315b004..e712ec54b 100644
 --- a/src/client/clientlauncher.cpp
 +++ b/src/client/clientlauncher.cpp
 @@ -368,6 +368,11 @@ void ClientLauncher::config_guienv()

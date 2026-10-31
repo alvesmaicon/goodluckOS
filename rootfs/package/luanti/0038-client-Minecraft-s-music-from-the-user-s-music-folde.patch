@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Tue, 27 Oct 2026 11:29:56 -0300
-Subject: [PATCH 38/38] client: Minecraft's music from the user's music folder
+Subject: [PATCH 38/44] client: Minecraft's music from the user's music folder
 
 A MusicPlayer plays the tracks of <path_user>/music/<set>/*.ogg as
 Minecraft's MusicManager plays its music: one at a time, the first 5 s
@@ -30,10 +30,10 @@ ships with the engine.
 Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
 
 diff --git a/builtin/settingtypes.txt b/builtin/settingtypes.txt
-index 9588f7348..50f0f4ed9 100644
+index 2ff4f105c..4d68329d4 100644
 --- a/builtin/settingtypes.txt
 +++ b/builtin/settingtypes.txt
-@@ -890,6 +890,10 @@ sound_volume_unfocused (Volume when unfocused) float 0.3 0.0 1.0
+@@ -887,6 +887,10 @@ sound_volume_unfocused (Volume when unfocused) float 0.3 0.0 1.0
  #    pause menu.
  mute_sound (Mute sound) bool false
  
@@ -57,7 +57,7 @@ index 2f5c0edf6..e705337f7 100644
  	${CMAKE_CURRENT_SOURCE_DIR}/imagefilters.cpp
  	${CMAKE_CURRENT_SOURCE_DIR}/inputhandler.cpp
 diff --git a/src/client/game.cpp b/src/client/game.cpp
-index 47ec24d63..81b2f54ea 100644
+index beaa53000..9ed3b260c 100644
 --- a/src/client/game.cpp
 +++ b/src/client/game.cpp
 @@ -13,6 +13,7 @@
@@ -76,7 +76,7 @@ index 47ec24d63..81b2f54ea 100644
  	soundmaker.reset();
  	sound_manager.reset();
  
-@@ -661,6 +663,7 @@ void Game::shutdown()
+@@ -658,6 +660,7 @@ void Game::shutdown()
  
  	delete client;
  	client = nullptr;
@@ -84,7 +84,7 @@ index 47ec24d63..81b2f54ea 100644
  	soundmaker.reset();
  	sound_manager.reset();
  
-@@ -748,6 +751,7 @@ bool Game::initSound()
+@@ -741,6 +744,7 @@ bool Game::initSound()
  
  	soundmaker = std::make_unique<SoundMaker>(sound_manager.get(), nodedef_manager);
  	soundmaker->registerReceiver(eventmgr);
@@ -92,7 +92,7 @@ index 47ec24d63..81b2f54ea 100644
  
  	return true;
  }
-@@ -2775,6 +2779,11 @@ void Game::updateSound(f32 dtime)
+@@ -2774,6 +2778,11 @@ void Game::updateSound(f32 dtime)
  	MapNode n = map.getNode(player->getFootstepNodePos());
  	soundmaker->update(dtime, player->makes_footstep_sound,
  			nodedef_manager->get(n).sound_footstep);
@@ -105,7 +105,7 @@ index 47ec24d63..81b2f54ea 100644
  
  
 diff --git a/src/client/game_internal.h b/src/client/game_internal.h
-index 7f26684ae..2b73e1772 100644
+index 822d1df3d..61ed1b688 100644
 --- a/src/client/game_internal.h
 +++ b/src/client/game_internal.h
 @@ -28,6 +28,7 @@
@@ -116,7 +116,7 @@ index 7f26684ae..2b73e1772 100644
  class Server;
  class NodeMetadata;
  class ProfilerGraph;
-@@ -321,6 +322,7 @@ class Game {
+@@ -319,6 +320,7 @@ class Game {
  
  	std::unique_ptr<ISoundManager> sound_manager;
  	std::unique_ptr<SoundMaker> soundmaker;
@@ -279,7 +279,7 @@ index 000000000..124379687
 +	f32 m_left = 0.0f; // of the track, in seconds
 +};
 diff --git a/src/defaultsettings.cpp b/src/defaultsettings.cpp
-index f10bff59b..67caa0c87 100644
+index 18b16908c..9df75393c 100644
 --- a/src/defaultsettings.cpp
 +++ b/src/defaultsettings.cpp
 @@ -101,6 +101,7 @@ void set_default_settings()
@@ -291,7 +291,7 @@ index f10bff59b..67caa0c87 100644
  	settings->setDefault("mesh_generation_interval", "0");
  	settings->setDefault("mesh_generation_threads", "0");
 diff --git a/src/gui/guiEngine.cpp b/src/gui/guiEngine.cpp
-index f95df2d21..830ecc189 100644
+index 0ef5a3169..910469260 100644
 --- a/src/gui/guiEngine.cpp
 +++ b/src/gui/guiEngine.cpp
 @@ -35,6 +35,7 @@
@@ -310,7 +310,7 @@ index f95df2d21..830ecc189 100644
  
  	// create topleft header
  	m_toplefttext = L"";
-@@ -400,6 +402,7 @@ void GUIEngine::run()
+@@ -401,6 +403,7 @@ void GUIEngine::run()
  
  		sound_volume_control(m_sound_manager.get(), device->isWindowActive());
  		m_sound_manager->step(dtime);
@@ -318,7 +318,7 @@ index f95df2d21..830ecc189 100644
  
  #ifdef __ANDROID__
  		m_menu->getAndroidUIInput();
-@@ -426,6 +429,7 @@ GUIEngine::~GUIEngine()
+@@ -427,6 +430,7 @@ GUIEngine::~GUIEngine()
  		m_menu.reset();
  	}
  

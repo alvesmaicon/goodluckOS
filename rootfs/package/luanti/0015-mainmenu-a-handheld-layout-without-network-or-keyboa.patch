@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Tue, 13 Oct 2026 21:15:33 -0300
-Subject: [PATCH 15/15] mainmenu: a handheld layout without network or keyboard
+Subject: [PATCH 15/44] mainmenu: a handheld layout without network or keyboard
  (menu_handheld)
 
 A handheld with no network and no on-screen keyboard shows a main menu
@@ -22,7 +22,7 @@ nothing typed. Turning the setting off brings everything back as it was.
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 diff --git a/builtin/mainmenu/dlg_create_world.lua b/builtin/mainmenu/dlg_create_world.lua
-index a39c3457d..9c5d43b0a 100644
+index 5af46d1b7..5b12a4e24 100644
 --- a/builtin/mainmenu/dlg_create_world.lua
 +++ b/builtin/mainmenu/dlg_create_world.lua
 @@ -152,6 +152,23 @@ local function create_world_formspec(dialogdata)
@@ -108,35 +108,35 @@ index eca3c4058..fe1ef26fa 100644
  
  	tv_main:set_global_event_handler(main_event_handler)
 diff --git a/builtin/mainmenu/tab_about.lua b/builtin/mainmenu/tab_about.lua
-index b0b10f534..9fad59b88 100644
+index 204d8512b..b26dc303b 100644
 --- a/builtin/mainmenu/tab_about.lua
 +++ b/builtin/mainmenu/tab_about.lua
-@@ -85,16 +85,19 @@ return {
- 		local fs = "image[1.5,0.6;2.5,2.5;" .. core.formspec_escape(logofile) .. "]" ..
- 			"style_type[label;valign=center;halign=center]" ..
- 			"label[0.1,3.4;5.3,0.5;" ..
--			core.formspec_escape(version.project .. " " .. version.string) .. "]" ..
--			"button_url[1.5,4.1;2.5,0.8;homepage;luanti.org;https://www.luanti.org/]"
--
+@@ -87,17 +87,20 @@ return {
+ 			"style_type[label;valign=center;halign=center;font=mono,bold;font_size=*1.1]",
+ 			"label[0.1,4;5.4,0.6;",
+ 			core.formspec_escape(version.project .. " " .. version.string), "]",
+-			"style_type[button_url;border=false;textcolor=#4cd9f9]",
+-			"button_url[1.5,4.6;2.5,0.5;homepage;luanti.org;https://www.luanti.org/]"
+ 		}
+ 
 -		if PLATFORM == "Android" then
--			fs = fs .. "button[0.5,5.1;4.5,0.8;share_debug;" .. fgettext("Share debug log") .. "]"
+-			fs[#fs+1] = "button[0.5,5.1;4.5,0.8;share_debug;" .. fgettext("Share debug log") .. "]"
 -		else
--			fs = fs .. "tooltip[userdata;" ..
+-			fs[#fs+1] = "tooltip[userdata;" ..
 -					fgettext("Opens the directory that contains user-provided worlds, games, mods,\n" ..
 -							"and texture packs in a file manager / explorer.") .. "]"
--			fs = fs .. "button[0.5,5.1;4.5,0.8;userdata;" .. fgettext("Open User Data Directory") .. "]"
-+			core.formspec_escape(version.project .. " " .. version.string) .. "]"
-+
+-			fs[#fs+1] = "button[0.5,5.1;4.5,0.8;userdata;" .. fgettext("Open User Data Directory") .. "]"
 +		-- a handheld has no browser, no network and no file manager
 +		if not core.settings:get_bool("menu_handheld") then
-+			fs = fs .. "button_url[1.5,4.1;2.5,0.8;homepage;luanti.org;https://www.luanti.org/]"
++			fs[#fs+1] = "style_type[button_url;border=false;textcolor=#4cd9f9]"
++			fs[#fs+1] = "button_url[1.5,4.6;2.5,0.5;homepage;luanti.org;https://www.luanti.org/]"
 +			if PLATFORM == "Android" then
-+				fs = fs .. "button[0.5,5.1;4.5,0.8;share_debug;" .. fgettext("Share debug log") .. "]"
++				fs[#fs+1] = "button[0.5,5.1;4.5,0.8;share_debug;" .. fgettext("Share debug log") .. "]"
 +			else
-+				fs = fs .. "tooltip[userdata;" ..
++				fs[#fs+1] = "tooltip[userdata;" ..
 +						fgettext("Opens the directory that contains user-provided worlds, games, mods,\n" ..
 +								"and texture packs in a file manager / explorer.") .. "]"
-+				fs = fs .. "button[0.5,5.1;4.5,0.8;userdata;" .. fgettext("Open User Data Directory") .. "]"
++				fs[#fs+1] = "button[0.5,5.1;4.5,0.8;userdata;" .. fgettext("Open User Data Directory") .. "]"
 +			end
  		end
  
@@ -185,10 +185,10 @@ index 1c318fd04..635cee577 100644
  				"button[0,0;3.225,0.8;world_delete;".. fgettext("Delete") .. "]" ..
  				"button[3.325,0;3.225,0.8;world_configure;".. fgettext("Select Mods") .. "]"
 diff --git a/builtin/settingtypes.txt b/builtin/settingtypes.txt
-index 22aa75f96..0dd39f434 100644
+index bf14cc771..12ac580ef 100644
 --- a/builtin/settingtypes.txt
 +++ b/builtin/settingtypes.txt
-@@ -921,6 +921,11 @@ menu_clouds (Clouds in menu) bool true
+@@ -918,6 +918,11 @@ menu_clouds (Clouds in menu) bool true
  #    Choose theme colors for the main menu background.
  menu_theme (Menu theme) enum light dark,light
  

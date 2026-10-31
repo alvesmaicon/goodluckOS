@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Sun, 18 Oct 2026 19:33:37 -0300
-Subject: [PATCH 30/30] mainmenu: the handheld's new world takes a seed again
+Subject: [PATCH 30/44] mainmenu: the handheld's new world takes a seed again
 
 menu_handheld's create-world dialog left the seed out, so every world got a random one. With the
 gamepad's on-screen keyboard it can be typed again: a Seed field beside the world's name, both half
@@ -11,7 +11,7 @@ seed setting keeps the name field at full width.
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 diff --git a/builtin/mainmenu/dlg_create_world.lua b/builtin/mainmenu/dlg_create_world.lua
-index 6e60c4e70..e52894e77 100644
+index 8075b6afd..a96efcc62 100644
 --- a/builtin/mainmenu/dlg_create_world.lua
 +++ b/builtin/mainmenu/dlg_create_world.lua
 @@ -162,13 +162,18 @@ local function create_world_formspec(dialogdata)
@@ -37,10 +37,10 @@ index 6e60c4e70..e52894e77 100644
  			"button[0.5,3.5;3,0.5;world_create_confirm;" .. fgettext("Create") .. "]" ..
  			"button[3.5,3.5;3,0.5;world_create_cancel;" .. fgettext("Cancel") .. "]"
 diff --git a/builtin/settingtypes.txt b/builtin/settingtypes.txt
-index 25c3f3b51..fd0c90f06 100644
+index f00e86da0..76e04de6f 100644
 --- a/builtin/settingtypes.txt
 +++ b/builtin/settingtypes.txt
-@@ -946,8 +946,8 @@ menu_clouds (Clouds in menu) bool true
+@@ -943,8 +943,8 @@ menu_clouds (Clouds in menu) bool true
  menu_theme (Menu theme) enum light dark,light
  
  #    A main menu for a handheld with no network and no keyboard: no Join Game or Content tabs,

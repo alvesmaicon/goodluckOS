@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Thu, 29 Oct 2026 17:45:23 -0300
-Subject: [PATCH 42/42] mainmenu: the handheld shows a world's seed and
+Subject: [PATCH 41/44] mainmenu: the handheld shows a world's seed and
  re-creates it
 
 A world's seed was only in its map_meta.txt, so the player couldn't see it to make the same world
@@ -15,7 +15,7 @@ left of New. pt_BR: "Semente: $1", "Recriar".
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 diff --git a/builtin/mainmenu/dlg_create_world.lua b/builtin/mainmenu/dlg_create_world.lua
-index e52894e77..edef9f9bb 100644
+index a96efcc62..3ecd8ae50 100644
 --- a/builtin/mainmenu/dlg_create_world.lua
 +++ b/builtin/mainmenu/dlg_create_world.lua
 @@ -505,7 +505,8 @@ local function create_world_buttonhandler(this, fields)
@@ -88,10 +88,10 @@ index 315c38c9f..fca6334f4 100644
  		this:hide()
  		create_world_dlg:show()
 diff --git a/builtin/settingtypes.txt b/builtin/settingtypes.txt
-index 50f0f4ed9..66e8cfd49 100644
+index 4d68329d4..ad8824e30 100644
 --- a/builtin/settingtypes.txt
 +++ b/builtin/settingtypes.txt
-@@ -944,7 +944,8 @@ menu_theme (Menu theme) enum light dark,light
+@@ -941,7 +941,8 @@ menu_theme (Menu theme) enum light dark,light
  
  #    A main menu for a handheld with no network and no keyboard: no Join Game or Content tabs,
  #    nothing from ContentDB, no Select Mods, and a new world asks only for its name, seed and game
@@ -102,10 +102,10 @@ index 50f0f4ed9..66e8cfd49 100644
  
  [**HUD]
 diff --git a/po/pt_BR/luanti.po b/po/pt_BR/luanti.po
-index 1d3b1526e..1f2d6a2de 100644
+index 811cd6f9a..bc7dfa95e 100644
 --- a/po/pt_BR/luanti.po
 +++ b/po/pt_BR/luanti.po
-@@ -1084,6 +1084,14 @@ msgstr "Permitir trocar de modo"
+@@ -1087,6 +1087,14 @@ msgstr "Permitir trocar de modo"
  msgid "Bonus chest"
  msgstr "Baú inicial"
  

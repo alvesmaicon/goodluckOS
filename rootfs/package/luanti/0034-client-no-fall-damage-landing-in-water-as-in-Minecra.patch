@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Sat, 24 Oct 2026 01:03:53 -0300
-Subject: [PATCH 34/34] client: no fall damage landing in water, as in
+Subject: [PATCH 34/44] client: no fall damage landing in water, as in
  Minecraft
 
 A fall onto the bottom of shallow water hurt as on land, less what the
@@ -15,7 +15,7 @@ Checked in the native build, a fall of 20 m: on land 14 HP, into water
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 diff --git a/src/client/clientenvironment.cpp b/src/client/clientenvironment.cpp
-index 51b50206c..89bf7d3c9 100644
+index 3387fc5d1..c7c50b286 100644
 --- a/src/client/clientenvironment.cpp
 +++ b/src/client/clientenvironment.cpp
 @@ -178,6 +178,10 @@ void ClientEnvironment::step(float dtime)

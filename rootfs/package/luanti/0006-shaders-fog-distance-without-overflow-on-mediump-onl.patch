@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Tue, 13 Oct 2026 02:49:43 -0300
-Subject: [PATCH 06/13] shaders: fog distance without overflow on mediump-only
+Subject: [PATCH 06/44] shaders: fog distance without overflow on mediump-only
  GPUs
 
 The fog in the node, object and cloud fragment shaders used

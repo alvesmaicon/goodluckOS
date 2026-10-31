@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Sat, 24 Oct 2026 02:15:56 -0300
-Subject: [PATCH 35/35] client: the player's jump and fall as in Minecraft
+Subject: [PATCH 35/44] client: the player's jump and fall as in Minecraft
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -43,7 +43,7 @@ at the surface 2.36 m/s (2.33, it was 2.57).
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 diff --git a/src/client/clientenvironment.cpp b/src/client/clientenvironment.cpp
-index 89bf7d3c9..f663c0627 100644
+index c7c50b286..c41a0fe63 100644
 --- a/src/client/clientenvironment.cpp
 +++ b/src/client/clientenvironment.cpp
 @@ -127,10 +127,9 @@ void ClientEnvironment::step(float dtime)

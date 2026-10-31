@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Tue, 13 Oct 2026 20:13:13 -0300
-Subject: [PATCH 14/14] mainmenu: Survival or Creative chosen when creating a
+Subject: [PATCH 14/44] mainmenu: Survival or Creative chosen when creating a
  world
 
 The Start Game tab's Creative Mode and Enable Damage checkboxes are two
@@ -24,7 +24,7 @@ pt_BR translations for the four new strings.
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 diff --git a/builtin/mainmenu/common.lua b/builtin/mainmenu/common.lua
-index 240e0f083..02c5b3957 100644
+index 5c8029f7f..668479b94 100644
 --- a/builtin/mainmenu/common.lua
 +++ b/builtin/mainmenu/common.lua
 @@ -162,7 +162,12 @@ function menu_render_worldlist()
@@ -42,7 +42,7 @@ index 240e0f083..02c5b3957 100644
  
  	return table.concat(retval, ",")
 diff --git a/builtin/mainmenu/dlg_create_world.lua b/builtin/mainmenu/dlg_create_world.lua
-index 951300df9..a39c3457d 100644
+index cdfb3e8d0..5af46d1b7 100644
 --- a/builtin/mainmenu/dlg_create_world.lua
 +++ b/builtin/mainmenu/dlg_create_world.lua
 @@ -292,12 +292,17 @@ local function create_world_formspec(dialogdata)
@@ -118,10 +118,10 @@ index 951300df9..a39c3457d 100644
  		seed = core.settings:get("fixed_map_seed") or "",
  		flags = {
 diff --git a/po/pt_BR/luanti.po b/po/pt_BR/luanti.po
-index 6e74e66da..d0483347a 100644
+index f15b77f3d..370fa2fc0 100644
 --- a/po/pt_BR/luanti.po
 +++ b/po/pt_BR/luanti.po
-@@ -1044,6 +1044,22 @@ msgstr "Baixa humidade e calor elevado resultam em rios rasos ou secos"
+@@ -1047,6 +1047,22 @@ msgstr "Baixa humidade e calor elevado resultam em rios rasos ou secos"
  msgid "Mapgen"
  msgstr "Gerador de Mundo"
  

@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Tue, 13 Oct 2026 02:49:42 -0300
-Subject: [PATCH 01/13] SDL: on KMSDRM, the gamepad drives a drawn cursor in
+Subject: [PATCH 02/44] SDL: on KMSDRM, the gamepad drives a drawn cursor in
  menus
 
 Under KMSDRM there is no window system, and on displays without a cursor
@@ -49,7 +49,7 @@ index d4e6b1b75..c8136bb0d 100644
  	/** Causes a EGET_ELEMENT_FOCUS_LOST event followed by a
  	EGET_ELEMENT_FOCUSED event. If someone absorbed either of the events,
 diff --git a/irr/src/CGUIEnvironment.cpp b/irr/src/CGUIEnvironment.cpp
-index 4d8a18bca..b66f206c5 100644
+index beb274416..09813c753 100644
 --- a/irr/src/CGUIEnvironment.cpp
 +++ b/irr/src/CGUIEnvironment.cpp
 @@ -24,6 +24,7 @@
@@ -178,10 +178,10 @@ index 8d315aef7..a92bb22de 100644
  	core::array<IGUIElement *> DeletionQueue;
  
 diff --git a/irr/src/CIrrDeviceSDL.cpp b/irr/src/CIrrDeviceSDL.cpp
-index fef8b1bf1..9b30cce64 100644
+index 38a1bdee5..b4d815d0f 100644
 --- a/irr/src/CIrrDeviceSDL.cpp
 +++ b/irr/src/CIrrDeviceSDL.cpp
-@@ -508,6 +508,15 @@ CIrrDeviceSDL::CIrrDeviceSDL(const SIrrlichtCreationParameters &param) :
+@@ -458,6 +458,15 @@ CIrrDeviceSDL::CIrrDeviceSDL(const SIrrlichtCreationParameters &param) :
  		createGUIAndScene();
  		VideoDriver->OnResize(core::dimension2d<u32>(Width, Height));
  	}
@@ -197,7 +197,7 @@ index fef8b1bf1..9b30cce64 100644
  }
  
  //! destructor
-@@ -1191,6 +1200,9 @@ bool CIrrDeviceSDL::run()
+@@ -1116,6 +1125,9 @@ bool CIrrDeviceSDL::run()
  			irrevent.GamepadButtonEvent.ID = id;
  			irrevent.GamepadButtonEvent.PressedDown = (SDL_event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN);
  			recentGamepadID = id;
@@ -207,7 +207,7 @@ index fef8b1bf1..9b30cce64 100644
  			postEventFromUser(irrevent);
  			break;
  		}
-@@ -1208,6 +1220,8 @@ bool CIrrDeviceSDL::run()
+@@ -1133,6 +1145,8 @@ bool CIrrDeviceSDL::run()
  #endif
  			irrevent.GamepadAxisEvent.ID = id;
  			recentGamepadID = id;
@@ -216,7 +216,7 @@ index fef8b1bf1..9b30cce64 100644
  			postEventFromUser(irrevent);
  			break;
  		}
-@@ -1219,9 +1233,181 @@ bool CIrrDeviceSDL::run()
+@@ -1144,9 +1158,181 @@ bool CIrrDeviceSDL::run()
  		resetReceiveTextInputEvents();
  	} // end while
  
@@ -399,10 +399,10 @@ index fef8b1bf1..9b30cce64 100644
  {
  	int window_w, window_h;
 diff --git a/irr/src/CIrrDeviceSDL.h b/irr/src/CIrrDeviceSDL.h
-index 69bc5bed1..c0ac2a087 100644
+index b2d9baaf5..5e54bf716 100644
 --- a/irr/src/CIrrDeviceSDL.h
 +++ b/irr/src/CIrrDeviceSDL.h
-@@ -330,6 +330,20 @@ class CIrrDeviceSDL : public CIrrDeviceStub
+@@ -310,6 +310,20 @@ class CIrrDeviceSDL : public CIrrDeviceStub
  	SDL_JoystickID recentGamepadID = 0;
  #endif // _IRR_USE_SDL3_
  	SDL_Gamepad *getRecentGamepad() const;

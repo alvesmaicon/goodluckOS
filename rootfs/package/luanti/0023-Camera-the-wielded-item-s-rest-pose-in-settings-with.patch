@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Fri, 16 Oct 2026 14:26:39 -0300
-Subject: [PATCH 23/23] Camera: the wielded item's rest pose in settings, with
+Subject: [PATCH 23/44] Camera: the wielded item's rest pose in settings, with
  one for nodes
 
 The wielded item always rested at (55, -35, 65) turned (-100, 120,
@@ -23,7 +23,7 @@ pixel for pixel in the native build).
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 diff --git a/builtin/settingtypes.txt b/builtin/settingtypes.txt
-index b33be6531..13a52cb44 100644
+index b88b4ec4c..0fdc37390 100644
 --- a/builtin/settingtypes.txt
 +++ b/builtin/settingtypes.txt
 @@ -534,6 +534,14 @@ offhand_rotation (Off-hand rotation) v3f (0, -25, 0)
@@ -150,7 +150,7 @@ index 3dd4a5e64..78c9b57b4 100644
  	video::E_MATERIAL_TYPE m_material_type;
  
 diff --git a/src/defaultsettings.cpp b/src/defaultsettings.cpp
-index 70e28323a..ff56a8ae6 100644
+index 6f845b6f2..069a68a51 100644
 --- a/src/defaultsettings.cpp
 +++ b/src/defaultsettings.cpp
 @@ -311,6 +311,10 @@ void set_default_settings()

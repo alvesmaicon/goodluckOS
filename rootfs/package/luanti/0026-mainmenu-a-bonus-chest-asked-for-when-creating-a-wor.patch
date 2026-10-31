@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Sat, 17 Oct 2026 01:25:28 -0300
-Subject: [PATCH 26/26] mainmenu: a bonus chest asked for when creating a world
+Subject: [PATCH 26/44] mainmenu: a bonus chest asked for when creating a world
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -13,7 +13,7 @@ minetest_game: goodluck_bonus_chest). pt_BR: "Baú inicial".
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 diff --git a/builtin/mainmenu/dlg_create_world.lua b/builtin/mainmenu/dlg_create_world.lua
-index 98ef4d8a6..6e60c4e70 100644
+index d42e8d112..8075b6afd 100644
 --- a/builtin/mainmenu/dlg_create_world.lua
 +++ b/builtin/mainmenu/dlg_create_world.lua
 @@ -157,7 +157,9 @@ local function create_world_formspec(dialogdata)
@@ -57,10 +57,10 @@ index 98ef4d8a6..6e60c4e70 100644
  		seed = core.settings:get("fixed_map_seed") or "",
  		flags = {
 diff --git a/po/pt_BR/luanti.po b/po/pt_BR/luanti.po
-index 5cf768266..5524ae505 100644
+index ea2d50de2..bc6dc3fe0 100644
 --- a/po/pt_BR/luanti.po
 +++ b/po/pt_BR/luanti.po
-@@ -1080,6 +1080,10 @@ msgstr "Criativo"
+@@ -1083,6 +1083,10 @@ msgstr "Criativo"
  msgid "Allow changing the game mode"
  msgstr "Permitir trocar de modo"
  
