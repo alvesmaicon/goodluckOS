@@ -23,7 +23,7 @@ The examples copy to the card in a card reader on a Mac (`/Volumes/HOME`). MTP w
 
 ![Luanti on the console: a lake, with the far shore in view](luanti.png)
 
-Luanti is a block-building engine, here with Minetest Game and 63 mods that bring it close to Minecraft. It is part of the system image, so there is nothing to supply or install. It has [a page of its own](luanti.md): updating it, the engine and its 45 patches, the mods and their licenses, and the art made for it. How it plays and its controls are in the [README](../../README.md#luanti).
+Luanti is a block-building engine, here with Minetest Game and 63 mods that bring it close to Minecraft. It is part of the system image, so there is nothing to supply or install. It has [a page of its own](luanti.md): how it plays and its controls, updating it, the engine and its 45 patches, the mods and their licenses, and the art made for it.
 
 ## Stardew Valley
 
