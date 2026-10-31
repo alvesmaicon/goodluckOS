@@ -181,6 +181,8 @@ The same list is in System Settings -> Input Settings, next to a button tester.
 
 ### Luanti
 
+How Luanti is built and updated, the engine's patches, the mods and their licenses are on [its own page](docs/ports/luanti.md).
+
 #### Worlds and settings
 
 Luanti opens on its main menu, trimmed to what works without network: New asks for the world's name (left empty, it takes the next free one), its seed (left empty, a random one; the same seed makes the same world), its game mode, Survival or Creative, and whether it starts with a bonus chest. Under the world list is the selected world's seed; Re-create opens New with that seed, game mode and bonus chest already filled in. A world made with "Bonus chest" ticked starts with a chest by the spawn, on open level ground (not on a tree, under one or against a slope), torches around it, holding a map of the place, a stone pickaxe and axe, apples, bread, sticks, planks, logs and torches.
@@ -551,7 +553,7 @@ With that said, most of the games people actually care about (Stardew Valley, Ha
 ### Ports in this fork
 Four ports are in progress here. Luanti is part of the system image; the others need your own copy of the game, so each one is built on a PC from your files: [Ports](docs/ports/README.md) says how, and how each one runs.
 
-| [Luanti](docs/ports/README.md#luanti) | [Stardew Valley](docs/ports/README.md#stardew-valley) | [Ocarina of Time](docs/ports/README.md#ocarina-of-time) | [Majora's Mask](docs/ports/README.md#majoras-mask) |
+| [Luanti](docs/ports/luanti.md) | [Stardew Valley](docs/ports/README.md#stardew-valley) | [Ocarina of Time](docs/ports/README.md#ocarina-of-time) | [Majora's Mask](docs/ports/README.md#majoras-mask) |
 | --- | --- | --- | --- |
 | ![Luanti](docs/ports/luanti.png) | ![Stardew Valley](docs/ports/stardew-valley.png) | ![Ocarina of Time](docs/ports/ocarina-of-time.png) | ![Majora's Mask](docs/ports/majoras-mask.png) |
 | Free, in the system image | The game from Steam | Your ROM | Your ROM |

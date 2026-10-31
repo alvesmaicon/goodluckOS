@@ -105,7 +105,7 @@ It runs the `curl` program and hands it the URL on its standard input, so the cr
 
 ## Luanti packages
 
-Luanti is in `develop`; a Luanti task goes on a short-lived `feat/luanti-<x>` branch from it. A card whose image has Update Luanti takes a new Luanti as one file, `luanti-<date>-<time>-<commit>.tar.xz`, copied to `HOME/updates`; [docs/ports](../docs/ports/README.md#updating-luanti) describes the console side. A package holds what the commit's image would: the engine, the game with its mods, the overlay's Luanti files (`usr/share/luanti`, `luanti.conf`, `luanti*.sh`) and the engine's translations that the image keeps.
+Luanti is in `develop`; a Luanti task goes on a short-lived `feat/luanti-<x>` branch from it. A card whose image has Update Luanti takes a new Luanti as one file, `luanti-<date>-<time>-<commit>.tar.xz`, copied to `HOME/updates`; [docs/ports/luanti.md](../docs/ports/luanti.md#updating-luanti) describes the console side. A package holds what the commit's image would: the engine, the game with its mods, the overlay's Luanti files (`usr/share/luanti`, `luanti.conf`, `luanti*.sh`) and the engine's translations that the image keeps.
 
 ```sh
 dev/gl luanti-pkg develop               # dev/out/luanti/luanti-20261017-1350-f7506b7.tar.xz (a branch, tag or commit)
