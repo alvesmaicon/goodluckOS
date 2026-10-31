@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Tue, 13 Oct 2026 02:49:43 -0300
-Subject: [PATCH 12/13] client: simplified regions show detail again with
+Subject: [PATCH 12/44] client: simplified regions show detail again with
  hysteresis
 
 A region drawn simplified switched back to detail meshes as soon as its
@@ -17,10 +17,10 @@ whether its detail mesh was left out, asked for again, or made.
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 diff --git a/src/client/client.cpp b/src/client/client.cpp
-index 0b5c2c766..fa3b2bad2 100644
+index e2dcc6460..571f53f15 100644
 --- a/src/client/client.cpp
 +++ b/src/client/client.cpp
-@@ -651,6 +651,7 @@ void Client::step(float dtime)
+@@ -644,6 +644,7 @@ void Client::step(float dtime)
  				delete block->mesh;
  				block->mesh = nullptr;
  				block->solid_sides = r.solid_sides;
@@ -28,19 +28,19 @@ index 0b5c2c766..fa3b2bad2 100644
  
  				if (r.mesh) {
  					minimap_mapblocks = r.mesh->moveMinimapMapblocks();
-@@ -1808,7 +1809,6 @@ void Client::addUpdateMeshTask(v3s16 p, bool ack_to_server, bool urgent)
+@@ -1809,7 +1810,6 @@ void Client::addUpdateMeshTask(v3s16 p, bool urgent)
  	if (b == NULL)
  		return;
  
 -	m_env.getClientMap().markLodDirty(p);
- 	m_mesh_update_manager->updateBlock(&m_env.getMap(), p, ack_to_server, urgent);
+ 	m_mesh_update_manager->updateBlock(&m_env.getMap(), p, urgent);
  }
  
 diff --git a/src/client/clientmap.cpp b/src/client/clientmap.cpp
-index 76b5ccae5..2e69efa54 100644
+index 018ec4d1f..341c64398 100644
 --- a/src/client/clientmap.cpp
 +++ b/src/client/clientmap.cpp
-@@ -390,6 +390,8 @@ void ClientMap::clearDrawList()
+@@ -411,6 +411,8 @@ void ClientMap::clearDrawList()
  
  // Detail meshes are made this many nodes before they are drawn
  static constexpr f32 LOD_DETAIL_MARGIN = 2 * MAP_BLOCKSIZE;
@@ -49,7 +49,7 @@ index 76b5ccae5..2e69efa54 100644
  
  static const v3s16 lod_face_dirs[6] = {
  	v3s16(0, 1, 0), v3s16(0, -1, 0), v3s16(1, 0, 0),
-@@ -404,20 +406,50 @@ f32 ClientMap::lodDistance(v3s16 region_pos) const
+@@ -425,20 +427,50 @@ f32 ClientMap::lodDistance(v3s16 region_pos) const
  	return center.getDistanceFrom(m_camera_position);
  }
  
@@ -103,7 +103,7 @@ index 76b5ccae5..2e69efa54 100644
  	region.drawlist_id = m_drawlist_id;
  	region.used_ms = now_ms;
  
-@@ -453,7 +485,7 @@ void ClientMap::dropDetailMesh(MapBlock *block)
+@@ -474,7 +506,7 @@ void ClientMap::dropDetailMesh(MapBlock *block)
  	invalidateMapBlockMesh(block->mesh);
  	delete block->mesh;
  	block->mesh = nullptr;
@@ -112,7 +112,7 @@ index 76b5ccae5..2e69efa54 100644
  }
  
  bool ClientMap::skipDetailMesh(v3s16 mesh_pos)
-@@ -471,7 +503,7 @@ bool ClientMap::skipDetailMesh(v3s16 mesh_pos)
+@@ -492,7 +524,7 @@ bool ClientMap::skipDetailMesh(v3s16 mesh_pos)
  		return false;
  	if (block->mesh)
  		dropDetailMesh(block);
@@ -121,7 +121,7 @@ index 76b5ccae5..2e69efa54 100644
  	return true;
  }
  
-@@ -601,8 +633,8 @@ void ClientMap::updateDrawList()
+@@ -617,8 +649,8 @@ void ClientMap::updateDrawList()
  				v3s16 block_pos_nodes = block->getPosRelative();
  
  				// Left without a detail mesh while the BFS culler drew it simplified
@@ -132,7 +132,7 @@ index 76b5ccae5..2e69efa54 100644
  					m_client->addUpdateMeshTask(block_pos);
  				}
  
-@@ -760,11 +792,11 @@ void ClientMap::updateDrawList()
+@@ -776,11 +808,11 @@ void ClientMap::updateDrawList()
  			if (lod_enabled && block) {
  				const f32 d = lodDistance(region_pos);
  				const bool detail_wanted = d <= (m_cache_lod_distance + LOD_DETAIL_MARGIN) * BS;
@@ -148,10 +148,10 @@ index 76b5ccae5..2e69efa54 100644
  				if (lod && mesh && !detail_wanted)
  					dropDetailMesh(block);
 diff --git a/src/client/clientmap.h b/src/client/clientmap.h
-index dabe074a0..7015a4bcc 100644
+index 34e811e13..8d7eec944 100644
 --- a/src/client/clientmap.h
 +++ b/src/client/clientmap.h
-@@ -159,12 +159,15 @@ class ClientMap : public Map, public scene::ISceneNode
+@@ -163,12 +163,15 @@ class ClientMap : public Map, public scene::ISceneNode
  		u32 drawlist_id = 0;
  		u64 queued_ms = 0;
  		u64 used_ms = 0;
@@ -170,10 +170,10 @@ index dabe074a0..7015a4bcc 100644
  	void dropDetailMesh(MapBlock *block);
  
 diff --git a/src/mapblock.h b/src/mapblock.h
-index 17366f08d..77f29fe04 100644
+index dabd6cc59..9c2d8f74d 100644
 --- a/src/mapblock.h
 +++ b/src/mapblock.h
-@@ -461,8 +461,9 @@ class MapBlock
+@@ -463,8 +463,9 @@ class MapBlock
  	// marks the sides which are opaque: 00+Z-Z+Y-Y+X-X
  	u8 solid_sides = 0;
  

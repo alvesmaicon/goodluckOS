@@ -6,7 +6,7 @@ All four are work in progress and have only run on my console (GA36-MB, A33, 512
 
 | Game | Built on | You supply | On the A33 | Where |
 | --- | --- | --- | --- | --- |
-| [Luanti](#luanti) | Luanti 5.17 with 45 patches, Minetest Game, 63 mods | nothing | 20 FPS in a forest, 10 over a lake | `rootfs/package/luanti` |
+| [Luanti](#luanti) | Luanti 5.18 with 44 patches, Minetest Game, 63 mods | nothing | 20 FPS in a forest, 10 over a lake | `rootfs/package/luanti` |
 | [Stardew Valley](#stardew-valley) | Mono, MonoGame, gl4es | the game, from Steam | about 19 FPS on the farm | `dev/stardew` |
 | [Ocarina of Time](#ocarina-of-time) | Ship of Harkinian 9.3.0 | your ROM | 20 FPS, as on the N64 | `dev/zelda` |
 | [Majora's Mask](#majoras-mask) | 2 Ship 2 Harkinian 5.0.1 | your ROM | not measured yet | `dev/zelda` |
@@ -23,7 +23,7 @@ The examples copy to the card in a card reader on a Mac (`/Volumes/HOME`). MTP w
 
 ![Luanti on the console: a lake, with the far shore in view](luanti.png)
 
-Luanti is an open-source engine for Minecraft-like games, and Minetest Game, its classic game, is free. Here both run on a 512 MB handheld with a Mali-400: 45 patches make the engine fast enough, fit it to a gamepad and a 640x480 screen, and make it dig, swim, jump and hold things as Minecraft does, and 63 mods, 46 of them written for goodluckOS, bring the game close to Minecraft: Survival or Creative, hunger and status effects, armor and shields, Minecraft's ores, crops and foods, the classic monsters and the witch, villages with traders, horses, experience, enchanting and the anvil, a bow, a compass, maps and a spyglass, recipes learnt as you go, the Nether with its fortresses, potions and the brewing stand, swamps with witch huts, and the End with its strongholds and the ender dragon. At 640x480: 20 FPS in a forest, 10 to 11 looking across a lake, capped at 30. It comes with free textures and sounds, or takes the textures, sounds and music of your own Minecraft: Java Edition, which Update Luanti imports from a copy of your `.minecraft` folder ([Updating Luanti](#updating-luanti)); nothing of Minecraft's is in this repository or in the image.
+Luanti is an open-source engine for Minecraft-like games, and Minetest Game, its classic game, is free. Here both run on a 512 MB handheld with a Mali-400: 44 patches make the engine fast enough, fit it to a gamepad and a 640x480 screen, and make it dig, swim, jump and hold things as Minecraft does, and 63 mods, 46 of them written for goodluckOS, bring the game close to Minecraft: Survival or Creative, hunger and status effects, armor and shields, Minecraft's ores, crops and foods, the classic monsters and the witch, villages with traders, horses, experience, enchanting and the anvil, a bow, a compass, maps and a spyglass, recipes learnt as you go, the Nether with its fortresses, potions and the brewing stand, swamps with witch huts, and the End with its strongholds and the ender dragon. At 640x480: 20 FPS in a forest, 10 to 11 looking across a lake, capped at 30. It comes with free textures and sounds, or takes the textures, sounds and music of your own Minecraft: Java Edition, which Update Luanti imports from a copy of your `.minecraft` folder ([Updating Luanti](#updating-luanti)); nothing of Minecraft's is in this repository or in the image.
 
 **Install:** Luanti is part of the system image (a Buildroot package), so there is nothing to copy. Build the rootfs from `develop` and write it to the card (`dev/gl rootfs`, `dev/gl ext4`, `dev/sdcard-mac.sh`, see [dev/README.md](../../dev/README.md)), and it shows up in the Games tab. Worlds and settings are kept in `HOME/.minetest`. The controls, and how each part of the game plays, are in the [README](../../README.md#luanti).
 
@@ -48,9 +48,9 @@ Update Luanti also gives Luanti the look and the sounds of your own Minecraft: J
 
 Update Luanti is part of the system image: a card with an older image needs a new one first, or gets Update Luanti from a PC over USB. This fork publishes no packages yet; `dev/gl luanti-pkg` makes them on a PC from any branch, tag or commit ([dev/README.md](../../dev/README.md#luanti-packages)).
 
-### The engine: Luanti 5.17 for handhelds
+### The engine: Luanti 5.18 for handhelds
 
-The engine is Luanti 5.17.0 (celeron55 and contributors; code LGPL-2.1+, media CC BY-SA 3.0) with the commits of the `handheld/5.17` branch of [alvesmaicon/luanti](https://github.com/alvesmaicon/luanti/tree/handheld/5.17), which Buildroot applies as patches (`rootfs/package/luanti/`). This tree builds 5.17.0-handheld.26. The patches are under Luanti's license. They were written with AI assistance, which Luanti's AI policy doesn't accept, so they stay in that fork; fixes upstream could use are its issues labelled "upstream candidate".
+The engine is Luanti 5.18.0 (celeron55 and contributors; code LGPL-2.1+, media CC BY-SA 3.0) with the commits of the `handheld/5.18` branch of [alvesmaicon/luanti](https://github.com/alvesmaicon/luanti/tree/handheld/5.18), which Buildroot applies as patches (`rootfs/package/luanti/`). This tree builds 5.18.0-handheld.27. Patch 0001 is a commit of Luanti 5.19-dev taken early. The patches are under Luanti's license. They were written with AI assistance, which Luanti's AI policy doesn't accept, so they stay in that fork; fixes upstream could use are its issues labelled "upstream candidate".
 
 | Scene on the A33, view range 320 | Luanti 5.17.0 | With the patches and the handheld's settings |
 | --- | --- | --- |
@@ -61,8 +61,8 @@ The engine is Luanti 5.17.0 (celeron55 and contributors; code LGPL-2.1+, media C
 | Patch | What it changes |
 | --- | --- |
 | | **GPU and memory** |
-| 0002 | 2D batches drawn with `glDrawElements`, so menus have text on GLES 2 |
-| 0005 | Index buffers created as such, so lima caches their index range: the CPU work per vertex drops about 20 times |
+| 0001 | A block is acknowledged as it arrives, not once its mesh is made, so the server sends the next ones sooner |
+| 0003 | 2D batches drawn with `glDrawElements`, so menus have text on GLES 2 |
 | 0006 | Fog without overflow on GPUs with only 16-bit floats, where everything past 25.6 nodes took the fog's color |
 | 0007 | Fog computed per vertex in the nodes shader |
 | 0008 | Nodes drawn as opaque cubes, opaque leaves too, hide what is behind them |
@@ -72,10 +72,9 @@ The engine is Luanti 5.17.0 (celeron55 and contributors; code LGPL-2.1+, media C
 | 0020 | The HUD isn't drawn under a menu |
 | 0027 | The loading screen waits for the terrain in view, so a world opens complete |
 | 0039, 0040 | Blocks near the player keep their detail mesh, from the first ones a world sends |
-| 0041 | The light curve is set before the terrain loads, so a world doesn't open dark |
 | | **Gamepad and screen** |
-| 0001 | Without a cursor plane, the gamepad moves a drawn cursor in menus |
-| 0004 | Fixed-size forms fit screens under 800x600 |
+| 0002 | Without a cursor plane, the gamepad moves a drawn cursor in menus |
+| 0005 | Fixed-size forms fit screens under 800x600 |
 | 0016, 0025 | An on-screen keyboard for the gamepad, whose OK is the field's Enter |
 | 0024 | The right stick scrolls menus, the left one moves the cursor |
 | 0029 | The top face button shift-clicks in menus, as on Minecraft Bedrock: a stack goes straight to the other side |
@@ -84,7 +83,7 @@ The engine is Luanti 5.17.0 (celeron55 and contributors; code LGPL-2.1+, media C
 | 0014, 0017, 0026, 0030 | A new world asks for its name, its seed, Survival or Creative (a button, as in Minecraft) and a bonus chest |
 | 0018 | Settings open on a Video page with the render distance in chunks |
 | 0021 | The world list takes the whole width |
-| 0042 | The world list shows the selected world's seed, and Re-create makes the world again |
+| 0041 | The world list shows the selected world's seed, and Re-create makes the world again |
 | | **In game** |
 | 0022 | The off-hand item, a shield, is held in the left hand, lowered or raised |
 | 0023 | The held item's rest pose is a setting, posed as in Minecraft at 640x480 |
@@ -96,11 +95,11 @@ The engine is Luanti 5.17.0 (celeron55 and contributors; code LGPL-2.1+, media C
 | 0036 | A map held in both hands, as Minecraft holds it |
 | 0037 | The item in hand changes, and walking bobs the view and the hand, as in Minecraft |
 | 0038 | Music played as Minecraft plays it, from `HOME/.minetest/music`, streamed from the card; nothing ships with the engine |
-| 0043 | Night Vision, for the game to set: everything a player sees as lit as its brightest light |
-| 0045 | A sun or moon with no transparency, as Minecraft's are, added to the sky as Minecraft draws them |
+| 0042 | Night Vision, for the game to set: everything a player sees as lit as its brightest light |
+| 0044 | A sun or moon with no transparency, as Minecraft's are, added to the sky as Minecraft draws them |
 | | **System** |
-| 0003 | Text converted with UCS-4, which minimal glibc builds have built in |
-| 0044 | Builds on Windows: no variable named like one of its macros |
+| 0004 | Text converted with UCS-4, which minimal glibc builds have built in |
+| 0043 | Builds on Windows: no variable named like one of its macros |
 
 ### The game: Minetest Game and 63 mods
 

@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Fri, 16 Oct 2026 00:46:40 -0300
-Subject: [PATCH 19/19] GUI: item meshes share one depth clear per frame
+Subject: [PATCH 19/44] GUI: item meshes share one depth clear per frame
 
 drawItemStack cleared the depth buffer before every item it draws as a
 mesh (a node without an inventory image). On tiled GPUs a clear that
@@ -44,7 +44,7 @@ index 961f90016..6f47f5274 100644
  		if (context.shadow_renderer)
  			context.shadow_renderer->drawDebug();
 diff --git a/src/client/renderingengine.cpp b/src/client/renderingengine.cpp
-index ccc44522b..49023d1e3 100644
+index 8b5f98162..e05f27605 100644
 --- a/src/client/renderingengine.cpp
 +++ b/src/client/renderingengine.cpp
 @@ -20,6 +20,7 @@
@@ -55,8 +55,8 @@ index ccc44522b..49023d1e3 100644
  #include "render/core.h"
  #include "render/factory.h"
  #include "filesys.h"
-@@ -370,6 +371,7 @@ void RenderingEngine::draw_load_screen(const std::wstring &text,
- 		}
+@@ -380,6 +381,7 @@ void RenderingEngine::draw_load_screen(const std::wstring &text,
+ 		gui_bottom_text = gui::StaticText::add(guienv, bottom_text, rect, false, false);
  	}
  
 +	drawItemStackDepthReset();
@@ -126,7 +126,7 @@ index 52bccf089..aa13d947f 100644
  		gui::IGUIFont *font,
  		const ItemStack &item,
 diff --git a/src/gui/guiEngine.cpp b/src/gui/guiEngine.cpp
-index ac84c7c53..f95df2d21 100644
+index a2c3a6f53..0ef5a3169 100644
 --- a/src/gui/guiEngine.cpp
 +++ b/src/gui/guiEngine.cpp
 @@ -3,6 +3,7 @@
@@ -137,7 +137,7 @@ index ac84c7c53..f95df2d21 100644
  #include "statusTextHelper.h"
  
  #include "client/fontengine.h"
-@@ -367,6 +368,7 @@ void GUIEngine::run()
+@@ -368,6 +369,7 @@ void GUIEngine::run()
  
  			drawFooter(driver);
  

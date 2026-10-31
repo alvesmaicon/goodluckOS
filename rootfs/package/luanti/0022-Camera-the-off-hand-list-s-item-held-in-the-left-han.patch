@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Fri, 16 Oct 2026 13:35:35 -0300
-Subject: [PATCH 22/22] Camera: the off-hand list's item held in the left hand
+Subject: [PATCH 22/44] Camera: the off-hand list's item held in the left hand
 
 A game can give a player an "offhand" inventory list; its first item is
 drawn in first person in the left hand, next to the wielded one, in the
@@ -21,7 +21,7 @@ camera.
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 diff --git a/builtin/settingtypes.txt b/builtin/settingtypes.txt
-index 7d840f5e2..b33be6531 100644
+index 9319e3a0d..b88b4ec4c 100644
 --- a/builtin/settingtypes.txt
 +++ b/builtin/settingtypes.txt
 @@ -526,6 +526,14 @@ undersampling (Undersampling) int 1 1 8
@@ -163,12 +163,12 @@ index 03e4f1931..874730265 100644
  	// draw control
  	MapDrawControl& m_draw_control;
 diff --git a/src/defaultsettings.cpp b/src/defaultsettings.cpp
-index 5e740a5d8..70e28323a 100644
+index 48494ee68..6f845b6f2 100644
 --- a/src/defaultsettings.cpp
 +++ b/src/defaultsettings.cpp
 @@ -307,6 +307,10 @@ void set_default_settings()
+ 	settings->setDefault("enable_local_map_saving", "false");
  	settings->setDefault("show_entity_selectionbox", "false");
- 	settings->setDefault("ambient_occlusion_gamma", "1.8");
  	settings->setDefault("arm_inertia", "true");
 +	settings->setDefault("offhand_position", "(-41, -32, 65)");
 +	settings->setDefault("offhand_rotation", "(0, -25, 0)");

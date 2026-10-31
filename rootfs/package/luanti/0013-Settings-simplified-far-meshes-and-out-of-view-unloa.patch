@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Tue, 13 Oct 2026 02:50:43 -0300
-Subject: [PATCH 13/13] Settings: simplified far meshes and out-of-view
+Subject: [PATCH 13/44] Settings: simplified far meshes and out-of-view
  unloading on by default
 
 This branch exists for weak hardware, so what it adds is on unless
@@ -19,10 +19,10 @@ client_unload_out_of_view = false give back upstream's behaviour.
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 diff --git a/builtin/settingtypes.txt b/builtin/settingtypes.txt
-index 3452a46f4..22aa75f96 100644
+index d45b8ce8a..bf14cc771 100644
 --- a/builtin/settingtypes.txt
 +++ b/builtin/settingtypes.txt
-@@ -2122,7 +2122,7 @@ client_mesh_chunk (Client Mesh Chunksize) int 1 1 16
+@@ -2116,7 +2116,7 @@ client_mesh_chunk (Client Mesh Chunksize) int 2 1 16
  #    Distance in nodes beyond which regions of 2x2x2 map blocks are drawn from a
  #    simplified mesh, with one cube per 2x2x2 nodes. Saves vertices and memory
  #    in long views. Needs a mesh chunksize of 1 or 2. 0 disables it.
@@ -31,7 +31,7 @@ index 3452a46f4..22aa75f96 100644
  
  #    Decide the color depth of the texture used for the post-processing pipeline.
  #    Reducing this can improve performance, but some effects (e.g. debanding)
-@@ -2249,12 +2249,12 @@ prometheus_listener_address (Prometheus listener address) [server] string 127.0.
+@@ -2243,12 +2243,12 @@ prometheus_listener_address (Prometheus listener address) [server] string 127.0.
  max_out_chat_queue_size (Maximum size of the client's outgoing chat queue) [client] int 20 -1 32767
  
  #    Timeout for client to remove unused map data from memory, in seconds.
@@ -47,7 +47,7 @@ index 3452a46f4..22aa75f96 100644
  #    Maximum number of mapblocks for client to be kept in memory.
  #    Note that there is an internal dynamic minimum number of blocks that
 diff --git a/src/defaultsettings.cpp b/src/defaultsettings.cpp
-index 3db998df8..5e740a5d8 100644
+index 6a854331d..48494ee68 100644
 --- a/src/defaultsettings.cpp
 +++ b/src/defaultsettings.cpp
 @@ -112,8 +112,8 @@ void set_default_settings()
@@ -58,13 +58,13 @@ index 3db998df8..5e740a5d8 100644
 -	settings->setDefault("client_unload_out_of_view", "false");
 +	settings->setDefault("client_unload_unused_data_timeout", "120");
 +	settings->setDefault("client_unload_out_of_view", "true");
- 	settings->setDefault("client_mapblock_limit", "7500"); // about 120 MB
+ 	settings->setDefault("client_mapblock_limit", "9300"); // about 145 MB
  	settings->setDefault("enable_build_where_you_stand", "false");
  	settings->setDefault("curl_timeout", "20000");
 @@ -255,7 +255,7 @@ void set_default_settings()
  	settings->setDefault("fps_max_unfocused", "10");
- 	settings->setDefault("viewing_range", "190");
- 	settings->setDefault("client_mesh_chunk", "1");
+ 	settings->setDefault("viewing_range", "200");
+ 	settings->setDefault("client_mesh_chunk", "2");
 -	settings->setDefault("client_lod_distance", "0");
 +	settings->setDefault("client_lod_distance", "160");
  	settings->setDefault("screen_w", "1024");

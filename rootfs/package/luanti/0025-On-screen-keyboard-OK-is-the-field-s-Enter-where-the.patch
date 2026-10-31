@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Sat, 17 Oct 2026 01:20:51 -0300
-Subject: [PATCH 25/26] On-screen keyboard: OK is the field's Enter where the
+Subject: [PATCH 25/44] On-screen keyboard: OK is the field's Enter where the
  form asks for it
 
 The keyboard only set the text and closed, so a field with field_enter_after_edit (a search box that
@@ -75,10 +75,10 @@ index d5a82745b..f52fa08c9 100644
  	IGUIElement *getBox() const { return Box; }
  
 diff --git a/src/gui/guiFormSpecMenu.cpp b/src/gui/guiFormSpecMenu.cpp
-index cc78db0db..b157ec5a7 100644
+index 658d0c984..852e1b585 100644
 --- a/src/gui/guiFormSpecMenu.cpp
 +++ b/src/gui/guiFormSpecMenu.cpp
-@@ -5458,6 +5458,20 @@ bool GUIFormSpecMenu::OnEvent(const SEvent& event)
+@@ -5486,6 +5486,20 @@ bool GUIFormSpecMenu::OnEvent(const SEvent& event)
  			if (caller_id <= ID_PROCEED_BTN)
  				break;
  

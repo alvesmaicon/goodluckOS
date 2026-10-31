@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Sat, 24 Oct 2026 01:03:39 -0300
-Subject: [PATCH 33/34] client: the player in water moves as in Minecraft
+Subject: [PATCH 33/44] client: the player in water moves as in Minecraft
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -52,10 +52,10 @@ downstream at rest, 1.45 walking upstream (1.95 in still water).
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 diff --git a/doc/lua_api.md b/doc/lua_api.md
-index 9cb3ff178..20ec6d025 100644
+index c016e9db2..168294493 100644
 --- a/doc/lua_api.md
 +++ b/doc/lua_api.md
-@@ -9354,6 +9354,8 @@ You **must not** mix names and track numbers to refer to the same animation.
+@@ -9453,6 +9453,8 @@ You **must not** mix names and track numbers to refer to the same animation.
            (default: `false`)
          * `new_move`: use new move/sneak code. When `false` the exact old code
            is used for the specific old sneak behavior (default: `true`)
@@ -65,7 +65,7 @@ index 9cb3ff178..20ec6d025 100644
      * For games, we recommend for simpler code to first modify the `movement_*`
        settings (e.g. via the game's `minetest.conf`) to set a global base value
 diff --git a/src/client/clientenvironment.cpp b/src/client/clientenvironment.cpp
-index 9726335a9..51b50206c 100644
+index 977c58daa..3387fc5d1 100644
 --- a/src/client/clientenvironment.cpp
 +++ b/src/client/clientenvironment.cpp
 @@ -124,9 +124,9 @@ void ClientEnvironment::step(float dtime)
@@ -81,10 +81,10 @@ index 9726335a9..51b50206c 100644
  			if (!is_climbing && !lplayer->in_liquid)
  				// HACK the factor 2 for gravity is arbitrary and should be removed eventually
 diff --git a/src/client/content_cao.cpp b/src/client/content_cao.cpp
-index 2847def93..d651021f8 100644
+index c340783b0..b208354b5 100644
 --- a/src/client/content_cao.cpp
 +++ b/src/client/content_cao.cpp
-@@ -1738,6 +1738,10 @@ void GenericCAO::processMessage(const std::string &data)
+@@ -1746,6 +1746,10 @@ void GenericCAO::processMessage(const std::string &data)
  			phys.speed_walk        = readF32(is);
  		}
  
@@ -432,10 +432,10 @@ index 0b97e3349..cdea8af87 100644
  	bool m_disable_descend = false;
  	u16 m_breath = PLAYER_MAX_BREATH_DEFAULT;
 diff --git a/src/player.cpp b/src/player.cpp
-index 6f7ee9ffb..0f331dd22 100644
+index 8bce2ec07..dbb4bcd1c 100644
 --- a/src/player.cpp
 +++ b/src/player.cpp
-@@ -212,7 +212,7 @@ static auto tie(const PlayerPhysicsOverride &o)
+@@ -224,7 +224,7 @@ static auto tie(const PlayerPhysicsOverride &o)
  	o.speed, o.jump, o.gravity, o.sneak, o.sneak_glitch, o.new_move, o.speed_climb,
  	o.speed_crouch, o.liquid_fluidity, o.liquid_fluidity_smooth, o.liquid_sink,
  	o.acceleration_default, o.acceleration_air, o.speed_fast, o.acceleration_fast,
@@ -445,7 +445,7 @@ index 6f7ee9ffb..0f331dd22 100644
  }
  
 diff --git a/src/player.h b/src/player.h
-index b5a1da17a..d4ec0b891 100644
+index 514f72355..3e33fc939 100644
 --- a/src/player.h
 +++ b/src/player.h
 @@ -118,6 +118,8 @@ struct PlayerPhysicsOverride
@@ -472,10 +472,10 @@ index bfab9a5a7..089443ce3 100644
  }
  
 diff --git a/src/script/lua_api/l_object.cpp b/src/script/lua_api/l_object.cpp
-index d381c392e..d21ea6c94 100644
+index b637bf52b..decb96d06 100644
 --- a/src/script/lua_api/l_object.cpp
 +++ b/src/script/lua_api/l_object.cpp
-@@ -1912,6 +1912,7 @@ int ObjectRef::l_set_physics_override(lua_State *L)
+@@ -1915,6 +1915,7 @@ int ObjectRef::l_set_physics_override(lua_State *L)
  	getfloatfield(L, 2, "speed_fast", phys.speed_fast);
  	getfloatfield(L, 2, "acceleration_fast", phys.acceleration_fast);
  	getfloatfield(L, 2, "speed_walk", phys.speed_walk);
@@ -483,7 +483,7 @@ index d381c392e..d21ea6c94 100644
  
  	if (phys != old)
  		playersao->m_physics_override_sent = false;
-@@ -1961,6 +1962,8 @@ int ObjectRef::l_get_physics_override(lua_State *L)
+@@ -1964,6 +1965,8 @@ int ObjectRef::l_get_physics_override(lua_State *L)
  	lua_setfield(L, -2, "acceleration_fast");
  	lua_pushnumber(L, phys.speed_walk);
  	lua_setfield(L, -2, "speed_walk");
@@ -493,7 +493,7 @@ index d381c392e..d21ea6c94 100644
  }
  
 diff --git a/src/server/player_sao.cpp b/src/server/player_sao.cpp
-index c73cf8170..9d3d27f11 100644
+index 4a6cd1ad4..91ad89de2 100644
 --- a/src/server/player_sao.cpp
 +++ b/src/server/player_sao.cpp
 @@ -337,6 +337,8 @@ std::string PlayerSAO::generateUpdatePhysicsOverrideCommand() const

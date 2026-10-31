@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Tue, 13 Oct 2026 02:49:43 -0300
-Subject: [PATCH 10/13] client: draw far regions from simplified meshes
+Subject: [PATCH 10/44] client: draw far regions from simplified meshes
 
 At range 320 on a 512 MB handheld (Mali-400), a view across a lake drew
 1.52 M vertices in ~1,300 draw calls at 3-4 FPS, and the driver's
@@ -36,12 +36,12 @@ change, at the far shore's silhouettes.
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 diff --git a/builtin/settingtypes.txt b/builtin/settingtypes.txt
-index 91b752d49..3452a46f4 100644
+index cdafe4ecc..d45b8ce8a 100644
 --- a/builtin/settingtypes.txt
 +++ b/builtin/settingtypes.txt
-@@ -2119,6 +2119,11 @@ texture_min_size (Base texture size) int 192 192 16384
+@@ -2113,6 +2113,11 @@ texture_min_size (Base texture size) int 192 192 16384
  #    Systems with a low-end GPU (or no GPU) would benefit from smaller values.
- client_mesh_chunk (Client Mesh Chunksize) int 1 1 16
+ client_mesh_chunk (Client Mesh Chunksize) int 2 1 16
  
 +#    Distance in nodes beyond which regions of 2x2x2 map blocks are drawn from a
 +#    simplified mesh, with one cube per 2x2x2 nodes. Saves vertices and memory
@@ -64,10 +64,10 @@ index 2f6888395..2f5c0edf6 100644
  	${CMAKE_CURRENT_SOURCE_DIR}/render/core.cpp
  	${CMAKE_CURRENT_SOURCE_DIR}/render/factory.cpp
 diff --git a/src/client/client.cpp b/src/client/client.cpp
-index 36f29db2a..8bdaf8ac0 100644
+index cd0caf1cd..e2dcc6460 100644
 --- a/src/client/client.cpp
 +++ b/src/client/client.cpp
-@@ -622,6 +622,14 @@ void Client::step(float dtime)
+@@ -615,6 +615,14 @@ void Client::step(float dtime)
  		{
  			num_processed_meshes++;
  
@@ -82,18 +82,18 @@ index 36f29db2a..8bdaf8ac0 100644
  			std::vector<MinimapMapblock*> minimap_mapblocks;
  			bool do_mapper_update = true;
  
-@@ -1794,20 +1802,28 @@ void Client::addUpdateMeshTask(v3s16 p, bool ack_to_server, bool urgent)
+@@ -1801,20 +1809,28 @@ void Client::addUpdateMeshTask(v3s16 p, bool urgent)
  	if (b == NULL)
  		return;
  
 +	m_env.getClientMap().markLodDirty(p);
- 	m_mesh_update_manager->updateBlock(&m_env.getMap(), p, ack_to_server, urgent);
+ 	m_mesh_update_manager->updateBlock(&m_env.getMap(), p, urgent);
  }
  
- void Client::addUpdateMeshTaskWithEdge(v3s16 blockpos, bool ack_to_server, bool urgent)
+ void Client::addUpdateMeshTaskWithEdge(v3s16 blockpos, bool urgent)
  {
 +	m_env.getClientMap().markLodDirty(blockpos);
- 	m_mesh_update_manager->updateBlock(&m_env.getMap(), blockpos, ack_to_server, urgent, true);
+ 	m_mesh_update_manager->updateBlock(&m_env.getMap(), blockpos, urgent, true);
  }
  
 +void Client::addUpdateLodMeshTask(v3s16 blockpos)
@@ -101,31 +101,31 @@ index 36f29db2a..8bdaf8ac0 100644
 +	m_mesh_update_manager->updateLod(&m_env.getMap(), blockpos);
 +}
 +
- void Client::addUpdateMeshTaskForNode(v3s16 nodepos, bool ack_to_server, bool urgent)
+ void Client::addUpdateMeshTaskForNode(v3s16 nodepos, bool urgent)
  {
  	infostream << "Client::addUpdateMeshTaskForNode(): " << nodepos << std::endl;
  
  	v3s16 blockpos = getNodeBlockPos(nodepos);
  	v3s16 blockpos_relative = blockpos * MAP_BLOCKSIZE;
 +	m_env.getClientMap().markLodDirty(blockpos);
- 	m_mesh_update_manager->updateBlock(&m_env.getMap(), blockpos, ack_to_server, urgent, false);
+ 	m_mesh_update_manager->updateBlock(&m_env.getMap(), blockpos, urgent, false);
  	// Leading edge
  	if (nodepos.X == blockpos_relative.X)
 diff --git a/src/client/client.h b/src/client/client.h
-index 2ca5c09fe..240990e3d 100644
+index 7d09ed4a0..b01dec2af 100644
 --- a/src/client/client.h
 +++ b/src/client/client.h
-@@ -302,6 +302,8 @@ class Client : public con::PeerHandler, public InventoryManager, public IGameDef
+@@ -303,6 +303,8 @@ class Client : public con::PeerHandler, public InventoryManager, public IGameDef
  	// Including blocks at appropriate edges
- 	void addUpdateMeshTaskWithEdge(v3s16 blockpos, bool ack_to_server=false, bool urgent=false);
- 	void addUpdateMeshTaskForNode(v3s16 nodepos, bool ack_to_server=false, bool urgent=false);
+ 	void addUpdateMeshTaskWithEdge(v3s16 blockpos, bool urgent=false);
+ 	void addUpdateMeshTaskForNode(v3s16 nodepos, bool urgent=false);
 +	// Simplified mesh of the region of 2x2x2 blocks holding blockpos (client_lod_distance)
 +	void addUpdateLodMeshTask(v3s16 blockpos);
  
  	bool hasClientEvents() const { return !m_client_event_queue.empty(); }
  	// Get event from queue. If queue is empty, it triggers an assertion failure.
 diff --git a/src/client/clientmap.cpp b/src/client/clientmap.cpp
-index 48b38f737..f7d809395 100644
+index d8bd09194..f509c28b5 100644
 --- a/src/client/clientmap.cpp
 +++ b/src/client/clientmap.cpp
 @@ -6,6 +6,8 @@
@@ -157,7 +157,7 @@ index 48b38f737..f7d809395 100644
  }
  
  ClientMap::~ClientMap()
-@@ -375,9 +383,94 @@ void ClientMap::clearDrawList()
+@@ -396,9 +404,94 @@ void ClientMap::clearDrawList()
  		block->refDrop();
  	m_keeplist.clear();
  
@@ -252,7 +252,7 @@ index 48b38f737..f7d809395 100644
  void ClientMap::updateDrawList()
  {
  	ScopeProfiler sp(g_profiler, "CM::updateDrawList()", SPT_AVG);
-@@ -409,6 +502,13 @@ void ClientMap::updateDrawList()
+@@ -430,6 +523,13 @@ void ClientMap::updateDrawList()
  			occlusion_culling_enabled = false;
  	}
  
@@ -266,7 +266,7 @@ index 48b38f737..f7d809395 100644
  	const v3s16 camera_block = getContainerPos(cam_pos_nodes, MAP_BLOCKSIZE);
  	assert(m_drawlist.empty());
  	m_drawlist = decltype(m_drawlist)(MapBlockComparer(camera_block));
-@@ -615,7 +715,10 @@ void ClientMap::updateDrawList()
+@@ -631,7 +731,10 @@ void ClientMap::updateDrawList()
  
  			// Note that we don't fill m_keeplist, or call resetUsageTimer() here.
  			// touchMapBlocks() exists to deal with that.
@@ -278,7 +278,7 @@ index 48b38f737..f7d809395 100644
  				add_to_drawlist(block);
  			}
  
-@@ -729,9 +832,36 @@ void ClientMap::updateDrawList()
+@@ -745,9 +848,36 @@ void ClientMap::updateDrawList()
  			add_to_drawlist(block);
  	}
  
@@ -315,7 +315,7 @@ index 48b38f737..f7d809395 100644
  }
  
  void ClientMap::touchMapBlocks()
-@@ -1047,6 +1177,42 @@ void ClientMap::renderMap(video::IVideoDriver* driver, s32 pass)
+@@ -1091,6 +1221,42 @@ void ClientMap::renderMap(video::IVideoDriver* driver, s32 pass)
  
  	auto is_frustum_culled = m_client->getCamera()->getFrustumCuller();
  
@@ -359,7 +359,7 @@ index 48b38f737..f7d809395 100644
  		const v3s16 block_pos = i.first;
  		MapBlock *block = i.second;
 diff --git a/src/client/clientmap.h b/src/client/clientmap.h
-index 9ccaf967b..f12828a34 100644
+index 9eb4b0c24..f11008e0f 100644
 --- a/src/client/clientmap.h
 +++ b/src/client/clientmap.h
 @@ -8,7 +8,9 @@
@@ -380,7 +380,7 @@ index 9ccaf967b..f12828a34 100644
  
  enum CameraMode : int;
  
-@@ -117,6 +120,12 @@ class ClientMap : public Map, public scene::ISceneNode
+@@ -120,6 +123,12 @@ class ClientMap : public Map, public scene::ISceneNode
  
  	void invalidateMapBlockMesh(MapBlockMesh *mesh);
  
@@ -393,10 +393,10 @@ index 9ccaf967b..f12828a34 100644
  	// For debug printing
  	void PrintInfo(std::ostream &out) override;
  
-@@ -135,6 +144,25 @@ class ClientMap : public Map, public scene::ISceneNode
- private:
+@@ -139,6 +148,24 @@ class ClientMap : public Map, public scene::ISceneNode
  	bool isMeshOccluded(MapBlock *mesh_block, u16 mesh_size, v3s16 cam_pos_nodes);
  
+ 	bool useLoopsCuller() const;
 +	struct LodRegion
 +	{
 +		std::unique_ptr<MapBlockMesh> mesh;
@@ -415,11 +415,10 @@ index 9ccaf967b..f12828a34 100644
 +	// Whether the region holding a block is drawn from its simplified mesh
 +	bool useLod(v3s16 region_pos, u64 now_ms);
 +	void dropLodMeshes(LodRegion &region);
-+
+ 
  	// update the vertex order in transparent mesh buffers
  	void updateTransparentMeshBuffers();
- 
-@@ -176,6 +204,11 @@ class ClientMap : public Map, public scene::ISceneNode
+@@ -181,6 +208,11 @@ class ClientMap : public Map, public scene::ISceneNode
  	std::vector<MapBlock*> m_keeplist;
  	std::map<v3s16, MapBlock*> m_drawlist_shadow;
  	bool m_needs_update_drawlist;
@@ -431,7 +430,7 @@ index 9ccaf967b..f12828a34 100644
  	CachedMeshBuffers m_dynamic_buffers;
  
  	bool m_cache_trilinear_filter;
-@@ -187,4 +220,6 @@ class ClientMap : public Map, public scene::ISceneNode
+@@ -192,4 +224,6 @@ class ClientMap : public Map, public scene::ISceneNode
  	bool m_loops_occlusion_culler;
  	bool m_enable_raytraced_culling;
  	bool m_cache_unload_out_of_view;
@@ -439,10 +438,10 @@ index 9ccaf967b..f12828a34 100644
 +	f32 m_cache_unload_timeout;
  };
 diff --git a/src/client/mapblock_mesh.cpp b/src/client/mapblock_mesh.cpp
-index f743d3fea..5f5f888d3 100644
+index e745efbfc..9bfb524a8 100644
 --- a/src/client/mapblock_mesh.cpp
 +++ b/src/client/mapblock_mesh.cpp
-@@ -637,9 +637,6 @@ MapBlockMesh::MapBlockMesh(Client *client, MeshMakeData *data):
+@@ -460,9 +460,6 @@ MapBlockMesh::MapBlockMesh(Client *client, MeshMakeData *data):
  {
  	ZoneScoped;
  
@@ -452,7 +451,7 @@ index f743d3fea..5f5f888d3 100644
  	auto mesh_grid = data->m_mesh_grid;
  	v3s16 bp = data->m_blockpos;
  	// Only generate minimap mapblocks at grid aligned coordinates.
-@@ -672,6 +669,24 @@ MapBlockMesh::MapBlockMesh(Client *client, MeshMakeData *data):
+@@ -495,6 +492,24 @@ MapBlockMesh::MapBlockMesh(Client *client, MeshMakeData *data):
  		MapblockMeshGenerator(data, &collector).generate();
  	}
  
@@ -477,7 +476,7 @@ index f743d3fea..5f5f888d3 100644
  	/*
  		Convert MeshCollector to SMesh
  	*/
-@@ -748,7 +763,7 @@ MapBlockMesh::MapBlockMesh(Client *client, MeshMakeData *data):
+@@ -571,7 +586,7 @@ MapBlockMesh::MapBlockMesh(Client *client, MeshMakeData *data):
  		}
  	}
  
@@ -487,7 +486,7 @@ index f743d3fea..5f5f888d3 100644
  	// Check if animation is required for this mesh
  	m_has_animation =
 diff --git a/src/client/mapblock_mesh.h b/src/client/mapblock_mesh.h
-index c0b12f3f4..1d9e9f183 100644
+index 2fffe3e41..d9dfab629 100644
 --- a/src/client/mapblock_mesh.h
 +++ b/src/client/mapblock_mesh.h
 @@ -20,6 +20,7 @@ namespace video {
@@ -497,8 +496,8 @@ index c0b12f3f4..1d9e9f183 100644
 +struct MeshCollector;
  class IShaderSource;
  class ITextureSource;
- 
-@@ -49,6 +50,8 @@ struct MeshMakeData
+ struct LightPair;
+@@ -51,6 +52,8 @@ struct MeshMakeData
  	bool m_smooth_lighting = false;
  	bool m_enable_water_reflections = false;
  	bool m_enable_waving_water = false;
@@ -507,7 +506,7 @@ index c0b12f3f4..1d9e9f183 100644
  
  	const NodeDefManager *m_nodedef;
  
-@@ -178,6 +181,8 @@ class MapBlockMesh
+@@ -180,6 +183,8 @@ class MapBlockMesh
  public:
  	// Builds the mesh given
  	MapBlockMesh(Client *client, MeshMakeData *data);
@@ -516,7 +515,7 @@ index c0b12f3f4..1d9e9f183 100644
  	~MapBlockMesh();
  
  	// Main animation function, parameters:
-@@ -275,6 +280,7 @@ class MapBlockMesh
+@@ -277,6 +282,7 @@ class MapBlockMesh
  	}
  
  private:
@@ -525,7 +524,7 @@ index c0b12f3f4..1d9e9f183 100644
  	typedef std::pair<u8 /* layer index */, u32 /* buffer index */> MeshIndex;
  
 diff --git a/src/client/mesh_generator_thread.cpp b/src/client/mesh_generator_thread.cpp
-index d6bd4282e..252f75f51 100644
+index ddc5dd667..7a4f250ac 100644
 --- a/src/client/mesh_generator_thread.cpp
 +++ b/src/client/mesh_generator_thread.cpp
 @@ -8,6 +8,8 @@
@@ -547,10 +546,10 @@ index d6bd4282e..252f75f51 100644
 +	m_client(client),
 +	m_lod(lod)
  {
+ 	assert(m_client);
  	m_cache_smooth_lighting = g_settings->getBool("smooth_lighting");
- 	m_cache_enable_water_reflections = g_settings->getBool("enable_water_reflections");
-@@ -103,10 +106,10 @@ bool MeshUpdateQueue::addBlock(Map *map, v3s16 p, bool ack_block_to_server,
- 	bool urgent, bool from_neighbor)
+@@ -103,10 +106,10 @@ MeshUpdateQueue::~MeshUpdateQueue()
+ bool MeshUpdateQueue::addBlock(Map *map, v3s16 p, bool urgent, bool from_neighbor)
  {
  	// If block that causes update does not exist, skip.
 -	if (!map->getBlockNoCreateNoEx(p))
@@ -562,7 +561,16 @@ index d6bd4282e..252f75f51 100644
  
  	// Mesh is placed at the corner block of a chunk
  	// (where all coordinate are divisible by the chunk size)
-@@ -223,7 +226,7 @@ void MeshUpdateQueue::clear(bool finish)
+@@ -163,7 +166,7 @@ bool MeshUpdateQueue::addBlock(Map *map, v3s16 p, bool urgent, bool from_neighbo
+ 
+ void MeshUpdateQueue::reAddBlock(MeshUpdateResult &r)
+ {
+-	const MeshGrid mesh_grid = m_client->getMeshGrid();
++	const MeshGrid mesh_grid = m_lod ? MeshGrid{LodMeshGenerator::REGION} : m_client->getMeshGrid();
+ 
+ 	const v3s16 mesh_position = mesh_grid.getMeshPos(r.p);
+ 
+@@ -248,7 +251,7 @@ void MeshUpdateQueue::clear()
  
  void MeshUpdateQueue::fillDataFromMapBlocks(QueuedMeshUpdate *q)
  {
@@ -571,20 +579,24 @@ index d6bd4282e..252f75f51 100644
  	MeshMakeData *data = new MeshMakeData(m_client->ndef(),
  			MAP_BLOCKSIZE * mesh_grid.cell_size, mesh_grid);
  	q->data = data;
-@@ -236,8 +239,10 @@ void MeshUpdateQueue::fillDataFromMapBlocks(QueuedMeshUpdate *q)
+@@ -261,12 +264,14 @@ void MeshUpdateQueue::fillDataFromMapBlocks(QueuedMeshUpdate *q)
  			block->copyTo(data->m_vmanip);
  	}
  
 -	data->setCrack(q->crack_level, q->crack_pos);
--	data->m_generate_minimap = !!m_client->getMinimap();
 +	data->m_lod = m_lod;
 +	if (!m_lod)
 +		data->setCrack(q->crack_level, q->crack_pos);
+ 
+ 	float ao_gamma = m_client->getCommittedStaticLighting().ao_gamma;
+ 	data->m_ao_gamma_inv = ao_gamma == 0.0f ? 0.0f : (1.0f / ao_gamma);
+ 
+-	data->m_generate_minimap = !!m_client->getMinimap();
 +	data->m_generate_minimap = !m_lod && m_client->getMinimap();
  	data->m_smooth_lighting = m_cache_smooth_lighting;
  	data->m_enable_water_reflections = m_cache_enable_water_reflections;
  	data->m_enable_waving_water = m_cache_enable_waving_water;
-@@ -247,32 +252,66 @@ void MeshUpdateQueue::fillDataFromMapBlocks(QueuedMeshUpdate *q)
+@@ -289,32 +294,66 @@ void MeshUpdateResult::dropBlocks()
  	MeshUpdateWorkerThread
  */
  
@@ -651,9 +663,9 @@ index d6bd4282e..252f75f51 100644
 +			r.mesh = std::make_unique<MapBlockMesh>(m_client, q->data);
 +			r.solid_sides = get_solid_sides(q->data);
 +		}
- 		r.ack_list = std::move(q->ack_list);
- 		r.urgent = q->urgent;
  		r.map_blocks = std::move(q->map_blocks);
+ 		r.epoch = q->epoch;
+ 		r.urgent = q->urgent;
  
  		m_manager->putResult(std::move(r));
 -		m_queue_in->done(q->p);
@@ -661,7 +673,7 @@ index d6bd4282e..252f75f51 100644
  		delete q;
  		sp.stop();
  
-@@ -290,7 +329,8 @@ void MeshUpdateWorkerThread::doUpdate()
+@@ -332,7 +371,8 @@ void MeshUpdateWorkerThread::doUpdate()
  */
  
  MeshUpdateManager::MeshUpdateManager(Client *client):
@@ -671,7 +683,7 @@ index d6bd4282e..252f75f51 100644
  {
  	int number_of_threads = rangelim(g_settings->getS32("mesh_generation_threads"), 0, 8);
  
-@@ -303,7 +343,8 @@ MeshUpdateManager::MeshUpdateManager(Client *client):
+@@ -345,7 +385,8 @@ MeshUpdateManager::MeshUpdateManager(Client *client):
  	infostream << "MeshUpdateManager: using " << number_of_threads << " threads" << std::endl;
  
  	for (int i = 0; i < number_of_threads; i++)
@@ -680,35 +692,52 @@ index d6bd4282e..252f75f51 100644
 +				&m_lod_queue_in, this));
  }
  
- void MeshUpdateManager::updateBlock(Map *map, v3s16 p, bool ack_block_to_server,
-@@ -329,6 +370,12 @@ void MeshUpdateManager::updateBlock(Map *map, v3s16 p, bool ack_block_to_server,
+ void MeshUpdateManager::updateBlock(Map *map, v3s16 p, bool urgent, bool update_neighbors)
+@@ -370,6 +411,12 @@ void MeshUpdateManager::updateBlock(Map *map, v3s16 p, bool urgent, bool update_
  	deferUpdate();
  }
  
 +void MeshUpdateManager::updateLod(Map *map, v3s16 p)
 +{
-+	m_lod_queue_in.addBlock(map, p, false, false, false);
++	m_lod_queue_in.addBlock(map, p, false, false);
 +	deferUpdate();
 +}
 +
  void MeshUpdateManager::putResult(MeshUpdateResult &&result)
  {
  	if (result.urgent)
-@@ -355,6 +402,7 @@ bool MeshUpdateManager::getNextResult(MeshUpdateResult &r)
- void MeshUpdateManager::clearAllQueues(bool finish)
+@@ -391,7 +438,7 @@ bool MeshUpdateManager::getNextResult(MeshUpdateResult &r)
+ 		// just kidding, we can't return this result. put it back into the queue.
+ 		verbosestream << "MeshUpdateManager: have to regenerate " << r.p
+ 			<< " due to epoch difference (" << r.epoch << ")" << std::endl;
+-		m_queue_in.reAddBlock(r);
++		(r.lod ? m_lod_queue_in : m_queue_in).reAddBlock(r);
+ 		r = MeshUpdateResult(); // don't leave stale data to caller
+ 		return getNextResult(r);
+ 	}
+@@ -402,6 +449,7 @@ void MeshUpdateManager::forceRegenerate(Map *map, const std::vector<v3s16> &pp)
  {
- 	m_queue_in.clear(finish);
-+	m_lod_queue_in.clear(finish);
+ 	// This invalidates all previously produced results (if still pending)
+ 	m_queue_in.setEpoch(++m_epoch);
++	m_lod_queue_in.setEpoch(m_epoch);
  
- 	const auto &drop_result = [] (MeshUpdateResult &r) {
- 		for (auto *block : r.map_blocks)
+ 	verbosestream << "MeshUpdateManager: m_epoch=" << m_epoch << "; will queue "
+ 		<< pp.size() << " blocks to be updated" << std::endl;
+@@ -415,6 +463,7 @@ void MeshUpdateManager::forceRegenerate(Map *map, const std::vector<v3s16> &pp)
+ void MeshUpdateManager::clearAllQueues()
+ {
+ 	m_queue_in.clear();
++	m_lod_queue_in.clear();
+ 
+ 	const auto &do_it = [] (ResultQueue &queue) {
+ 		auto helper = queue.iterLocked();
 diff --git a/src/client/mesh_generator_thread.h b/src/client/mesh_generator_thread.h
-index 27efe0455..b86322873 100644
+index 63f98a2da..aedabb1a4 100644
 --- a/src/client/mesh_generator_thread.h
 +++ b/src/client/mesh_generator_thread.h
-@@ -65,7 +65,8 @@ class MeshUpdateQueue
- 	};
- 
+@@ -60,7 +60,8 @@ struct QueuedMeshUpdate
+ class MeshUpdateQueue
+ {
  public:
 -	MeshUpdateQueue(Client *client);
 +	/// @param lod queue of simplified meshes of 2x2x2 block regions (meshgen/lod.h)
@@ -716,7 +745,7 @@ index 27efe0455..b86322873 100644
  
  	~MeshUpdateQueue();
  
-@@ -98,6 +99,7 @@ class MeshUpdateQueue
+@@ -102,6 +103,7 @@ class MeshUpdateQueue
  
  private:
  	Client *m_client;
@@ -724,7 +753,7 @@ index 27efe0455..b86322873 100644
  	std::vector<QueuedMeshUpdate *> m_queue;
  	std::unordered_set<v3s16> m_urgents;
  	std::unordered_set<v3s16> m_inflight_blocks;
-@@ -115,6 +117,9 @@ struct MeshUpdateResult
+@@ -120,6 +122,9 @@ struct MeshUpdateResult
  {
  	v3s16 p = v3s16(-1338, -1338, -1338);
  	std::unique_ptr<MapBlockMesh> mesh;
@@ -732,9 +761,9 @@ index 27efe0455..b86322873 100644
 +	bool lod = false;
 +	std::unique_ptr<MapBlockMesh> skirts[6];
  	u8 solid_sides;
- 	std::vector<v3s16> ack_list;
- 	bool urgent = false;
-@@ -128,7 +133,8 @@ class MeshUpdateManager;
+ 	std::vector<MapBlock*> map_blocks;
+ 	u16 epoch = U16_MAX;
+@@ -139,7 +144,8 @@ class MeshUpdateManager;
  class MeshUpdateWorkerThread : public UpdateThread
  {
  public:
@@ -744,7 +773,7 @@ index 27efe0455..b86322873 100644
  
  protected:
  	virtual void doUpdate();
-@@ -136,6 +142,7 @@ class MeshUpdateWorkerThread : public UpdateThread
+@@ -147,6 +153,7 @@ class MeshUpdateWorkerThread : public UpdateThread
  private:
  	Client *m_client;
  	MeshUpdateQueue *m_queue_in;
@@ -752,8 +781,8 @@ index 27efe0455..b86322873 100644
  	MeshUpdateManager *m_manager;
  
  	// TODO: Add callback to update these when g_settings changes
-@@ -152,6 +159,9 @@ class MeshUpdateManager
- 	void updateBlock(Map *map, v3s16 p, bool ack_block_to_server, bool urgent,
+@@ -163,6 +170,9 @@ class MeshUpdateManager
+ 	void updateBlock(Map *map, v3s16 p, bool urgent,
  			bool update_neighbors = false);
  
 +	// Queues a simplified mesh of the region holding block p
@@ -762,8 +791,8 @@ index 27efe0455..b86322873 100644
  	void putResult(MeshUpdateResult &&r);
  
  	/// @note caller needs to refDrop() the affected map_blocks
-@@ -172,6 +182,7 @@ class MeshUpdateManager
- 	void deferUpdate();
+@@ -193,6 +203,7 @@ class MeshUpdateManager
+ 	u16 m_epoch = 0;
  
  	MeshUpdateQueue m_queue_in;
 +	MeshUpdateQueue m_lod_queue_in;
@@ -772,7 +801,7 @@ index 27efe0455..b86322873 100644
  
 diff --git a/src/client/meshgen/lod.cpp b/src/client/meshgen/lod.cpp
 new file mode 100644
-index 000000000..2d7ff5add
+index 000000000..96e09d2f4
 --- /dev/null
 +++ b/src/client/meshgen/lod.cpp
 @@ -0,0 +1,249 @@
@@ -896,7 +925,7 @@ index 000000000..2d7ff5add
 +			if (id == CONTENT_AIR)
 +				continue;
 +			const ContentFeatures &f = m_ndef->get(n);
-+			if (f.visuals->solidness == 2) {
++			if (NDT_solidness[f.drawtype] == 2) {
 +				solid[n_solid++] = n;
 +			} else if (f.isLiquid()) {
 +				if (f.liquid_alternative_source_id != CONTENT_IGNORE)
@@ -1088,13 +1117,13 @@ index 000000000..3430b8681
 +	std::vector<Cell> m_grid;
 +};
 diff --git a/src/defaultsettings.cpp b/src/defaultsettings.cpp
-index 072614b29..3db998df8 100644
+index 050fa3387..6a854331d 100644
 --- a/src/defaultsettings.cpp
 +++ b/src/defaultsettings.cpp
 @@ -255,6 +255,7 @@ void set_default_settings()
  	settings->setDefault("fps_max_unfocused", "10");
- 	settings->setDefault("viewing_range", "190");
- 	settings->setDefault("client_mesh_chunk", "1");
+ 	settings->setDefault("viewing_range", "200");
+ 	settings->setDefault("client_mesh_chunk", "2");
 +	settings->setDefault("client_lod_distance", "0");
  	settings->setDefault("screen_w", "1024");
  	settings->setDefault("screen_h", "600");

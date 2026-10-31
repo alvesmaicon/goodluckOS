@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Sun, 18 Oct 2026 09:07:10 -0300
-Subject: [PATCH 29/29] SDL on KMSDRM: the top face button shift-clicks in
+Subject: [PATCH 29/44] SDL on KMSDRM: the top face button shift-clicks in
  menus
 
 In the inventory the gamepad had a left click (take or drop the whole stack) on two buttons and a right
@@ -17,10 +17,10 @@ text field, and so does the top one.
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 diff --git a/irr/src/CIrrDeviceSDL.cpp b/irr/src/CIrrDeviceSDL.cpp
-index 4eb93f091..10f5ad04d 100644
+index bacc75355..3b99f16d5 100644
 --- a/irr/src/CIrrDeviceSDL.cpp
 +++ b/irr/src/CIrrDeviceSDL.cpp
-@@ -1242,7 +1242,7 @@ bool CIrrDeviceSDL::run()
+@@ -1167,7 +1167,7 @@ bool CIrrDeviceSDL::run()
  }
  
  #if defined(_IRR_COMPILE_WITH_JOYSTICK_EVENTS_)
@@ -29,7 +29,7 @@ index 4eb93f091..10f5ad04d 100644
  bool CIrrDeviceSDL::gamepadButtonAsMouse(GamepadButton button, bool down)
  {
  	const u32 bit = 1u << static_cast<u32>(button);
-@@ -1281,7 +1281,7 @@ bool CIrrDeviceSDL::gamepadButtonAsMouse(GamepadButton button, bool down)
+@@ -1206,7 +1206,7 @@ bool CIrrDeviceSDL::gamepadButtonAsMouse(GamepadButton button, bool down)
  
  	switch (button) {
  	case GamepadButton::SOUTH:
@@ -38,7 +38,7 @@ index 4eb93f091..10f5ad04d 100644
  		postGamepadClick(SDL_BUTTON_LEFT, down);
  		// a click on a text field opens the on-screen keyboard
  		if (!down && GUIEnvironment)
-@@ -1416,6 +1416,7 @@ void CIrrDeviceSDL::postGamepadClick(u32 button, bool down)
+@@ -1341,6 +1341,7 @@ void CIrrDeviceSDL::postGamepadClick(u32 button, bool down)
  		irrevent.MouseInput.Event = down ? EMIE_RMOUSE_PRESSED_DOWN : EMIE_RMOUSE_LEFT_UP;
  	irrevent.MouseInput.Button = button;
  	irrevent.MouseInput.ButtonStates = MouseButtonStates;
@@ -46,7 +46,7 @@ index 4eb93f091..10f5ad04d 100644
  	irrevent.MouseInput.X = MouseX;
  	irrevent.MouseInput.Y = MouseY;
  	postEventFromUser(irrevent);
-@@ -1438,6 +1439,7 @@ void CIrrDeviceSDL::postGamepadWheel(f32 wheel)
+@@ -1363,6 +1364,7 @@ void CIrrDeviceSDL::postGamepadWheel(f32 wheel)
  	irrevent.MouseInput.Wheel = wheel;
  	irrevent.MouseInput.Gamepad = true;
  	irrevent.MouseInput.ButtonStates = MouseButtonStates;
@@ -54,7 +54,7 @@ index 4eb93f091..10f5ad04d 100644
  	irrevent.MouseInput.X = MouseX;
  	irrevent.MouseInput.Y = MouseY;
  	postEventFromUser(irrevent);
-@@ -1450,6 +1452,7 @@ void CIrrDeviceSDL::postGamepadMouse(EMOUSE_INPUT_EVENT event, f32 wheel)
+@@ -1375,6 +1377,7 @@ void CIrrDeviceSDL::postGamepadMouse(EMOUSE_INPUT_EVENT event, f32 wheel)
  	irrevent.MouseInput.Event = event;
  	irrevent.MouseInput.Wheel = wheel;
  	irrevent.MouseInput.ButtonStates = MouseButtonStates;

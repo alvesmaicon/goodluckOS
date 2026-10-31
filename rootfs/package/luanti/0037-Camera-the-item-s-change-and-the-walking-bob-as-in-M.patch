@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Mon, 26 Oct 2026 00:55:40 -0300
-Subject: [PATCH 37/37] Camera: the item's change and the walking bob as in
+Subject: [PATCH 37/44] Camera: the item's change and the walking bob as in
  Minecraft
 
 A new wielded item came in with Luanti's animation: the old one dropped
@@ -41,7 +41,7 @@ the arm and the map draw as before.
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 diff --git a/builtin/settingtypes.txt b/builtin/settingtypes.txt
-index 7a4898e63..9588f7348 100644
+index abc583b16..2ff4f105c 100644
 --- a/builtin/settingtypes.txt
 +++ b/builtin/settingtypes.txt
 @@ -543,7 +543,8 @@ offhand_raised_position (Raised off-hand position) v3f (-22, -18, 50)
@@ -390,10 +390,10 @@ index 8e694c331..35ff493ee 100644
  
  	CameraMode m_camera_mode;
 diff --git a/src/client/game.cpp b/src/client/game.cpp
-index 8067461c2..47ec24d63 100644
+index 36faeaa6a..beaa53000 100644
 --- a/src/client/game.cpp
 +++ b/src/client/game.cpp
-@@ -3098,6 +3098,10 @@ void Game::handlePointingAtNode(const PointedThing &pointed,
+@@ -3097,6 +3097,10 @@ void Game::handlePointingAtNode(const PointedThing &pointed,
  		bool placed = nodePlacement(def, selected_item, nodepos, neighborpos,
  			pointed, meta);
  

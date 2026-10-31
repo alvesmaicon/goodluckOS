@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Fri, 16 Oct 2026 01:34:29 -0300
-Subject: [PATCH 21/21] mainmenu: the handheld's world list takes the whole
+Subject: [PATCH 21/44] mainmenu: the handheld's world list takes the whole
  width
 
 With menu_handheld, a game that disables the Creative, Damage and Host

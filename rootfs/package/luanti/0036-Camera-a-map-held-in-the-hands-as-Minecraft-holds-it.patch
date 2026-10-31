@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Sun, 25 Oct 2026 23:07:41 -0300
-Subject: [PATCH 36/36] Camera: a map held in the hands as Minecraft holds it
+Subject: [PATCH 36/44] Camera: a map held in the hands as Minecraft holds it
 
 A map was a flat HUD image in the middle of the screen, the same wherever
 the player looked, with the hand hidden. Minecraft holds a filled map in
@@ -449,7 +449,7 @@ index 804e2fb39..8e694c331 100644
  
  	CameraMode m_camera_mode;
 diff --git a/src/client/hud.cpp b/src/client/hud.cpp
-index a21a334c4..8dc540618 100644
+index 3bcde6fbd..d5ad2f515 100644
 --- a/src/client/hud.cpp
 +++ b/src/client/hud.cpp
 @@ -486,6 +486,9 @@ void Hud::drawLuaElements(const v3s16 &camera_offset, bool only_unhidable)

@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Fri, 30 Oct 2026 19:33:22 -0300
-Subject: [PATCH 45/45] client: an opaque sun or moon is added to the sky, as
+Subject: [PATCH 44/44] client: an opaque sun or moon is added to the sky, as
  Minecraft draws them
 
 Minecraft's sun and moon are drawn on black, no transparency in them, and
@@ -19,7 +19,7 @@ texture change.
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 diff --git a/src/client/sky.cpp b/src/client/sky.cpp
-index 23f3fb4dc..1dcd38c66 100644
+index a2d95844b..e355336f0 100644
 --- a/src/client/sky.cpp
 +++ b/src/client/sky.cpp
 @@ -45,6 +45,20 @@ static inline void disableTextureFiltering(video::SMaterial &mat)
@@ -62,7 +62,7 @@ index 23f3fb4dc..1dcd38c66 100644
  	}
  }
 diff --git a/src/client/texturesource.cpp b/src/client/texturesource.cpp
-index 79f03d072..8d5b4e8b8 100644
+index e53c0b209..f8f87a899 100644
 --- a/src/client/texturesource.cpp
 +++ b/src/client/texturesource.cpp
 @@ -116,6 +116,8 @@ class TextureSource final : public IWritableTextureSource
@@ -74,7 +74,7 @@ index 79f03d072..8d5b4e8b8 100644
  	core::dimension2du getTextureDimensions(const std::string &image);
  
  	void setImageCaching(bool enabled);
-@@ -651,6 +653,27 @@ video::SColor TextureSource::getTextureAverageColor(const std::string &name)
+@@ -654,6 +656,27 @@ video::SColor TextureSource::getTextureAverageColor(const std::string &name)
  	return c;
  }
  

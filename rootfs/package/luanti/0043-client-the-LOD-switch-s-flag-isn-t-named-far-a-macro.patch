@@ -1,21 +1,21 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Fri, 30 Oct 2026 15:31:56 -0300
-Subject: [PATCH 44/45] client: the LOD switch's flag isn't named far, a macro
+Subject: [PATCH 43/44] client: the LOD switch's flag isn't named far, a macro
  on Windows
 
 windows.h defines far and near as empty macros (16-bit Windows' pointer
 qualifiers), so `bool far = ...` in ClientMap::useLod read as `bool = ...`
 and the windows workflow's four builds (MinGW 32/64, MSVC x86/x64) stopped
-there since e1790eda2. Renamed to distant; nothing else changes.
+there since "draw far regions from simplified meshes". Renamed to distant; nothing else changes.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 diff --git a/src/client/clientmap.cpp b/src/client/clientmap.cpp
-index f16197ec0..9eebf408e 100644
+index f12eb94ec..13766b19e 100644
 --- a/src/client/clientmap.cpp
 +++ b/src/client/clientmap.cpp
-@@ -428,19 +428,19 @@ bool ClientMap::useLod(v3s16 region_pos, f32 d, u64 now_ms)
+@@ -449,19 +449,19 @@ bool ClientMap::useLod(v3s16 region_pos, f32 d, u64 now_ms)
  		return it->second.lod;
  
  	const f32 switch_d = m_cache_lod_distance * BS;

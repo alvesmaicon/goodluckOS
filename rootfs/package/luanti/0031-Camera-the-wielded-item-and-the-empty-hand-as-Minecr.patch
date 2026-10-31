@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Fri, 23 Oct 2026 12:22:46 -0300
-Subject: [PATCH 31/31] Camera: the wielded item and the empty hand as
+Subject: [PATCH 31/44] Camera: the wielded item and the empty hand as
  Minecraft draws them
 
 Luanti held the item at a fixed rest pose (made a setting by the
@@ -65,7 +65,7 @@ hand (no swing) and with dirt (swings).
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 diff --git a/builtin/settingtypes.txt b/builtin/settingtypes.txt
-index fd0c90f06..7a4898e63 100644
+index 76e04de6f..abc583b16 100644
 --- a/builtin/settingtypes.txt
 +++ b/builtin/settingtypes.txt
 @@ -542,14 +542,6 @@ offhand_rotation (Off-hand rotation) v3f (0, -25, 0)
@@ -357,10 +357,10 @@ index 32eb39f79..804e2fb39 100644
  	CameraMode m_camera_mode;
  
 diff --git a/src/client/game.cpp b/src/client/game.cpp
-index d480c3d7d..7786487bc 100644
+index c004c694d..63f23c58a 100644
 --- a/src/client/game.cpp
 +++ b/src/client/game.cpp
-@@ -3081,8 +3081,13 @@ void Game::handlePointingAtNode(const PointedThing &pointed,
+@@ -3080,8 +3080,13 @@ void Game::handlePointingAtNode(const PointedThing &pointed,
  		runData.repeat_place_timer = 0;
  		infostream << "Place button pressed while looking at ground" << std::endl;
  
@@ -376,7 +376,7 @@ index d480c3d7d..7786487bc 100644
  
  		soundmaker->m_player_rightpunch_sound = SoundSpec();
  
-@@ -3090,7 +3095,6 @@ void Game::handlePointingAtNode(const PointedThing &pointed,
+@@ -3089,7 +3094,6 @@ void Game::handlePointingAtNode(const PointedThing &pointed,
  		// make that happen
  		// And also set the sound and send the interact
  		// But first check for meta formspec and rightclickable
@@ -384,7 +384,7 @@ index d480c3d7d..7786487bc 100644
  		bool placed = nodePlacement(def, selected_item, nodepos, neighborpos,
  			pointed, meta);
  
-@@ -3623,7 +3627,7 @@ void Game::updateFrame(ProfilerGraph *graph, RunStats *stats, f32 dtime,
+@@ -3635,7 +3639,7 @@ void Game::updateFrame(ProfilerGraph *graph, RunStats *stats, f32 dtime,
  		ItemStack &tool_item = player->getWieldedItem(&selected_item, &hand_item);
  
  		bool skip_anim = client->consumeSkipNextWieldAnimation();
@@ -516,7 +516,7 @@ index 78c9b57b4..ed45a8dde 100644
  	video::E_MATERIAL_TYPE m_material_type;
  
 diff --git a/src/defaultsettings.cpp b/src/defaultsettings.cpp
-index c1a36010b..f10bff59b 100644
+index b67ca0d01..18b16908c 100644
 --- a/src/defaultsettings.cpp
 +++ b/src/defaultsettings.cpp
 @@ -313,10 +313,6 @@ void set_default_settings()

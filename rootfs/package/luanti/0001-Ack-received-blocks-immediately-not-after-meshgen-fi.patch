@@ -1,0 +1,557 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: sfan5 <sfan5@live.de>
+Date: Fri, 30 Oct 2026 22:32:07 +0100
+Subject: [PATCH 01/44] Ack received blocks immediately, not after meshgen
+ finishes (#17661)
+
+(cherry picked from commit 19370a0e4e771c204525775ca9bab0f4ed2ef1cf)
+
+diff --git a/src/client/client.cpp b/src/client/client.cpp
+index 1feaf3d85..cd0caf1cd 100644
+--- a/src/client/client.cpp
++++ b/src/client/client.cpp
+@@ -372,7 +372,7 @@ Client::~Client()
+ 
+ 	m_mesh_update_manager->stop();
+ 	m_mesh_update_manager->wait();
+-	m_mesh_update_manager->clearAllQueues(true);
++	m_mesh_update_manager->clearAllQueues();
+ 
+ 	// Delete detached inventories
+ 	for (auto &it : m_detached_inventories)
+@@ -515,34 +515,23 @@ void Client::step(float dtime)
+ 			mapblock_limit, &deleted_blocks);
+ 
+ 		// Send info to server
+-
+-		auto i = deleted_blocks.begin();
+-		std::vector<v3s16> sendlist;
+-		for(;;) {
+-			if(sendlist.size() == 255 || i == deleted_blocks.end()) {
+-				if(sendlist.empty())
+-					break;
+-				/*
+-					[0] u16 command
+-					[2] u8 count
+-					[3] v3s16 pos_0
+-					[3+6] v3s16 pos_1
+-					...
+-				*/
+-
+-				sendDeletedBlocks(sendlist);
+-
+-				if(i == deleted_blocks.end())
+-					break;
+-
+-				sendlist.clear();
++		while (!deleted_blocks.empty()) {
++			std::vector<v3s16> sendlist;
++			while (!deleted_blocks.empty() && sendlist.size() < 255) {
++				sendlist.push_back(deleted_blocks.back());
++				deleted_blocks.pop_back();
+ 			}
+-
+-			sendlist.push_back(*i);
+-			++i;
++			sendDeletedBlocks(sendlist);
+ 		}
+ 	}
+ 
++	/*
++		Notify server about received blocks
++	*/
++	if (!m_got_blocks.empty())
++		sendGotBlocks(m_got_blocks);
++	m_got_blocks.clear();
++
+ 	/*
+ 		Send pending messages on out chat queue
+ 	*/
+@@ -620,7 +609,6 @@ void Client::step(float dtime)
+ 		updateStaticLighting(player->getLighting().static_);
+ 
+ 		int num_processed_meshes = 0;
+-		std::vector<v3s16> blocks_to_ack;
+ 		bool force_update_shadows = false;
+ 		MeshUpdateResult r;
+ 		while (m_mesh_update_manager->getNextResult(r))
+@@ -676,23 +664,8 @@ void Client::step(float dtime)
+ 				}
+ 			}
+ 
+-			// TODO?: it's really weird and complicates things how we only ack
+-			// blocks after they've been through the meshgen queue...
+-			for (auto p : r.ack_list) {
+-				if (blocks_to_ack.size() == 255) {
+-					sendGotBlocks(blocks_to_ack);
+-					blocks_to_ack.clear();
+-				}
+-
+-				blocks_to_ack.emplace_back(p);
+-			}
+-
+ 			r.dropBlocks();
+ 		}
+-		if (blocks_to_ack.size() > 0) {
+-				// Acknowledge block(s)
+-				sendGotBlocks(blocks_to_ack);
+-		}
+ 
+ 		if (num_processed_meshes > 0)
+ 			g_profiler->graphAdd("num_processed_meshes", num_processed_meshes);
+@@ -701,7 +674,7 @@ void Client::step(float dtime)
+ 			auto shadow = RenderingEngine::get_shadow_renderer();
+ 			if (shadow)
+ 				shadow->setForceUpdateShadowMap();
+-		};
++		}
+ 	}
+ 
+ 	/*
+@@ -1280,15 +1253,14 @@ void Client::startAuth(AuthMechanism chosen_auth_mechanism)
+ 	}
+ }
+ 
+-void Client::sendDeletedBlocks(std::vector<v3s16> &blocks)
++void Client::sendDeletedBlocks(const std::vector<v3s16> &blocks)
+ {
+ 	NetworkPacket pkt(TOSERVER_DELETEDBLOCKS, 1 + sizeof(v3s16) * blocks.size());
+ 
+-	pkt << (u8) blocks.size();
+-
+-	for (const v3s16 &block : blocks) {
++	assert(blocks.size() <= U8_MAX);
++	pkt << static_cast<u8>(blocks.size());
++	for (const v3s16 &block : blocks)
+ 		pkt << block;
+-	}
+ 
+ 	Send(&pkt);
+ }
+@@ -1296,7 +1268,9 @@ void Client::sendDeletedBlocks(std::vector<v3s16> &blocks)
+ void Client::sendGotBlocks(const std::vector<v3s16> &blocks)
+ {
+ 	NetworkPacket pkt(TOSERVER_GOTBLOCKS, 1 + 6 * blocks.size());
+-	pkt << (u8) blocks.size();
++
++	assert(blocks.size() <= U8_MAX);
++	pkt << static_cast<u8>(blocks.size());
+ 	for (const v3s16 &block : blocks)
+ 		pkt << block;
+ 
+@@ -1558,8 +1532,8 @@ void Client::removeNode(v3s16 p)
+ 	catch(InvalidPositionException &e) {
+ 	}
+ 
+-	for (const auto &modified_block : modified_blocks) {
+-		addUpdateMeshTaskWithEdge(modified_block.first, false, true);
++	for (const auto &it : modified_blocks) {
++		addUpdateMeshTaskWithEdge(it.first, true);
+ 	}
+ }
+ 
+@@ -1620,8 +1594,8 @@ void Client::addNode(v3s16 p, MapNode n, bool remove_metadata)
+ 	catch(InvalidPositionException &e) {
+ 	}
+ 
+-	for (const auto &modified_block : modified_blocks) {
+-		addUpdateMeshTaskWithEdge(modified_block.first, false, true);
++	for (const auto &it : modified_blocks) {
++		addUpdateMeshTaskWithEdge(it.first, true);
+ 	}
+ }
+ 
+@@ -1754,12 +1728,12 @@ void Client::setCrack(int level, v3s16 pos)
+ 	if(old_crack_level >= 0 && (level < 0 || pos != old_crack_pos))
+ 	{
+ 		// remove old crack
+-		addUpdateMeshTaskForNode(old_crack_pos, false, true);
++		addUpdateMeshTaskForNode(old_crack_pos, true);
+ 	}
+ 	if(level >= 0 && (old_crack_level < 0 || pos != old_crack_pos))
+ 	{
+ 		// add new crack
+-		addUpdateMeshTaskForNode(pos, false, true);
++		addUpdateMeshTaskForNode(pos, true);
+ 	}
+ }
+ 
+@@ -1818,7 +1792,7 @@ void Client::typeChatMessage(const std::wstring &message)
+ 	sendChatMessage(message);
+ }
+ 
+-void Client::addUpdateMeshTask(v3s16 p, bool ack_to_server, bool urgent)
++void Client::addUpdateMeshTask(v3s16 p, bool urgent)
+ {
+ 	// Check if the block exists to begin with. In the case when a non-existing
+ 	// neighbor is automatically added, it may not. In that case we don't want
+@@ -1827,28 +1801,28 @@ void Client::addUpdateMeshTask(v3s16 p, bool ack_to_server, bool urgent)
+ 	if (b == NULL)
+ 		return;
+ 
+-	m_mesh_update_manager->updateBlock(&m_env.getMap(), p, ack_to_server, urgent);
++	m_mesh_update_manager->updateBlock(&m_env.getMap(), p, urgent);
+ }
+ 
+-void Client::addUpdateMeshTaskWithEdge(v3s16 blockpos, bool ack_to_server, bool urgent)
++void Client::addUpdateMeshTaskWithEdge(v3s16 blockpos, bool urgent)
+ {
+-	m_mesh_update_manager->updateBlock(&m_env.getMap(), blockpos, ack_to_server, urgent, true);
++	m_mesh_update_manager->updateBlock(&m_env.getMap(), blockpos, urgent, true);
+ }
+ 
+-void Client::addUpdateMeshTaskForNode(v3s16 nodepos, bool ack_to_server, bool urgent)
++void Client::addUpdateMeshTaskForNode(v3s16 nodepos, bool urgent)
+ {
+ 	infostream << "Client::addUpdateMeshTaskForNode(): " << nodepos << std::endl;
+ 
+ 	v3s16 blockpos = getNodeBlockPos(nodepos);
+ 	v3s16 blockpos_relative = blockpos * MAP_BLOCKSIZE;
+-	m_mesh_update_manager->updateBlock(&m_env.getMap(), blockpos, ack_to_server, urgent, false);
++	m_mesh_update_manager->updateBlock(&m_env.getMap(), blockpos, urgent, false);
+ 	// Leading edge
+ 	if (nodepos.X == blockpos_relative.X)
+-		addUpdateMeshTask(blockpos + v3s16(-1, 0, 0), false, urgent);
++		addUpdateMeshTask(blockpos + v3s16(-1, 0, 0), urgent);
+ 	if (nodepos.Y == blockpos_relative.Y)
+-		addUpdateMeshTask(blockpos + v3s16(0, -1, 0), false, urgent);
++		addUpdateMeshTask(blockpos + v3s16(0, -1, 0), urgent);
+ 	if (nodepos.Z == blockpos_relative.Z)
+-		addUpdateMeshTask(blockpos + v3s16(0, 0, -1), false, urgent);
++		addUpdateMeshTask(blockpos + v3s16(0, 0, -1), urgent);
+ }
+ 
+ ClientEvent *Client::getClientEvent()
+diff --git a/src/client/client.h b/src/client/client.h
+index 5f2ba2adc..7d09ed4a0 100644
+--- a/src/client/client.h
++++ b/src/client/client.h
+@@ -299,10 +299,10 @@ class Client : public con::PeerHandler, public InventoryManager, public IGameDef
+ 
+ 	u64 getMapSeed() const { return m_map_seed; }
+ 
+-	void addUpdateMeshTask(v3s16 blockpos, bool ack_to_server=false, bool urgent=false);
++	void addUpdateMeshTask(v3s16 blockpos, bool urgent=false);
+ 	// Including blocks at appropriate edges
+-	void addUpdateMeshTaskWithEdge(v3s16 blockpos, bool ack_to_server=false, bool urgent=false);
+-	void addUpdateMeshTaskForNode(v3s16 nodepos, bool ack_to_server=false, bool urgent=false);
++	void addUpdateMeshTaskWithEdge(v3s16 blockpos, bool urgent=false);
++	void addUpdateMeshTaskForNode(v3s16 nodepos, bool urgent=false);
+ 
+ 	bool hasClientEvents() const { return !m_client_event_queue.empty(); }
+ 	// Get event from queue. If queue is empty, it triggers an assertion failure.
+@@ -490,7 +490,7 @@ class Client : public con::PeerHandler, public InventoryManager, public IGameDef
+ 
+ 	void sendInit(const std::string &playerName);
+ 	void startAuth(AuthMechanism chosen_auth_mechanism);
+-	void sendDeletedBlocks(std::vector<v3s16> &blocks);
++	void sendDeletedBlocks(const std::vector<v3s16> &blocks);
+ 	void sendGotBlocks(const std::vector<v3s16> &blocks);
+ 	void sendRemovedSounds(const std::vector<s32> &soundList);
+ 	void sendPlayerPos();
+@@ -545,6 +545,9 @@ class Client : public con::PeerHandler, public InventoryManager, public IGameDef
+ 	u32 m_last_chat_message_sent;
+ 	float m_chat_message_allowance = 5.0f;
+ 	std::queue<ChatMessage *> m_chat_queue;
++	/// received blocks that we still want to ack to the server
++	/// @note don't append blindly. this must be sent when it reaches 255 entries.
++	std::vector<v3s16> m_got_blocks;
+ 
+ 	// The authentication methods we can use to enter sudo mode (=change password)
+ 	u32 m_sudo_auth_methods;
+diff --git a/src/client/mesh_generator_thread.cpp b/src/client/mesh_generator_thread.cpp
+index c4493aa9c..ddc5dd667 100644
+--- a/src/client/mesh_generator_thread.cpp
++++ b/src/client/mesh_generator_thread.cpp
+@@ -97,11 +97,10 @@ MeshUpdateQueue::MeshUpdateQueue(Client *client):
+ 
+ MeshUpdateQueue::~MeshUpdateQueue()
+ {
+-	clear(true);
++	clear();
+ }
+ 
+-bool MeshUpdateQueue::addBlock(Map *map, v3s16 p, bool ack_block_to_server,
+-	bool urgent, bool from_neighbor)
++bool MeshUpdateQueue::addBlock(Map *map, v3s16 p, bool urgent, bool from_neighbor)
+ {
+ 	// If block that causes update does not exist, skip.
+ 	if (!map->getBlockNoCreateNoEx(p))
+@@ -127,8 +126,6 @@ bool MeshUpdateQueue::addBlock(Map *map, v3s16 p, bool ack_block_to_server,
+ 	*/
+ 	for (QueuedMeshUpdate *q : m_queue) {
+ 		if (q->p == mesh_position) {
+-			if (ack_block_to_server)
+-				q->ack_list.push_back(p);
+ 			q->crack_level = m_client->getCrackLevel();
+ 			q->crack_pos = m_client->getCrackPos();
+ 			q->urgent |= urgent;
+@@ -142,8 +139,6 @@ bool MeshUpdateQueue::addBlock(Map *map, v3s16 p, bool ack_block_to_server,
+ 	*/
+ 	UnqueuedMeshUpdate q{new QueuedMeshUpdate()};
+ 	q->p = mesh_position;
+-	if (ack_block_to_server)
+-		q->ack_list.push_back(p);
+ 	q->crack_level = m_client->getCrackLevel();
+ 	q->crack_pos = m_client->getCrackPos();
+ 	q->urgent = urgent;
+@@ -155,7 +150,6 @@ bool MeshUpdateQueue::addBlock(Map *map, v3s16 p, bool ack_block_to_server,
+ 		Note: this can be extended with more precise checks in the future
+ 	*/
+ 	if (from_neighbor && q->checkSkip(mesh_grid.cell_size)) {
+-		assert(!ack_block_to_server);
+ 		m_urgents.erase(mesh_position);
+ 		g_profiler->add("MeshUpdateQueue: updates skipped", 1);
+ 		return true;
+@@ -181,8 +175,6 @@ void MeshUpdateQueue::reAddBlock(MeshUpdateResult &r)
+ 	// Update if exists in queue
+ 	for (QueuedMeshUpdate *q : m_queue) {
+ 		if (q->p == mesh_position) {
+-			for (auto p : r.ack_list)
+-				q->ack_list.push_back(p);
+ 			q->urgent |= r.urgent;
+ 			// Do not retrieve blocks again, but make sure to drop our old ones
+ 			r.dropBlocks();
+@@ -193,7 +185,6 @@ void MeshUpdateQueue::reAddBlock(MeshUpdateResult &r)
+ 	// Queue a new update
+ 	UnqueuedMeshUpdate q{new QueuedMeshUpdate()};
+ 	q->p = mesh_position;
+-	q->ack_list = std::move(r.ack_list);
+ 	q->crack_level = m_client->getCrackLevel();
+ 	q->crack_pos = m_client->getCrackPos();
+ 	q->urgent = r.urgent;
+@@ -215,7 +206,7 @@ QueuedMeshUpdate *MeshUpdateQueue::pop()
+ 			QueuedMeshUpdate *q = *i;
+ 			if (must_be_urgent && m_urgents.count(q->p) == 0)
+ 				continue;
+-			// Make sure no two threads are processing the same mapblock, as that causes racing conditions
++			// Make sure no two threads are processing the same mapblock, as that causes race conditions
+ 			if (m_inflight_blocks.find(q->p) != m_inflight_blocks.end())
+ 				continue;
+ 			m_queue.erase(i);
+@@ -243,23 +234,16 @@ void MeshUpdateQueue::done(v3s16 pos)
+ 	m_inflight_blocks.erase(pos);
+ }
+ 
+-void MeshUpdateQueue::clear(bool finish)
++void MeshUpdateQueue::clear()
+ {
+ 	MutexAutoLock lock(m_mutex);
+-	decltype(m_queue) new_queue;
+ 	for (auto *it : m_queue) {
+-		// If we're in an active game session clearing updates that the
+-		// server expects us to ack will cause problems.
+-		if (it->ack_list.empty() || finish) {
+-			m_urgents.erase(it->p);
+-			m_inflight_blocks.erase(it->p);
+-			it->dropBlocks();
+-			delete it;
+-		} else {
+-			new_queue.push_back(it);
+-		}
++		m_urgents.erase(it->p);
++		m_inflight_blocks.erase(it->p);
++		it->dropBlocks();
++		delete it;
+ 	}
+-	m_queue = std::move(new_queue);
++	m_queue.clear();
+ }
+ 
+ void MeshUpdateQueue::fillDataFromMapBlocks(QueuedMeshUpdate *q)
+@@ -325,7 +309,6 @@ void MeshUpdateWorkerThread::doUpdate()
+ 		r.p = q->p;
+ 		r.mesh = std::unique_ptr<MapBlockMesh>(mesh_new);
+ 		r.solid_sides = get_solid_sides(q->data);
+-		r.ack_list = std::move(q->ack_list);
+ 		r.map_blocks = std::move(q->map_blocks);
+ 		r.epoch = q->epoch;
+ 		r.urgent = q->urgent;
+@@ -365,13 +348,12 @@ MeshUpdateManager::MeshUpdateManager(Client *client):
+ 		m_workers.push_back(std::make_unique<MeshUpdateWorkerThread>(client, &m_queue_in, this));
+ }
+ 
+-void MeshUpdateManager::updateBlock(Map *map, v3s16 p, bool ack_block_to_server,
+-		bool urgent, bool update_neighbors)
++void MeshUpdateManager::updateBlock(Map *map, v3s16 p, bool urgent, bool update_neighbors)
+ {
+ 	static thread_local const bool many_neighbors =
+ 			g_settings->getBool("smooth_lighting")
+ 			&& !g_settings->getFlag("performance_tradeoffs");
+-	if (!m_queue_in.addBlock(map, p, ack_block_to_server, urgent, false)) {
++	if (!m_queue_in.addBlock(map, p, urgent, false)) {
+ 		warningstream << "Update requested for non-existent block at "
+ 				<< p << std::endl;
+ 		return;
+@@ -379,10 +361,10 @@ void MeshUpdateManager::updateBlock(Map *map, v3s16 p, bool ack_block_to_server,
+ 	if (update_neighbors) {
+ 		if (many_neighbors) {
+ 			for (v3s16 dp : g_26dirs)
+-				m_queue_in.addBlock(map, p + dp, false, urgent, true);
++				m_queue_in.addBlock(map, p + dp, urgent, true);
+ 		} else {
+ 			for (v3s16 dp : g_6dirs)
+-				m_queue_in.addBlock(map, p + dp, false, urgent, true);
++				m_queue_in.addBlock(map, p + dp, urgent, true);
+ 		}
+ 	}
+ 	deferUpdate();
+@@ -425,26 +407,20 @@ void MeshUpdateManager::forceRegenerate(Map *map, const std::vector<v3s16> &pp)
+ 		<< pp.size() << " blocks to be updated" << std::endl;
+ 
+ 	for (v3s16 p : pp) {
+-		m_queue_in.addBlock(map, p, false, false, false);
++		m_queue_in.addBlock(map, p, false, false);
+ 	}
+ 	deferUpdate();
+ }
+ 
+-void MeshUpdateManager::clearAllQueues(bool finish)
++void MeshUpdateManager::clearAllQueues()
+ {
+-	m_queue_in.clear(finish);
++	m_queue_in.clear();
+ 
+-	// Same problem as in MeshUpdateQueue::clear() here: we can't just blindly
+-	// throw away results that the server expects to receive an ack for.
+-	const auto &do_it = [finish] (ResultQueue &queue) {
++	const auto &do_it = [] (ResultQueue &queue) {
+ 		auto helper = queue.iterLocked();
+ 		for (auto it = helper.begin(); it != helper.end(); ) {
+-			if (it->ack_list.empty() || finish) {
+-				it->dropBlocks();
+-				it = helper.erase(it);
+-			} else {
+-				++it;
+-			}
++			it->dropBlocks();
++			it = helper.erase(it);
+ 		}
+ 	};
+ 	do_it(m_queue_out_urgent);
+diff --git a/src/client/mesh_generator_thread.h b/src/client/mesh_generator_thread.h
+index 102404601..63f98a2da 100644
+--- a/src/client/mesh_generator_thread.h
++++ b/src/client/mesh_generator_thread.h
+@@ -23,7 +23,6 @@ class Client;
+ struct QueuedMeshUpdate
+ {
+ 	v3s16 p = v3s16(-1337, -1337, -1337);
+-	std::vector<v3s16> ack_list;
+ 	int crack_level = -1;
+ 	v3s16 crack_pos;
+ 	MeshMakeData *data = nullptr; // This is generated in MeshUpdateQueue::pop()
+@@ -70,11 +69,10 @@ class MeshUpdateQueue
+ 	 * update for the block p.
+ 	 * @param map Map
+ 	 * @param p block position
+-	 * @param ack_to_server Should be acked to server when done?
+ 	 * @param urgent High-priority?
+ 	 * @param from_neighbor was this update only necessary due to a neighbor change?
+ 	 */
+-	bool addBlock(Map *map, v3s16 p, bool ack_to_server, bool urgent, bool from_neighbor);
++	bool addBlock(Map *map, v3s16 p, bool urgent, bool from_neighbor);
+ 
+ 	/**
+ 	 * Re-queues a block that was already finished.
+@@ -100,8 +98,7 @@ class MeshUpdateQueue
+ 		return m_queue.size();
+ 	}
+ 
+-	/// @param finish if true, also clears updates that need to be acked to the server
+-	void clear(bool finish);
++	void clear();
+ 
+ private:
+ 	Client *m_client;
+@@ -124,7 +121,6 @@ struct MeshUpdateResult
+ 	v3s16 p = v3s16(-1338, -1338, -1338);
+ 	std::unique_ptr<MapBlockMesh> mesh;
+ 	u8 solid_sides;
+-	std::vector<v3s16> ack_list;
+ 	std::vector<MapBlock*> map_blocks;
+ 	u16 epoch = U16_MAX;
+ 	bool urgent = false;
+@@ -164,7 +160,7 @@ class MeshUpdateManager
+ 
+ 	// Caches the block at p and its neighbors (if needed) and queues a mesh
+ 	// update for the block at p
+-	void updateBlock(Map *map, v3s16 p, bool ack_block_to_server, bool urgent,
++	void updateBlock(Map *map, v3s16 p, bool urgent,
+ 			bool update_neighbors = false);
+ 
+ 	void putResult(MeshUpdateResult &&r);
+@@ -180,8 +176,7 @@ class MeshUpdateManager
+ 	 */
+ 	void forceRegenerate(Map *map, const std::vector<v3s16> &pp);
+ 
+-	/// @param finish if true, also clears updates that need to be acked to the server
+-	void clearAllQueues(bool finish);
++	void clearAllQueues();
+ 
+ 	void start();
+ 	void stop();
+diff --git a/src/network/clientpackethandler.cpp b/src/network/clientpackethandler.cpp
+index 2712dd37a..b5e9927ca 100644
+--- a/src/network/clientpackethandler.cpp
++++ b/src/network/clientpackethandler.cpp
+@@ -334,10 +334,15 @@ void Client::handleCommand_BlockData(NetworkPacket* pkt)
+ 		ServerMap::saveBlock(block, m_localdb.get());
+ 	}
+ 
+-	/*
+-		Add it to mesh update queue and set it to be acknowledged after update.
+-	*/
+-	addUpdateMeshTaskWithEdge(p, true);
++	// Add it to mesh update queue
++	addUpdateMeshTaskWithEdge(p);
++
++	// Ack it to the server
++	if (m_got_blocks.size() == U8_MAX) {
++		sendGotBlocks(m_got_blocks);
++		m_got_blocks.clear();
++	}
++	m_got_blocks.push_back(p);
+ }
+ 
+ void Client::handleCommand_Inventory(NetworkPacket* pkt)
+diff --git a/src/util/container.h b/src/util/container.h
+index d056be325..e4c678339 100644
+--- a/src/util/container.h
++++ b/src/util/container.h
+@@ -138,15 +138,19 @@ class MutexedQueue
+ 
+ 	void push_back(const T &t)
+ 	{
+-		MutexAutoLock lock(m_mutex);
+-		m_queue.push_back(t);
++		{
++			MutexAutoLock lock(m_mutex);
++			m_queue.push_back(t);
++		}
+ 		m_signal.post();
+ 	}
+ 
+ 	void push_back(T &&t)
+ 	{
+-		MutexAutoLock lock(m_mutex);
+-		m_queue.push_back(std::move(t));
++		{
++			MutexAutoLock lock(m_mutex);
++			m_queue.push_back(std::move(t));
++		}
+ 		m_signal.post();
+ 	}
+ 
+@@ -240,8 +244,10 @@ class MutexedQueue
+ 	struct IterationHelper {
+ 		friend class MutexedQueue<T>;
+ 		~IterationHelper() {
++			bool empty = q->getQueue().empty();
+ 			q->getMutex().unlock();
+-			q->getSignal().post(); // assume modified
++			if (!empty)
++				q->getSignal().post(); // assume modified
+ 		}
+ 
+ 		auto begin() { return q->getQueue().begin(); }
