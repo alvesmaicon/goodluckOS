@@ -1,6 +1,6 @@
 #include "system/jack.h"
 
-#include <SDL.h>
+#include <SDL2/SDL.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <linux/input.h>
