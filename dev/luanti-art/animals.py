@@ -690,14 +690,17 @@ def ender_dragon():
     body = dragon_box(-12, -16, -16, 24, 24, 64, 0, 0) + sum(
         (dragon_box(-1, -22, z, 2, 6, 12, 220, 53) for z in (-10, 10, 30)), [])
     parts.append(part("body", body_at, body))
+    # a membrane: Minecraft draws the dragon unculled and paints only its upper side (the under one is blank in the
+    # texture), so here that side is a two-sided square, seen from below as Minecraft shows it
+    membrane = lambda x0, v, m: quad(*dragon_box(x0, 0, 2, 56, 0, 56, -56, v, m)[0])
     for side, k in (("left", 1), ("right", -1)):
         m = side == "left"
         x0 = 0 if m else -56
         wing = add(body_at, (12 * k, -15, -6))
         parts.append(part(side + "_wing", wing, dragon_box(x0, -4, -4, 56, 8, 8, 112, 88, m) +
-                          dragon_box(x0, 0, 2, 56, 0, 56, -56, 88, m), parent="body"))
+                          membrane(x0, 88, m), parent="body"))
         parts.append(part(side + "_wing_tip", add(wing, (56 * k, 0, 0)), dragon_box(x0, -2, -2, 56, 4, 4, 112, 136, m) +
-                          dragon_box(x0, 0, 2, 56, 0, 56, -56, 144, m), parent=side + "_wing"))
+                          membrane(x0, 144, m), parent=side + "_wing"))
         for leg, at, legs in (("front", (12 * k, 0, -6), ((1.3, (-4, -4, -4, 8, 24, 8, 112, 104)),
                                                        ((0, 20, -1), -0.5, (-3, -1, -3, 6, 24, 6, 226, 138)),
                                                        ((0, 23, 0), 0.75, (-4, 0, -12, 8, 4, 16, 144, 104)))),
