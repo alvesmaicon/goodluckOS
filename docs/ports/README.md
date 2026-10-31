@@ -6,7 +6,7 @@ All four are work in progress and have only run on my console (GA36-MB, A33, 512
 
 | Game | Built on | You supply | On the A33 | Where |
 | --- | --- | --- | --- | --- |
-| [Luanti](#luanti) | Luanti 5.18 with 44 patches, Minetest Game, 63 mods | nothing | 20 FPS in a forest, 10 over a lake | `rootfs/package/luanti` |
+| [Luanti](#luanti) | Luanti 5.18 with 45 patches, Minetest Game, 63 mods | nothing | 20 FPS in a forest, 10 over a lake | `rootfs/package/luanti` |
 | [Stardew Valley](#stardew-valley) | Mono, MonoGame, gl4es | the game, from Steam | about 19 FPS on the farm | `dev/stardew` |
 | [Ocarina of Time](#ocarina-of-time) | Ship of Harkinian 9.3.0 | your ROM | 20 FPS, as on the N64 | `dev/zelda` |
 | [Majora's Mask](#majoras-mask) | 2 Ship 2 Harkinian 5.0.1 | your ROM | not measured yet | `dev/zelda` |
@@ -23,7 +23,7 @@ The examples copy to the card in a card reader on a Mac (`/Volumes/HOME`). MTP w
 
 ![Luanti on the console: a lake, with the far shore in view](luanti.png)
 
-Luanti is an open-source engine for Minecraft-like games, and Minetest Game, its classic game, is free. Here both run on a 512 MB handheld with a Mali-400: 44 patches make the engine fast enough, fit it to a gamepad and a 640x480 screen, and make it dig, swim, jump and hold things as Minecraft does, and 63 mods, 46 of them written for goodluckOS, bring the game close to Minecraft: Survival or Creative, hunger and status effects, armor and shields, Minecraft's ores, crops and foods, the classic monsters and the witch, villages with traders, horses, experience, enchanting and the anvil, a bow, a compass, maps and a spyglass, recipes learnt as you go, the Nether with its fortresses, potions and the brewing stand, swamps with witch huts, and the End with its strongholds and the ender dragon. At 640x480: 20 FPS in a forest, 10 to 11 looking across a lake, capped at 30. It comes with free textures and sounds, or takes the textures, sounds and music of your own Minecraft: Java Edition, which Update Luanti imports from a copy of your `.minecraft` folder ([Updating Luanti](#updating-luanti)); nothing of Minecraft's is in this repository or in the image.
+Luanti is an open-source engine for Minecraft-like games, and Minetest Game, its classic game, is free. Here both run on a 512 MB handheld with a Mali-400: 45 patches make the engine fast enough, fit it to a gamepad and a 640x480 screen, and make it dig, swim, jump and hold things as Minecraft does, and 63 mods, 46 of them written for goodluckOS, bring the game close to Minecraft: Survival or Creative, hunger and status effects, armor and shields, Minecraft's ores, crops and foods, the classic monsters and the witch, villages with traders, horses, experience, enchanting and the anvil, a bow, a compass, maps and a spyglass, recipes learnt as you go, the Nether with its fortresses, potions and the brewing stand, swamps with witch huts, and the End with its strongholds and the ender dragon. At 640x480: 20 FPS in a forest, 10 to 11 looking across a lake, capped at 30. It comes with free textures and sounds, or takes the textures, sounds and music of your own Minecraft: Java Edition, which Update Luanti imports from a copy of your `.minecraft` folder ([Updating Luanti](#updating-luanti)); nothing of Minecraft's is in this repository or in the image.
 
 **Install:** Luanti is part of the system image (a Buildroot package), so there is nothing to copy. Build the rootfs from `develop` and write it to the card (`dev/gl rootfs`, `dev/gl ext4`, `dev/sdcard-mac.sh`, see [dev/README.md](../../dev/README.md)), and it shows up in the Games tab. Worlds and settings are kept in `HOME/.minetest`. The controls, and how each part of the game plays, are in the [README](../../README.md#luanti).
 
@@ -50,7 +50,7 @@ Update Luanti is part of the system image: a card with an older image needs a ne
 
 ### The engine: Luanti 5.18 for handhelds
 
-The engine is Luanti 5.18.0 (celeron55 and contributors; code LGPL-2.1+, media CC BY-SA 3.0) with the commits of the `handheld/5.18` branch of [alvesmaicon/luanti](https://github.com/alvesmaicon/luanti/tree/handheld/5.18), which Buildroot applies as patches (`rootfs/package/luanti/`). This tree builds 5.18.0-handheld.27. Patch 0001 is a commit of Luanti 5.19-dev taken early. The patches are under Luanti's license. They were written with AI assistance, which Luanti's AI policy doesn't accept, so they stay in that fork; fixes upstream could use are its issues labelled "upstream candidate".
+The engine is Luanti 5.18.0 (celeron55 and contributors; code LGPL-2.1+, media CC BY-SA 3.0) with the commits of the `handheld/5.18` branch of [alvesmaicon/luanti](https://github.com/alvesmaicon/luanti/tree/handheld/5.18), which Buildroot applies as patches (`rootfs/package/luanti/`). This tree builds 5.18.0-handheld.28. Patch 0001 is a commit of Luanti 5.19-dev taken early. The patches are under Luanti's license. They were written with AI assistance, which Luanti's AI policy doesn't accept, so they stay in that fork; fixes upstream could use are its issues labelled "upstream candidate".
 
 | Scene on the A33, view range 320 | Luanti 5.17.0 | With the patches and the handheld's settings |
 | --- | --- | --- |
@@ -94,6 +94,7 @@ The engine is Luanti 5.18.0 (celeron55 and contributors; code LGPL-2.1+, media C
 | 0035 | Jumps and falls as in Minecraft: its jump, its air and its fall damage |
 | 0036 | A map held in both hands, as Minecraft holds it |
 | 0037 | The item in hand changes, and walking bobs the view and the hand, as in Minecraft |
+| 0045 | The same item with other metadata, a compass's needle, is redrawn in the hand instead of lowered and raised |
 | 0038 | Music played as Minecraft plays it, from `HOME/.minetest/music`, streamed from the card; nothing ships with the engine |
 | 0042 | Night Vision, for the game to set: everything a player sees as lit as its brightest light |
 | 0044 | A sun or moon with no transparency, as Minecraft's are, added to the sky as Minecraft draws them |

@@ -1,0 +1,98 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Sat, 31 Oct 2026 00:19:09 -0300
+Subject: [PATCH 45/45] Camera: an item whose metadata alone changes is redrawn
+ in the hand
+
+A mod that shows something on an item by changing its metadata, as goodluckOS's compass turns
+its needle through the inventory_image and wield_image fields while the player turns, made the
+item in hand go down and back up each time: any change of name or metadata counted as another
+item. Minecraft's compass and clock turn in the hand without that.
+
+Now only another item, or another hotbar slot, lowers and raises it; the same item in the same
+slot with other metadata is redrawn where it is (once the hand is down, if a change was under
+way). Two maps in the hotbar, the same item with different metadata, still change with the
+animation when the player switches between them.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/src/client/camera.cpp b/src/client/camera.cpp
+index b34f926c2..b70612d0d 100644
+--- a/src/client/camera.cpp
++++ b/src/client/camera.cpp
+@@ -695,19 +695,27 @@ void Camera::setDigging(s32 button)
+ 	}
+ }
+ 
+-void Camera::wield(const ItemStack &item, bool animate, bool arm)
+-{
+-	if (item.name != m_wield_item_next.name ||
+-			item.metadata != m_wield_item_next.metadata || arm != m_wield_arm_next) {
+-		m_wield_item_next = item;
+-		m_wield_arm_next = arm;
+-		m_wield_map_next = !arm &&
+-				itemgroup_get(item.getDefinition(m_client->idef()).groups, "held_map") > 0;
+-
+-		m_wield_changing = animate;
+-		if (!animate)
+-			updateWieldedTool();
++void Camera::wield(const ItemStack &item, bool animate, bool arm, u16 slot)
++{
++	// the same item in the same slot with other metadata (a compass's needle) is redrawn in the hand, as
++	// Minecraft's compass turns
++	if (item.name == m_wield_item_next.name && arm == m_wield_arm_next && slot == m_wield_slot_next) {
++		if (item.metadata != m_wield_item_next.metadata) {
++			m_wield_item_next = item;
++			if (!m_wield_changing)
++				updateWieldedTool();
++		}
++		return;
+ 	}
++	m_wield_item_next = item;
++	m_wield_arm_next = arm;
++	m_wield_slot_next = slot;
++	m_wield_map_next = !arm &&
++			itemgroup_get(item.getDefinition(m_client->idef()).groups, "held_map") > 0;
++
++	m_wield_changing = animate;
++	if (!animate)
++		updateWieldedTool();
+ }
+ 
+ void Camera::drawWieldedTool(core::matrix4* translation)
+diff --git a/src/client/camera.h b/src/client/camera.h
+index 35ff493ee..5a2a53310 100644
+--- a/src/client/camera.h
++++ b/src/client/camera.h
+@@ -157,8 +157,8 @@ class Camera
+ 	void setDigging(s32 button);
+ 
+ 	// Replace the wielded item mesh
+-	// arm: the hand is empty, drawn as Minecraft's arm
+-	void wield(const ItemStack &item, bool animate = true, bool arm = false);
++	// arm: the hand is empty, drawn as Minecraft's arm; slot: the hotbar slot it is in
++	void wield(const ItemStack &item, bool animate = true, bool arm = false, u16 slot = 0);
+ 
+ 	// The wielded item was used up a little (a node placed): it drops and comes back up
+ 	void itemUsed() { m_height_tick = 0.0f; }
+@@ -294,6 +294,7 @@ class Camera
+ 	bool m_wield_changing = false;
+ 	ItemStack m_wield_item_next;
+ 	bool m_wield_arm_next = false;
++	u16 m_wield_slot_next = 0;
+ 	bool m_wield_map = false, m_wield_map_next = false;
+ 	std::string m_arm_skin;
+ 
+diff --git a/src/client/game.cpp b/src/client/game.cpp
+index 003c960fe..37b6eb41b 100644
+--- a/src/client/game.cpp
++++ b/src/client/game.cpp
+@@ -3654,7 +3654,7 @@ void Game::updateFrame(ProfilerGraph *graph, RunStats *stats, f32 dtime,
+ 		ItemStack &tool_item = player->getWieldedItem(&selected_item, &hand_item);
+ 
+ 		bool skip_anim = client->consumeSkipNextWieldAnimation();
+-		camera->wield(tool_item, !skip_anim, selected_item.empty());
++		camera->wield(tool_item, !skip_anim, selected_item.empty(), player->getWieldIndex());
+ 	}
+ 
+ 	/*

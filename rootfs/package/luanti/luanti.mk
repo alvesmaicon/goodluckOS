@@ -40,7 +40,7 @@ LUANTI_PRE_CONFIGURE_HOOKS += LUANTI_BUILD_LIBZIP
 # 5.18.0 with the handheld patches of github.com/alvesmaicon/luanti (branch handheld/5.18): the number stays
 # 5.18.0 for games' min_minetest_version, the suffix goes up with each binary
 LUANTI_CONF_OPTS = \
-	-DVERSION_EXTRA=handheld.27 \
+	-DVERSION_EXTRA=handheld.28 \
 	-DBUILD_CLIENT=ON \
 	-DBUILD_SERVER=OFF \
 	-DBUILD_UNITTESTS=OFF \
