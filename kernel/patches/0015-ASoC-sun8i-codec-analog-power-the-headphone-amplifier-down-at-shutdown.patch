@@ -3,8 +3,8 @@ Subject: [PATCH] ASoC: sun8i-codec-analog: power the headphone amplifier down at
 
 simple-audio-card has no shutdown callback, so a reboot or a power off
 resets the SoC, or cuts AVCC, with the headphone amplifier still on, and
-the headphones hear its output collapse as a loud click. With the
-amplifier kept powered between streams, that is every reboot.
+the headphones hear its output collapse as a loud click. HPCOM is kept
+powered, and the amplifier is on for 5 s after any sound.
 
 Give the analog codec a platform shutdown that powers the amplifier
 down the way DAPM does it: HPPAEN off, 1 s for the output to settle,
@@ -13,11 +13,10 @@ then HPCOM and its protection off.
 diff --git a/sound/soc/sunxi/sun8i-codec-analog.c b/sound/soc/sunxi/sun8i-codec-analog.c
 --- a/sound/soc/sunxi/sun8i-codec-analog.c
 +++ b/sound/soc/sunxi/sun8i-codec-analog.c
-@@ -914,13 +914,34 @@
- 					       &sun8i_codec_analog_cmpnt_drv,
+@@ -908,12 +908,33 @@ static int sun8i_codec_analog_probe(struct platform_device *pdev)
  					       NULL, 0);
  }
-+
+ 
 +/*
 + * The card has no shutdown, so a reboot resets the SoC with the headphone
 + * amplifier on, and the headphones hear it collapse. Power it down the way
@@ -26,7 +25,7 @@ diff --git a/sound/soc/sunxi/sun8i-codec-analog.c b/sound/soc/sunxi/sun8i-codec-
 +static void sun8i_codec_analog_shutdown(struct platform_device *pdev)
 +{
 +	struct regmap *regmap = dev_get_regmap(&pdev->dev, NULL);
- 
++
 +	if (!regmap)
 +		return;
 +

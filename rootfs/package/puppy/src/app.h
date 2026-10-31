@@ -68,6 +68,7 @@ private:
     TopBar bar;                 // as last drawn
     Uint32 sensorsDue = 0;      // when its battery and temperatures are read again
     bool following = false;     // after a volume, brightness or output hotkey, which change the levels behind our back
+    Uint32 jackEvent = 0;       // the SDL event of a plug going in or out, 0 without a jack
     Uint32 followUntil = 0, followNextRead = 0;
     Uint32 osdEvent = (Uint32)-1;   // the HUD's panel was written (system/osd.h)
     Uint32 panelUntil = 0;          // then one more frame takes it away

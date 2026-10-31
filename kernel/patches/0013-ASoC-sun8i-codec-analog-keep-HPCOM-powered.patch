@@ -1,0 +1,39 @@
+From: alvesmaicon <alvesmaiconn@gmail.com>
+Subject: [PATCH] ASoC: sun8i-codec-analog: keep HPCOM powered
+
+DAPM powers HPCOM and its protection up with the headphone amplifier for
+every stream and down after it. With the jack's return on HPCOM (direct
+drive), powering it down with headphones in pops loudly and resets the
+whole analog block to its defaults (headphone volume to 0, the PA muted,
+every gain back to 0 dB).
+
+The vendor driver sets HPCOM_FC and COMPTEN once at init and never
+clears them. Do the same: force HPCOM and its protection on when the
+headphone widgets are added. The amplifier keeps following the streams.
+
+The amplifier stays out of this on purpose. With it on, plugging
+headphones in or pulling them out clicks loudly, every time; with it off
+and HPCOM on, the jack is silent. With HPCOM off as well, it clicks
+again. Powering the amplifier up or down with headphones in and HPCOM on
+only gives a faint hiss.
+
+diff --git a/sound/soc/sunxi/sun8i-codec-analog.c b/sound/soc/sunxi/sun8i-codec-analog.c
+--- a/sound/soc/sunxi/sun8i-codec-analog.c
++++ b/sound/soc/sunxi/sun8i-codec-analog.c
+@@ -416,6 +416,16 @@ static int sun8i_codec_add_headphone(struct snd_soc_component *cmpnt)
+ 		return ret;
+ 	}
+ 
++	/*
++	 * With the jack's return on HPCOM, powering HPCOM up or down with
++	 * headphones in pops and resets the analog block to its defaults.
++	 * The vendor driver sets it up once: keep it and its protection on.
++	 * The amplifier still follows the streams: on, it clicks whenever a
++	 * plug goes in or out.
++	 */
++	snd_soc_dapm_force_enable_pin(dapm, "HPCOM");
++	snd_soc_dapm_force_enable_pin(dapm, "HPCOM Protection");
++
+ 	return 0;
+ }
+ 

@@ -6,6 +6,7 @@
 
 #include "layout.h"
 #include "system/clock.h"
+#include "system/jack.h"
 #include "system/osd.h"
 
 App::App(Ui& ui, SDL_GameController* pad) : ui(ui), pad(pad), input(pad) {
@@ -94,6 +95,7 @@ void App::render() {
 int App::run() {
     audio.read();
     topBarChanged();
+    jackEvent = jack::watch();
     lastActivity = SDL_GetTicks();
 
     while (running && !stack.empty()) {
@@ -204,6 +206,10 @@ int App::run() {
             }
             if (ev.type == SDL_QUIT) running = false;
             else if (ev.type == SDL_WINDOWEVENT && ev.window.event == SDL_WINDOWEVENT_EXPOSED) dirty = true;
+            if (jackEvent && ev.type == jackEvent) {   // triggerhappy moves the sound: follow the mixer
+                follow();
+                continue;
+            }
 
             if (stack.back()->raw()) {
                 stack.back()->onEvent(ev);

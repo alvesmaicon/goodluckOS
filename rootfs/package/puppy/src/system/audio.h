@@ -1,7 +1,7 @@
 #pragma once
 // The console's mixer: the ALSA card of puppy.conf's alsa_card. Headphone is the volume of both
-// outputs; switching Speaker off leaves the sound on the headphones only (the GA36-MB has no jack
-// detection).
+// outputs; switching Speaker off leaves the sound on the headphones only (FN + DOWN, or the jack
+// through triggerhappy: see system/jack.h).
 #include <alsa/asoundlib.h>
 
 // The card, open and loaded for as long as the object lives.

@@ -1,0 +1,21 @@
+From: alvesmaicon <alvesmaiconn@gmail.com>
+Subject: [PATCH] mfd: sun6i-prcm: give the A23 codec its headset detection registers
+
+The A23/A33 analog codec has a headset detection block right after its
+PR register: an enable at 0x1c4, a control register at 0x1c8 and a data
+register at 0x1cc, with the headset mic ADC and the jack interrupt
+flags. The vendor kernel's switch driver uses it. Extend the codec's
+resource from 4 to 16 bytes so its driver can reach them.
+
+diff --git a/drivers/mfd/sun6i-prcm.c b/drivers/mfd/sun6i-prcm.c
+--- a/drivers/mfd/sun6i-prcm.c
++++ b/drivers/mfd/sun6i-prcm.c
+@@ -12,7 +12,7 @@
+ #include <linux/of.h>
+ 
+ #define SUN8I_CODEC_ANALOG_BASE	0x1c0
+-#define SUN8I_CODEC_ANALOG_SIZE	0x4
++#define SUN8I_CODEC_ANALOG_SIZE	0x10
+ 
+ struct prcm_data {
+ 	int nsubdevs;

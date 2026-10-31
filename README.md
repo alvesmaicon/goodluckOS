@@ -34,7 +34,7 @@ An uncompromisingly fast, small, modern, and feature-rich custom firmware for A2
 - SELECT+START closes the active application cleanly (RetroArch saves first), bringing you right back to the launcher
 - FN+START+SELECT force-kills the active application
 - FN+DPAD_UP toggles a live FPS/CPU graph for monitoring in-game performance. What it shows, its style and its corner are set in System Settings -> Overlay.
-- FN+DPAD_DOWN switches the sound between the speaker and the headphones only (the console can't detect the headphone jack)
+- The sound goes to the headphones when they're plugged in and back to the speaker when they come out (A33), and FN+DPAD_DOWN switches it by hand
 - If the screen is on, the LEDs are off. Nothing blinding you while you're playing in the dark
 - Comes stock with Chocolate Doom, ready to play
 - Comes with Luanti, a block-building game in the style of Minecraft: Minetest Game with mods that bring it close to Minecraft, from its monsters, villages and horses to the Nether and the End, played with the console's buttons (see [Luanti](docs/ports/luanti.md))
@@ -69,7 +69,7 @@ Don't have the original microSD card? Open an issue here on github, we have micr
 Once it's installed, System Settings -> Storage -> `Resize Home` expands your HOME partition to fill all the remaining space on your SD card. Do it before copying your games: HOME is backed up to RAM while it's resized. You only need to do this once.
 
 ## What still needs to be done
-- Headphone auto-detection. We have reason to believe some GA36-MB variants simply lack the hardware to do this.
+- Headphone auto-detection on the A23 (the A33 has it).
 - More LibRetro cores
 - Fine tune existing LibRetro cores for best performance.
 - Portmaster (or equivalent)
@@ -162,7 +162,7 @@ Grid or list view, whether the tabs are shown and which ones are set in System S
 | SELECT + START | Close the active app cleanly (RetroArch saves first) and go back to the launcher |
 | FN + SELECT + START | Force close the active app |
 | FN + D-pad up | Show / hide a live FPS and CPU overlay |
-| FN + D-pad down | Sound on the speaker or on the headphones only (the console can't detect headphones, so this is manual) |
+| FN + D-pad down | Sound on the speaker or on the headphones only (on the A33, plugging headphones in or out also switches it) |
 
 ### RetroArch
 FN is the hotkey:
