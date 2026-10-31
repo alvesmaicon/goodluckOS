@@ -18,9 +18,11 @@ local MAX_SLOPE = 20
 local HEADROOM = 16
 -- how far around a building the ground is sloped to it
 local SLOPE = 4
+-- buildings keep off the mapchunk's edge, where a later neighbour's tree reaches 4 nodes in
+local EDGE = 5
 
 local c_air, c_gravel, c_dirt, c_sand, c_desert_sand
-local clear_cids, dirt_cids, sand_cids = {}, {}, {}
+local clear_cids, dirt_cids, sand_cids, tree_cids = {}, {}, {}, {}
 -- the voxels being built on: 1.4 million entries for a chunk of 5, let go after each village
 local data
 
@@ -181,6 +183,8 @@ local function foundation_cid(pos, sample)
 	return c_dirt
 end
 
+-- a tree of the biome, and how far it reaches from its trunk (its schematic is centred on it)
+local reach = {}
 local function tree_path(pos)
 	local b = core.get_biome_data(pos)
 	local name = b and core.get_biome_name(b.biome):lower() or ""
@@ -194,7 +198,9 @@ local function tree_path(pos)
 	elseif name:find("jungle") then
 		file = "jungle_tree.mts"
 	end
-	return core.get_modpath("default") .. "/schematics/" .. file
+	local path = core.get_modpath("default") .. "/schematics/" .. file
+	reach[path] = reach[path] or math.floor(core.read_schematic(path, {}).size.x / 2)
+	return path, reach[path]
 end
 
 -- the buildings, and who lives in each (villagers.lua): one villager a bed, traders by trade
@@ -224,6 +230,9 @@ core.register_on_mods_loaded(function()
 				g.tree or g.flower or g.sapling or g.attached_node or def.drawtype == "plantlike" or
 				def.drawtype == "plantlike_rooted") then
 			clear_cids[id] = true
+		end
+		if g.tree or g.leaves or g.leafdecay or g.vine then
+			tree_cids[id] = true
 		end
 		if g.soil or name:find("dirt") then
 			dirt_cids[id] = true
@@ -284,7 +293,8 @@ local function layout(vx, vz, pr, minp, maxp, a, along)
 					px = side == 1 and vx + 3 or vx - 3 - sx
 				end
 				local ok = false
-				if px >= minp.x + 2 and px + sx <= maxp.x - 2 and pz >= minp.z + 2 and pz + sz <= maxp.z - 2 and
+				if px >= minp.x + EDGE and px + sx - 1 <= maxp.x - EDGE and pz >= minp.z + EDGE and
+						pz + sz - 1 <= maxp.z - EDGE and
 						not overlapping(px, pz, px + sx - 1, pz + sz - 1, boxes, 2) then
 					local t = footprint(a, px, pz, px + sx - 1, pz + sz - 1, minp.y, maxp.y)
 					local cx, cz = px + math.floor(sx / 2), pz + math.floor(sz / 2)
@@ -301,6 +311,16 @@ local function layout(vx, vz, pr, minp, maxp, a, along)
 								if d == 0 or not overlapping(fx, fz, fx, fz, boxes, 0) then
 									for fy = y + 1 + d, top do
 										data[a:index(fx, fy, fz)] = c_air
+									end
+									-- over the building, the trees that rose higher go too, and what lay on them
+									if d == 0 then
+										local gone = true
+										for i = a:index(fx, top + 1, fz), a:index(fx, a.MaxEdge.y, fz), a.ystride do
+											gone = tree_cids[data[i]] or gone and clear_cids[data[i]] or false
+											if gone then
+												data[i] = c_air
+											end
+										end
 									end
 									for fy = math.max(minp.y, surface_y(a, fx, fz, minp.y, y - d) or y - d), y - d do
 										data[a:index(fx, fy, fz)] = base
@@ -335,16 +355,16 @@ local function layout(vx, vz, pr, minp, maxp, a, along)
 		end
 	end
 
-	-- a few trees of the biome between the houses
-	local path = tree_path({x = vx, y = 0, z = vz})
+	-- a few trees of the biome between the houses, out of their reach
+	local path, r = tree_path({x = vx, y = 0, z = vz})
 	for _ = 1, pr(12, 20) do
 		local tx, tz = vx + pr(-RADIUS + 6, RADIUS - 6), vz + pr(-RADIUS + 6, RADIUS - 6)
 		if tx >= minp.x + 3 and tx <= maxp.x - 3 and tz >= minp.z + 3 and tz <= maxp.z - 3 and
-				not overlapping(tx - 2, tz - 2, tx + 2, tz + 2, boxes, 1) then
+				not overlapping(tx - r, tz - r, tx + r, tz + r, boxes, 1) then
 			local ty = surface_y(a, tx, tz, minp.y, maxp.y)
 			if ty and dirt_cids[data[a:index(tx, ty, tz)]] then
 				trees[#trees + 1] = {pos = {x = tx, y = ty + 1, z = tz}, path = path, rot = tostring(pr(0, 3) * 90)}
-				boxes[#boxes + 1] = {x1 = tx - 2, z1 = tz - 2, x2 = tx + 2, z2 = tz + 2}
+				boxes[#boxes + 1] = {x1 = tx - r, z1 = tz - r, x2 = tx + r, z2 = tz + r}
 			end
 		end
 	end
@@ -406,7 +426,7 @@ local function build(vm, emin, emax, minp, maxp, vx, vy, vz, seed)
 		core.place_schematic_on_vmanip(vm, p.pos, p.path, p.rot, p.file:find("^cultivos") and crops(pr) or {}, true)
 	end
 	for _, t in ipairs(trees) do
-		core.place_schematic_on_vmanip(vm, t.pos, t.path, t.rot, {}, false)
+		core.place_schematic_on_vmanip(vm, t.pos, t.path, t.rot, {}, false, "place_center_x, place_center_z")
 	end
 	vm:calc_lighting()
 	vm:write_to_map()
