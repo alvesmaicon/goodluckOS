@@ -7,6 +7,8 @@ goodluck_effects = {registered = {}, order = {}, undead = {}}
 local E = goodluck_effects
 local active, huds, swirls = {}, {}, {}
 local ICON, ROW, BLINK = 50, 66, 10
+-- the icons start under the system's status bar and the compass's position (goodluck_compass)
+local TOP = 80
 local HEARTS = {poison = "goodluck_effects_heart_poisoned.png", wither = "goodluck_effects_heart_withered.png"}
 
 -- def: description, color ("#rrggbb"), bad, instant, physics(level) -> share for goodluck_physics, interval(level) ->
@@ -65,7 +67,7 @@ local function layout(player)
 		if e then
 			local row = def.bad and 2 or 1
 			column[row] = column[row] + 1
-			local x, y = -8 - ICON * column[row] + ICON / 2, 4 + 24 + ROW * (row - 1)
+			local x, y = -8 - ICON * column[row] + ICON / 2, TOP + 24 + ROW * (row - 1)
 			local at = {position = {x = 1, y = 0}, alignment = {x = 0, y = 0}, offset = {x = x, y = y},
 				scale = {x = 2, y = 2}, z_index = 10}
 			local ids = {}
