@@ -789,7 +789,8 @@ def build(name, tex, parts, segments):
                         continue
                     face_mid = [sum(q[i] for q in quad) / 4 for i in range(3)]
                     order = (0, 1, 2, 0, 2, 3)
-                    if sum(n[i] * (face_mid[i] - mid[i]) for i in range(3)) < 0:
+                    # a flat two-sided square lies on its middle: its sides keep the order they were given
+                    if sum(n[i] * (face_mid[i] - mid[i]) for i in range(3)) < -1e-9:
                         order, n = (0, 2, 1, 0, 3, 2), tuple(-x for x in n)
                     base = len(prim["pos"])
                     for q, (u, v) in zip(quad, [(u1, v0), (u0, v0), (u0, v1), (u1, v1)]):
