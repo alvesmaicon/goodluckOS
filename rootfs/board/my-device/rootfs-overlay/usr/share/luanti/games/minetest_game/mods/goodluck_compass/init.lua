@@ -83,11 +83,12 @@ local function show_position(player, on)
 	local name = player:get_player_name()
 	local hud = shown[name]
 	if on and not hud then
+		-- at the top right, under the system's status bar
 		shown[name] = {
-			back = player:hud_add({type = "image", text = "goodluck_compass_back.png", position = {x = 0.5, y = 0},
-				offset = {x = 0, y = 6}, alignment = {x = 0, y = 1}, scale = {x = 230, y = 24}, z_index = 10}),
+			back = player:hud_add({type = "image", text = "goodluck_compass_back.png", position = {x = 1, y = 0},
+				offset = {x = -10, y = 50}, alignment = {x = -1, y = 1}, scale = {x = 230, y = 24}, z_index = 10}),
 			text = player:hud_add({type = "text", text = where(player), number = 0xFFFFFF,
-				position = {x = 0.5, y = 0}, offset = {x = 0, y = 18}, alignment = {x = 0, y = 0}, z_index = 11}),
+				position = {x = 1, y = 0}, offset = {x = -125, y = 62}, alignment = {x = 0, y = 0}, z_index = 11}),
 		}
 	elseif on then
 		local text = where(player)
