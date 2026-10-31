@@ -243,17 +243,20 @@ if armor then
 	local update_player_visuals = armor.update_player_visuals
 	armor.update_player_visuals = function(self, player)
 		local t = self.textures[player:get_player_name()]
-		if t and t.armor then
+		-- once, as set_player_armor makes it over blank.png (this may run again on the same string)
+		if t and t.armor and t.armor:sub(1, 10) == "blank.png^" then
 			local parts = t.armor:split("^")
-			-- a piece in a group ("(...)") over its 1x1 blank.png stays 1x1: the base gets the skin's size
-			if parts[1] == "blank.png" then
-				parts[1] = "[fill:64x32:0,0:#00000000"
-			end
 			for i = 3, #parts do
 				if parts[i]:find("^3d_armor_leggings_") then
 					table.insert(parts, 2, table.remove(parts, i))
 					break
 				end
+			end
+			-- a piece in a group ("(...)") over its 1x1 blank.png stays 1x1, and a group isn't scaled to the base: the
+			-- base and every piece get twice the skin's size, room for a block's 16 px faces on the head
+			parts[1] = "[fill:128x64:0,0:#00000000"
+			for i = 2, #parts do
+				parts[i] = "(" .. parts[i] .. "^[resize:128x64)"
 			end
 			t.armor = table.concat(parts, "^")
 		end

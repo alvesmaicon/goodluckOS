@@ -449,15 +449,47 @@ def pumpkin_top():
     return img
 
 
-def face(side):
+EYES = [(3, 4), (4, 4), (3, 5), (4, 5), (5, 5), (11, 4), (12, 4), (10, 5), (11, 5), (12, 5)]
+MOUTH = [(x, 10) for x in range(3, 13)] + [(x, 11) for x in range(4, 12)] + [(5, 9), (8, 9), (11, 9)]
+
+
+# the jack o'lantern's face glows; the carved pumpkin's is dark
+def face(side, hole="#ffd84a", deep="#e8a020"):
     img = side.copy()
-    glow, inner = hexc("#ffd84a"), hexc("#e8a020")
-    eyes = [(3, 4), (4, 4), (3, 5), (4, 5), (5, 5), (11, 4), (12, 4), (10, 5), (11, 5), (12, 5)]
-    mouth = [(x, 10) for x in range(3, 13)] + [(x, 11) for x in range(4, 12)] + [(5, 9), (8, 9), (11, 9)]
-    for x, y in eyes + mouth:
-        img.putpixel((x, y), glow + (255,))
+    for x, y in EYES + MOUTH:
+        img.putpixel((x, y), hexc(hole) + (255,))
     for x, y in ((4, 5), (11, 5), (6, 11), (9, 11)):
-        img.putpixel((x, y), inner + (255,))
+        img.putpixel((x, y), hexc(deep) + (255,))
+    return img
+
+
+# worn on the head: the faces where the skin has its hat, the skin's layout at twice its size
+def worn(top, side, front):
+    img = Image.new("RGBA", (128, 64), (0, 0, 0, 0))
+    for (x, y), tile in (((80, 0), top), ((96, 0), top), ((64, 16), side), ((80, 16), front), ((96, 16), side),
+                         ((112, 16), side)):
+        img.paste(tile, (x, y))
+    return img
+
+
+# what is seen from inside it: black but for the eyes and the mouth, blurred
+def blur():
+    from PIL import ImageFilter
+    holes = Image.new("L", (16, 16), 0)
+    for x, y in EYES + MOUTH:
+        holes.putpixel((x, y), 255)
+    holes = holes.resize((128, 128), Image.NEAREST).filter(ImageFilter.GaussianBlur(5))
+    img = Image.new("RGBA", (128, 128), (0, 0, 0, 255))
+    img.putalpha(holes.point(lambda v: 255 - v))
+    return img
+
+
+# drawn over the blur in place of the engine's crosshair, which is its lines of 10 px either side
+def crosshair():
+    img = Image.new("RGBA", (21, 21), (0, 0, 0, 0))
+    for i in range(21):
+        img.putpixel((10, i), (255, 255, 255, 255))
+        img.putpixel((i, 10), (255, 255, 255, 255))
     return img
 
 
@@ -499,8 +531,14 @@ for name, (palette, text) in SPRITES.items():
     grid(palette, text).save(f"{OUT}/{name}.png")
 side = ribbed("#e38a1c", "#a8580c", "#f5a843", False)
 side.save(f"{OUT}/goodluck_food_pumpkin_side.png")
-pumpkin_top().save(f"{OUT}/goodluck_food_pumpkin_top.png")
+top = pumpkin_top()
+top.save(f"{OUT}/goodluck_food_pumpkin_top.png")
 face(side).save(f"{OUT}/goodluck_food_jack_o_lantern.png")
+carved = face(side, "#2e1504", "#4f2a0b")
+carved.save(f"{OUT}/goodluck_food_carved_pumpkin.png")
+worn(top, side, carved).save(f"{OUT}/goodluck_food_carved_pumpkin_worn.png")
+blur().save(f"{OUT}/goodluck_food_pumpkin_blur.png")
+crosshair().save(f"{OUT}/goodluck_food_pumpkin_crosshair.png")
 melon().save(f"{OUT}/goodluck_food_melon_side.png")
 melon_top = ribbed("#5a9a2a", "#2f6b1a", "#7ab040", True)
 for x, y in ((7, 7), (8, 7), (7, 8), (8, 8)):
@@ -542,4 +580,4 @@ for face in ("top", "side", "inner", "bottom"):
 for name, (leaf, root) in CROPS.items():
     for s in range(4):
         crop(leaf, root, s).save(f"{OUT}/goodluck_food_{name}_{s + 1}.png")
-print(len(SPRITES) + 4 * len(CROPS) + 22, "textures in", os.path.relpath(OUT, ROOT))
+print(len(SPRITES) + 4 * len(CROPS) + 26, "textures in", os.path.relpath(OUT, ROOT))

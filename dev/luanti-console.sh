@@ -68,12 +68,19 @@ send() {
     tmp=$(mktemp -d)
     cp "$pkg" "$tmp/$part"
     echo "== $name ($(($(wc -c < "$pkg") / 1024)) KB) to HOME over MTP, about 1 min"
-    # libmtp can hang opening the session; the next run resets the USB interface first
+    # libmtp can hang opening the session; the next run resets the USB interface first. A Mac's ptpcamerad takes the
+    # console as a camera and is back as soon as it is killed, so it is kept away until mtp-sendfile holds the device
     for try in 1 2 3; do
-        if [ "$(uname)" = Darwin ]; then killall ptpcamerad 2>/dev/null || true; fi
-        perl -e 'alarm shift; exec @ARGV' 180 mtp-sendfile "$tmp/$part" "$part" > "$tmp/log" 2>&1 && break
+        keeper=
+        if [ "$(uname)" = Darwin ]; then
+            (while :; do killall -9 ptpcamerad 2>/dev/null; sleep 0.2; done) & keeper=$!
+        fi
+        if perl -e 'alarm shift; exec @ARGV' 180 mtp-sendfile "$tmp/$part" "$part" > "$tmp/log" 2>&1; then rc=0; else rc=$?; fi
+        [ -z "$keeper" ] || kill $keeper 2>/dev/null || true
+        # mtp-sendfile also exits 0 when it found no device or could not open one
+        [ $rc = 0 ] && ! grep -q -E 'No devices|PANIC|Unable to open' "$tmp/log" && break
         g "rm -f $H/$part" > /dev/null
-        [ $try -lt 3 ] || { cat "$tmp/log"; rm -rf "$tmp"; die "MTP failed: nothing was installed"; }
+        [ $try -lt 3 ] || { cat "$tmp/log"; rm -rf "$tmp"; die "MTP failed: nothing was installed (a stuck MTP session on the console clears with a reboot; or send over serial: dev/glserial.py send)"; }
         echo "   MTP stopped (try $try of 3), again"
     done
     rm -rf "$tmp"

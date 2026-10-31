@@ -90,7 +90,17 @@ fruit("pumpkin", {
 	tiles = {"goodluck_food_pumpkin_top.png", "goodluck_food_pumpkin_top.png", "goodluck_food_pumpkin_side.png"},
 })
 
--- Minecraft's own until 1.13: a pumpkin over a torch
+-- placed with its face toward the player
+core.register_node("goodluck_food:carved_pumpkin", {
+	description = S("Carved Pumpkin"),
+	tiles = {"goodluck_food_pumpkin_top.png", "goodluck_food_pumpkin_top.png", "goodluck_food_pumpkin_side.png",
+		"goodluck_food_pumpkin_side.png", "goodluck_food_pumpkin_side.png", "goodluck_food_carved_pumpkin.png"},
+	paramtype2 = "facedir",
+	is_ground_content = false,
+	groups = {choppy = 3, oddly_breakable_by_hand = 2, flammable = 2},
+	sounds = default.node_sound_wood_defaults(),
+})
+
 core.register_node("goodluck_food:jack_o_lantern", {
 	description = S("Jack o'Lantern"),
 	tiles = {"goodluck_food_pumpkin_top.png", "goodluck_food_pumpkin_top.png", "goodluck_food_pumpkin_side.png",
@@ -104,8 +114,48 @@ core.register_node("goodluck_food:jack_o_lantern", {
 
 core.register_craft({
 	output = "goodluck_food:jack_o_lantern",
-	recipe = {{"goodluck_food:pumpkin"}, {"default:torch"}},
+	recipe = {{"goodluck_food:carved_pumpkin"}, {"default:torch"}},
 })
+
+-- shears on a pumpkin carve it, as Minecraft's PumpkinBlock: the face on the side clicked (from above or below,
+-- toward the player), 4 seeds thrown out of it, one of the shears' 238 uses
+local SHEARS = "mobs:shears"
+local shears = core.registered_items[SHEARS]
+if shears then
+	local on_place = shears.on_place
+	core.override_item(SHEARS, {on_place = function(itemstack, placer, pointed_thing)
+		local pos = pointed_thing.type == "node" and pointed_thing.under
+		if not pos or not placer or not placer:is_player() or placer:get_player_control().sneak or
+				core.get_node(pos).name ~= "goodluck_food:pumpkin" then
+			return on_place(itemstack, placer, pointed_thing)
+		end
+		local name = placer:get_player_name()
+		if core.is_protected(pos, name) then
+			core.record_protection_violation(pos, name)
+			return itemstack
+		end
+		local face = vector.subtract(pointed_thing.above, pos)
+		if face.y ~= 0 then
+			local look = core.facedir_to_dir(core.dir_to_facedir(placer:get_look_dir()))
+			face = vector.multiply(look, -1)
+		end
+		core.set_node(pos, {name = "goodluck_food:carved_pumpkin",
+			param2 = core.dir_to_facedir(vector.multiply(face, -1))})
+		local seeds = core.add_item(vector.offset(pos, face.x * 0.65, -0.4, face.z * 0.65),
+			"goodluck_food:pumpkin_seeds 4")
+		if seeds then
+			seeds:set_velocity(vector.new(face.x + math.random() * 0.4, 1, face.z + math.random() * 0.4))
+		end
+		core.sound_play("goodluck_food_pumpkin_carve", {pos = pos, max_hear_distance = 16}, true)
+		if not core.is_creative_enabled(name) then
+			itemstack:add_wear_by_uses(238)
+			if itemstack:is_empty() then
+				core.sound_play("default_tool_breaks", {pos = pos, max_hear_distance = 16}, true)
+			end
+		end
+		return itemstack
+	end})
+end
 
 -- 3 to 7 slices
 local slices = {{items = {"goodluck_food:melon_slice 3"}}}

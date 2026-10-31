@@ -45,6 +45,10 @@ local function set_looking(player, name, on)
 			sprint.stop(player, false, "spyglass")
 		end
 	end
+	-- the carved pumpkin's blur gives way to the lens
+	if core.global_exists("goodluck_armor") then
+		goodluck_armor.scoping(player, on)
+	end
 end
 
 core.register_globalstep(function()

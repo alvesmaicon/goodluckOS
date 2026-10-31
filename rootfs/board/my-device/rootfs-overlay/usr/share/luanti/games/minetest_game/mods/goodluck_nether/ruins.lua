@@ -10,6 +10,17 @@ local OFFSET = -16 * math.floor(CHUNK / 32)
 local SEED = (tonumber(core.get_mapgen_setting("seed")) or 0) % 2147483647
 local RAD = 7
 local OBSIDIAN, CRYING = "default:obsidian", "goodluck_nether:crying_obsidian"
+-- what a ruin clears around itself, as the witch hut
+local TRUNK, FOLIAGE, VINES, LOOSE = {}, {}, {}, {}
+core.register_on_mods_loaded(function()
+	for name, def in pairs(core.registered_nodes) do
+		local g, id = def.groups or {}, core.get_content_id(name)
+		TRUNK[id] = (g.tree or 0) > 0 or nil
+		FOLIAGE[id] = ((g.leaves or 0) > 0 or (g.leafdecay or 0) > 0 or (g.vine or 0) > 0) or nil
+		VINES[id] = (g.vine or 0) > 0 or nil
+		LOOSE[id] = name ~= "air" and def.buildable_to or nil
+	end
+end)
 
 -- Minecraft's chests/ruined_portal: 4 to 8 draws by weight, the golden gear enchanted at random; what the game lacks
 -- (iron nuggets, fire charge, clock, bell, glistering melon, the pressure plate) stays out
@@ -75,7 +86,24 @@ local function build(ground, kind, pr)
 	local across = {x = along.z, z = along.x}
 	-- half of a buried frame shows
 	local sink = (kind == "buried" or kind == "desert") and math.floor(h / 2) or pr:next(0, 1)
-	local p1, p2 = vector.offset(ground, -RAD, -6, -RAD), vector.offset(ground, RAD, 12, RAD)
+	-- the footprint: the base along the frame's foot, the frame lying on the +across side, the chest 2 to either side
+	local a0 = -math.floor(w / 2)
+	local by = ground.y - sink
+	local c1, peak = fallen and h + 1 or 2, by + 1 + (fallen and 0 or h)
+	local function at(a, c)
+		return ground.x + along.x * a + across.x * c, ground.z + along.z * a + across.z * c
+	end
+	-- no ruin where a trunk stands in the footprint or the ring around it, from the base to 3 over the top; in the
+	-- rainforest every spot has one, and the jungle ruin takes the place of those trees' trunks (their crowns join
+	-- the canopy)
+	local x1, z1 = at(a0 - 3, -3)
+	local x2, z2 = at(a0 + w + 2, c1 + 1)
+	local trunks = core.find_nodes_in_area({x = math.min(x1, x2), y = by, z = math.min(z1, z2)},
+		{x = math.max(x1, x2), y = peak + 3, z = math.max(z1, z2)}, "group:tree")
+	if #trunks > 0 and not mossy then
+		return
+	end
+	local p1, p2 = vector.offset(ground, -RAD, -6, -RAD), vector.offset(ground, RAD, #trunks > 0 and 40 or 12, RAD)
 	local vm = core.get_voxel_manip()
 	local e1, e2 = vm:read_from_map(p1, p2)
 	local area = VoxelArea(e1, e2)
@@ -97,6 +125,32 @@ local function build(ground, kind, pr)
 			if solid(name) and not solid(get(x, y + 1, z)) and core.get_item_group(name, "leaves") == 0 and
 					core.get_item_group(name, "tree") == 0 then
 				return y
+			end
+		end
+	end
+
+	-- a jungle ruin's trees: their trunks, from its footprint up
+	for _, t in ipairs(trunks) do
+		for i = area:index(t.x, t.y, t.z), area:index(t.x, p2.y, t.z), area.ystride do
+			if TRUNK[data[i]] then
+				data[i] = c_air
+			end
+		end
+	end
+	-- the leaves and vines of the footprint and its ring up to 3 over the top, the vines of one ring further, which
+	-- may hang from them, and what lay on what went
+	for a = a0 - 4, a0 + w + 3 do
+		for c = -4, c1 + 2 do
+			local ring = math.max(a0 - 2 - a, a - a0 - w - 1, -2 - c, c - c1, 0)
+			local x, z = at(a, c)
+			local gone = false
+			for y = by, peak + 3 do
+				local i = area:index(x, y, z)
+				local cid = data[i]
+				gone = VINES[cid] or FOLIAGE[cid] and ring <= 1 or gone and LOOSE[cid] or false
+				if gone then
+					data[i] = c_air
+				end
 			end
 		end
 	end
@@ -126,7 +180,6 @@ local function build(ground, kind, pr)
 	end
 
 	-- the base: bricks along the frame's foot, two to three wide
-	local a0 = -math.floor(w / 2)
 	local base = {}
 	local function brick()
 		if nether then
@@ -134,7 +187,6 @@ local function build(ground, kind, pr)
 		end
 		return mossy and pr:next(1, 100) <= 40 and "default:mossycobble" or "default:stonebrick"
 	end
-	local by = ground.y - sink
 	for a = a0 - 2, a0 + w + 1 do
 		for c = -2, 2 do
 			if (math.abs(c) <= 1 or pr:next(1, 100) <= 40) and pr:next(1, 100) <= 75 then
@@ -231,7 +283,7 @@ core.register_on_generated(function(minp, maxp)
 		return
 	end
 	local x, z = minp.x + pr:next(RAD + 4, CHUNK - RAD - 5), minp.z + pr:next(RAD + 4, CHUNK - RAD - 5)
-	local ground, kind
+	local ground, kind, r
 	if nether then
 		-- one of the two realm mapchunks; a floor with room above in its column or one near it
 		if chunk_index(minp.y) % 2 ~= pr:next(0, 1) then
@@ -252,32 +304,42 @@ core.register_on_generated(function(minp, maxp)
 			end
 			x, z = minp.x + pr:next(RAD + 4, CHUNK - RAD - 5), minp.z + pr:next(RAD + 4, CHUNK - RAD - 5)
 		end
+		r = ground and build(ground, kind, pr)
 	else
+		-- the first spot picks the mapchunk over the ground; in a forest, more for one with no trunk in the way
 		local heightmap = core.get_mapgen_object("heightmap")
-		local y = heightmap and heightmap[(z - minp.z) * CHUNK + (x - minp.x) + 1]
-		if not y or y < minp.y + 8 or y > maxp.y - 14 then
-			return
-		end
-		ground = {x = x, y = y, z = z}
-		local biome = core.get_biome_name(core.get_biome_data(ground).biome) or ""
-		local roll = pr:next(1, 100)
-		if y < 0 then
-			kind = "sea"
-		elseif biome:find("desert") then
-			kind = "desert"
-		elseif roll <= 25 and y - 20 > minp.y + 8 then
-			kind = "underground"
-			ground.y = y - pr:next(12, math.min(20, y - minp.y - 8))
-		elseif roll <= 50 then
-			kind = "buried"
-		else
-			kind = biome:find("rainforest") and "jungle" or "land"
+		local roll
+		for try = 1, 12 do
+			local y = heightmap and heightmap[(z - minp.z) * CHUNK + (x - minp.x) + 1]
+			if y and y >= minp.y + 8 and y <= maxp.y - 14 then
+				ground = {x = x, y = y, z = z}
+				local biome = core.get_biome_name(core.get_biome_data(ground).biome) or ""
+				roll = roll or pr:next(1, 100)
+				if y < 0 then
+					kind = "sea"
+				elseif biome:find("desert") then
+					kind = "desert"
+				elseif roll <= 25 and y - 20 > minp.y + 8 then
+					kind = "underground"
+					ground.y = y - pr:next(12, math.min(20, y - minp.y - 8))
+				elseif roll <= 50 then
+					kind = "buried"
+				else
+					kind = biome:find("rainforest") and "jungle" or "land"
+				end
+				r = build(ground, kind, pr)
+				if r then
+					break
+				end
+			elseif try == 1 then
+				return
+			end
+			x, z = minp.x + pr:next(RAD + 4, CHUNK - RAD - 5), minp.z + pr:next(RAD + 4, CHUNK - RAD - 5)
 		end
 	end
-	if not ground then
+	if not r then
 		return
 	end
-	local r = build(ground, kind, pr)
 	core.log("action", ("[goodluck_nether] ruined portal at %s: %s%s%s, %dx%d"):format(core.pos_to_string(ground), kind,
 		r.fallen and ", fallen" or "", r.giant and ", giant" or "", r.w + 2, r.h + 2))
 end)

@@ -58,10 +58,12 @@ def mc_rot(x=0.0, y=0.0, z=0.0):
     return qmul(mc_z(z), qmul(mc_y(y), mc_x(x)))
 
 
-def part(name, pivot, faces, rot=(0, 0, 0), gear=(), parent=None):
+def part(name, pivot, faces, rot=(0, 0, 0), gear=(), parent=None, skin=()):
     # a joint: its boxes' faces in Minecraft's space, turned about its pivot at rest; gear faces go to the second
-    # primitive; with a parent it follows that joint's turns
-    return {"name": name, "pivot": pivot, "rot": rot, "faces": faces, "gear": list(gear), "parent": parent}
+    # primitive; with a parent it follows that joint's turns; skin: quads (corners, uv, normals, the joint of each
+    # corner) that stretch between joints
+    return {"name": name, "pivot": pivot, "rot": rot, "faces": faces, "gear": list(gear), "parent": parent,
+            "skin": list(skin)}
 
 
 def legs(height, front_z, hind_z, x, mirror_left):
@@ -204,10 +206,10 @@ def quad(corners, uv):
     return [(corners, uv), ([corners[1], corners[0], corners[3], corners[2]], uv)] + [([m, m, m, m], uv)] * 4
 
 
-def humanoid(thin, held=None):
+def humanoid(thin, item=()):
     # Minecraft's humanoid: the head and the body hang from y 0, the arms from the shoulders, the legs from the hips;
     # the skeleton's limbs 2 pixels wide (64x32), the zombie's 4 (64x64, where the player's left limbs are blank),
-    # both's left ones the right ones mirrored; held in place of the skeleton's bow
+    # both's left ones the right ones mirrored; item in the right hand, drawn by the second texture
     head = box(0, 0, -4, -8, -4, 8, 8, 8) + box(32, 0, -4, -8, -4, 8, 8, 8, grow=0.5)
     if thin:
         right_arm, left_arm = box(40, 16, -1, -2, -1, 2, 12, 2), box(40, 16, -1, -2, -1, 2, 12, 2, mirror=True)
@@ -217,10 +219,8 @@ def humanoid(thin, held=None):
         right_arm, left_arm = box(40, 16, -3, -2, -2, 4, 12, 4), box(40, 16, -1, -2, -2, 4, 12, 4, mirror=True)
         right_leg, left_leg = box(0, 16, -2, 0, -2, 4, 12, 4), box(0, 16, -2, 0, -2, 4, 12, 4, mirror=True)
         hip = 1.9
-    # the skeleton's bow: its item image on a square in the right hand, across the arm, drawn by the second texture
-    bow = quad([(8, 10, -8), (-8, 10, -8), (-8, 10, 8), (8, 10, 8)], (0, 0, 64, 32)) if thin else ()
     return [part("head", (0, 0, 0), head), part("body", (0, 0, 0), box(16, 16, -4, 0, -2, 8, 12, 4)),
-            part("right_arm", (-5, 2, 0), right_arm, gear=bow if held is None else held),
+            part("right_arm", (-5, 2, 0), right_arm, gear=item),
             part("left_arm", (5, 2, 0), left_arm),
             part("right_leg", (-hip, 12, 0), right_leg), part("left_leg", (hip, 12, 0), left_leg)]
 
@@ -242,14 +242,19 @@ def affine(*steps):
     return lambda p: tuple(16 * sum(m[i][k] * v for k, v in enumerate(p + (1,))) for i in range(3))
 
 
-def held(tex, inward=0):
-    # an item in the right hand as Minecraft draws it (ItemInHandLayer, item/handheld's thirdperson_righthand): from
-    # the arm's pivot (the skeleton's moved inward 1) turned -90 about x and 180 about y, moved 1, 2 and -10 sixteenths,
-    # then the display's 4 up and 0.5 ahead, 55 about z and -90 about y, 0.85 its size about its middle; its image on a
-    # square at the middle of its thickness, each side as Minecraft's extruded item shows it, drawn whole by the second
-    # texture (tex: the model's texture size, the unit of its uv)
+# item models' thirdperson_righthand displays: moved, turned about x, then y, then z, scaled; item/handheld's (tools,
+# swords) and item/bow's
+HANDHELD = (("t", 0, 4 / 16, 0.5 / 16), ("r", 1, -90), ("r", 2, 55), ("s", 0.85))
+BOW = (("t", -1 / 16, -2 / 16, 2.5 / 16), ("r", 0, -80), ("r", 1, 260), ("r", 2, -40), ("s", 0.9))
+
+
+def held(tex, inward=0, display=HANDHELD):
+    # an item in the right hand as Minecraft draws it (ItemInHandLayer, then the item model's display): from the arm's
+    # pivot (the skeleton's moved inward 1) turned -90 about x and 180 about y, moved 1, 2 and -10 sixteenths, then the
+    # display about the item's middle; its image on a square at the middle of its thickness, each side as Minecraft's
+    # extruded item shows it, drawn whole by the second texture (tex: the model's texture size, the unit of its uv)
     at = affine(("t", inward / 16, 0, 0), ("r", 0, -90), ("r", 1, 180), ("t", 1 / 16, 2 / 16, -10 / 16),
-                ("t", 0, 4 / 16, 0.5 / 16), ("r", 1, -90), ("r", 2, 55), ("s", 0.85), ("t", -0.5, -0.5, -0.5))
+                *display, ("t", -0.5, -0.5, -0.5))
     tr, tl, bl, br = (at((x, y, 0.5)) for x, y in ((1, 1), (0, 1), (0, 0), (1, 0)))
     w, h = tex
     mid = at((0.5, 0.5, 0.5))
@@ -358,19 +363,23 @@ def ears(amount, period):
     return pose
 
 
+def villager_body():
+    # the body under the head as VillagerModel.createBodyModel has it in 26.x: the robe 20 long over it, the arms
+    # crossed and turned up from (0, 3, -1), the legs
+    arms = box(44, 22, -8, -2, -2, 4, 8, 4) + box(44, 22, 4, -2, -2, 4, 8, 4, mirror=True) + \
+        box(40, 38, -4, 2, -2, 8, 4, 4)
+    return [part("body", (0, 0, 0), box(16, 20, -4, 0, -3, 8, 12, 6) + box(0, 38, -4, 0, -3, 8, 20, 6, grow=0.5)),
+            part("arms", (0, 3, -1), arms, rot=(-0.75, 0, 0)),
+            part("right_leg", (-2, 12, 0), box(0, 22, -2, 0, -2, 4, 12, 4)),
+            part("left_leg", (2, 12, 0), box(0, 22, -2, 0, -2, 4, 12, 4, mirror=True))]
+
+
 def villager():
-    # Minecraft's villager since 1.14: a tall head with its hat layer, the brim of a hat and the nose, the robe over
-    # the body, the arms crossed and turned up, the legs
+    # Minecraft's villager in 26.x: a tall head with its hat layer, the brim of a hat and the nose, on its body
     rim = posed(box(30, 47, -8, -8, -6, 16, 16, 1), (0, 0, 0), (-PI / 2, 0, 0))
     head = box(0, 0, -4, -10, -4, 8, 10, 8) + box(32, 0, -4, -10, -4, 8, 10, 8, grow=0.51) + \
         box(24, 0, -1, -3, -6, 2, 4, 2) + rim
-    arms = box(44, 22, -8, -2, -2, 4, 8, 4) + box(44, 22, 4, -2, -2, 4, 8, 4, mirror=True) + \
-        box(40, 38, -4, 2, -2, 8, 4, 4)
-    return [part("head", (0, 0, 0), head),
-            part("body", (0, 0, 0), box(16, 20, -4, 0, -3, 8, 12, 6) + box(0, 38, -4, 0, -3, 8, 18, 6, grow=0.5)),
-            part("arms", (0, 2, 0), arms, rot=(-0.75, 0, 0)),
-            part("right_leg", (-2, 12, 0), box(0, 22, -2, 0, -2, 4, 12, 4)),
-            part("left_leg", (2, 12, 0), box(0, 22, -2, 0, -2, 4, 12, 4, mirror=True))]
+    return [part("head", (0, 0, 0), head)] + villager_body()
 
 
 def stride(legs, arms, period):
@@ -404,8 +413,9 @@ def zombie_arms(up, hit=None):
 
 
 def aim(t):
-    # the skeleton's bow up: both arms straight ahead, the right one a little in
-    return {"right_arm": (mc_rot(-PI / 2, -0.1, 0), None), "left_arm": (mc_rot(-PI / 2, 0.1, 0), None)}
+    # the skeleton's bow up (HumanoidModel's BOW_AND_ARROW): both arms straight ahead, the right one a little in, the
+    # left one turned in to the string
+    return {"right_arm": (mc_rot(-PI / 2, -0.1, 0), None), "left_arm": (mc_rot(-PI / 2, 0.5, 0), None)}
 
 
 def lay(t):
@@ -438,22 +448,16 @@ VILLAGER = [(0, 1, None), (1, 1.0, stride(0.7, 0, 1.0)), (3, 0.5, stride(1.4, 0,
 # The witch (goodluck_monsters), 64x128: stands 0-1, walks 1-2, runs 3-3.5, dies 4-5; drinking it stands 6-6.1 and
 # walks 7-8, its nose up with the potion at it (the second texture, blank but then)
 def witch():
-    # Minecraft's witch: the villager's body as VillagerModel.createBodyModel has it in 26.x (the robe 20 long, the
-    # crossed arms from (0, 3, -1)) under a head without the villager's hat layer; the hat a brim and three tiers, each
-    # on the one below it, a little turned; the nose with its mole, and the potion in front of it when it drinks
+    # Minecraft's witch: the villager's body under a head without the villager's hat layer; the hat a brim and three
+    # tiers, each on the one below it, a little turned; the nose with its mole, and the potion in front of it when it
+    # drinks
     hat = posed(box(0, 95, 0, 0, 0, 1, 2, 1, grow=0.25), (1.75, -2, 2), (-0.20943952, 0, 0.10471976))
     hat = posed(box(0, 87, 0, 0, 0, 4, 4, 4) + hat, (1.75, -4, 2), (-0.10471976, 0, 0.05235988))
     hat = posed(box(0, 76, 0, 0, 0, 7, 4, 7) + hat, (1.75, -4, 2), (-0.05235988, 0, 0.02617994))
     hat = posed(box(0, 64, 0, 0, 0, 10, 2, 10) + hat, (-5, -10.03125, -5))
     nose = box(24, 0, -1, -1, -6, 2, 4, 2) + posed(box(0, 0, 0, 3, -6.75, 1, 1, 1, grow=-0.25), (0, -2, 0))
-    arms = box(44, 22, -8, -2, -2, 4, 8, 4) + box(44, 22, 4, -2, -2, 4, 8, 4, mirror=True) + \
-        box(40, 38, -4, 2, -2, 8, 4, 4)
     return [part("head", (0, 0, 0), box(0, 0, -4, -10, -4, 8, 10, 8) + hat),
-            part("nose", (0, -2, 0), nose, gear=potion((64, 128)), parent="head"),
-            part("body", (0, 0, 0), box(16, 20, -4, 0, -3, 8, 12, 6) + box(0, 38, -4, 0, -3, 8, 20, 6, grow=0.5)),
-            part("arms", (0, 3, -1), arms, rot=(-0.75, 0, 0)),
-            part("right_leg", (-2, 12, 0), box(0, 22, -2, 0, -2, 4, 12, 4)),
-            part("left_leg", (2, 12, 0), box(0, 22, -2, 0, -2, 4, 12, 4, mirror=True))]
+            part("nose", (0, -2, 0), nose, gear=potion((64, 128)), parent="head")] + villager_body()
 
 
 def potion(tex):
@@ -538,7 +542,7 @@ ANIMALS = {
     "donkey": ((64, 64), horse(True), HORSE),
     "spider": ((64, 32), spider(), SPIDER),
     "zombie": ((64, 64), humanoid(False), ZOMBIE),
-    "skeleton": ((64, 32), humanoid(True), SKELETON),
+    "skeleton": ((64, 32), humanoid(True, held((64, 32), 1, BOW)), SKELETON),
     "villager": ((64, 64), villager(), VILLAGER),
     "boat": ((128, 64), boat(), [(0, 1, None)]),
     "arrow": ((32, 32), arrow(), [(0, 1, None)]),
@@ -546,7 +550,7 @@ ANIMALS = {
     "blaze": ((64, 32), blaze(), BLAZE),
     "magma_cube": ((64, 64), magma_cube(), MAGMA_CUBE),
     "zombified_piglin": ((64, 64), zombified_piglin(), PIGLIN),
-    # the wither skeleton is the skeleton with a stone sword (the renderer draws it 1.2 times as big)
+    # the skeleton holds its bow, the wither skeleton a stone sword (drawn 1.2 times as big by its renderer)
     "wither_skeleton": ((64, 32), humanoid(True, held((64, 32), 1)), WITHER_SKELETON),
     "witch": ((64, 128), witch(), WITCH),
 }
@@ -686,14 +690,17 @@ def ender_dragon():
     body = dragon_box(-12, -16, -16, 24, 24, 64, 0, 0) + sum(
         (dragon_box(-1, -22, z, 2, 6, 12, 220, 53) for z in (-10, 10, 30)), [])
     parts.append(part("body", body_at, body))
+    # a membrane: Minecraft draws the dragon unculled and paints only its upper side (the under one is blank in the
+    # texture), so here that side is a two-sided square, seen from below as Minecraft shows it
+    membrane = lambda x0, v, m: quad(*dragon_box(x0, 0, 2, 56, 0, 56, -56, v, m)[0])
     for side, k in (("left", 1), ("right", -1)):
         m = side == "left"
         x0 = 0 if m else -56
         wing = add(body_at, (12 * k, -15, -6))
         parts.append(part(side + "_wing", wing, dragon_box(x0, -4, -4, 56, 8, 8, 112, 88, m) +
-                          dragon_box(x0, 0, 2, 56, 0, 56, -56, 88, m), parent="body"))
+                          membrane(x0, 88, m), parent="body"))
         parts.append(part(side + "_wing_tip", add(wing, (56 * k, 0, 0)), dragon_box(x0, -2, -2, 56, 4, 4, 112, 136, m) +
-                          dragon_box(x0, 0, 2, 56, 0, 56, -56, 144, m), parent=side + "_wing"))
+                          membrane(x0, 144, m), parent=side + "_wing"))
         for leg, at, legs in (("front", (12 * k, 0, -6), ((1.3, (-4, -4, -4, 8, 24, 8, 112, 104)),
                                                        ((0, 20, -1), -0.5, (-3, -1, -3, 6, 24, 6, 226, 138)),
                                                        ((0, 23, 0), 0.75, (-4, 0, -12, 8, 4, 16, 144, 104)))),
@@ -754,10 +761,47 @@ def dragon_pose(period):
 # flying 0-1.75 (Minecraft's beat at full speed), perched 2-2.5 (its 0.1 a tick)
 DRAGON = [(0, 1.75, dragon_pose(1.75)), (2, 0.5, dragon_pose(0.5))]
 
+# The crystal's beam to the dragon (EnderDragonRenderer's): 8 sides, 0.75 round at the crystal and a fifth of that at
+# the far end, one node from the joint "beam" toward -z (Luanti's +z), which the entity turns and stretches to the
+# dragon. Minecraft scrolls its texture toward the crystal; here 8 rings slide an eighth of the way toward it in 0.6 s
+# and start over, the texture's 32 rows between each two (as Minecraft's 8 a node on a beam of 32)
+BEAM_RINGS, BEAM_LOOP = 8, 0.6
+
+
+def beam_radius(f):
+    # in pixels, f of the way from the crystal
+    return 12 - 9.6 * f
+
+
+def crystal_beam():
+    rings = [("beam", 0.0)] + [("ring%d" % k, (k + 1) / BEAM_RINGS) for k in range(BEAM_RINGS)] + [("beam", 1.0)]
+    at = lambda f, a: (beam_radius(f) * math.sin(a), 24 + beam_radius(f) * math.cos(a), -16 * f)
+    out = lambda a: (math.sin(a), math.cos(a), 0)
+    skin = []
+    for (near, f0), (far, f1) in zip(rings, rings[1:]):
+        for j in range(8):
+            a0, a1 = 2 * PI * j / 8, 2 * PI * (j + 1) / 8
+            skin.append(([at(f1, a1), at(f1, a0), at(f0, a0), at(f0, a1)], (2 * j, 0, 2 * j + 2, 32),
+                         [out(a1), out(a0), out(a0), out(a1)], [far, far, near, near]))
+    return [part("beam", (0, 24, 0), [], skin=skin)] + \
+        [part(name, (0, 24, -16 * f), [], parent="beam") for name, f in rings[1:-1]]
+
+
+def slide(t):
+    # each ring toward the crystal, its round growing as the beam's does there
+    phi = t / BEAM_LOOP
+    pose = {}
+    for k in range(BEAM_RINGS):
+        f = (k + 1) / BEAM_RINGS
+        s = beam_radius(f - phi / BEAM_RINGS) / beam_radius(f)
+        pose["ring%d" % k] = (None, (0, 0, 16 * phi / BEAM_RINGS), (s, s, 1.0))
+    return pose
+
 
 ANIMALS.update({"enderman": ((64, 32), enderman(), ENDERMAN), "silverfish": ((64, 32), silverfish(), SILVERFISH),
                 "end_crystal": ((64, 32), end_crystal(), [(0, 6, spin)]),
-                "ender_dragon": ((256, 256), ender_dragon(), DRAGON)})
+                "ender_dragon": ((256, 256), ender_dragon(), DRAGON),
+                "crystal_beam": ((16, 32), crystal_beam(), [(0, BEAM_LOOP, slide)])})
 
 
 def normal(a, b, c):
@@ -787,7 +831,8 @@ def build(name, tex, parts, segments):
                         continue
                     face_mid = [sum(q[i] for q in quad) / 4 for i in range(3)]
                     order = (0, 1, 2, 0, 2, 3)
-                    if sum(n[i] * (face_mid[i] - mid[i]) for i in range(3)) < 0:
+                    # a flat two-sided square lies on its middle: its sides keep the order they were given
+                    if sum(n[i] * (face_mid[i] - mid[i]) for i in range(3)) < -1e-9:
                         order, n = (0, 2, 1, 0, 3, 2), tuple(-x for x in n)
                     base = len(prim["pos"])
                     for q, (u, v) in zip(quad, [(u1, v0), (u0, v0), (u0, v1), (u1, v1)]):
@@ -796,6 +841,15 @@ def build(name, tex, parts, segments):
                         prim["uvs"].append((u / w, v / h))
                         prim["jnt"].append(j)
                     prim["idx"] += [base + o for o in order]
+    for p in parts:
+        for corners, (u0, v0, u1, v1), normals, owners in p["skin"]:
+            prim, base = prims[0], len(prims[0]["pos"])
+            for q, (u, v), n, o in zip(corners, [(u1, v0), (u0, v0), (u0, v1), (u1, v1)], normals, owners):
+                prim["pos"].append(gltf(q))
+                prim["nrm"].append((-n[0], -n[1], n[2]))
+                prim["uvs"].append((u / w, v / h))
+                prim["jnt"].append(joints.index(o))
+            prim["idx"] += [base + o for o in (0, 1, 2, 0, 2, 3)]
     prims = [prim for prim in prims if prim["pos"]]
     # every joint's rest place, and its place from its parent's
     rest, parent = {"root": (0.0, 0.0, 0.0)}, {"root": None}
@@ -811,17 +865,20 @@ def build(name, tex, parts, segments):
             t = i / n * length
             times.append(round(start + t + (0.001 if i == 0 and s else 0), 4))
             if pose:
-                for jname, (r, d) in pose(t).items():
+                # a joint's key: its turn, its move and (if given) its scale
+                for jname, key in pose(t).items():
+                    r, d, s = (tuple(key) + (None,))[:3]
                     keyed.setdefault(jname, set()).update(["rotation"] if r else [])
                     keyed[jname].update(["translation"] if d else [])
+                    keyed[jname].update(["scale"] if s else [])
     times = sorted(set(times))
 
     def at(jname, time):
         for start, length, pose in segments:
             if pose and start - 1e-6 <= time <= start + length + 1e-6:
-                r, d = pose(time - start).get(jname, (None, None))
-                return r or (0.0, 0.0, 0.0, 1.0), d or (0, 0, 0)
-        return (0.0, 0.0, 0.0, 1.0), (0, 0, 0)
+                r, d, s = (tuple(pose(time - start).get(jname, (None, None))) + (None,))[:3]
+                return r or (0.0, 0.0, 0.0, 1.0), d or (0, 0, 0), s or (1.0, 1.0, 1.0)
+        return (0.0, 0.0, 0.0, 1.0), (0, 0, 0), (1.0, 1.0, 1.0)
 
     blob, views, accessors = bytearray(), [], []
 
@@ -872,6 +929,8 @@ def build(name, tex, parts, segments):
         for path in sorted(keyed.get(jname, ())):
             if path == "rotation":
                 out = add("4f", [at(jname, t)[0] for t in times], "VEC4", FLOAT)
+            elif path == "scale":
+                out = add("3f", [at(jname, t)[2] for t in times], "VEC3", FLOAT)
             else:
                 moved = lambda d: tuple(r + o for r, o in zip(local.get(jname, (0.0, 0.0, 0.0)), (-d[0] * S, -d[1] * S, d[2] * S)))
                 out = add("3f", [moved(at(jname, t)[1]) for t in times], "VEC3", FLOAT)
