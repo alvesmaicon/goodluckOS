@@ -360,11 +360,16 @@ core.register_entity("goodluck_end:end_crystal", {
 		self.object:set_armor_groups({fleshy = 100, immortal = 0})
 		self.object:set_animation({x = 0, y = 6}, 1, 0, true)
 		self._base = staticdata ~= "nobase"
+		-- (a guard only while the dragon is called back, never saved)
+		self._guarded = staticdata == "guarded"
 	end,
 	get_staticdata = function(self)
 		return self._base and "" or "nobase"
 	end,
 	on_punch = function(self, puncher)
+		if self._guarded then
+			return true
+		end
 		local pos = self.object:get_pos()
 		self.object:remove()
 		if E.on_crystal_destroyed then
