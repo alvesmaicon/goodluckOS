@@ -763,3 +763,12 @@ goodluck_end_stonebrick_mossy.png	{block/mossy_stone_bricks}
 goodluck_end_stonebrick_cracked.png	{block/cracked_stone_bricks}
 goodluck_end_stonebrick_chiseled.png	{block/chiseled_stone_bricks}
 goodluck_end_iron_bars.png	{block/iron_bars}
+goodluck_end_purpur_block.png	{block/purpur_block}
+goodluck_end_purpur_pillar_side.png	{block/purpur_pillar_side}
+goodluck_end_purpur_pillar_top.png	{block/purpur_pillar_top}
+goodluck_end_end_rod.png	{block/end_rod}
+goodluck_end_chorus_plant.png	{block/chorus_plant}
+goodluck_end_chorus_flower.png	{block/chorus_flower}
+goodluck_end_chorus_flower_dead.png	{block/chorus_flower_dead}
+goodluck_end_chorus_fruit.png	{item/chorus_fruit}
+goodluck_end_chorus_fruit_popped.png	{item/popped_chorus_fruit}

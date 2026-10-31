@@ -35,6 +35,14 @@ core.register_entity("goodluck_end:thrown_pearl", {
 			self._ticks = (self._ticks or 0) + 1
 			local pos = self.object:get_pos()
 			local to = vector.add(pos, self._v)
+			if E.inside(pos) then
+				for k = 1, 4 do
+					local p = vector.round(vector.add(pos, vector.multiply(self._v, k / 4)))
+					if core.get_node(p).name == "goodluck_end:gateway" then
+						return self:through(p, owner)
+					end
+				end
+			end
 			for hit in core.raycast(pos, to, true, false) do
 				local obj = hit.type == "object" and hit.ref
 				local ent = obj and obj:get_luaentity()
@@ -54,6 +62,15 @@ core.register_entity("goodluck_end:thrown_pearl", {
 			if self._ticks > 600 or core.get_node(to).name == "ignore" then
 				self.object:remove()
 				return
+			end
+		end
+	end,
+	through = function(self, gate, owner)
+		self.object:remove()
+		if owner and owner:get_hp() > 0 then
+			E.enter_gateway(owner, gate)
+			if not creative(owner) then
+				owner:set_hp(owner:get_hp() - 5, {type = "set_hp", cause = "goodluck_end:ender_pearl"})
 			end
 		end
 	end,

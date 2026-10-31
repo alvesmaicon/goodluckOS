@@ -25,6 +25,10 @@ FILES = {
     "block/end_portal_frame_bottom": "frame_bottom", "block/end_portal_frame_eye": "frame_eye",
     "block/mossy_stone_bricks": "stonebrick_mossy", "block/cracked_stone_bricks": "stonebrick_cracked",
     "block/chiseled_stone_bricks": "stonebrick_chiseled", "block/iron_bars": "iron_bars",
+    "block/purpur_block": "purpur_block", "block/purpur_pillar_side": "purpur_pillar_side",
+    "block/purpur_pillar_top": "purpur_pillar_top", "block/end_rod": "end_rod", "block/chorus_plant": "chorus_plant",
+    "block/chorus_flower": "chorus_flower", "block/chorus_flower_dead": "chorus_flower_dead",
+    "item/chorus_fruit": "chorus_fruit", "item/popped_chorus_fruit": "chorus_fruit_popped",
 }
 
 os.makedirs(OUT, exist_ok=True)

@@ -106,6 +106,7 @@ local function arrive(player, to, build)
 		core.sound_play("goodluck_nether_portal_travel", {to_player = name, gain = 0.5}, true)
 	end)
 end
+E.travelling, E.arrive = travelling, arrive
 
 function E.to_end(player)
 	core.log("action", ("[goodluck_end] %s goes to the End"):format(player:get_player_name()))
@@ -393,7 +394,8 @@ core.register_on_generated(function(minp, maxp)
 		storage:set_string("podium", core.pos_to_string(made.podium))
 		core.log("action", ("[goodluck_end] exit portal's podium at %s"):format(core.pos_to_string(made.podium)))
 	end
-	core.log("action", ("[goodluck_end] End chunk %d,%d,%d: %d ms (data %d, shape %d, pillars %d, write %d), %d stone")
-		:format(minp.x, minp.y, minp.z, (made.read + made.shape + made.features + made.write) / 1000, made.read / 1000,
-		made.shape / 1000, made.features / 1000, made.write / 1000, made.stone))
+	core.log("action", ("[goodluck_end] End chunk %d,%d,%d: %d ms (data %d, shape %d, features %d, write %d), %d stone,"
+		.. " %d small islands, %d chorus plants, %d gateways"):format(minp.x, minp.y, minp.z, (made.read + made.shape +
+		made.features + made.write) / 1000, made.read / 1000, made.shape / 1000, made.features / 1000, made.write / 1000,
+		made.stone, made.islands, made.plants, #made.gateways))
 end)

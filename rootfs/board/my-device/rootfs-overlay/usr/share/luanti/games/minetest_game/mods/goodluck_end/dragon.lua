@@ -251,7 +251,7 @@ local IMMUNE = {["air"] = true, ["ignore"] = true, ["goodluck_end:end_stone"] = 
 	["goodluck_nether:bedrock"] = true, ["goodluck_nether:crying_obsidian"] = true, ["xpanes:bar"] = true,
 	["xpanes:bar_flat"] = true, ["goodluck_end:portal"] = true, ["goodluck_end:exit_portal"] = true,
 	["goodluck_end:frame"] = true, ["goodluck_end:frame_eye"] = true, ["fire:permanent_flame"] = true,
-	["goodluck_end:dragon_egg"] = true, ["default:torch_wall"] = true}
+	["goodluck_end:dragon_egg"] = true, ["default:torch_wall"] = true, ["goodluck_end:gateway"] = true}
 
 local function boss_bars(e)
 	e._bars = e._bars or {}
@@ -785,8 +785,8 @@ core.register_node("goodluck_end:dragon_egg", {
 	end,
 })
 
--- its death: experience, the exit portal lit, the egg the first time; ready for a next one never (respawning it
--- with four crystals is not here)
+-- its death: experience, the exit portal lit, a gateway (gateway.lua), the egg the first time; ready for a next one
+-- never (respawning it with four crystals is not here)
 function E.dragon_died(e, pos)
 	local first = storage:get_string("killed") ~= "1"
 	storage:set_string("killed", "1")
@@ -796,6 +796,7 @@ function E.dragon_died(e, pos)
 	end
 	e.object:remove()
 	E.exit_portal(true)
+	E.spawn_gateway()
 	local top = podium_top()
 	if first and top then
 		core.set_node(top, {name = "goodluck_end:dragon_egg"})
