@@ -245,7 +245,8 @@ goodluck_end
   their spawn eggs, the ender pearl, the eye of ender, the end crystal item, end
   stone and its bricks, the end portal frame, the dragon egg, mossy, cracked and
   chiseled stone bricks, iron bars, purpur, its pillar, the end rod, the chorus
-  plant, flower and fruit, the End's sky and the star field its portal and
+  plant, flower and fruit, the ender chest (turned to the layout since 1.15 as
+  the chest is), the endermite, the End's sky and the star field its portal and
   gateways are cut from) are Pixel Perfection Legacy's by Nova Wostra, after XSSheep's
   Pixel Perfection (26.3-97.2,
   https://modrinth.com/resourcepack/pixel-perfection-legacy), CC BY-SA 4.0,

@@ -29,6 +29,8 @@ FILES = {
     "block/purpur_pillar_top": "purpur_pillar_top", "block/end_rod": "end_rod", "block/chorus_plant": "chorus_plant",
     "block/chorus_flower": "chorus_flower", "block/chorus_flower_dead": "chorus_flower_dead",
     "item/chorus_fruit": "chorus_fruit", "item/popped_chorus_fruit": "chorus_fruit_popped",
+    "entity/endermite/endermite": "endermite",
+    "item/endermite_spawn_egg": "endermite_egg",
 }
 
 os.makedirs(OUT, exist_ok=True)
@@ -63,4 +65,22 @@ for y in range(32):
             g = rng.randint(220, 255)
             beam.putpixel((x, y), (g, g, g, 255))
 beam.save(f"{OUT}/goodluck_end_crystal_beam.png")
-print(len(FILES) + 2, "textures in", os.path.relpath(OUT, ROOT))
+
+
+# the ender chest: Pixel Perfection draws it for Minecraft's model before 1.15, which stood upside down; turned to the
+# layout since, as pixelperfection.py turns the chest
+def faces(u, v, w, h, d):
+    return [(u + d, v, w, d), (u + d + w, v, w, d), (u, v + d, d, h), (u + d, v + d, w, h), (u + d + w, v + d, d, h),
+            (u + d + w + d, v + d, w, h)]
+
+
+old = Image.open(SRC + "entity/chest/ender.png").convert("RGBA")
+chest = Image.new("RGBA", old.size)
+for box in ((0, 0, 14, 5, 14), (0, 19, 14, 10, 14), (0, 0, 2, 4, 1)):
+    crop = [old.crop((x, y, x + cw, y + ch)) for x, y, cw, ch in faces(*box)]
+    top, bottom = (c.transpose(Image.FLIP_LEFT_RIGHT) for c in crop[:2])
+    west, north, east, south = (c.rotate(180) for c in crop[2:])
+    for img, (x, y, _, _) in zip([bottom, top, west, south, east, north], faces(*box)):
+        chest.paste(img, (x, y))
+chest.save(f"{OUT}/goodluck_end_ender_chest.png")
+print(len(FILES) + 3, "textures in", os.path.relpath(OUT, ROOT))

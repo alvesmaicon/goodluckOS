@@ -174,6 +174,8 @@ goodluck_end_silverfish	mob/silverfish/say1 mob/silverfish/say2 mob/silverfish/s
 goodluck_end_silverfish_hurt	mob/silverfish/hit1 mob/silverfish/hit2 mob/silverfish/hit3
 goodluck_end_silverfish_death	mob/silverfish/kill
 goodluck_end_chorus_grow	block/chorus_flower/grow1 block/chorus_flower/grow2 block/chorus_flower/grow3 block/chorus_flower/grow4
+goodluck_end_ender_chest_open	block/enderchest/open
+goodluck_end_ender_chest_close	block/enderchest/close
 goodluck_end_chorus_death	block/chorus_flower/death1 block/chorus_flower/death2 block/chorus_flower/death3
 goodluck_end_pearl_throw	random/bow
 goodluck_end_eye_launch	entity/endereye/endereye_launch1 entity/endereye/endereye_launch2

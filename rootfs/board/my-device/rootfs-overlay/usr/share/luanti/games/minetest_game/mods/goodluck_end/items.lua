@@ -80,6 +80,9 @@ core.register_entity("goodluck_end:thrown_pearl", {
 			obj:punch(self.object, 1, {full_punch_interval = 1, damage_groups = {fleshy = 0}})
 		end
 		E.specks(at, 32, 0.3)
+		if math.random() < 0.05 then
+			core.add_entity(at, "goodluck_end:endermite")
+		end
 		if not owner or owner:get_hp() <= 0 then
 			return
 		end

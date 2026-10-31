@@ -803,8 +803,8 @@ core.register_node("goodluck_end:dragon_egg", {
 	end,
 })
 
--- its death: experience, the exit portal lit, a gateway (gateway.lua), the egg the first time; ready for a next one
--- never (respawning it with four crystals is not here)
+-- its death: experience, the exit portal lit, a gateway (gateway.lua), the egg the first time; four crystals call it
+-- back (respawn.lua)
 function E.dragon_died(e, pos)
 	local first = storage:get_string("killed") ~= "1"
 	storage:set_string("killed", "1")

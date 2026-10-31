@@ -185,6 +185,8 @@ Each dragon killed opens an end gateway, one of twenty hanging in a ring over th
 
 The dragon can be called back as in Minecraft, for another fight and another gateway: an end crystal (glass about an eye of ender over a ghast tear) goes on obsidian or bedrock, and four of them on the exit portal's rim, one on each side, put the portal out and turn their beams to the sky. Each pillar in turn is struck and built anew with a crystal that can't be broken until the dragon is back, half a minute later. Breaking one of the four on the way stops it.
 
+The ender chest (eight obsidian about an eye of ender) opens your own chest of 32 slots, the same in every ender chest you open, wherever it is; breaking one leaves its obsidian. One ender pearl in twenty lets out an endermite where it lands, a small purple pest that bites and is gone in two minutes.
+
 ## Updating Luanti
 
 Once a card has Luanti, a new version needs no new system image: it comes as one file, a package named `luanti-<date>-<time>-<commit>.tar.xz` (about 10 MB). A package holds all of Luanti, the engine and the game, so it installs over any older version, without the ones in between.

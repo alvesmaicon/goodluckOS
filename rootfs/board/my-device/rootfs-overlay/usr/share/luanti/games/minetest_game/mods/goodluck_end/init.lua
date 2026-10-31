@@ -26,6 +26,7 @@ core.register_mapgen_script(path .. "/stronghold.lua")
 E.stronghold = dofile(path .. "/stronghold.lua")
 E.strongholds.locator = E.stronghold.locator
 dofile(path .. "/items.lua")
+dofile(path .. "/enderchest.lua")
 dofile(path .. "/mobs.lua")
 E.spawn_endermen()
 dofile(path .. "/portal.lua")

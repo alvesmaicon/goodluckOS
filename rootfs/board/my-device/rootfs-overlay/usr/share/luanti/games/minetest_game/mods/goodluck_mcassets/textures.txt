@@ -772,3 +772,6 @@ goodluck_end_chorus_flower.png	{block/chorus_flower}
 goodluck_end_chorus_flower_dead.png	{block/chorus_flower_dead}
 goodluck_end_chorus_fruit.png	{item/chorus_fruit}
 goodluck_end_chorus_fruit_popped.png	{item/popped_chorus_fruit}
+goodluck_end_ender_chest.png	{entity/chest/ender}
+goodluck_end_endermite.png	{entity/endermite/endermite}
+goodluck_end_endermite_egg.png	{item/endermite_spawn_egg}
