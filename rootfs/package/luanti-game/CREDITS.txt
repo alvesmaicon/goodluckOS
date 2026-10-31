@@ -248,9 +248,11 @@ goodluck_end
   is cut from) are Pixel Perfection Legacy's by Nova Wostra, after XSSheep's
   Pixel Perfection (26.3-97.2,
   https://modrinth.com/resourcepack/pixel-perfection-legacy), CC BY-SA 4.0,
-  copied by dev/luanti-art/end.py, and so under CC BY-SA 4.0. Its creatures are
-  goodluck_models' meshes of Minecraft's. Its code and its strongholds, laid out
-  as Minecraft's, are goodluckOS's own (see goodluck_* below).
+  copied by dev/luanti-art/end.py, and so under CC BY-SA 4.0. The crystal's
+  beam (goodluck_end_crystal_beam.png) is goodluckOS's own, specks end.py draws.
+  Its creatures and the beam are goodluck_models' meshes of Minecraft's. Its
+  code and its strongholds, laid out as Minecraft's, are goodluckOS's own (see
+  goodluck_* below).
 
 Left out of mobs, mobs_animal, mobs_monster, stamina, mobs_npc and mob_horse:
 screenshot.jpg, made on textstudio.com, whose terms are unclear. The game

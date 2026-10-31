@@ -58,10 +58,12 @@ def mc_rot(x=0.0, y=0.0, z=0.0):
     return qmul(mc_z(z), qmul(mc_y(y), mc_x(x)))
 
 
-def part(name, pivot, faces, rot=(0, 0, 0), gear=(), parent=None):
+def part(name, pivot, faces, rot=(0, 0, 0), gear=(), parent=None, skin=()):
     # a joint: its boxes' faces in Minecraft's space, turned about its pivot at rest; gear faces go to the second
-    # primitive; with a parent it follows that joint's turns
-    return {"name": name, "pivot": pivot, "rot": rot, "faces": faces, "gear": list(gear), "parent": parent}
+    # primitive; with a parent it follows that joint's turns; skin: quads (corners, uv, normals, the joint of each
+    # corner) that stretch between joints
+    return {"name": name, "pivot": pivot, "rot": rot, "faces": faces, "gear": list(gear), "parent": parent,
+            "skin": list(skin)}
 
 
 def legs(height, front_z, hind_z, x, mirror_left):
@@ -754,10 +756,47 @@ def dragon_pose(period):
 # flying 0-1.75 (Minecraft's beat at full speed), perched 2-2.5 (its 0.1 a tick)
 DRAGON = [(0, 1.75, dragon_pose(1.75)), (2, 0.5, dragon_pose(0.5))]
 
+# The crystal's beam to the dragon (EnderDragonRenderer's): 8 sides, 0.75 round at the crystal and a fifth of that at
+# the far end, one node from the joint "beam" toward -z (Luanti's +z), which the entity turns and stretches to the
+# dragon. Minecraft scrolls its texture toward the crystal; here 8 rings slide an eighth of the way toward it in 0.6 s
+# and start over, the texture's 32 rows between each two (as Minecraft's 8 a node on a beam of 32)
+BEAM_RINGS, BEAM_LOOP = 8, 0.6
+
+
+def beam_radius(f):
+    # in pixels, f of the way from the crystal
+    return 12 - 9.6 * f
+
+
+def crystal_beam():
+    rings = [("beam", 0.0)] + [("ring%d" % k, (k + 1) / BEAM_RINGS) for k in range(BEAM_RINGS)] + [("beam", 1.0)]
+    at = lambda f, a: (beam_radius(f) * math.sin(a), 24 + beam_radius(f) * math.cos(a), -16 * f)
+    out = lambda a: (math.sin(a), math.cos(a), 0)
+    skin = []
+    for (near, f0), (far, f1) in zip(rings, rings[1:]):
+        for j in range(8):
+            a0, a1 = 2 * PI * j / 8, 2 * PI * (j + 1) / 8
+            skin.append(([at(f1, a1), at(f1, a0), at(f0, a0), at(f0, a1)], (2 * j, 0, 2 * j + 2, 32),
+                         [out(a1), out(a0), out(a0), out(a1)], [far, far, near, near]))
+    return [part("beam", (0, 24, 0), [], skin=skin)] + \
+        [part(name, (0, 24, -16 * f), [], parent="beam") for name, f in rings[1:-1]]
+
+
+def slide(t):
+    # each ring toward the crystal, its round growing as the beam's does there
+    phi = t / BEAM_LOOP
+    pose = {}
+    for k in range(BEAM_RINGS):
+        f = (k + 1) / BEAM_RINGS
+        s = beam_radius(f - phi / BEAM_RINGS) / beam_radius(f)
+        pose["ring%d" % k] = (None, (0, 0, 16 * phi / BEAM_RINGS), (s, s, 1.0))
+    return pose
+
 
 ANIMALS.update({"enderman": ((64, 32), enderman(), ENDERMAN), "silverfish": ((64, 32), silverfish(), SILVERFISH),
                 "end_crystal": ((64, 32), end_crystal(), [(0, 6, spin)]),
-                "ender_dragon": ((256, 256), ender_dragon(), DRAGON)})
+                "ender_dragon": ((256, 256), ender_dragon(), DRAGON),
+                "crystal_beam": ((16, 32), crystal_beam(), [(0, BEAM_LOOP, slide)])})
 
 
 def normal(a, b, c):
@@ -796,6 +835,15 @@ def build(name, tex, parts, segments):
                         prim["uvs"].append((u / w, v / h))
                         prim["jnt"].append(j)
                     prim["idx"] += [base + o for o in order]
+    for p in parts:
+        for corners, (u0, v0, u1, v1), normals, owners in p["skin"]:
+            prim, base = prims[0], len(prims[0]["pos"])
+            for q, (u, v), n, o in zip(corners, [(u1, v0), (u0, v0), (u0, v1), (u1, v1)], normals, owners):
+                prim["pos"].append(gltf(q))
+                prim["nrm"].append((-n[0], -n[1], n[2]))
+                prim["uvs"].append((u / w, v / h))
+                prim["jnt"].append(joints.index(o))
+            prim["idx"] += [base + o for o in (0, 1, 2, 0, 2, 3)]
     prims = [prim for prim in prims if prim["pos"]]
     # every joint's rest place, and its place from its parent's
     rest, parent = {"root": (0.0, 0.0, 0.0)}, {"root": None}
@@ -811,17 +859,20 @@ def build(name, tex, parts, segments):
             t = i / n * length
             times.append(round(start + t + (0.001 if i == 0 and s else 0), 4))
             if pose:
-                for jname, (r, d) in pose(t).items():
+                # a joint's key: its turn, its move and (if given) its scale
+                for jname, key in pose(t).items():
+                    r, d, s = (tuple(key) + (None,))[:3]
                     keyed.setdefault(jname, set()).update(["rotation"] if r else [])
                     keyed[jname].update(["translation"] if d else [])
+                    keyed[jname].update(["scale"] if s else [])
     times = sorted(set(times))
 
     def at(jname, time):
         for start, length, pose in segments:
             if pose and start - 1e-6 <= time <= start + length + 1e-6:
-                r, d = pose(time - start).get(jname, (None, None))
-                return r or (0.0, 0.0, 0.0, 1.0), d or (0, 0, 0)
-        return (0.0, 0.0, 0.0, 1.0), (0, 0, 0)
+                r, d, s = (tuple(pose(time - start).get(jname, (None, None))) + (None,))[:3]
+                return r or (0.0, 0.0, 0.0, 1.0), d or (0, 0, 0), s or (1.0, 1.0, 1.0)
+        return (0.0, 0.0, 0.0, 1.0), (0, 0, 0), (1.0, 1.0, 1.0)
 
     blob, views, accessors = bytearray(), [], []
 
@@ -872,6 +923,8 @@ def build(name, tex, parts, segments):
         for path in sorted(keyed.get(jname, ())):
             if path == "rotation":
                 out = add("4f", [at(jname, t)[0] for t in times], "VEC4", FLOAT)
+            elif path == "scale":
+                out = add("3f", [at(jname, t)[2] for t in times], "VEC3", FLOAT)
             else:
                 moved = lambda d: tuple(r + o for r, o in zip(local.get(jname, (0.0, 0.0, 0.0)), (-d[0] * S, -d[1] * S, d[2] * S)))
                 out = add("3f", [moved(at(jname, t)[1]) for t in times], "VEC3", FLOAT)

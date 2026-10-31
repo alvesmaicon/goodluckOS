@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 # The End's creatures, blocks and items when the player has no Minecraft of their own: Pixel Perfection Legacy by Nova
 # Wostra (CC BY-SA 4.0, https://modrinth.com/resourcepack/pixel-perfection-legacy, 26.3-97.2 unzipped), in 26.x's
-# layouts, copied under goodluck_end's names; the end portal's surface is its star field cut to 16x16 frames
+# layouts, copied under goodluck_end's names; the end portal's surface is its star field cut to 16x16 frames, and
+# the crystal's beam (which Pixel Perfection lacks) white specks of our own
 #   python3 dev/luanti-art/end.py <pixel perfection legacy dir> [out dir]
-import os, shutil, sys
+import os, random, shutil, sys
 from PIL import Image
 
 ROOT = os.path.dirname(os.path.abspath(__file__)) + "/../.."
@@ -49,4 +50,13 @@ for i in range(64):
     img.putdata(tile)
     frames.paste(img, (0, i * 16))
 frames.save(f"{OUT}/goodluck_end_portal.png")
-print(len(FILES) + 1, "textures in", os.path.relpath(OUT, ROOT))
+# the beam: a third of its pixels white or nearly, the rest clear, 32 rows as Minecraft's beam shows on 4 nodes
+rng = random.Random(1029)
+beam = Image.new("RGBA", (16, 32), (255, 255, 255, 0))
+for y in range(32):
+    for x in range(16):
+        if rng.random() < 0.3:
+            g = rng.randint(220, 255)
+            beam.putpixel((x, y), (g, g, g, 255))
+beam.save(f"{OUT}/goodluck_end_crystal_beam.png")
+print(len(FILES) + 2, "textures in", os.path.relpath(OUT, ROOT))

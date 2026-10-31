@@ -729,7 +729,8 @@ goodluck_swamp_vine.png	{block/vine}^[multiply:#6a7039
 goodluck_swamp_flower_pot.png	{block/flower_pot}
 
 # The End (goodluck_end): its creatures, blocks and items, the dragon and the sky; the end portal's surface stays the
-# game's own (Minecraft draws it with a shader)
+# game's own (Minecraft draws it with a shader); the crystal's beam shows the top 32 rows of Minecraft's, as many as it
+# draws on 4 nodes
 goodluck_end_enderman.png	{entity/enderman/enderman}
 goodluck_end_enderman_eyes.png	{entity/enderman/enderman_eyes}
 goodluck_end_silverfish.png	{entity/silverfish/silverfish}
@@ -737,6 +738,7 @@ goodluck_end_dragon.png	{entity/enderdragon/dragon}
 goodluck_end_dragon_eyes.png	{entity/enderdragon/dragon_eyes}
 goodluck_end_dragon_fireball.png	{entity/enderdragon/dragon_fireball}
 goodluck_end_end_crystal.png	{entity/end_crystal/end_crystal}
+goodluck_end_crystal_beam.png	{entity/end_crystal/end_crystal_beam}^[verticalframe:8:0
 goodluck_end_sky.png	{environment/end_sky}
 goodluck_end_ender_pearl.png	{item/ender_pearl}
 goodluck_end_ender_eye.png	{item/ender_eye}

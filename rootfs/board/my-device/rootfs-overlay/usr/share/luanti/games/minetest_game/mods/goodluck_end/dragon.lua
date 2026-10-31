@@ -162,6 +162,73 @@ core.register_entity("goodluck_end:dragon_head", {
 	end,
 })
 
+-- The healing beam, Minecraft's crystal beam: a tube in the crystal's glass, its rings sliding toward it, turned and
+-- stretched to the dragon on the steps the server sends objects on, which the client eases between; gone with the
+-- crystal, with the dragon (or its dying) and when the dragon is out of reach
+local STEP = tonumber(core.settings:get("dedicated_server_step")) or 0.09
+local send_timer, sending = 0, false
+local function aim(beam, interval)
+	local dragon, crystal = beam._dragon, beam._crystal
+	local e = dragon:get_luaentity()
+	local cp = crystal:get_pos()
+	local dp = dragon:get_pos()
+	if not e or e._beam ~= beam or e._phase == "dying" or not cp or vector.distance(dp, cp) > 32 then
+		return false
+	end
+	local from = beam._from
+	local dx, dy, dz = dp.x - from.x, dp.y + 2 - from.y, dp.z - from.z
+	-- (nothing sent while the dragon sits)
+	local last = beam._d
+	if last and math.abs(last[1] - dx) + math.abs(last[2] - dy) + math.abs(last[3] - dz) < 0.05 then
+		return true
+	end
+	beam._d = {dx, dy, dz}
+	local len = math.max(0.1, math.sqrt(dx * dx + dy * dy + dz * dz))
+	beam.object:set_rotation({x = math.asin(dy / len), y = math.atan2(-dx, dz), z = 0})
+	beam.object:set_bone_override("beam", {scale = {vec = {x = 1, y = 1, z = len}, absolute = true,
+		interpolation = interval}})
+	return true
+end
+
+core.register_entity("goodluck_end:crystal_beam", {
+	initial_properties = {physical = false, pointable = false, static_save = false, visual = "mesh",
+		mesh = "goodluck_models_crystal_beam.glb", textures = {"goodluck_end_crystal_beam.png"},
+		backface_culling = false, shaded = false, glow = 15},
+	on_activate = function(self)
+		self.object:set_animation({x = 0, y = 0.6}, 1, 0, true)
+		self._from, self._t = self.object:get_pos(), 0
+	end,
+	on_step = function(self, dtime)
+		self._t = self._t + dtime
+		if sending then
+			local interval = self._t
+			self._t = 0
+			if not (self._dragon and aim(self, interval)) then
+				self.object:remove()
+			end
+		end
+	end,
+})
+
+-- the beam to the crystal that heals it, kept while it is the same one
+local function show_beam(e, crystal)
+	local b = e._beam
+	if b and crystal and b._crystal:get_luaentity() == crystal:get_luaentity() and b.object:get_pos() then
+		return
+	end
+	if b and b.object:get_pos() then
+		b.object:remove()
+	end
+	e._beam = nil
+	local obj = crystal and core.add_entity(vector.offset(crystal:get_pos(), 0, 1, 0), "goodluck_end:crystal_beam")
+	local beam = obj and obj:get_luaentity()
+	if beam then
+		beam._dragon, beam._crystal = e.object, crystal
+		e._beam = beam
+		aim(beam, 0)
+	end
+end
+
 -- the holding pattern's ring: 12 nodes 60 out, Minecraft's outer path nodes, at its heights
 local function ring_node(i, y0)
 	local a = 2 * math.pi * (i % 12) / 12
@@ -629,17 +696,9 @@ core.register_entity(D, {
 				end
 			end
 			self._crystal = crystal and crystal:get_pos()
-			if crystal then
-				if self._hp < MAX then
-					self._hp = math.min(MAX, self._hp + 1)
-				end
-				local from = vector.offset(crystal:get_pos(), 0, 1, 0)
-				local to = vector.offset(pos, 0, 2, 0)
-				local n = math.min(24, math.floor(near))
-				for i = 0, n do
-					core.add_particle({pos = vector.add(from, vector.multiply(vector.subtract(to, from), i / n)),
-						expirationtime = 0.55, size = 2, glow = 14, texture = "goodluck_nether_portal_particle.png^[multiply:#f0a0ff"})
-				end
+			show_beam(self, crystal)
+			if crystal and self._hp < MAX then
+				self._hp = math.min(MAX, self._hp + 1)
 			end
 			boss_bars(self)
 			remember(self)
@@ -801,6 +860,12 @@ local function hold_pillars(on)
 end
 local fight_timer = 0
 core.register_globalstep(function(dtime)
+	-- the server's own timer for sending objects, kept alike (globalsteps run before the objects')
+	send_timer = send_timer + dtime
+	sending = send_timer > STEP
+	if sending then
+		send_timer = send_timer - STEP
+	end
 	fight_timer = fight_timer + dtime
 	if fight_timer < 2 then
 		return
