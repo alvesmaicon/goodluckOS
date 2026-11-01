@@ -37,7 +37,7 @@ An uncompromisingly fast, small, modern, and feature-rich custom firmware for A2
 - The sound goes to the headphones when they're plugged in and back to the speaker when they come out (A33), and FN+DPAD_DOWN switches it by hand
 - If the screen is on, the LEDs are off. Nothing blinding you while you're playing in the dark
 - Comes stock with Chocolate Doom, ready to play
-- Comes with Luanti, a block-building game in the style of Minecraft: Minetest Game with mods that bring it close to Minecraft, from its monsters, villages and horses to the Nether and the End, played with the console's buttons (see [Luanti](docs/ports/luanti.md))
+- Luanti, a block-building game in the style of Minecraft, as an app for the App Installer: Minetest Game with mods that bring it close to Minecraft, from its monsters, villages and horses to the Nether and the End, played with the console's buttons (see [Luanti for goodluckOS](https://github.com/alvesmaicon/luanti/blob/handheld/5.18/goodluckos/README.md))
 - Second SD card (TF-2 slot) for more games, with its own launcher tab
 - Music and video player (mpv): Music and Videos tabs in the launcher, played full screen with the console's buttons, with speed (0.25x to 2x) and zoom (up to 4x, moved with the right stick) for videos
 - Comes stock with Retroarch and several optimized cores (PCSX-ReArmed, Snes9x, QuickNES, DOSbox, Genesis Plus GX, mGBA, etc)
@@ -181,7 +181,7 @@ The same list is in System Settings -> Input Settings, next to a button tester.
 
 ### Luanti
 
-Luanti, a block-building game in the style of Minecraft, has [a page of its own](docs/ports/luanti.md): how it plays and [its controls](docs/ports/luanti.md#controls), updating it, the engine's patches and the mods.
+Luanti, a block-building game in the style of Minecraft, is an app from [its own repository](https://github.com/alvesmaicon/luanti/blob/handheld/5.18/goodluckos/README.md): how to install it, how it plays and [its controls](https://github.com/alvesmaicon/luanti/blob/handheld/5.18/goodluckos/README.md#controls), the engine's changes and the mods.
 
 ## System Settings
 Opened with START from the launcher, which it is part of: there's no loading screen on the way in or out, and the launcher comes back as you left it. The sections are on the left, and the page of the selected one on the right:
@@ -326,7 +326,7 @@ To add custom art to Puppy, add an image file into the `icons` folder in your ro
 
 Puppy also reads a `gamelist.xml` in the rom folder (as written by Skraper or EmulationStation): it takes each game's name, description, year/genre/players and image from it. An image in `icons` still wins over the gamelist's. With the interface in another language, a `gamelist.<code>.xml` next to it (e.g. `gamelist.pt-BR.xml`, written by a scraper pass in that language) supplies that language's names, descriptions and genres; images and anything it lacks still come from `gamelist.xml`. Big images are scaled down once and cached in `~/.cache/puppy/thumbs`.
 
-Luanti can be updated from a package (`luanti-*.tar.xz`): copy it to the `updates` folder of HOME (over USB, where Windows shows the console as a drive) and run Update Luanti, next to Luanti in Games. A package holds all of Luanti, the engine and the game, so any one can be installed over any older version without the ones in between; an older package or the same version is refused. It checks every file before changing anything, keeps what was installed, and shows each step on the screen. Undo Luanti update goes back to the version before, and undoing again returns to the update. Update Luanti also gives Luanti the look of your own Minecraft (Java Edition): copy its `.minecraft` folder (the one with `versions` and `assets` in it; `%APPDATA%\.minecraft` on Windows) to HOME, as `minecraft` or `.minecraft`, and run Update Luanti. It reads the client jar with the most textures among the versions there and takes every texture Luanti has a place for (ground, ores, wood, plants, tools, armor in the inventory and worn, Steve as the player, the chest, the bed, the boat, the arrow, the farm animals, the horses, the villagers, the monsters...), and from the `assets` folder the sounds (steps, digging, breaking and placing by material, doors, chests, fire, the animals and monsters, hits, the bow, eating, experience, the anvil, carving a pumpkin) and the music (the 32 tracks of a survival game, the 6 more of a creative one, the 3 under water and the 9 of the main menu, about 160 MB, copied once), then says how many it found; a texture or sound that version lacks keeps Luanti's own. The interface takes Minecraft's too: the hearts (poisoned and withered too), hunger, armor and breath bars, the status effects' icons, the experience bar, the hotbar, the inventory's window, slots and tabs, the enchanting table's window and slots, the crosshair, the view from inside a carved pumpkin, the sun and the moon. The music plays as in Minecraft: a track at a time, 10 to 20 minutes apart in a game and within half a minute on the menu, at the Music volume of the settings. Nothing of Minecraft's ships with goodluckOS, and nothing leaves the card; goodluckOS is not affiliated with Mojang or Microsoft, and Minecraft is their trademark. With the folder deleted, the next Update Luanti brings Luanti's own textures and sounds back and removes the music.
+Luanti comes as an app: copy its zip to the `apps` folder of HOME and install it in System Settings -> System -> App Installer. Its [page](https://github.com/alvesmaicon/luanti/blob/handheld/5.18/goodluckos/README.md) says where to get it and how to give it the look of your own Minecraft.
 
 ### Second card (TF-2 slot)
 A FAT32 or exFAT card in the second slot shows up in the launcher, in its own External Card tab and in each system's tab. The card is found when the console starts; to swap it with the console on, use System Settings -> Storage: Eject card before taking it out, and Detect card after putting one in. Put the games in a `roms` folder with the same system folders as HOME (`roms/snes`, `roms/psx`, `roms/gba`...), and covers in each folder's `icons`. A card with no `roms` folder gets the folders created the first time it's mounted; existing folders and files are never touched. Music and videos go in `media/music` and `media/videos`.
@@ -367,7 +367,7 @@ With the confirm button on B, A and B swap here too.
 The A33 decodes video in software: up to 640x480 H.264 plays smoothly, 1080p and H.265 don't. Convert bigger videos on your PC first, e.g. `ffmpeg -i in.mp4 -vf scale=640:480:force_original_aspect_ratio=decrease:force_divisible_by=2 -c:v libx264 -tune fastdecode -crf 23 -c:a aac -ac 2 out.mkv`. On Windows, macOS or Linux, [convert-videos](convert-videos/README.md) does this for a whole folder, turns portrait videos to fill the screen and saves a frame of each one as its art.
 
 ## Does goodluckOS come with any games?
-goodluckOS ships with Chocolate Doom and a shareware Doom wad, and with Luanti and Minetest Game (free software).
+goodluckOS ships with Chocolate Doom and a shareware Doom wad. Luanti and Minetest Game (free software) come as an app ([Luanti for goodluckOS](https://github.com/alvesmaicon/luanti/blob/handheld/5.18/goodluckos/README.md)).
 
 goodluckOS will never be distributed with unauthorized copyright-protected materials. If you own the copyright to any games (or know of any permissively-licensed/CC games) that you think might make a good fit, please open an Issue! We would love to include more small, high-quality games with the OS by default.
 
@@ -378,12 +378,12 @@ The Allwinner A23/A33 is a 32-bit SoC. This means that 64-bit software simply _c
 With that said, most of the games people actually care about (Stardew Valley, Half-Life 1, n64 re-comps, Android GameMaker games, OpenMW, OpenRCT2, + more) are 32-bit games, and therefore should theoretically work if anyone cares to create 32-bit ports.
 
 ### Ports in this fork
-Four ports are in progress here. Luanti is part of the system image; the others need your own copy of the game, so each one is built on a PC from your files: [Ports](docs/ports/README.md) says how, and how each one runs.
+Four ports are in progress here. Luanti is an app from its own repository; the others need your own copy of the game, so each one is built on a PC from your files: [Ports](docs/ports/README.md) says how, and how each one runs.
 
-| [Luanti](docs/ports/luanti.md) | [Stardew Valley](docs/ports/README.md#stardew-valley) | [Ocarina of Time](docs/ports/README.md#ocarina-of-time) | [Majora's Mask](docs/ports/README.md#majoras-mask) |
+| [Luanti](https://github.com/alvesmaicon/luanti/blob/handheld/5.18/goodluckos/README.md) | [Stardew Valley](docs/ports/README.md#stardew-valley) | [Ocarina of Time](docs/ports/README.md#ocarina-of-time) | [Majora's Mask](docs/ports/README.md#majoras-mask) |
 | --- | --- | --- | --- |
-| ![Luanti](docs/ports/luanti.png) | ![Stardew Valley](docs/ports/stardew-valley.png) | ![Ocarina of Time](docs/ports/ocarina-of-time.png) | ![Majora's Mask](docs/ports/majoras-mask.png) |
-| Free, in the system image | The game from Steam | Your ROM | Your ROM |
+| ![Luanti](https://raw.githubusercontent.com/alvesmaicon/luanti/handheld/5.18/goodluckos/luanti.png) | ![Stardew Valley](docs/ports/stardew-valley.png) | ![Ocarina of Time](docs/ports/ocarina-of-time.png) | ![Majora's Mask](docs/ports/majoras-mask.png) |
+| Free, an app (one zip) | The game from Steam | Your ROM | Your ROM |
 
 # Development
 
