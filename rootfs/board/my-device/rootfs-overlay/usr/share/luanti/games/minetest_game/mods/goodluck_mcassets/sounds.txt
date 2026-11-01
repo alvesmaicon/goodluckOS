@@ -191,3 +191,20 @@ goodluck_end_dragon	mob/enderdragon/growl1 mob/enderdragon/growl2 mob/enderdrago
 goodluck_end_dragon_hurt	mob/enderdragon/hit1 mob/enderdragon/hit2 mob/enderdragon/hit3 mob/enderdragon/hit4
 goodluck_end_dragon_wings	mob/enderdragon/wings1 mob/enderdragon/wings2 mob/enderdragon/wings3 mob/enderdragon/wings4 mob/enderdragon/wings5 mob/enderdragon/wings6
 goodluck_end_dragon_death	mob/enderdragon/end
+
+# The End cities: the shulker, its bullet and the shulker box; the item frame
+goodluck_end_shulker	entity/shulker/ambient1 entity/shulker/ambient2 entity/shulker/ambient3 entity/shulker/ambient4 entity/shulker/ambient5 entity/shulker/ambient6 entity/shulker/ambient7
+goodluck_end_shulker_open	entity/shulker/open1 entity/shulker/open2 entity/shulker/open3 entity/shulker/open4 entity/shulker/open5
+goodluck_end_shulker_close	entity/shulker/close1 entity/shulker/close2 entity/shulker/close3 entity/shulker/close4 entity/shulker/close5
+goodluck_end_shulker_hurt	entity/shulker/hurt1 entity/shulker/hurt2 entity/shulker/hurt3 entity/shulker/hurt4
+goodluck_end_shulker_hurt_closed	entity/shulker/hurt_closed1 entity/shulker/hurt_closed2 entity/shulker/hurt_closed3 entity/shulker/hurt_closed4 entity/shulker/hurt_closed5
+goodluck_end_shulker_death	entity/shulker/death1 entity/shulker/death2 entity/shulker/death3 entity/shulker/death4
+goodluck_end_shulker_shoot	entity/shulker/shoot1 entity/shulker/shoot2 entity/shulker/shoot3 entity/shulker/shoot4
+goodluck_end_shulker_bullet_hit	entity/shulker_bullet/hit1 entity/shulker_bullet/hit2 entity/shulker_bullet/hit3 entity/shulker_bullet/hit4
+goodluck_end_shulker_box_open	block/shulker_box/open
+goodluck_end_shulker_box_close	block/shulker_box/close
+goodluck_end_item_frame_place	entity/itemframe/place1 entity/itemframe/place2 entity/itemframe/place3 entity/itemframe/place4
+goodluck_end_item_frame_add	entity/itemframe/add_item1 entity/itemframe/add_item2 entity/itemframe/add_item3 entity/itemframe/add_item4
+goodluck_end_item_frame_remove	entity/itemframe/remove_item1 entity/itemframe/remove_item2 entity/itemframe/remove_item3 entity/itemframe/remove_item4
+goodluck_end_item_frame_rotate	entity/itemframe/rotate_item1 entity/itemframe/rotate_item2 entity/itemframe/rotate_item3 entity/itemframe/rotate_item4
+goodluck_end_item_frame_break	entity/itemframe/break1 entity/itemframe/break2 entity/itemframe/break3

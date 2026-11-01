@@ -3,7 +3,9 @@
 -- strongholds are and how they are laid out (strongholds.lua, stronghold.lua, drawn in the map generator's threads),
 -- their blocks, the end portal frame and the portal (portal.lua). The End itself, its island, pillars and crystals,
 -- far over the world (realm.lua, endgen.lua in the map generator's threads), its outer islands (islands.lua) with
--- chorus (chorus.lua) and gateways (gateway.lua), purpur and end rods (purpur.lua), and its dragon (dragon.lua)
+-- chorus (chorus.lua) and gateways (gateway.lua), purpur and end rods (purpur.lua), and its dragon (dragon.lua); the
+-- End cities (cities.lua, city.lua, drawn in the map generator's threads; treasure.lua), their blocks (city_blocks.lua),
+-- the shulker (shulker.lua) and the shulker box (shulker_box.lua)
 goodluck_end = {}
 local E = goodluck_end
 local path = core.get_modpath("goodluck_end")
@@ -20,6 +22,14 @@ dofile(path .. "/gateway.lua")
 E.islands = dofile(path .. "/islands.lua")
 core.register_mapgen_script(path .. "/islands.lua")
 core.register_mapgen_script(path .. "/endgen.lua")
+E.cities = dofile(path .. "/cities.lua")
+core.register_mapgen_script(path .. "/cities.lua")
+E.city = dofile(path .. "/city.lua")
+core.register_mapgen_script(path .. "/city.lua")
+dofile(path .. "/city_blocks.lua")
+dofile(path .. "/shulker.lua")
+dofile(path .. "/shulker_box.lua")
+dofile(path .. "/treasure.lua")
 E.strongholds = dofile(path .. "/strongholds.lua")
 core.ipc_set("goodluck_end:rings", E.strongholds.rings)
 core.register_mapgen_script(path .. "/stronghold.lua")

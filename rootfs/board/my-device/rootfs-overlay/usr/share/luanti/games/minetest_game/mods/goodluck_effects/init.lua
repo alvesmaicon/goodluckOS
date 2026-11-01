@@ -401,6 +401,15 @@ E.register("slow_falling", {description = S("Slow Falling"), color = "#f3cfb9",
 		slow[player:get_player_name()] = nil
 		goodluck_physics.set(player, "goodluck_effects:slow_falling", nil)
 	end})
+-- Minecraft's 0.05 a tick up a level, the speed going a fifth of the way there each tick and keeping 0.98 of itself:
+-- 0.91 a second a level, no gravity meanwhile (the shulker's bullet)
+E.register("levitation", {description = S("Levitation"), color = "#ceffff", bad = true,
+	physics = function() return {gravity = 0} end,
+	on_step = function(player, level, dtime)
+		local vy = player:get_velocity().y
+		local steady = level * 0.196 / 0.216
+		player:add_velocity({x = 0, y = steady + (vy - steady) * 0.784 ^ (dtime * 20) - vy, z = 0})
+	end})
 -- never below half a heart
 E.register("poison", {description = S("Poison"), color = "#87a363", bad = true, interval = every(25),
 	on_interval = function(player) hurt(player, "poison", 1) end})

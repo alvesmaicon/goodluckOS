@@ -146,6 +146,62 @@ function I.biome(x, z)
 	return "barrens"
 end
 
+-- The ground's top at x, z, as endgen.lua makes it: Minecraft's density from the islands' value and the noise at the
+-- grid's corners about the column (every 8 across and 4 up from the End's floor), blended along z, then y, then x the
+-- way endgen.lua adds it up; nil where the column has no end stone. For the End cities in any thread; its noise and
+-- density are endgen.lua's own, and kept in I for it
+local NOISE = {offset = 0, scale = 0.25, spread = {x = 96 / 8, y = 48 / 4, z = 96 / 8}, seed = 7480, octaves = 4,
+	persistence = 0.5, lacunarity = 2}
+local function density(island, jy, n)
+	local v = island + n
+	local top = max(0, min(1, 1 - (jy - 56) / 256))
+	v = -23.4375 + top * (v + 23.4375)
+	local low = max(0, min(1, (jy - 4) / 28))
+	return (-0.234375 + low * (v + 0.234375)) * 0.64
+end
+I.NOISE, I.density = NOISE, density
+local noise, corner = nil, {}
+function I.ground(x, z, ymin)
+	local x0, z0 = floor(x / 8) * 8, floor(z / 8) * 8
+	if I.columns(x0, z0, 2, 2, 8, corner) <= -0.5 then
+		return nil
+	end
+	noise = noise or core.get_value_noise(NOISE)
+	local fz, ox = (z - z0) / 8, x - x0
+	local function level(jy)
+		local d = {}
+		for k = 1, 4 do
+			local cx, cz = x0 + (k - 1) % 2 * 8, z0 + floor((k - 1) / 2) * 8
+			d[k] = density(corner[k], jy, noise:get_3d({x = cx / 8, y = (ymin + jy) / 4, z = cz / 8}))
+		end
+		return d[1] + (d[3] - d[1]) * fz, d[2] + (d[4] - d[2]) * fz
+	end
+	local function stone(a, b)
+		if a <= 0 and b <= 0 then
+			return false
+		end
+		local d, dd = a, (b - a) / 8
+		for _ = 1, ox do
+			d = d + dd
+		end
+		return d > 0
+	end
+	local a1, b1 = level(100)
+	if stone(a1, b1) then
+		return ymin + 100
+	end
+	for g = 24, 0, -1 do
+		local a0, b0 = level(g * 4)
+		for y = g * 4 + 3, g * 4, -1 do
+			local fy = (y - g * 4) / 4
+			if stone(a0 + (a1 - a0) * fy, b0 + (b1 - b0) * fy) then
+				return ymin + y
+			end
+		end
+		a1, b1 = a0, b0
+	end
+end
+
 -- the map generator's threads share it with endgen.lua
 if core.save_gen_notify then
 	goodluck_end_islands = I
