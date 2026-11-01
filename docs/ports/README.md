@@ -6,7 +6,7 @@ All four are work in progress and have only run on my console (GA36-MB, A33, 512
 
 | Game | Built on | You supply | On the A33 | Where |
 | --- | --- | --- | --- | --- |
-| [Luanti](luanti.md) | Luanti 5.18 with 45 patches, Minetest Game, 63 mods | nothing | 20 FPS in a forest, 10 over a lake | `rootfs/package/luanti` |
+| [Luanti](https://github.com/alvesmaicon/luanti/blob/handheld/5.18/goodluckos/README.md) | Luanti 5.18 with 51 patches, Minetest Game, 63 mods | nothing (an app) | 20 FPS in a forest, 10 over a lake | [alvesmaicon/luanti](https://github.com/alvesmaicon/luanti) |
 | [Stardew Valley](#stardew-valley) | Mono, MonoGame, gl4es | the game, from Steam | about 19 FPS on the farm | `dev/stardew` |
 | [Ocarina of Time](#ocarina-of-time) | Ship of Harkinian 9.3.0 | your ROM | 20 FPS, as on the N64 | `dev/zelda` |
 | [Majora's Mask](#majoras-mask) | 2 Ship 2 Harkinian 5.0.1 | your ROM | not measured yet | `dev/zelda` |
@@ -21,9 +21,7 @@ The examples copy to the card in a card reader on a Mac (`/Volumes/HOME`). MTP w
 
 ## Luanti
 
-![Luanti on the console: a lake, with the far shore in view](luanti.png)
-
-Luanti is a block-building engine, here with Minetest Game and 63 mods that bring it close to Minecraft. It is part of the system image, so there is nothing to supply or install. It has [a page of its own](luanti.md): how it plays and its controls, updating it, the engine and its 45 patches, the mods and their licenses, and the art made for it.
+Luanti is a block-building engine, here with Minetest Game and 63 mods that bring it close to Minecraft. It is an app now, built and documented in [its own repository](https://github.com/alvesmaicon/luanti/blob/handheld/5.18/goodluckos/README.md): copy its zip to `HOME/apps` and install it in System Settings -> System -> App Installer. Nothing of yours to supply.
 
 ## Stardew Valley
 

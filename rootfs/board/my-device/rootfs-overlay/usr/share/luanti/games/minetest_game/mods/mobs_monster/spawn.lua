@@ -1,1 +1,0 @@
--- empty: goodluck_monsters spawns the monsters now, Minecraft's classic ones
