@@ -9,6 +9,7 @@
 
 #include "app.h"
 #include "model.h"
+#include "system/apps.h"
 #include "system/audio.h"
 #include "system/hud.h"
 #include "keyboard.h"
@@ -70,7 +71,7 @@ public:
 private:
     enum class Page { Display, Interface, Overlay, DateTime, Storage, System, Input,
                       Tabs, Shortcuts, Info, Network, Scraper, ScraperSystems,
-                      ScraperRun, Resize, Credits };
+                      ScraperRun, Apps, Resize, Credits };
     struct Cursor {
         int sel = -1;       // the selected row, -1 for none (a page with nothing to change scrolls)
         int scroll = 0;     // the first row on screen
@@ -102,6 +103,8 @@ private:
     std::vector<ScraperFolder> scrapeFolders;
     Uint32 runRead = 0, watchSince = 0;
     bool watchRun = false, watchCheck = false;
+    std::vector<AppItem> appZipList, installedList;   // App Installer's two lists
+    bool appsChanged = false;       // an app was installed or uninstalled: the launcher loads its tabs again
     Keyboard kb;                    // typing the ScreenScraper account
     std::string typed;
     std::vector<std::pair<std::string, std::string>> credits;   // the Credits section only shows when there are some
@@ -149,6 +152,10 @@ private:
     std::vector<Row> scraperSystemsPage();
     std::vector<Row> scraperRunPage();
     void startScraping();
+    std::vector<Row> appsPage();
+    void reloadApps();
+    void askInstall(const AppItem& zip);
+    void askUninstall(const AppItem& installed);
     void type(const char* prompt, const std::string& value, std::function<void(const std::string&)> done);
     std::vector<Row> inputPage();
     std::vector<Row> shortcutsPage();

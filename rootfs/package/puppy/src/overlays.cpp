@@ -211,3 +211,30 @@ void DialogScreen::render(Ui& ui) {
 Hints DialogScreen::hints() const {
     return {{"A", tr("Select")}, {"B", tr("Close")}};
 }
+
+WorkScreen::WorkScreen(App& app, std::string text, Work work, std::function<void(const std::string&)> done)
+    : Screen(app), text(std::move(text)), done(std::move(done)) {
+    worker = std::thread([this, work = std::move(work)] {
+        result = work([this](float f) { percent = (int)(f * 100); });
+        finished = true;
+    });
+}
+
+WorkScreen::~WorkScreen() {
+    if (worker.joinable()) worker.join();
+}
+
+void WorkScreen::render(Ui& ui) {
+    shown = percent;
+    ui.status(text + " " + std::to_string(shown) + "%");
+}
+
+void WorkScreen::tick(Uint32) {
+    if (percent != shown) app.redraw();
+    if (!finished || !done) return;
+    worker.join();
+    const auto then = std::move(done);
+    done = nullptr;
+    app.pop();
+    then(result);
+}

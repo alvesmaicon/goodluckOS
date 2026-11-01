@@ -9,6 +9,7 @@
 #include <set>
 
 #include "config.h"
+#include "system/apps.h"
 #include "util.h"
 
 struct Archive {
@@ -42,7 +43,8 @@ static void upsert(std::vector<Record>& records, const Record& rec) {
     records.push_back(rec);
 }
 
-static void parseAppsFile(const std::string& path, std::vector<Record>& records) {
+static void parseAppsFile(const std::string& path, std::vector<Record>& records,
+                          const char* defaultCategory = "Applications") {
     std::ifstream in(path);
     if (!in) return;
 
@@ -57,7 +59,7 @@ static void parseAppsFile(const std::string& path, std::vector<Record>& records)
     auto flush = [&]() {
         if (section == "ENTRY") {
             Record rec;
-            rec.entry.category    = get("CATEGORY").empty() ? "Applications" : get("CATEGORY");
+            rec.entry.category    = get("CATEGORY").empty() ? defaultCategory : get("CATEGORY");
             rec.entry.name        = get("NAME");
             rec.entry.id          = rec.entry.name;
             rec.entry.description = get("DESCRIPTION");
@@ -477,6 +479,32 @@ std::vector<Category> loadCatalog() {
             }
         }
     }
+    // Apps installed by the App Installer, each run in its own folder: CATEGORY picks the tab (Games is
+    // also in All Games), Apps without one or with System, which would hide it in the START menu
+    recoverApps();
+    std::vector<Record> installed;
+    std::error_code ec;
+    for (fs::directory_iterator it(cfg.installedApps, ec), end; !ec && it != end; it.increment(ec)) {
+        const fs::path dir = it->path();
+        std::error_code ec2;
+        if (dir.filename().string().empty() || dir.filename().string()[0] == '.' || !it->is_directory(ec2)) continue;
+        std::vector<Record> found;
+        parseAppsFile((dir / "app.puppy").string(), found, kAppsCategory);
+        for (auto& rec : found) {
+            if (rec.isArchive) continue;
+            Entry& e = rec.entry;
+            if (e.category == kMenuCategory) e.category = kAppsCategory;
+            e.command = "cd " + shellQuote(dir.string()) + " && " + e.command;
+            if (!e.iconPath.empty() && e.iconPath[0] != '/') e.iconPath = (dir / e.iconPath).string();
+            if (!e.video.empty() && e.video[0] != '/') e.video = (dir / e.video).string();
+            installed.push_back(rec);
+        }
+    }
+    std::sort(installed.begin(), installed.end(), [](const Record& l, const Record& r) {
+        return lower(l.entry.name) < lower(r.entry.name);
+    });
+    for (const auto& rec : installed) upsert(records, rec);
+
     for (const auto& path : cfg.esSystems) parseEsSystems(path, records);
 
     std::vector<Category> cats;

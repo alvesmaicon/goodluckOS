@@ -3,7 +3,8 @@
 An app is **a folder with an `app.puppy` file in it**. To share it, zip the folder.
 
 Players copy the zip into the `apps` folder on HOME (over USB or with the card in a PC), open
-**System > App Installer** and install it. The app then shows up in the launcher's **Apps** row.
+**System Settings > System > App Installer** and install it. The app then shows up in the launcher's
+**Apps** tab, or in the tab its `CATEGORY` names.
 
 ```
 HelloWorld.zip
@@ -38,8 +39,9 @@ TERMINAL=1
 | `ICON` | | A PNG in the app's folder, at most 1024 × 1024. Up to 192 × 128 it is drawn at its own size in the middle of the tile (48 × 48 matches the system icons); bigger pictures are scaled to cover the tile, like box art. |
 | `VERSION` | | Shown by the installer. |
 | `TERMINAL` | | Any value: a text program, run on the console instead of the screen. |
+| `CATEGORY` | | The launcher tab: `Games` puts a game with the native games, in All Games too. Without it (or with `System`), the Apps tab. |
 
-`CATEGORY` is ignored: installed apps always go in the Apps row. Lines starting with `#` are comments.
+Lines starting with `#` are comments.
 
 ## The program
 

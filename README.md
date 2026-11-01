@@ -43,7 +43,7 @@ An uncompromisingly fast, small, modern, and feature-rich custom firmware for A2
 - Comes stock with Retroarch and several optimized cores (PCSX-ReArmed, Snes9x, QuickNES, DOSbox, Genesis Plus GX, mGBA, etc)
 - Games perform very well. Metal Gear Solid 1 is completely playable at reasonable framerates
 - Comes with a custom, optimized launcher application, with tabs per system, search, favourites, play time and game artwork/descriptions from `gamelist.xml`
-- System Settings, in the launcher: brightness, volume, audio output, launcher options, language, interface font, overlay, date and time, storage (second card, trash, Resize Home), power mode (Battery saver, Balanced, Performance), system info, a button tester and a restore of the default settings
+- System Settings, in the launcher: brightness, volume, audio output, launcher options, language, interface font, overlay, date and time, storage (second card, trash, Resize Home), power mode (Battery saver, Balanced, Performance), system info, an app installer, a button tester and a restore of the default settings
 - Translatable interface, with English and Brazilian Portuguese included (see [Translations](#translations))
 - Autostart any application on boot, including games or a front-end like EmulationStation (coming soon)
 - USB terminal access for remote debugging. Log in with `sudo screen /dev/ttyACM* 115200` and `root:root`
@@ -240,6 +240,7 @@ System Settings
 │   │   ├── ScreenScraper account: User, Password, Check the account
 │   │   ├── What to get: Games (Missing only / All), Picture, Videos, Region, Systems ─ which ROM folders (those of the launcher's tabs)
 │   │   └── Scrape: Start, Last run; while it runs, Scraping ─ Stop, Total (a bar over all the chosen systems), the system and game, the counts
+│   ├── App Installer ─ the app zips in HOME/apps to install or update, and the installed apps to uninstall
 │   └── Restore default settings
 ├── Input Settings
 │   ├── Confirm button: A (right) / B (bottom)
@@ -281,6 +282,8 @@ VT323, Pixelify Sans and Atkinson Hyperlegible are under the SIL Open Font Licen
 | ![System](docs/screenshots/system-settings-system.png) | ![Storage: the second card and the trash](docs/screenshots/system-settings-storage.png) |
 | Network over the USB cable | Scraper |
 | ![Network](docs/screenshots/system-settings-network.png) | ![Scraper](docs/screenshots/system-settings-scraper.png) |
+| App Installer: app zips in HOME/apps, and the installed apps | |
+| ![App Installer](docs/screenshots/system-settings-apps.png) | |
 
 ## Translations
 Every text in the launcher, System Settings included, and in the console's messages ("Restarting...") can be translated, and new languages need no code changes. Languages live in `/usr/share/goodluck/lang/<code>.lang` (in the repository: `rootfs/board/my-device/rootfs-overlay/usr/share/goodluck/lang/`) and show up in System Settings -> Interface -> Language as soon as the file is there.
@@ -341,6 +344,9 @@ To add a new emulator, find an appropriate armhf libretro core .so file (e.g. fr
 2. Anywhere in your HOME partition, e.g. a `cores` folder
 
 Then modify `HOME -> apps.puppy` with a new `[ARCHIVE]` entry, pointing the COMMAND to your new libretro core. Take a look at `HOME -> apps.puppy` for an exmaple.
+
+### Apps from zips
+An app made for goodluckOS comes as a zip: copy it into `HOME -> apps` and install it from System Settings -> System -> App Installer. It shows up in the launcher tab its `app.puppy` names (Games: also in All Games), or in an Apps tab. Installing a newer zip of the same app updates it and keeps its `data` folder; uninstalling deletes its folder. Making one: see [Making apps](docs/making-apps.md).
 
 ## How do I add music and videos?
 Copy them into `HOME -> media -> music` and `HOME -> media -> videos`. The Music and Videos tabs show up in the launcher once there's something in them. A folder (an album, a series) is one entry that plays whole, with its `cover.jpg` or `folder.jpg` as the art; a single file plays along with the rest of its folder. In the Showcase style, a video's trailer is 30 s of itself from a fifth of the way in (a series: its first episode's). Other art goes in the `icons` folder, named like the file or folder.

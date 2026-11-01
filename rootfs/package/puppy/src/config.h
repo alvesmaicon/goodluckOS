@@ -10,6 +10,7 @@ struct Config {
     std::vector<std::string> apps     = {"/usr/share/puppy/apps.puppy", "/home/player/apps.puppy"};
     std::vector<std::string> appsDirs = {"/home/player/.local/share/applications"};   // *.puppy files
     std::vector<std::string> esSystems;     // EmulationStation es_systems.cfg files to take systems from
+    std::string installedApps = "/home/player/apps";  // App Installer's apps: a folder each, with an app.puppy
     // goodluckOS's appd runs the picked app and closes Puppy meanwhile; with launch_command empty
     // (puppy.conf), Puppy writes the command to launch_file and quits, for a script that runs it
     std::string launchCommand = "doas appctl launch-application";
@@ -52,5 +53,6 @@ constexpr const char* kMostPlayedName = "Most Played";
 constexpr const char* kMenuCategory  = "System";   // apps.puppy category taken out of the tabs
 constexpr const char* kSettingsName  = "System Settings";   // entry of that category opened by START
 constexpr const char* kGamesCategory = "Games";    // apps.puppy category of native games: also in All Games, as ports
+constexpr const char* kAppsCategory  = "Apps";     // installed apps without a CATEGORY of their own
 
 bool loadConfig(int argc, char** argv);
