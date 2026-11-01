@@ -594,6 +594,13 @@ core.register_entity(D, {
 	},
 	_goodluck_dragon = true,
 	on_activate = function(self, staticdata)
+		-- (one woken after it came again elsewhere goes)
+		for _, ent in pairs(core.luaentities) do
+			if ent.name == D and ent ~= self and ent.object:get_pos() then
+				self.object:remove()
+				return
+			end
+		end
 		local s = core.deserialize(staticdata or "") or {}
 		self._hp = s.hp or MAX
 		self._v = vector.zero()
@@ -834,9 +841,10 @@ local function dragon_entity()
 		end
 	end
 end
--- (once: after that it is kept with its mapblock; one left inactive out of everyone's reach has its mapblock
--- forceloaded where it was last, so that it wakes up and flies back)
-local waking
+-- (once, its mapchunk made first: one added where the map isn't generated yet is lost when it is. After that it is
+-- kept with its mapblock; one left inactive out of everyone's reach has its mapblock forceloaded where it was last,
+-- so that it wakes up and flies back, and if it doesn't within 15 s it is lost: it comes again there, as it was)
+local waking, woken, coming
 function E.spawn_dragon()
 	local o = E.podium()
 	local kept = storage:get_string("dragon")
@@ -850,16 +858,36 @@ function E.spawn_dragon()
 	if kept ~= "" then
 		local s = core.deserialize(kept) or {}
 		if s.pos and not waking then
-			waking = vector.round(s.pos)
+			waking, woken = vector.round(s.pos), core.get_us_time()
 			core.forceload_block(waking, true, -1)
+		elseif waking and core.get_us_time() - woken > 15000000 then
+			core.forceload_free_block(waking, true)
+			waking = nil
+			core.add_entity(s.pos, D, core.serialize({hp = s.hp, phase = s.phase}))
+			core.log("action", ("[goodluck_end] the ender dragon was lost: back at %s, %s"):format(
+				core.pos_to_string(vector.round(s.pos)), s.phase or "hold"))
 		end
 		return
 	end
-	local obj = core.add_entity({x = 0, y = E.ymin + 128, z = 0}, D)
-	if obj then
-		remember(obj:get_luaentity())
-		core.log("action", "[goodluck_end] the ender dragon comes")
+	if coming then
+		return
 	end
+	coming = true
+	local at = {x = 0, y = E.ymin + 128, z = 0}
+	core.emerge_area(vector.offset(at, -16, -16, -16), vector.offset(at, 16, 16, 16), function(_, _, left)
+		if left > 0 then
+			return
+		end
+		coming = false
+		if dragon_entity() or storage:get_string("dragon") ~= "" then
+			return
+		end
+		local obj = core.add_entity(at, D)
+		if obj then
+			remember(obj:get_luaentity())
+			core.log("action", "[goodluck_end] the ender dragon comes")
+		end
+	end)
 end
 -- the pillars' tops kept active during the fight, so that their crystals heal it out of the players' reach too, as
 -- the whole End is loaded in Minecraft
