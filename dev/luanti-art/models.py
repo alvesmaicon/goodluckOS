@@ -170,4 +170,58 @@ frame = [("top", element((0, 0, 0), (16, 13, 16), {"up": (0, 0, 16, 16)})),
 write("goodluck_models_end_portal_frame.obj", None, (16, 16), lift=-0.5, groups=frame)
 write("goodluck_models_end_portal_frame_eye.obj", None, (16, 16), lift=-0.5,
       groups=frame + [("eye", element((4, 13, 4), (12, 16, 12), EYE))])
+
+# the end rod (goodluck_end), its base and its rod as its block model has them, standing on the face it is put on
+ROD_SIDE = {f: (0, 0, 2, 15) for f in ("north", "south", "west", "east")}
+write("goodluck_models_end_rod.obj", element((6, 0, 6), (10, 1, 10), {"down": (6, 6, 2, 2), "up": (2, 2, 6, 6),
+      **{f: (2, 6, 6, 7) for f in ("north", "south", "west", "east")}}) +
+      element((7, 1, 7), (9, 16, 9), {"up": (2, 0, 4, 2), **ROD_SIDE}), (16, 16), lift=-0.5)
+# The End cities' blocks (goodluck_end). The shulker box, closed and open (ShulkerBoxRenderer: the lid half a node up
+# and turned 270 degrees), standing as its block entity draws it facing up; on another face the engine turns it there
+def to_block(faces, f):
+    return [([f(*q) for q in c], uv) for c, uv in faces]
+
+
+def shulker_box(open_):
+    lid = posed(box(0, 0, -8, -16, -8, 16, 12, 16), (0, 16 if open_ else 24, 0),
+                (0, math.radians(270) if open_ else 0, 0))
+    base = posed(box(0, 28, -8, -8, -8, 16, 8, 16), (0, 24, 0))
+    return to_block(base + lid, lambda x, y, z: (8 + x, 24 - y, 8 - z))
+
+
+write("goodluck_models_shulker_box.obj", shulker_box(False), (64, 64), lift=-0.5)
+write("goodluck_models_shulker_box_open.obj", shulker_box(True), (64, 64), lift=-0.5)
+
+
+# the dragon head (DragonHeadModel: the dragon's head at 0.75, its jaw under it) as SkullBlockRenderer stands it on a
+# floor, and on a wall a quarter node in toward the wall and up
+def dragon_head(wall):
+    head = box(176, 44, -6, -1, -24, 12, 5, 16) + box(112, 30, -8, -8, -10, 16, 16, 16) + \
+        box(0, 0, -5, -12, -4, 2, 4, 6, mirror=True) + box(112, 0, -5, -3, -22, 2, 2, 4, mirror=True) + \
+        box(0, 0, 3, -12, -4, 2, 4, 6) + box(112, 0, 3, -3, -22, 2, 2, 4)
+    jaw = posed(box(176, 65, -6, 0, -16, 12, 4, 16), (0, 4, -8))
+    faces = [([(x * 0.75, y * 0.75 - 7.986666, z * 0.75) for x, y, z in c], uv) for c, uv in head + jaw]
+    if wall:
+        return to_block(faces, lambda x, y, z: (8 - x, 4 - y, 12 + z))
+    return to_block(faces, lambda x, y, z: (8 - x, -y, 8 + z))
+
+
+write("goodluck_models_dragon_head.obj", dragon_head(False), (256, 256), lift=-0.5)
+write("goodluck_models_dragon_wall_head.obj", dragon_head(True), (256, 256), lift=-0.5)
+
+# the item frame (template_item_frame: its back and the four sides of birch about it), laid on the floor, back down
+SIDE = {"down": (2, 0, 14, 1), "up": (2, 15, 14, 16)}
+FRAME_WOOD = element((2, 2, 15), (14, 3, 16), dict(SIDE, north=(2, 13, 14, 14), south=(2, 13, 14, 14),
+                                                   west=(15, 13, 16, 14), east=(0, 13, 1, 14))) + \
+    element((2, 13, 15), (14, 14, 16), dict(SIDE, north=(2, 2, 14, 3), south=(2, 2, 14, 3), west=(15, 2, 16, 3),
+                                             east=(0, 2, 1, 3))) + \
+    element((2, 3, 15), (3, 13, 16), {"north": (13, 3, 14, 13), "south": (2, 3, 3, 13), "west": (15, 3, 16, 13),
+                                       "east": (0, 3, 1, 13)}) + \
+    element((13, 3, 15), (14, 13, 16), {"north": (2, 3, 3, 13), "south": (13, 3, 14, 13), "west": (15, 3, 16, 13),
+                                         "east": (0, 3, 1, 13)})
+FRAME_BACK = element((3, 3, 15.5), (13, 13, 16), {"north": (3, 3, 13, 13), "south": (3, 3, 13, 13)})
+write("goodluck_models_item_frame.obj", None, (16, 16), lift=-0.5,
+      groups=[("wood", to_block(FRAME_WOOD, lambda x, y, z: (x, 16 - z, y))),
+              ("back", to_block(FRAME_BACK, lambda x, y, z: (x, 16 - z, y)))])
+
 print("meshes in", os.path.relpath(OUT, ROOT))

@@ -25,6 +25,12 @@ FILES = {
     "block/end_portal_frame_bottom": "frame_bottom", "block/end_portal_frame_eye": "frame_eye",
     "block/mossy_stone_bricks": "stonebrick_mossy", "block/cracked_stone_bricks": "stonebrick_cracked",
     "block/chiseled_stone_bricks": "stonebrick_chiseled", "block/iron_bars": "iron_bars",
+    "block/purpur_block": "purpur_block", "block/purpur_pillar_side": "purpur_pillar_side",
+    "block/purpur_pillar_top": "purpur_pillar_top", "block/end_rod": "end_rod", "block/chorus_plant": "chorus_plant",
+    "block/chorus_flower": "chorus_flower", "block/chorus_flower_dead": "chorus_flower_dead",
+    "item/chorus_fruit": "chorus_fruit", "item/popped_chorus_fruit": "chorus_fruit_popped",
+    "entity/endermite/endermite": "endermite",
+    "item/endermite_spawn_egg": "endermite_egg",
 }
 
 os.makedirs(OUT, exist_ok=True)
@@ -59,4 +65,44 @@ for y in range(32):
             g = rng.randint(220, 255)
             beam.putpixel((x, y), (g, g, g, 255))
 beam.save(f"{OUT}/goodluck_end_crystal_beam.png")
-print(len(FILES) + 2, "textures in", os.path.relpath(OUT, ROOT))
+
+
+# the ender chest: Pixel Perfection draws it for Minecraft's model before 1.15, which stood upside down; turned to the
+# layout since, as pixelperfection.py turns the chest
+def faces(u, v, w, h, d):
+    return [(u + d, v, w, d), (u + d + w, v, w, d), (u, v + d, d, h), (u + d, v + d, w, h), (u + d + w, v + d, d, h),
+            (u + d + w + d, v + d, w, h)]
+
+
+old = Image.open(SRC + "entity/chest/ender.png").convert("RGBA")
+chest = Image.new("RGBA", old.size)
+for box in ((0, 0, 14, 5, 14), (0, 19, 14, 10, 14), (0, 0, 2, 4, 1)):
+    crop = [old.crop((x, y, x + cw, y + ch)) for x, y, cw, ch in faces(*box)]
+    top, bottom = (c.transpose(Image.FLIP_LEFT_RIGHT) for c in crop[:2])
+    west, north, east, south = (c.rotate(180) for c in crop[2:])
+    for img, (x, y, _, _) in zip([bottom, top, west, south, east, north], faces(*box)):
+        chest.paste(img, (x, y))
+chest.save(f"{OUT}/goodluck_end_ender_chest.png")
+# the End cities: the shulker in its colours (this game's 15 dyes), its spark, shell and egg, the item frame, the
+# magenta glass, a firework's spark for the end rod's glitter (which Pixel Perfection lacks); the dragon head as worn
+# (its upper head's faces where a 128x64 skin has its hat, the rest masked off by goodluck_end_hat_mask.png, which the
+# Minecraft textures' line uses too); the Levitation icon for goodluck_effects
+CITY = {"entity/shulker/shulker": "shulker", "entity/shulker/spark": "shulker_spark",
+        "item/shulker_shell": "shulker_shell", "item/shulker_spawn_egg": "shulker_egg",
+        "block/item_frame": "item_frame", "item/item_frame": "item_frame_item",
+        "block/magenta_stained_glass": "magenta_stained_glass", "particle/spark_1": "glitter"}
+for colour in ("white", "light_gray", "gray", "black", "purple", "blue", "cyan", "green", "lime", "yellow", "brown",
+               "orange", "red", "magenta", "pink"):
+    CITY["entity/shulker/shulker_" + colour] = "shulker_" + colour
+for path, name in CITY.items():
+    shutil.copyfile(SRC + path + ".png", f"{OUT}/goodluck_end_{name}.png")
+mask = Image.new("L", (128, 64), 0)
+mask.paste(255, (64, 0, 128, 32))
+mask.save(f"{OUT}/goodluck_end_hat_mask.png")
+worn = Image.new("RGBA", (128, 64))
+worn.paste(Image.open(SRC + "entity/enderdragon/dragon.png").convert("RGBA").crop((48, 30, 176, 94)), (0, 0))
+worn.putalpha(Image.composite(worn.getchannel("A"), mask, mask))
+worn.save(f"{OUT}/goodluck_end_dragon_head_worn.png")
+shutil.copyfile(SRC + "mob_effect/levitation.png",
+                f"{OUT}/../../goodluck_effects/textures/goodluck_effects_levitation.png")
+print(len(FILES) + len(CITY) + 6, "textures in", os.path.relpath(OUT, ROOT))

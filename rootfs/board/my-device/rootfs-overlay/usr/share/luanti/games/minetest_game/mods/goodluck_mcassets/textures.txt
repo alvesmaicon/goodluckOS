@@ -573,6 +573,15 @@ goodluck_horse_armor_diamond_item.png	{item/diamond_horse_armor}
 3d_armor_chestplate_diamond.png	{entity/equipment/humanoid/diamond}^[mask:goodluck_mcassets_mask_chestplate.png
 3d_armor_leggings_diamond.png	{entity/equipment/humanoid_leggings/diamond}^[mask:goodluck_mcassets_mask_leggings.png
 3d_armor_boots_diamond.png	([combine:64x32:16,-20={entity/equipment/humanoid/diamond}^[mask:goodluck_mcassets_mask_boots.png)^([combine:64x32:16,-16={entity/equipment/humanoid/diamond}^[mask:goodluck_mcassets_mask_boots_top.png)
+# The elytra (goodluck_elytra): its item, broken too (put on the stack from code, so "file"), the wings' texture on
+# their mesh, the firework rocket, its sparks and smoke (their frames in a strip, as the particles play them)
+goodluck_elytra_elytra.png	{item/elytra}
+goodluck_elytra_elytra_broken.png	{item/elytra_broken}	file
+goodluck_elytra_wings.png	{entity/equipment/wings/elytra}
+goodluck_elytra_firework_rocket.png	{item/firework_rocket}
+goodluck_elytra_spark.png	[combine:8x64:0,0={particle/spark_7}:0,8={particle/spark_6}:0,16={particle/spark_5}:0,24={particle/spark_4}:0,32={particle/spark_3}:0,40={particle/spark_2}:0,48={particle/spark_1}:0,56={particle/spark_0}
+goodluck_elytra_poof.png	[combine:8x64:0,0={particle/generic_7}:0,8={particle/generic_6}:0,16={particle/generic_5}:0,24={particle/generic_4}:0,32={particle/generic_3}:0,40={particle/generic_2}:0,48={particle/generic_1}:0,56={particle/generic_0}
+
 # The player: Steve, the top half of the skin being the layout the character model has (no second layer)
 character.png	{entity/player/wide/steve}^[sheet:1x2:0,0
 
@@ -763,3 +772,43 @@ goodluck_end_stonebrick_mossy.png	{block/mossy_stone_bricks}
 goodluck_end_stonebrick_cracked.png	{block/cracked_stone_bricks}
 goodluck_end_stonebrick_chiseled.png	{block/chiseled_stone_bricks}
 goodluck_end_iron_bars.png	{block/iron_bars}
+goodluck_end_purpur_block.png	{block/purpur_block}
+goodluck_end_purpur_pillar_side.png	{block/purpur_pillar_side}
+goodluck_end_purpur_pillar_top.png	{block/purpur_pillar_top}
+goodluck_end_end_rod.png	{block/end_rod}
+goodluck_end_chorus_plant.png	{block/chorus_plant}
+goodluck_end_chorus_flower.png	{block/chorus_flower}
+goodluck_end_chorus_flower_dead.png	{block/chorus_flower_dead}
+goodluck_end_chorus_fruit.png	{item/chorus_fruit}
+goodluck_end_chorus_fruit_popped.png	{item/popped_chorus_fruit}
+goodluck_end_ender_chest.png	{entity/chest/ender}
+goodluck_end_endermite.png	{entity/endermite/endermite}
+goodluck_end_endermite_egg.png	{item/endermite_spawn_egg}
+
+# The End cities (goodluck_end): the shulker and its colours, its bullet, shell and egg, the item frame, the magenta
+# glass, the dragon head as worn (its upper head's faces where the skin has its hat) and the Levitation icon
+goodluck_end_shulker.png	{entity/shulker/shulker}
+goodluck_end_shulker_white.png	{entity/shulker/shulker_white}
+goodluck_end_shulker_light_gray.png	{entity/shulker/shulker_light_gray}
+goodluck_end_shulker_gray.png	{entity/shulker/shulker_gray}
+goodluck_end_shulker_black.png	{entity/shulker/shulker_black}
+goodluck_end_shulker_purple.png	{entity/shulker/shulker_purple}
+goodluck_end_shulker_blue.png	{entity/shulker/shulker_blue}
+goodluck_end_shulker_cyan.png	{entity/shulker/shulker_cyan}
+goodluck_end_shulker_green.png	{entity/shulker/shulker_green}
+goodluck_end_shulker_lime.png	{entity/shulker/shulker_lime}
+goodluck_end_shulker_yellow.png	{entity/shulker/shulker_yellow}
+goodluck_end_shulker_brown.png	{entity/shulker/shulker_brown}
+goodluck_end_shulker_orange.png	{entity/shulker/shulker_orange}
+goodluck_end_shulker_red.png	{entity/shulker/shulker_red}
+goodluck_end_shulker_magenta.png	{entity/shulker/shulker_magenta}
+goodluck_end_shulker_pink.png	{entity/shulker/shulker_pink}
+goodluck_end_shulker_spark.png	{entity/shulker/spark}
+goodluck_end_shulker_shell.png	{item/shulker_shell}
+goodluck_end_shulker_egg.png	{item/shulker_spawn_egg}
+goodluck_end_item_frame.png	{block/item_frame}
+goodluck_end_item_frame_item.png	{item/item_frame}
+goodluck_end_magenta_stained_glass.png	{block/magenta_stained_glass}
+goodluck_end_glitter.png	{particle/glitter_1}
+goodluck_end_dragon_head_worn.png	[combine:128x64:-48,-30={entity/enderdragon/dragon}^[mask:goodluck_end_hat_mask.png
+goodluck_effects_levitation.png	{mob_effect/levitation}

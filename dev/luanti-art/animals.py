@@ -625,6 +625,32 @@ def wriggle(t):
 
 SILVERFISH = [(0, 1, wriggle), (1, 1.0, wriggle), (4, 1, both(die, wriggle))]
 
+ENDERMITE_SIZES = [(4, 3, 2), (6, 4, 5), (3, 3, 1), (1, 2, 1)]
+ENDERMITE_UV = [(0, 0), (0, 5), (0, 14), (0, 18)]
+
+
+def endermite():
+    # Minecraft's endermite: four segments from the head (-z) on the ground
+    z, parts = -3.5, []
+    for i, ((w, h, d), (u, v)) in enumerate(zip(ENDERMITE_SIZES, ENDERMITE_UV)):
+        parts.append(part("segment%d" % i, (0, 24 - h, z), box(u, v, -w * 0.5, 0, -d * 0.5, w, h, d)))
+        if i < 3:
+            z += (d + ENDERMITE_SIZES[i + 1][2]) * 0.5
+    return parts
+
+
+def mite_wriggle(t):
+    # as the silverfish's, a fifth of the turn and half the sway: cos(age * 0.9 + i * 0.15 pi) * pi * 0.01 *
+    # (1 + |i - 2|), sin(...) * pi * 0.1 * |i - 2|
+    pose = {}
+    for i in range(4):
+        a = 2 * PI * 3 * t + i * 0.15 * PI
+        pose["segment%d" % i] = (mc_y(math.cos(a) * PI * 0.01 * (1 + abs(i - 2))), (math.sin(a) * PI * 0.1 * abs(i - 2), 0, 0))
+    return pose
+
+
+ENDERMITE = [(0, 1, mite_wriggle), (1, 1.0, mite_wriggle), (4, 1, both(die, mite_wriggle))]
+
 
 def axis_quat(axis, a):
     s = math.sin(a / 2)
@@ -798,11 +824,36 @@ def slide(t):
     return pose
 
 
-ANIMALS.update({"enderman": ((64, 32), enderman(), ENDERMAN), "silverfish": ((64, 32), silverfish(), SILVERFISH),
+ANIMALS.update({"enderman": ((64, 32), enderman(), ENDERMAN), "silverfish": ((64, 32), silverfish(), SILVERFISH), "endermite": ((64, 32), endermite(), ENDERMITE),
                 "end_crystal": ((64, 32), end_crystal(), [(0, 6, spin)]),
                 "ender_dragon": ((256, 256), ender_dragon(), DRAGON),
                 "crystal_beam": ((16, 32), crystal_beam(), [(0, BEAM_LOOP, slide)])})
 
+
+# The shulker (goodluck_end), as 26.x has it: its base, its lid and its head about the middle of its block (the game
+# lifts the lid and turns the head by their bones); its bullet, the spark's three crossed plates turning as Minecraft
+# turns them, inside a copy half again as big (the second texture, faint)
+def shulker():
+    return [part("base", (0, 32, 0), box(0, 28, -8, -8, -8, 16, 8, 16)),
+            part("lid", (0, 32, 0), box(0, 0, -8, -16, -8, 16, 12, 16)),
+            part("head", (0, 20, 0), box(0, 52, -3, 0, -3, 6, 6, 6))]
+
+
+def shulker_bullet():
+    plates = box(0, 0, -4, -4, -1, 8, 8, 2) + box(0, 10, -1, -4, -4, 2, 8, 8) + box(20, 0, -4, -1, -4, 8, 2, 8)
+    shell = [([tuple(k * 1.5 for k in q) for q in c], uv) for c, uv in plates]
+    return [part("main", (0, 24, 0), plates, gear=shell)]
+
+
+def bullet_spin(t):
+    k = t * FPS
+    return {"main": (qmul(mc_y(math.radians(math.sin(k * 0.1) * 180)), qmul(mc_x(math.radians(math.cos(k * 0.1) * 180)),
+                                                                          mc_z(math.radians(math.sin(k * 0.15) * 360)))), None)}
+
+
+# its turns repeat every 2 pi seconds (sin 0.1 and 0.15 a tick)
+ANIMALS.update({"shulker": ((64, 64), shulker(), [(0, 1, None)]),
+                "shulker_bullet": ((64, 32), shulker_bullet(), [(0, 2 * PI, bullet_spin)])})
 
 def normal(a, b, c):
     u = [b[i] - a[i] for i in range(3)]

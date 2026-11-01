@@ -164,19 +164,26 @@ core.register_entity("goodluck_end:dragon_head", {
 
 -- The healing beam, Minecraft's crystal beam: a tube in the crystal's glass, its rings sliding toward it, turned and
 -- stretched to the dragon on the steps the server sends objects on, which the client eases between; gone with the
--- crystal, with the dragon (or its dying) and when the dragon is out of reach
+-- crystal, with the dragon (or its dying) and when the dragon is out of reach. Or to a place (_target), as the
+-- crystals that call the dragon back aim theirs (respawn.lua)
 local STEP = tonumber(core.settings:get("dedicated_server_step")) or 0.09
 local send_timer, sending = 0, false
 local function aim(beam, interval)
-	local dragon, crystal = beam._dragon, beam._crystal
-	local e = dragon:get_luaentity()
+	local crystal = beam._crystal
 	local cp = crystal:get_pos()
-	local dp = dragon:get_pos()
-	if not e or e._beam ~= beam or e._phase == "dying" or not cp or vector.distance(dp, cp) > 32 then
+	local dp = beam._target
+	if not dp then
+		local e = beam._dragon:get_luaentity()
+		dp = beam._dragon:get_pos()
+		if not e or e._beam ~= beam or e._phase == "dying" or not cp or vector.distance(dp, cp) > 32 then
+			return false
+		end
+		dp = vector.offset(dp, 0, 2, 0)
+	elseif not cp then
 		return false
 	end
 	local from = beam._from
-	local dx, dy, dz = dp.x - from.x, dp.y + 2 - from.y, dp.z - from.z
+	local dx, dy, dz = dp.x - from.x, dp.y - from.y, dp.z - from.z
 	-- (nothing sent while the dragon sits)
 	local last = beam._d
 	if last and math.abs(last[1] - dx) + math.abs(last[2] - dy) + math.abs(last[3] - dz) < 0.05 then
@@ -203,12 +210,23 @@ core.register_entity("goodluck_end:crystal_beam", {
 		if sending then
 			local interval = self._t
 			self._t = 0
-			if not (self._dragon and aim(self, interval)) then
+			if not ((self._dragon or self._target) and aim(self, interval)) then
 				self.object:remove()
 			end
 		end
 	end,
 })
+
+-- a crystal's beam to a place, until removed
+function E.beam_to(crystal, target)
+	local obj = core.add_entity(vector.offset(crystal:get_pos(), 0, 1, 0), "goodluck_end:crystal_beam")
+	local beam = obj and obj:get_luaentity()
+	if beam then
+		beam._crystal, beam._target = crystal, target
+		aim(beam, 0)
+	end
+	return beam
+end
 
 -- the beam to the crystal that heals it, kept while it is the same one
 local function show_beam(e, crystal)
@@ -251,7 +269,7 @@ local IMMUNE = {["air"] = true, ["ignore"] = true, ["goodluck_end:end_stone"] = 
 	["goodluck_nether:bedrock"] = true, ["goodluck_nether:crying_obsidian"] = true, ["xpanes:bar"] = true,
 	["xpanes:bar_flat"] = true, ["goodluck_end:portal"] = true, ["goodluck_end:exit_portal"] = true,
 	["goodluck_end:frame"] = true, ["goodluck_end:frame_eye"] = true, ["fire:permanent_flame"] = true,
-	["goodluck_end:dragon_egg"] = true, ["default:torch_wall"] = true}
+	["goodluck_end:dragon_egg"] = true, ["default:torch_wall"] = true, ["goodluck_end:gateway"] = true}
 
 local function boss_bars(e)
 	e._bars = e._bars or {}
@@ -576,6 +594,13 @@ core.register_entity(D, {
 	},
 	_goodluck_dragon = true,
 	on_activate = function(self, staticdata)
+		-- (one woken after it came again elsewhere goes)
+		for _, ent in pairs(core.luaentities) do
+			if ent.name == D and ent ~= self and ent.object:get_pos() then
+				self.object:remove()
+				return
+			end
+		end
 		local s = core.deserialize(staticdata or "") or {}
 		self._hp = s.hp or MAX
 		self._v = vector.zero()
@@ -785,8 +810,8 @@ core.register_node("goodluck_end:dragon_egg", {
 	end,
 })
 
--- its death: experience, the exit portal lit, the egg the first time; ready for a next one never (respawning it
--- with four crystals is not here)
+-- its death: experience, the exit portal lit, a gateway (gateway.lua), the egg the first time; four crystals call it
+-- back (respawn.lua)
 function E.dragon_died(e, pos)
 	local first = storage:get_string("killed") ~= "1"
 	storage:set_string("killed", "1")
@@ -794,8 +819,10 @@ function E.dragon_died(e, pos)
 	for _, f in pairs(e._forced or {}) do
 		core.forceload_free_block(f.pos, true)
 	end
+	clear_bars(e)
 	e.object:remove()
 	E.exit_portal(true)
+	E.spawn_gateway()
 	local top = podium_top()
 	if first and top then
 		core.set_node(top, {name = "goodluck_end:dragon_egg"})
@@ -814,9 +841,10 @@ local function dragon_entity()
 		end
 	end
 end
--- (once: after that it is kept with its mapblock; one left inactive out of everyone's reach has its mapblock
--- forceloaded where it was last, so that it wakes up and flies back)
-local waking
+-- (once, its mapchunk made first: one added where the map isn't generated yet is lost when it is. After that it is
+-- kept with its mapblock; one left inactive out of everyone's reach has its mapblock forceloaded where it was last,
+-- so that it wakes up and flies back, and if it doesn't within 15 s it is lost: it comes again there, as it was)
+local waking, woken, coming
 function E.spawn_dragon()
 	local o = E.podium()
 	local kept = storage:get_string("dragon")
@@ -830,16 +858,36 @@ function E.spawn_dragon()
 	if kept ~= "" then
 		local s = core.deserialize(kept) or {}
 		if s.pos and not waking then
-			waking = vector.round(s.pos)
+			waking, woken = vector.round(s.pos), core.get_us_time()
 			core.forceload_block(waking, true, -1)
+		elseif waking and core.get_us_time() - woken > 15000000 then
+			core.forceload_free_block(waking, true)
+			waking = nil
+			core.add_entity(s.pos, D, core.serialize({hp = s.hp, phase = s.phase}))
+			core.log("action", ("[goodluck_end] the ender dragon was lost: back at %s, %s"):format(
+				core.pos_to_string(vector.round(s.pos)), s.phase or "hold"))
 		end
 		return
 	end
-	local obj = core.add_entity({x = 0, y = E.ymin + 128, z = 0}, D)
-	if obj then
-		remember(obj:get_luaentity())
-		core.log("action", "[goodluck_end] the ender dragon comes")
+	if coming then
+		return
 	end
+	coming = true
+	local at = {x = 0, y = E.ymin + 128, z = 0}
+	core.emerge_area(vector.offset(at, -16, -16, -16), vector.offset(at, 16, 16, 16), function(_, _, left)
+		if left > 0 then
+			return
+		end
+		coming = false
+		if dragon_entity() or storage:get_string("dragon") ~= "" then
+			return
+		end
+		local obj = core.add_entity(at, D)
+		if obj then
+			remember(obj:get_luaentity())
+			core.log("action", "[goodluck_end] the ender dragon comes")
+		end
+	end)
 end
 -- the pillars' tops kept active during the fight, so that their crystals heal it out of the players' reach too, as
 -- the whole End is loaded in Minecraft

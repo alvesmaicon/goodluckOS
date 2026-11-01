@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Tue, 13 Oct 2026 20:13:13 -0300
-Subject: [PATCH 14/44] mainmenu: Survival or Creative chosen when creating a
+Subject: [PATCH 14/46] mainmenu: Survival or Creative chosen when creating a
  world
 
 The Start Game tab's Creative Mode and Enable Damage checkboxes are two

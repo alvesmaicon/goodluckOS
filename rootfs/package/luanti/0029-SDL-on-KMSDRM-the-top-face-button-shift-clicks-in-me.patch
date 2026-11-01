@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Sun, 18 Oct 2026 09:07:10 -0300
-Subject: [PATCH 29/44] SDL on KMSDRM: the top face button shift-clicks in
+Subject: [PATCH 29/46] SDL on KMSDRM: the top face button shift-clicks in
  menus
 
 In the inventory the gamepad had a left click (take or drop the whole stack) on two buttons and a right
