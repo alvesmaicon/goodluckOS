@@ -465,8 +465,10 @@ local function chunk_index(v)
 	return math.floor((v - OFFSET) / CHUNK)
 end
 
+-- none in a world made without structures (the menu's "Generate structures")
+local structures = Settings(core.get_worldpath() .. "/world.mt"):get_bool("generate_structures", true)
 core.register_on_generated(function(minp, maxp, blockseed)
-	if chunk_index(minp.x) % 2 ~= 0 or chunk_index(minp.z) % 2 ~= 0 then
+	if not structures or chunk_index(minp.x) % 2 ~= 0 or chunk_index(minp.z) % 2 ~= 0 then
 		return
 	end
 	local pr = create_prng(blockseed)

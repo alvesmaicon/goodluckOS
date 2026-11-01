@@ -181,7 +181,12 @@ end
 local function round(v)
 	return math.floor(v + 0.5)
 end
+-- "Mobs change blocks" off (the world's rules) leaves the blocks where they are
+local GRIEFING = core.settings:get_bool("mobs_griefing") ~= false
 local function take(self)
+	if not GRIEFING then
+		return
+	end
 	local p = self.object:get_pos()
 	local x, y, z = round(p.x - 2 + math.random() * 4), round(p.y + math.random() * 3), round(p.z - 2 + math.random() * 4)
 	local at = {x = x, y = y, z = z}

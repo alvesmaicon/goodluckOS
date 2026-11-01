@@ -10,6 +10,29 @@ stamina.EXHAUST_CRAFT = 0
 stamina.EXHAUST_DIG = 0.2  -- 800 nodes a point
 stamina.EXHAUST_JUMP = 2   -- about 80 jumps a point
 
+-- the world's difficulty and Natural regeneration (world.mt, from the handheld menu), as in Minecraft: Peaceful never
+-- gets hungry, Easy starves down to 10 HP, Normal to 1 and Hard to death; without regeneration food heals nothing
+local world = Settings(core.get_worldpath() .. "/world.mt")
+local difficulty = world:get("difficulty") or "normal"
+if not world:get_bool("natural_regeneration", true) then
+	stamina.HEAL_LVL = math.huge
+end
+if difficulty == "peaceful" then
+	local update = stamina.update_saturation
+	stamina.update_saturation = function(player, level)
+		return update(player, math.max(level, stamina.get_saturation(player)))
+	end
+end
+local FLOOR = ({easy = 10, normal = 1})[difficulty]
+if FLOOR then
+	core.register_on_player_hpchange(function(player, hp_change, reason)
+		if reason.hunger and hp_change < 0 then
+			return math.min(0, math.max(hp_change, FLOOR - player:get_hp()))
+		end
+		return hp_change
+	end, true)
+end
+
 -- Minecraft's Hunger effect (rotten flesh, goodluck_effects): the drumsticks go green while it lasts, 30 s, and hunger
 -- drains 0.1 exhaustion a second a level (4 here: a point is 160, Minecraft's 4)
 goodluck_hunger = {}

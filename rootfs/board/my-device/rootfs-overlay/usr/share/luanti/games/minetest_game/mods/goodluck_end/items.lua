@@ -193,6 +193,10 @@ local function throw_eye(itemstack, user)
 	end
 	local from = eyes(user)
 	local target = E.strongholds.nearest(from)
+	-- with no stronghold it does nothing, as in Minecraft
+	if not target then
+		return itemstack
+	end
 	local obj = core.add_entity(from, "goodluck_end:eye")
 	if not obj then
 		return itemstack

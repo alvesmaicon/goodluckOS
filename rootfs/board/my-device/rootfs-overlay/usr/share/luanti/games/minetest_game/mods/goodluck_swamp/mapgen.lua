@@ -7,6 +7,8 @@ local WET = {[SWAMP] = true, [core.get_biome_id("swamp_shore")] = true}
 -- last row or column so that two are a mapchunk apart at least, as Minecraft's random spread of one in 32 x 32 chunks
 -- 8 apart
 local REGION = 3
+-- none in a world made without structures (the menu's "Generate structures")
+local STRUCTURES = Settings(core.get_worldpath() .. "/world.mt"):get_bool("generate_structures", true)
 local SEED = tonumber(core.get_mapgen_setting("seed")) or 0
 local W, D = 7, 9
 -- a hut and the ring around it keep off a chunk's edge, where a later neighbour's swamp oak reaches 4 nodes in
@@ -307,7 +309,7 @@ core.register_on_generated(function(vm, minp, maxp, blockseed)
 	local rx, rz = math.floor(cx / REGION), math.floor(cz / REGION)
 	local pick = PcgRandom((SEED + rx * 73856093 + rz * 19349663) % 2147483647)
 	local made
-	if minp.y <= 1 and maxp.y >= 1 and cx == rx * REGION + pick:next(0, REGION - 2) and
+	if STRUCTURES and minp.y <= 1 and maxp.y >= 1 and cx == rx * REGION + pick:next(0, REGION - 2) and
 			cz == rz * REGION + pick:next(0, REGION - 2) then
 		-- its own random: the vines' depends on which chunks around were generated first
 		local witch, dir = hut(vm, minp, maxp, PcgRandom(blockseed % 2147483647))

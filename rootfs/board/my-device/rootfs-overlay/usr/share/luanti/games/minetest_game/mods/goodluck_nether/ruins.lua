@@ -267,7 +267,12 @@ local function chunk_index(v)
 	return math.floor((v - OFFSET) / CHUNK)
 end
 
+-- none in a world made without structures (the menu's "Generate structures")
+local structures = Settings(core.get_worldpath() .. "/world.mt"):get_bool("generate_structures", true)
 core.register_on_generated(function(minp, maxp)
+	if not structures then
+		return
+	end
 	local nether = maxp.y >= R.ymin and minp.y <= R.ymax
 	-- nor in goodluck_end's End, far over the world
 	local the_end = rawget(_G, "goodluck_end") and goodluck_end.inside and goodluck_end.inside(minp)

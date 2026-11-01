@@ -5,6 +5,8 @@
 -- mushrooms sit on the floors; the engine then adds the ores and patches, starts the lava springs flowing and lights
 -- it all
 local R = core.ipc_get("goodluck_nether:realm")
+-- no fortresses in a world made without structures (the menu's "Generate structures")
+local STRUCTURES = Settings(core.get_worldpath() .. "/world.mt"):get_bool("generate_structures", true)
 local YMIN, YMAX, SEA = R.ymin, R.ymax, R.sea
 -- the grid the noise is sampled on (the row below is written out for 4 across)
 local GX, GY = 4, 8
@@ -113,7 +115,7 @@ core.register_on_generated(function(vm, minp, maxp, blockseed)
 
 	-- the fortresses' share of this mapchunk, before what grows on the netherrack (Minecraft places them first too)
 	local tf = core.get_us_time()
-	local fortress = goodluck_nether.fortress.draw(data, area, {x = minp.x, y = y0, z = minp.z},
+	local fortress = STRUCTURES and goodluck_nether.fortress.draw(data, area, {x = minp.x, y = y0, z = minp.z},
 		{x = maxp.x, y = y1, z = maxp.z})
 	tf = core.get_us_time() - tf
 

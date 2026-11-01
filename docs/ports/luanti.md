@@ -10,7 +10,13 @@ Luanti is an open-source engine for Minecraft-like games, and Minetest Game, its
 
 ### Worlds and settings
 
-Luanti opens on its main menu, trimmed to what works without network: New asks for the world's name (left empty, it takes the next free one), its seed (left empty, a random one; the same seed makes the same world), its game mode, Survival or Creative, and whether it starts with a bonus chest. Under the world list is the selected world's seed; Re-create opens New with that seed, game mode and bonus chest already filled in. A world made with "Bonus chest" ticked starts with a chest by the spawn, on open level ground (not on a tree, under one or against a slope), torches around it, holding a map of the place, a stone pickaxe and axe, apples, bread, sticks, planks, logs and torches.
+Luanti opens on its main menu, trimmed to what works without network. New is laid out as Minecraft's Create New World, in three tabs:
+
+- **Game:** the world's name (left empty, it takes the next free one), its game mode, Survival or Creative, its difficulty and whether the game mode can be changed in game. Peaceful has no monsters and no hunger; Easy halves the monsters' health and damage and starvation stops at 10 HP; Normal starves down to 1 HP; Hard adds half to the monsters and starvation kills, as in Minecraft.
+- **World:** the world type, its seed (left empty, a random one; the same seed makes the same world), whether it has structures (villages, witch huts, ruined portals, Nether fortresses, strongholds and End cities; without strongholds there is no end portal, as in Minecraft) and whether it starts with a bonus chest. The types are Default, Superflat, Large biomes (four times as wide), Amplified (higher hills and mountains; it is heavier on the console), Single biome, and Luanti's Valleys and Carpathian; Customize turns caves, decorations (trees and plants), dungeons and the type's own features on or off, and picks the single biome.
+- **More:** Minecraft's game rules: keep the inventory after death, the daylight cycle, mobs spawning, fire spreading, mobs changing blocks (creepers and endermen) and natural regeneration.
+
+Under the world list is the selected world's seed; Re-create opens New with that world's choices already filled in. A world made with "Bonus chest" ticked starts with a chest by the spawn, on open level ground (not on a tree, under one or against a slope), torches around it, holding a map of the place, a stone pickaxe and axe, apples, bread, sticks, planks, logs and torches.
 
 As in Minecraft, Creative mode lets you fly, breaks blocks at once and has no damage, hunger or monster attacks. Survival has farm animals and monsters that come out in the dark. With "Allow changing the game mode" ticked, a toggle in the inventory switches between the two (a grass block in Creative, a sword in Survival, as in Minecraft's game mode switcher).
 
@@ -246,7 +252,7 @@ The engine is Luanti 5.18.0 (celeron55 and contributors; code LGPL-2.1+, media C
 | 0029 | The top face button shift-clicks in menus, as on Minecraft Bedrock: a stack goes straight to the other side |
 | | **Menus** |
 | 0015 | A main menu without what needs a network or a keyboard |
-| 0014, 0017, 0026, 0030 | A new world asks for its name, its seed, Survival or Creative (a button, as in Minecraft) and a bonus chest |
+| 0014, 0017, 0026, 0030, 0048 | A new world is made as in Minecraft: its name, game mode, difficulty, world type and options, seed, structures, bonus chest and game rules, in three tabs |
 | 0018 | Settings open on a Video page with the render distance in chunks |
 | 0021 | The world list takes the whole width |
 | 0041 | The world list shows the selected world's seed, and Re-create makes the world again |
