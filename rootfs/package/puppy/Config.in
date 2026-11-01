@@ -6,6 +6,7 @@ config BR2_PACKAGE_PUPPY
 	select BR2_PACKAGE_SDL2_IMAGE
 	select BR2_PACKAGE_SDL2_TTF
 	select BR2_PACKAGE_SDL2_GFX
+	select BR2_PACKAGE_ZLIB
 	help
 	  The Puppy Launcher.
 

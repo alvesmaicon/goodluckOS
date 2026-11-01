@@ -1,7 +1,9 @@
 #pragma once
 // Screens that open over another one: the on-screen keyboard, a menu, and a full-screen message.
+#include <atomic>
 #include <functional>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "app.h"
@@ -97,4 +99,28 @@ private:
     std::string text;
     std::function<void()> then;
     bool shown = false;
+};
+
+// A message over the whole screen while work runs in a thread (installing an app), with how far it
+// got. It takes no input; done gets the work's result once it has ended.
+class WorkScreen : public Screen {
+public:
+    using Work = std::function<std::string(const std::function<void(float)>& progress)>;
+    WorkScreen(App& app, std::string text, Work work, std::function<void(const std::string&)> done);
+    ~WorkScreen() override;
+
+    void onAction(Action) override {}
+    void render(Ui& ui) override;
+    bool overlay() const override { return true; }
+    Uint32 wakeAt() const override { return SDL_GetTicks() + 200; }
+    void tick(Uint32) override;
+
+private:
+    std::string text;
+    std::function<void(const std::string&)> done;
+    std::string result;
+    std::atomic<int> percent{0};
+    std::atomic<bool> finished{false};
+    int shown = -1;
+    std::thread worker;
 };

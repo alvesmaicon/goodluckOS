@@ -107,6 +107,7 @@ std::string SettingsScreen::title(Page p) const {
         case Page::Scraper:   return tr("Scraper");
         case Page::ScraperSystems: return tr("Systems to scrape");
         case Page::ScraperRun: return tr("Scraping");
+        case Page::Apps:      return tr("App Installer");
         case Page::Resize:    return tr("Resize Home");
         default:
             for (const auto& s : sections())
@@ -123,6 +124,8 @@ std::string SettingsScreen::pageHint(Page p) const {
         case Page::Network:
             return net.networkMode ? "" : tr("Set the USB cable to Network, on the System page, to use it.");
         case Page::ScraperRun: return tr("Starting a game pauses the scraper. Start goes on from where it stopped.");
+        case Page::Apps:
+            return tr("Copy an app's .zip file into the apps folder on HOME (over USB or with the card in a PC), then install it here.");
         case Page::Resize:
             if (resize.pending)
                 return tr("A resize is already scheduled for the next boot.") + std::string(" ") +
@@ -149,6 +152,7 @@ std::vector<Row> SettingsScreen::rows(Page p) {
         case Page::Scraper:   return scraperPage();
         case Page::ScraperSystems: return scraperSystemsPage();
         case Page::ScraperRun: return scraperRunPage();
+        case Page::Apps:      return appsPage();
         case Page::Resize:    return resizePage();
         case Page::Credits:   return creditsPage();
     }
@@ -510,6 +514,10 @@ std::vector<Row> SettingsScreen::systemPage() {
         scrapeFolders = scraperFolders();
         open(Page::Scraper);
     }, run.running() ? scrapedShare(run) : ""));
+    rows.push_back(Row::link("App Installer", [this] {
+        reloadApps();
+        open(Page::Apps);
+    }));
     // Overlay, Date & Time, the launcher's view, tabs, font and accent, and the power mode; the language,
     // the confirm button, the time zone and the clock stay
     rows.push_back(Row::action("Restore default settings", [this] {
@@ -755,6 +763,79 @@ std::vector<Row> SettingsScreen::scraperRunPage() {
     if (!run.requests.empty()) rows.push_back(Row::info("Requests today", run.requests));
     if (!run.detail.empty() && run.state == "error") rows.push_back(Row::info("ScreenScraper", run.detail));
     return rows;
+}
+
+void SettingsScreen::reloadApps() {
+    recoverApps();
+    appZipList = appZips();
+    installedList = installedApps();
+    if (page() != Page::Apps) return;
+    // the row picked may be gone: the nearest one left
+    Cursor& c = cursor();
+    const std::vector<Row> list = rows(Page::Apps);
+    int k = std::min(c.sel, (int)list.size() - 1);
+    while (k >= 0 && !list[k].focusable()) --k;
+    if (k < 0)
+        for (k = 0; k < (int)list.size() && !list[k].focusable(); ++k) {}
+    c.sel = k < (int)list.size() ? k : -1;
+}
+
+// The app zips in HOME/apps, then the installed apps: A installs or uninstalls, after asking
+std::vector<Row> SettingsScreen::appsPage() {
+    std::vector<Row> rows;
+    rows.push_back(Row::section("To install"));
+    if (appZipList.empty()) rows.push_back(Row::info("No zips to install", ""));
+    for (const AppItem& z : appZipList) {
+        Row r = Row::action(z.name, [this, z] { askInstall(z); },
+                            z.error.empty() ? humanSize(z.bytes >> 10) : tr("Can't install"));
+        r.rawLabel = true;
+        r.enabled = z.error.empty();
+        r.hint = z.error.empty() ? z.description : z.error;
+        rows.push_back(r);
+    }
+    rows.push_back(Row::section("Installed"));
+    if (installedList.empty()) rows.push_back(Row::info("No apps installed", ""));
+    for (const AppItem& a : installedList) {
+        Row r = Row::action(a.name, [this, a] { askUninstall(a); }, a.version);
+        r.rawLabel = true;
+        r.hint = a.description;
+        rows.push_back(r);
+    }
+    return rows;
+}
+
+void SettingsScreen::askInstall(const AppItem& zip) {
+    Dialog d;
+    d.title = zip.update ? "Update app" : "Install app";
+    d.subtitle = zip.version.empty() ? zip.name : zip.name + " " + zip.version;
+    d.message = zip.update ? "Install this version over the one installed? The app's data folder is kept."
+                           : "Install it? Its zip is removed from the apps folder once it is installed.";
+    d.choices = {"Cancel", zip.update ? "Update" : "Install"};
+    app.push(std::make_unique<DialogScreen>(app, d, [this, zip](int choice) {
+        if (choice != 1) return;
+        app.push(std::make_unique<WorkScreen>(app, trf("Installing %s...", zip.name),
+            [zip](const std::function<void(float)>& progress) { return installApp(zip, progress); },
+            [this, name = zip.name, update = zip.update](const std::string& error) {
+                appsChanged = true;
+                reloadApps();
+                app.notice(!error.empty() ? error : trf(update ? "%s is updated" : "%s is installed", name));
+            }));
+    }));
+}
+
+void SettingsScreen::askUninstall(const AppItem& installed) {
+    Dialog d;
+    d.title = "Uninstall app";
+    d.subtitle = installed.version.empty() ? installed.name : installed.name + " " + installed.version;
+    d.message = "Delete the app's folder, with everything the app keeps in it?";
+    d.choices = {"Cancel", "Uninstall"};
+    app.push(std::make_unique<DialogScreen>(app, d, [this, installed](int choice) {
+        if (choice != 1) return;
+        const std::string error = uninstallApp(installed);
+        appsChanged = true;
+        reloadApps();
+        app.notice(error.empty() ? trf("%s is uninstalled", installed.name) : error);
+    }));
 }
 
 // The systems with games, each one on or off

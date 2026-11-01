@@ -186,7 +186,7 @@ void SettingsScreen::close() {
         saveLevels();
         saveAt = 0;
     }
-    const bool reloadGames = i18n::current() != startLanguage || scrapeEnded();
+    const bool reloadGames = i18n::current() != startLanguage || scrapeEnded() || appsChanged;
     const auto closed = hooks.closed;
     app.pop();
     if (closed) closed(reloadGames);
