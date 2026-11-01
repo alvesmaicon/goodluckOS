@@ -812,6 +812,7 @@ function E.dragon_died(e, pos)
 	for _, f in pairs(e._forced or {}) do
 		core.forceload_free_block(f.pos, true)
 	end
+	clear_bars(e)
 	e.object:remove()
 	E.exit_portal(true)
 	E.spawn_gateway()
