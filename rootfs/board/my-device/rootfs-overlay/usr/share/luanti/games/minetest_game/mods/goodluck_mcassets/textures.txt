@@ -772,3 +772,31 @@ goodluck_end_chorus_flower.png	{block/chorus_flower}
 goodluck_end_chorus_flower_dead.png	{block/chorus_flower_dead}
 goodluck_end_chorus_fruit.png	{item/chorus_fruit}
 goodluck_end_chorus_fruit_popped.png	{item/popped_chorus_fruit}
+
+# The End cities (goodluck_end): the shulker and its colours, its bullet, shell and egg, the item frame, the magenta
+# glass, the dragon head as worn (its upper head's faces where the skin has its hat) and the Levitation icon
+goodluck_end_shulker.png	{entity/shulker/shulker}
+goodluck_end_shulker_white.png	{entity/shulker/shulker_white}
+goodluck_end_shulker_light_gray.png	{entity/shulker/shulker_light_gray}
+goodluck_end_shulker_gray.png	{entity/shulker/shulker_gray}
+goodluck_end_shulker_black.png	{entity/shulker/shulker_black}
+goodluck_end_shulker_purple.png	{entity/shulker/shulker_purple}
+goodluck_end_shulker_blue.png	{entity/shulker/shulker_blue}
+goodluck_end_shulker_cyan.png	{entity/shulker/shulker_cyan}
+goodluck_end_shulker_green.png	{entity/shulker/shulker_green}
+goodluck_end_shulker_lime.png	{entity/shulker/shulker_lime}
+goodluck_end_shulker_yellow.png	{entity/shulker/shulker_yellow}
+goodluck_end_shulker_brown.png	{entity/shulker/shulker_brown}
+goodluck_end_shulker_orange.png	{entity/shulker/shulker_orange}
+goodluck_end_shulker_red.png	{entity/shulker/shulker_red}
+goodluck_end_shulker_magenta.png	{entity/shulker/shulker_magenta}
+goodluck_end_shulker_pink.png	{entity/shulker/shulker_pink}
+goodluck_end_shulker_spark.png	{entity/shulker/spark}
+goodluck_end_shulker_shell.png	{item/shulker_shell}
+goodluck_end_shulker_egg.png	{item/shulker_spawn_egg}
+goodluck_end_item_frame.png	{block/item_frame}
+goodluck_end_item_frame_item.png	{item/item_frame}
+goodluck_end_magenta_stained_glass.png	{block/magenta_stained_glass}
+goodluck_end_glitter.png	{particle/glitter_1}
+goodluck_end_dragon_head_worn.png	[combine:128x64:-48,-30={entity/enderdragon/dragon}^[mask:goodluck_end_hat_mask.png
+goodluck_effects_levitation.png	{mob_effect/levitation}

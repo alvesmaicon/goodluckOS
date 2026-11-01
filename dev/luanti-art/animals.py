@@ -804,6 +804,31 @@ ANIMALS.update({"enderman": ((64, 32), enderman(), ENDERMAN), "silverfish": ((64
                 "crystal_beam": ((16, 32), crystal_beam(), [(0, BEAM_LOOP, slide)])})
 
 
+# The shulker (goodluck_end), as 26.x has it: its base, its lid and its head about the middle of its block (the game
+# lifts the lid and turns the head by their bones); its bullet, the spark's three crossed plates turning as Minecraft
+# turns them, inside a copy half again as big (the second texture, faint)
+def shulker():
+    return [part("base", (0, 32, 0), box(0, 28, -8, -8, -8, 16, 8, 16)),
+            part("lid", (0, 32, 0), box(0, 0, -8, -16, -8, 16, 12, 16)),
+            part("head", (0, 20, 0), box(0, 52, -3, 0, -3, 6, 6, 6))]
+
+
+def shulker_bullet():
+    plates = box(0, 0, -4, -4, -1, 8, 8, 2) + box(0, 10, -1, -4, -4, 2, 8, 8) + box(20, 0, -4, -1, -4, 8, 2, 8)
+    shell = [([tuple(k * 1.5 for k in q) for q in c], uv) for c, uv in plates]
+    return [part("main", (0, 24, 0), plates, gear=shell)]
+
+
+def bullet_spin(t):
+    k = t * FPS
+    return {"main": (qmul(mc_y(math.radians(math.sin(k * 0.1) * 180)), qmul(mc_x(math.radians(math.cos(k * 0.1) * 180)),
+                                                                          mc_z(math.radians(math.sin(k * 0.15) * 360)))), None)}
+
+
+# its turns repeat every 2 pi seconds (sin 0.1 and 0.15 a tick)
+ANIMALS.update({"shulker": ((64, 64), shulker(), [(0, 1, None)]),
+                "shulker_bullet": ((64, 32), shulker_bullet(), [(0, 2 * PI, bullet_spin)])})
+
 def normal(a, b, c):
     u = [b[i] - a[i] for i in range(3)]
     v = [c[i] - a[i] for i in range(3)]

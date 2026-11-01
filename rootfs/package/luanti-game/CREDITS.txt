@@ -249,12 +249,19 @@ goodluck_end
   gateways are cut from) are Pixel Perfection Legacy's by Nova Wostra, after XSSheep's
   Pixel Perfection (26.3-97.2,
   https://modrinth.com/resourcepack/pixel-perfection-legacy), CC BY-SA 4.0,
-  copied by dev/luanti-art/end.py, and so under CC BY-SA 4.0. The crystal's
-  beam (goodluck_end_crystal_beam.png) is goodluckOS's own, specks end.py draws.
-  Its creatures, the beam and the end rod are goodluck_models' meshes of
-  Minecraft's. Its code, its strongholds and its outer islands, laid out as
-  Minecraft's, are goodluckOS's own (see
-  goodluck_* below).
+  copied by dev/luanti-art/end.py, and so under CC BY-SA 4.0. So are the End
+  cities' (the shulker in its colours, its bullet's spark, its shell and spawn
+  egg, the item frame and its item, magenta stained glass, the dragon head worn,
+  cut from the dragon's texture, and a firework's spark for the shulker's
+  glitter), and goodluck_effects' Levitation icon, by the same and copied by the
+  same script. The crystal's beam (goodluck_end_crystal_beam.png) and the mask
+  for the worn dragon head (goodluck_end_hat_mask.png) are goodluckOS's own,
+  drawn by end.py. Its creatures, the beam, the end rod, the shulker and its
+  bullet, the shulker box, the dragon head and the item frame are
+  goodluck_models' meshes of Minecraft's. Its code, its strongholds, its outer
+  islands and its End cities (their pieces drawn as code after Minecraft's,
+  nothing of its templates copied), laid out as Minecraft's, are goodluckOS's
+  own (see goodluck_* below).
 
 Left out of mobs, mobs_animal, mobs_monster, stamina, mobs_npc and mob_horse:
 screenshot.jpg, made on textstudio.com, whose terms are unclear. The game
