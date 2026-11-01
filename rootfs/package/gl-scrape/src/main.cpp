@@ -22,6 +22,7 @@
 #include "json.h"
 #include "roms.h"
 #include "screenscraper.h"
+#include "systems.h"
 
 // The software's ScreenScraper credentials, kept out of the binary's plain strings
 template <size_t N> struct Hidden { unsigned char b[N]; };
@@ -40,39 +41,15 @@ static constexpr unsigned char kDevPasswordBytes[] = {SS_DEVPASSWORD_BYTES 0};
 static constexpr auto kDevId = hide(kDevIdBytes);
 static constexpr auto kDevPassword = hide(kDevPasswordBytes);
 
-// The folders of apps.puppy's systems, with ScreenScraper's system and the extensions Puppy lists
-struct System {
-    const char* folder;
-    int id;
-    const char* name;
-    const char* exts;
-};
-static const System kSystems[] = {
-    {"gb", 9, "Game Boy", "gb,zip,7z"},
-    {"gbc", 10, "Game Boy Color", "gbc,gb,zip,7z"},
-    {"gba", 12, "Game Boy Advance", "gba,zip,7z"},
-    {"nes", 3, "NES", "nes,fds,unf,unif,zip,7z"},
-    {"famicom", 3, "Famicom", "nes,fds,unf,unif,zip,7z"},
-    {"snes", 4, "Super Nintendo", "sfc,smc,zip,7z"},
-    {"sfc", 4, "Super Famicom", "sfc,smc,zip,7z"},
-    {"genesis", 1, "Sega Genesis", "md,smd,gen,bin,zip,7z"},
-    {"megadrive", 1, "Mega Drive", "md,smd,gen,bin,zip,7z"},
-    {"sms", 2, "Master System", "sms,zip,7z"},
-    {"mastersystem", 2, "Master System", "sms,zip,7z"},
-    {"gg", 21, "Game Gear", "gg,zip,7z"},
-    {"gamegear", 21, "Game Gear", "gg,zip,7z"},
-    {"segacd", 20, "Sega CD", "cue,chd,iso"},
-    {"psx", 57, "PlayStation", "bin,cue,chd,m3u,iso"},
-    {"psp", 61, "PSP", "iso,cso,chd"},
-};
-
 static const char* kHome = "/home/player";
 
 struct Options {
     std::string config = std::string(kHome) + "/.config/gl-scrape/settings";
     std::string cache = std::string(kHome) + "/.cache/gl-scrape";
     std::string status;
-    std::vector<std::string> roots = {std::string(kHome) + "/roms", "/media/external/roms"};
+    // Puppy's apps files: their tabs' folders are the ones scraped
+    std::vector<std::string> apps = {"/usr/share/puppy/apps.puppy", std::string(kHome) + "/apps.puppy",
+                                     std::string(kHome) + "/.local/share/applications"};
     std::vector<std::string> folders;   // only these (default: all but skip)
     std::set<std::string> skip;
     std::string lang = "en";
@@ -241,25 +218,25 @@ static std::set<std::string> referenced(const std::string& dir, const std::vecto
     return out;
 }
 
-struct Folder {
-    const System* sys;
-    std::string dir;
+struct Folder : RomDir {
+    int system;     // ScreenScraper's
     std::vector<std::string> roms;
 };
 
-static std::vector<Folder> folders(const Options& o, bool withSkipped = false) {
+// The folders with games; with the systems known, only those ScreenScraper has
+static std::vector<Folder> folders(const Options& o, const Systems& systems, bool withSkipped = false) {
     std::vector<Folder> out;
-    for (const std::string& root : o.roots)
-        for (const System& s : kSystems) {
-            if (!o.folders.empty() && std::find(o.folders.begin(), o.folders.end(), s.folder) == o.folders.end()) continue;
-            if (!withSkipped && o.skip.count(s.folder)) continue;
-            Folder f{&s, root + "/" + s.folder, {}};
-            std::vector<std::string> files = romFiles(f.dir, split(s.exts, ','));
-            const std::set<std::string> parts = referenced(f.dir, files);
-            for (const std::string& r : files)
-                if (!parts.count(r)) f.roms.push_back(r);
-            if (!f.roms.empty()) out.push_back(std::move(f));
-        }
+    for (const RomDir& d : romDirs(o.apps)) {
+        if (!o.folders.empty() && std::find(o.folders.begin(), o.folders.end(), d.folder) == o.folders.end()) continue;
+        if (!withSkipped && o.skip.count(d.folder)) continue;
+        Folder f{d, systems.find(d), {}};
+        if (!systems.empty() && !f.system) continue;
+        std::vector<std::string> files = romFiles(f.dir, f.exts);
+        const std::set<std::string> parts = referenced(f.dir, files);
+        for (const std::string& r : files)
+            if (!parts.count(r)) f.roms.push_back(r);
+        if (!f.roms.empty()) out.push_back(std::move(f));
+    }
     return out;
 }
 
@@ -328,8 +305,9 @@ static std::string fetchMedia(ScreenScraper& ss, const Options& o, const Folder&
 
 static void usage() {
     puts("usage: gl-scrape [options] [folder...]\n"
-         "  Scrapes the ROM folders (gb, gba, snes...) under /home/player/roms and /media/external/roms from\n"
-         "  ScreenScraper into their gamelist.xml. Options default to the settings file.\n"
+         "  Scrapes the ROM folders of the launcher's tabs from ScreenScraper into their gamelist.xml, each\n"
+         "  folder as the system its name gives (gba, megadrive, mame, fbneo...). Options default to the\n"
+         "  settings file.\n"
          "  --check          the account's quota, nothing scraped\n"
          "  --systems        the folders with games: folder, name, games, complete\n"
          "  --all            every game, not only what's missing\n"
@@ -340,8 +318,8 @@ static void usage() {
          "  --size WxH       pictures' largest size (400x300)\n"
          "  --status FILE    progress as key=value lines, for System Settings\n"
          "  --config FILE    settings (/home/player/.config/gl-scrape/settings)\n"
-         "  --roots A:B      ROM roots\n"
-         "  --cache DIR      answers already received (/home/player/.cache/gl-scrape)\n"
+         "  --apps A:B       Puppy's apps files or folders of them, whose tabs give the ROM folders\n"
+         "  --cache DIR      answers already received, the systems too (/home/player/.cache/gl-scrape)\n"
          "SS_DEVID, SS_DEVPASSWORD, SS_USER and SS_PASSWORD in the environment replace the credentials.");
 }
 
@@ -365,7 +343,7 @@ int main(int argc, char** argv) {
         else if (a == "--status" && more) o.status = argv[++i];
         else if (a == "--config" && more) ++i;
         else if (a == "--cache" && more) o.cache = argv[++i];
-        else if (a == "--roots" && more) o.roots = split(argv[++i], ':');
+        else if (a == "--apps" && more) o.apps = split(argv[++i], ':');
         else if (a == "--size" && more) sscanf(argv[++i], "%dx%d", &o.width, &o.height);
         else if (a == "-h" || a == "--help") { usage(); return 0; }
         else if (!a.empty() && a[0] != '-') o.folders.push_back(a);
@@ -373,14 +351,19 @@ int main(int argc, char** argv) {
     }
     if (o.lang.empty()) o.lang = "en";
 
+    // ScreenScraper's systems, from the cache until a run asks for them again
+    const std::string systemsPath = o.cache + "/systems";
+    Systems systems;
+    systems.load(systemsPath);
+
     if (list) {
-        for (const Folder& f : folders(o, true)) {
+        for (const Folder& f : folders(o, systems, true)) {
             Gamelist main, local;
             main.load(f.dir + "/gamelist.xml");
             if (o.lang != "en") local.load(f.dir + "/gamelist." + o.lang + ".xml");
             int complete = 0;
             for (const std::string& r : f.roms) complete += !needed(o, f, main, local, r);
-            printf("%s\t%s\t%zu\t%d\n", f.sys->folder, f.sys->name, f.roms.size(), complete);
+            printf("%s\t%s\t%zu\t%d\n", f.folder.c_str(), f.tab.c_str(), f.roms.size(), complete);
         }
         return 0;
     }
@@ -411,20 +394,36 @@ int main(int argc, char** argv) {
         return finish(o, p, "done", "", 0);
     }
 
-    const std::vector<Folder> work = folders(o);
+    // asked again after a month: a system ScreenScraper adds gets its folder scraped
+    struct stat st;
+    if (systems.empty() || (stat(systemsPath.c_str(), &st) == 0 && time(nullptr) - st.st_mtime > 30 * 86400)) {
+        Json answer;
+        Systems fresh;
+        a = ss.systemList(answer);
+        if (a == Answer::Ok && fresh.fromList(answer)) {
+            systems = fresh;
+            makeDirs(o.cache);
+            writeFile(systemsPath, systems.dump());
+        } else if (systems.empty()) {
+            p.detail = ss.detail;
+            return finish(o, p, "error", describe(a == Answer::Ok ? Answer::Garbled : a), 1);
+        }
+    }
+
+    const std::vector<Folder> work = folders(o, systems);
     p.steps = (int)work.size();
     for (const Folder& f : work) p.games += (int)f.roms.size();
     int offline = 0;
     for (const Folder& f : work) {
         ++p.step;
-        p.system = f.sys->name;
+        p.system = f.tab;
         p.total = (int)f.roms.size();
         p.index = 0;
         const std::string mainPath = f.dir + "/gamelist.xml", localPath = f.dir + "/gamelist." + o.lang + ".xml";
         Gamelist main, local;
         main.load(mainPath);
         if (o.lang != "en") local.load(localPath);
-        const std::string cacheDir = o.cache + "/" + std::to_string(f.sys->id);
+        const std::string cacheDir = o.cache + "/" + std::to_string(f.system);
         makeDirs(cacheDir);
         auto save = [&] {
             main.save(mainPath);
@@ -459,7 +458,7 @@ int main(int argc, char** argv) {
                 a = Answer::Busy;
                 for (int attempt = 0; attempt < 3 && (a == Answer::Busy || a == Answer::Network) && !stopping; ++attempt) {
                     if (attempt) sleep(a == Answer::Busy ? 10 : 5);
-                    a = ss.gameInfo(f.sys->id, rom, id, rec);
+                    a = ss.gameInfo(f.system, rom, id, rec);
                 }
                 p.detail = ss.detail;
                 if (a == Answer::Ok || a == Answer::NotFound) {

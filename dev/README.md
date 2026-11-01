@@ -88,14 +88,15 @@ SS_USER=...         # a ScreenScraper account, for tests in the container
 SS_PASSWORD=...
 ```
 
-`dev/gl app gl-scrape` builds it for the console and natively, and says so when the credentials are missing; `dev/gl deploy` adds it to `usr/bin`. The native one scrapes a folder of ROMs in the container, so a change can be tried without the console:
+`dev/gl app gl-scrape` builds it for the console and natively, and says so when the credentials are missing; `dev/gl deploy` adds it to `usr/bin`. The native one scrapes a folder of ROMs in the container, so a change can be tried without the console. It takes the folders from Puppy's apps files; an `apps.puppy` that names `/tmp/roms/gba` stands in for them:
 
 ```sh
 dev/gl shell
-/repo/dev/out/gl-scrape.aarch64 --roots /tmp/roms --cache /tmp/cache --config /dev/null --lang pt gba
+printf '[ARCHIVE]\nNAME=GBA\nENTRY_DIRECTORIES=/tmp/roms/gba\nENTRY_EXTENSIONS=gba;zip\n' > /tmp/apps.puppy
+/repo/dev/out/gl-scrape.aarch64 --apps /tmp/apps.puppy --cache /tmp/cache --config /dev/null --lang pt gba
 ```
 
-`dev/gl scrape-test` runs its tests: its pieces under ASan and UBSan, then the program against `dev/scrape-test/fake-screenscraper.py` (`SS_API` points it there), which checks the first run, Missing only and All, the media, the gamelists, the cache and that no credential lands in it. It needs no account and no internet.
+`dev/gl scrape-test` runs its tests: its pieces under ASan and UBSan, then the program against `dev/scrape-test/fake-screenscraper.py` (`SS_API` points it there), which checks the folders of the tabs and their systems, the first run, Missing only and All, the media, the gamelists, the cache and that no credential lands in it. It needs no account and no internet.
 
 It runs the `curl` program and hands it the URL on its standard input, so the credentials never show in `ps`. Buildroot takes them from `make`'s environment (a CI secret); an image built without them has a scraper that says so.
 

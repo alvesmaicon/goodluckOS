@@ -24,6 +24,7 @@ public:
     explicit ScreenScraper(Account a) : account(std::move(a)) {}
 
     Answer userInfo(Quota& q);
+    Answer systemList(Json& answer);    // systemesListe, as it comes (~4 MB)
     // jeuInfos, reduced to what gl-scrape keeps (see record())
     Answer gameInfo(int systemId, const std::string& file, const RomId& id, Json& game);
     // A media URL from a record, with the credentials and, for a picture, the size
@@ -36,7 +37,7 @@ private:
     int gapMs = 1100;
 
     std::string credentials() const;
-    Answer request(const std::string& url, Json& out);
+    Answer request(const std::string& url, Json& out, int timeout = 60);
 };
 
 // From a jeuInfos "jeu": names and dates by region, synopses and the main genre by language,
