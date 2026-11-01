@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Fri, 16 Oct 2026 14:26:39 -0300
-Subject: [PATCH 23/44] Camera: the wielded item's rest pose in settings, with
+Subject: [PATCH 23/46] Camera: the wielded item's rest pose in settings, with
  one for nodes
 
 The wielded item always rested at (55, -35, 65) turned (-100, 120,

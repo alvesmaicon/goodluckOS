@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Tue, 13 Oct 2026 22:40:53 -0300
-Subject: [PATCH 17/44] mainmenu: the handheld's new world gets a name again
+Subject: [PATCH 17/46] mainmenu: the handheld's new world gets a name again
 
 With the gamepad's on-screen keyboard, menu_handheld's create-world
 dialog can ask for the world's name again: a field above the game mode,

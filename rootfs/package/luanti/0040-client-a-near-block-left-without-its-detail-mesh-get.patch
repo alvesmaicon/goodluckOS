@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Thu, 29 Oct 2026 02:03:09 -0300
-Subject: [PATCH 40/44] client: a near block left without its detail mesh gets
+Subject: [PATCH 40/46] client: a near block left without its detail mesh gets
  it back
 
 The culler asks for the detail mesh of a block left out as far only when its traversal reaches

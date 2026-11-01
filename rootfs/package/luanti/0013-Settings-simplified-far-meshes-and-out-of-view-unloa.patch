@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Tue, 13 Oct 2026 02:50:43 -0300
-Subject: [PATCH 13/44] Settings: simplified far meshes and out-of-view
+Subject: [PATCH 13/46] Settings: simplified far meshes and out-of-view
  unloading on by default
 
 This branch exists for weak hardware, so what it adds is on unless
