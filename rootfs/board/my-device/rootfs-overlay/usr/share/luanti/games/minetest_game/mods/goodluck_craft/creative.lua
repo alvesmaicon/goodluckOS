@@ -58,13 +58,13 @@ end
 
 local function combat(name, def, g)
 	return name:find(":sword_") ~= nil or name == "tnt:tnt" or def.type == "tool" and any_group(g, "armor_head",
-		"armor_torso", "armor_legs", "armor_feet", "armor_shield")
+		"armor_torso", "armor_legs", "armor_feet", "armor_shield") and name ~= "goodluck_elytra:elytra"
 end
 
 local function tools(name, def, g)
 	return not combat(name, def, g) and (def.type == "tool" or any_group(g, "tool", "rail") or
 		matches(name, "^boats:", "^carts:", "^mobs:saddle$", "^mobs:nametag$", "^mobs:protector",
-		"^goodluck_nether:fire_charge$", "^goodluck_end:ender_pearl$", "^goodluck_end:ender_eye$"))
+		"^goodluck_nether:fire_charge$", "^goodluck_end:ender_pearl$", "^goodluck_end:ender_eye$", "^goodluck_elytra:"))
 end
 
 local function food(name, def, g)

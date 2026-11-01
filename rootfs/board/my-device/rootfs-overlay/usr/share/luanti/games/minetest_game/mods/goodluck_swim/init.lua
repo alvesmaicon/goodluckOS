@@ -78,6 +78,14 @@ local function lie(player, name, on)
 	end
 end
 
+-- another mod lays the player down (a glide ending with no room to stand): it crawls until there is
+function goodluck_swim.lie_down(player)
+	local name = player:get_player_name()
+	if not lying[name] then
+		lie(player, name, true)
+	end
+end
+
 -- player_api's animations (and so its box) leave the lying players alone
 local attached = player_api.player_attached
 local animate = player_api.globalstep

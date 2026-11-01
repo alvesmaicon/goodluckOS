@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Tue, 13 Oct 2026 02:49:43 -0300
-Subject: [PATCH 09/44] client: optionally unload blocks out of view, and touch
+Subject: [PATCH 09/46] client: optionally unload blocks out of view, and touch
  blocks below 5 FPS
 
 touchMapBlocks() keeps every block within the viewing range alive, all

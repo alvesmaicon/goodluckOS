@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Thu, 29 Oct 2026 01:45:43 -0300
-Subject: [PATCH 39/44] client: a block that comes with the player's placement
+Subject: [PATCH 39/46] client: a block that comes with the player's placement
  keeps its detail mesh
 
 The far blocks and the neighbour updates left out ("leave out far detail meshes") measure their

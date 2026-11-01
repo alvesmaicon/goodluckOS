@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Fri, 30 Oct 2026 15:31:56 -0300
-Subject: [PATCH 43/44] client: the LOD switch's flag isn't named far, a macro
+Subject: [PATCH 43/46] client: the LOD switch's flag isn't named far, a macro
  on Windows
 
 windows.h defines far and near as empty macros (16-bit Windows' pointer

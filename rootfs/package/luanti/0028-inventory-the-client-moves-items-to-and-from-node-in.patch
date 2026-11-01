@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Sat, 17 Oct 2026 23:26:36 -0300
-Subject: [PATCH 28/44] inventory: the client moves items to and from node
+Subject: [PATCH 28/46] inventory: the client moves items to and from node
  inventories at once
 
 Moving an item between the player's inventory and a chest's (or a furnace's) only showed once the server

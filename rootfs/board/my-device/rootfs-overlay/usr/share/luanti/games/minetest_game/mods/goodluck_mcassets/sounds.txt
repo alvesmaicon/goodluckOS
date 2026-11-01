@@ -110,6 +110,11 @@ x_bows_arrow_hit	random/bowhit1 random/bowhit2 random/bowhit3 random/bowhit4
 x_bows_arrow_successful_hit	random/successful_hit
 mobs_punch	entity/player/attack/strong1 entity/player/attack/strong2 entity/player/attack/strong3 entity/player/attack/strong4 entity/player/attack/strong5 entity/player/attack/strong6
 
+# The elytra (goodluck_elytra): the wind while gliding, putting it on, a rocket's launch
+goodluck_elytra_wind	item/elytra/elytra_loop
+goodluck_elytra_equip	item/armor/equip_leather1 item/armor/equip_leather2 item/armor/equip_leather3 item/armor/equip_leather4 item/armor/equip_leather5 item/armor/equip_leather6
+goodluck_elytra_launch	fireworks/launch1
+
 # Animals and monsters
 mobs_cow	mob/cow/say1 mob/cow/say2 mob/cow/say3 mob/cow/say4
 mobs_pig	mob/pig/say1 mob/pig/say2 mob/pig/say3
