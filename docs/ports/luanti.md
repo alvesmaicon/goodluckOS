@@ -10,15 +10,17 @@ Luanti is an open-source engine for Minecraft-like games, and Minetest Game, its
 
 ### Worlds and settings
 
-Luanti opens on its main menu, trimmed to what works without network. New is laid out as Minecraft's Create New World, in three tabs:
+Luanti opens on its world list, laid out as Minecraft's Select World: each world with a picture of it as it was last left (taken when the pause menu opens, or when START+SELECT closes the game), its name, when it was last played, its seed, game mode, difficulty and type, the latest played on top. A press picks a world and a second one plays it; the right stick scrolls past four worlds. Under the list are Play Selected World, Create New World, Rename, Delete, Re-create (New with that world's choices already filled in) and Exit.
+
+Create New World is laid out as Minecraft's, in three tabs, with a switch for each option that is on or off:
 
 - **Game:** the world's name (left empty, it takes the next free one), its game mode, Survival or Creative, its difficulty and whether the game mode can be changed in game. Peaceful has no monsters and no hunger; Easy halves the monsters' health and damage and starvation stops at 10 HP; Normal starves down to 1 HP; Hard adds half to the monsters and starvation kills, as in Minecraft.
 - **World:** the world type, its seed (left empty, a random one; the same seed makes the same world), whether it has structures (villages, witch huts, ruined portals, Nether fortresses, strongholds and End cities; without strongholds there is no end portal, as in Minecraft) and whether it starts with a bonus chest. The types are Default, Superflat, Large biomes (four times as wide), Amplified (higher hills and mountains; it is heavier on the console), Single biome, and Luanti's Valleys and Carpathian; Customize turns caves, decorations (trees and plants), dungeons and the type's own features on or off, and picks the single biome.
 - **More:** Minecraft's game rules: keep the inventory after death, the daylight cycle, mobs spawning, fire spreading, mobs changing blocks (creepers and endermen) and natural regeneration.
 
-Under the world list is the selected world's seed; Re-create opens New with that world's choices already filled in. A world made with "Bonus chest" ticked starts with a chest by the spawn, on open level ground (not on a tree, under one or against a slope), torches around it, holding a map of the place, a stone pickaxe and axe, apples, bread, sticks, planks, logs and torches.
+A world made with "Bonus chest" switched on starts with a chest by the spawn, on open level ground (not on a tree, under one or against a slope), torches around it, holding a map of the place, a stone pickaxe and axe, apples, bread, sticks, planks, logs and torches.
 
-As in Minecraft, Creative mode lets you fly, breaks blocks at once and has no damage, hunger or monster attacks. Survival has farm animals and monsters that come out in the dark. With "Allow changing the game mode" ticked, a toggle in the inventory switches between the two (a grass block in Creative, a sword in Survival, as in Minecraft's game mode switcher).
+As in Minecraft, Creative mode lets you fly, breaks blocks at once and has no damage, hunger or monster attacks. Survival has farm animals and monsters that come out in the dark. With "Allow changing the game mode" switched on, a toggle in the inventory switches between the two (a grass block in Creative, a sword in Survival, as in Minecraft's game mode switcher).
 
 A world opens only once the terrain in view is loaded and drawn, as far as the view goes (up to 320 blocks), so it doesn't show building itself; a new world has to be made first, which can take up to a minute.
 
@@ -252,10 +254,9 @@ The engine is Luanti 5.18.0 (celeron55 and contributors; code LGPL-2.1+, media C
 | 0029 | The top face button shift-clicks in menus, as on Minecraft Bedrock: a stack goes straight to the other side |
 | | **Menus** |
 | 0015 | A main menu without what needs a network or a keyboard |
-| 0014, 0017, 0026, 0030, 0048 | A new world is made as in Minecraft: its name, game mode, difficulty, world type and options, seed, structures, bonus chest and game rules, in three tabs |
+| 0014, 0017, 0026, 0030, 0048, 0049 | A new world is made as in Minecraft: its name, game mode, difficulty, world type and options, seed, structures, bonus chest and game rules, in three tabs |
 | 0018 | Settings open on a Video page with the render distance in chunks |
-| 0021 | The world list takes the whole width |
-| 0041 | The world list shows the selected world's seed, and Re-create makes the world again |
+| 0021, 0041, 0050, 0051 | The world list as Minecraft's Select World: a picture of each world as it was left, its name, last play, seed, mode, difficulty and type; Rename, Re-create and Exit |
 | | **In game** |
 | 0022 | The off-hand item, a shield, is held in the left hand, lowered or raised |
 | 0023 | The held item's rest pose is a setting, posed as in Minecraft at 640x480 |
