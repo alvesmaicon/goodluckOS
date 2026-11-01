@@ -208,26 +208,16 @@ core.register_on_leaveplayer(function(player)
 	players[player:get_player_name()] = nil
 end)
 
-local function description(def, lang)
-	return (core.get_translated_string(lang, def.description):gsub("\n.*", "")):lower()
-end
-
--- as minetest_game's search: the closest matches first, in the name, the description or its translation
+-- as minetest_game's search, the closest matches first, but only in the names the player sees
 local function search(player, filter)
-	local info = core.get_player_information(player:get_player_name())
-	local lang = info and info.lang_code ~= "" and info.lang_code
+	local lang = goodluck_craft.lang(player)
+	filter = goodluck_craft.fold(filter)
 	local found, order = {}, {}
 	for _, name in ipairs(lists.search) do
-		local def = core.registered_items[name]
-		local best
-		for _, s in ipairs({description(def, "en"), lang and description(def, lang) or "", name}) do
-			if s:find(filter, 1, true) then
-				best = math.min(best or 999, #s - #filter)
-			end
-		end
-		if best then
+		local s = goodluck_craft.search_name(name, lang)
+		if s:find(filter, 1, true) then
 			found[#found + 1] = name
-			order[name] = ("%03d"):format(best) .. name
+			order[name] = ("%03d"):format(#s - #filter) .. name
 		end
 	end
 	table.sort(found, function(a, b) return order[a] < order[b] end)

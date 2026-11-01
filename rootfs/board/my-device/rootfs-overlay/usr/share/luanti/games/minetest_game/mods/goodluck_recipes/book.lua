@@ -146,12 +146,9 @@ local function recipe_fs(fs, data)
 	item_button_fs(fs, 4, 1, recipe.output, recipe.output:match("%S*"))
 end
 
-local function imatch(str, filter)
-	return str:lower():find(filter, 1, true) ~= nil
-end
-
+-- as the creative inventory's search: only in the names the player sees
 local function execute_search(data)
-	local filter = data.filter
+	local filter = goodluck_craft.fold(data.filter)
 	if filter == "" then
 		data.items = data.base
 		return
@@ -159,10 +156,7 @@ local function execute_search(data)
 	data.items = {}
 
 	for _, item in ipairs(data.base) do
-		local def = core.registered_items[item]
-		local desc = def and core.get_translated_string(data.lang_code, def.description)
-
-		if imatch(item, filter) or desc and imatch(desc, filter) then
+		if goodluck_craft.search_name(item, data.lang_code):find(filter, 1, true) then
 			table.insert(data.items, item)
 		end
 	end

@@ -4,6 +4,7 @@ local S = core.get_translator("goodluck_craft")
 local MODPATH = core.get_modpath("goodluck_craft")
 goodluck_craft = {}
 dofile(MODPATH .. "/tabs.lua")
+dofile(MODPATH .. "/search.lua")
 local TABLE = "goodluck_craft:crafting_table"
 local at_table = {}
 local has_armor = core.get_modpath("3d_armor") and armor
