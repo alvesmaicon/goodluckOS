@@ -1,4 +1,4 @@
-From: Maicon Alves <maicon.alves@posthaus.com.br>
+From: Maicon Alves <alvesmaiconn@gmail.com>
 Subject: [PATCH] gallium/hud: goodluckOS feedback panel and status bar
 
 Draws over any app, even with the graphs hidden:

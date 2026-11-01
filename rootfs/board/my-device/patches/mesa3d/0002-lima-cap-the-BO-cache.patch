@@ -1,4 +1,4 @@
-From: Maicon Alves <maicon.alves@posthaus.com.br>
+From: Maicon Alves <alvesmaiconn@gmail.com>
 Subject: [PATCH] lima: cap the BO cache
 
 Freed BOs stay in the cache for 6 seconds, with no limit on their total
