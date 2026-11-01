@@ -573,6 +573,15 @@ goodluck_horse_armor_diamond_item.png	{item/diamond_horse_armor}
 3d_armor_chestplate_diamond.png	{entity/equipment/humanoid/diamond}^[mask:goodluck_mcassets_mask_chestplate.png
 3d_armor_leggings_diamond.png	{entity/equipment/humanoid_leggings/diamond}^[mask:goodluck_mcassets_mask_leggings.png
 3d_armor_boots_diamond.png	([combine:64x32:16,-20={entity/equipment/humanoid/diamond}^[mask:goodluck_mcassets_mask_boots.png)^([combine:64x32:16,-16={entity/equipment/humanoid/diamond}^[mask:goodluck_mcassets_mask_boots_top.png)
+# The elytra (goodluck_elytra): its item, broken too (put on the stack from code, so "file"), the wings' texture on
+# their mesh, the firework rocket, its sparks and smoke (their frames in a strip, as the particles play them)
+goodluck_elytra_elytra.png	{item/elytra}
+goodluck_elytra_elytra_broken.png	{item/elytra_broken}	file
+goodluck_elytra_wings.png	{entity/equipment/wings/elytra}
+goodluck_elytra_firework_rocket.png	{item/firework_rocket}
+goodluck_elytra_spark.png	[combine:8x64:0,0={particle/spark_7}:0,8={particle/spark_6}:0,16={particle/spark_5}:0,24={particle/spark_4}:0,32={particle/spark_3}:0,40={particle/spark_2}:0,48={particle/spark_1}:0,56={particle/spark_0}
+goodluck_elytra_poof.png	[combine:8x64:0,0={particle/generic_7}:0,8={particle/generic_6}:0,16={particle/generic_5}:0,24={particle/generic_4}:0,32={particle/generic_3}:0,40={particle/generic_2}:0,48={particle/generic_1}:0,56={particle/generic_0}
+
 # The player: Steve, the top half of the skin being the layout the character model has (no second layer)
 character.png	{entity/player/wide/steve}^[sheet:1x2:0,0
 
