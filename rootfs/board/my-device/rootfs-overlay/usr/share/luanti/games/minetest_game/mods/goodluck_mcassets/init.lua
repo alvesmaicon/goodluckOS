@@ -74,11 +74,15 @@ local function formspec(fs)
 	local windowed = false
 	-- a name with modifiers goes in as a group, whole in what surrounds it, and escaped as the formspec's own text,
 	-- so that the escaping inside [combine survives
-	fs = fs:gsub("[%w_%-%.]+%.png", function(t)
+	fs = fs:gsub("()([%w_%-%.]+%.png)", function(at, t)
 		local m = map[t]
 		if WINDOWS[t] and m then
 			m = window(m)
 			windowed = true
+		end
+		-- in a [combine (after its "x,y="), with its ":" and "^" escaped
+		if m and fs:sub(at - 1, at - 1) == "=" then
+			m = m:gsub("[%^:]", "\\%0")
 		end
 		return m and m:find("[%^%[]") and core.formspec_escape("(" .. m .. ")") or m
 	end)

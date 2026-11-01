@@ -224,9 +224,11 @@ local function search(player, filter)
 	return found
 end
 
+-- the icon as the slot's background, as the armor slots' marks
+local TRASH = core.formspec_escape("goodluck_craft_slot.png^[resize:40x40^[combine:40x40:4,4=creative_trash_icon.png" ..
+	"\\^[resize\\:32x32")
 function goodluck_craft.trash(x, y)
-	return ("image[%g,%g;0.8,0.8;creative_trash_icon.png]list[detached:trash;main;%g,%g;1,1;]"):format(x + 0.06,
-		y + 0.1, x, y)
+	return ("listimages[%s;]list[detached:trash;main;%g,%g;1,1;]listimages[;]"):format(TRASH, x, y)
 end
 
 -- the title, the items in a scrolling grid of 9 columns as Minecraft's (the shoulder buttons scroll it, as the mouse
