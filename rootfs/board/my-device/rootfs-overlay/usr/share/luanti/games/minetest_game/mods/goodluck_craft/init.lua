@@ -121,17 +121,18 @@ local function armor_formspec(player)
 			core.formspec_escape(tex.skin) .. "," .. core.formspec_escape(tex.armor) ..
 			",blank.png;0,180;false;false;0,79;30]",
 	}
+	-- an empty slot shows what goes in it as its background: an image would go under the slot's colour, which may be
+	-- opaque (Minecraft's)
 	for i, element in ipairs(SLOTS) do
-		if inv:get_stack("armor", i):is_empty() then
-			local x, y = 0, i - 1
-			if element == "shield" then
-				x, y = 3, 3
-			end
-			fs[#fs + 1] = ("image[%g,%g;1,1;goodluck_craft_slot_%s.png]"):format(x, y, element)
+		local x, y = 0, i - 1
+		if element == "shield" then
+			x, y = 3, 3
 		end
+		local empty = inv:get_stack("armor", i):is_empty()
+		fs[#fs + 1] = (empty and ("listimages[goodluck_craft_slot.png^goodluck_craft_slot_%s.png;]"):format(element) or
+			"") .. ("list[detached:%s_armor;armor;%d,%d;1,1;%d]"):format(name, x, y, i - 1) ..
+			(empty and "listimages[;]" or "")
 	end
-	fs[#fs + 1] = ("list[detached:%s_armor;armor;0,0;1,4;0]"):format(name)
-	fs[#fs + 1] = ("list[detached:%s_armor;armor;3,3;1,1;4]"):format(name)
 	fs[#fs + 1] = ("listring[detached:%s_armor;armor]listring[current_player;main]"):format(name)
 	return table.concat(fs)
 end
@@ -262,16 +263,17 @@ end
 -- the panel holds a page of the old 8.2 high forms; the tabs are rows of their own above it (and below it, in creative)
 -- inside the form, so that its size fits the screen with them and leaves a margin: slots of 39 px in creative and 41
 -- in survival at 640x480; the prepend's background would fill the tab rows, so the form draws its own (creative's is
--- wider, for the 9th column, the scrollbar and the trash beside the hotbar); the engine leaves the HUD out under it
+-- wider, for the 9th column, the scrollbar and the trash beside the hotbar), with its outline on the image's edge as
+-- the tabs need (the game's window has a shadow around it, Minecraft's has none); the engine leaves the HUD out under it
 local TAB_ROW = 1.05
 goodluck_craft.CREATIVE_TOP = -0.17 + TAB_ROW
--- survival's panel stands 12 px from the slots at the sides and the bottom at 640x480 (in its units they take
--- 8.04 x 8.4, the hotbar's bottom in the same place on every page), 11 over the first row, where the tabs sit on
+-- survival's panel stands 17 px from the slots at the sides and the bottom at 640x480 (in its units they take
+-- 8.04 x 8.4, the hotbar's bottom in the same place on every page), 16 over the first row, where the tabs sit on
 -- it; goodluck_chest's big chest draws it too
 local SIDE, EDGE = 0.24, 0.26
 function goodluck_craft.panel(top)
-	return ("background9[%g,%g;%g,%g;gui_formbg.png;false;10]"):format(0.25 - SIDE, top - EDGE, 8.04 + 2 * SIDE,
-		8.4 + 2 * EDGE)
+	return ("background9[%g,%g;%g,%g;goodluck_craft_panel.png;false;10]"):format(0.25 - SIDE, top - EDGE,
+		8.04 + 2 * SIDE, 8.4 + 2 * EDGE)
 end
 function sfinv.make_formspec(player, context, content, show_inv)
 	local creative = core.is_creative_enabled(player:get_player_name())
@@ -279,8 +281,6 @@ function sfinv.make_formspec(player, context, content, show_inv)
 	-- where the page ends: the hotbar's bottom
 	local bottom = show_inv and 9.02 or 8.17
 	local top = creative and goodluck_craft.CREATIVE_TOP or -0.16 + TAB_ROW
-	-- tabs that touch the panel's edge at 640x480: survival's bigger slots round its row 2 px higher
-	local tabs_top, tabs_bottom = top - TAB_ROW + (creative and 0 or 0.043), top + bottom + 0.178
 	return table.concat({
 		("size[%g,%g]"):format(w, creative and 9.6 or 9.1),
 		"padding[0.01,0.01]",
@@ -288,9 +288,9 @@ function sfinv.make_formspec(player, context, content, show_inv)
 		"bgcolor[#080808BB;true]",
 		"listcolors[#00000069;#5A5A5A;#141318;#30434C;#FFF]",
 		-- creative's: as much panel below the hotbar as at the sides and the top
-		creative and ("background9[-0.2,%g;%g,%g;gui_formbg.png;false;10]"):format(top - 0.26, w + 0.4, bottom + 0.66)
-			or goodluck_craft.panel(top),
-		goodluck_craft.tabs_formspec(context, creative, tabs_top, tabs_bottom, 8.65),
+		creative and ("background9[-0.2,%g;%g,%g;goodluck_craft_panel.png;false;10]"):format(top - 0.26, w + 0.4,
+			bottom + 0.66) or goodluck_craft.panel(top),
+		goodluck_craft.tabs_formspec(context, creative),
 		("container[%g,%g]"):format(creative and 0 or 0.25, top),
 		show_inv and inventory(4.15) or "",
 		context.page == "mtg_craftguide:craftguide" and content:gsub("container%[0,5%.6%]", "container[0,5.2]") or content,

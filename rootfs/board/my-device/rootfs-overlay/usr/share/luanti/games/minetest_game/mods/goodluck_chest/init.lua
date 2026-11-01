@@ -75,11 +75,9 @@ local function formspec(lp, page)
 		goodluck_craft and goodluck_craft.panel(TOP) or "",
 	}
 	for i = 1, 2 do
-		local x, y = 0.25 + (i - 1) * 1.25, TOP - TAB_ROW + 0.043
 		-- the number as an item icon: a text label or a plain image goes under the selected tab's image
-		fs[#fs + 1] = goodluck_craft and goodluck_craft.tab(i, tostring(i), "goodluck_chest:page_" .. i, i == page, x,
-			y, 1, false) or
-			("button[%g,%g;1,0.9;goodluck_tab_%d;%d]"):format(x, y, i, i)
+		fs[#fs + 1] = goodluck_craft and goodluck_craft.tab(i, tostring(i), "goodluck_chest:page_" .. i, i == page, 1, i,
+			false) or ("button[%g,%g;1,0.9;goodluck_tab_%d;%d]"):format(0.25 + (i - 1) * 1.25, TOP - TAB_ROW, i, i)
 	end
 	fs[#fs + 1] = ("container[0.25,%g]"):format(TOP)
 	fs[#fs + 1] = ("list[%s;main;0,0;8,4;%d]"):format(loc, (page - 1) * 32)
