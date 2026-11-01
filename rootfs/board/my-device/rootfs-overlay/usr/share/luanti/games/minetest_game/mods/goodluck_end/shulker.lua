@@ -33,13 +33,19 @@ local function shulker_at(pos, but)
 		end
 	end
 end
--- the first face at pos it can hold to (canStayAt: the block there solid, the place free)
-local function attachable(pos)
+-- the first face at pos it can hold to (canStayAt: the block there solid, the place free); waiting: else one not
+-- loaded yet
+local function attachable(pos, waiting)
 	if not free(pos) then
 		return
 	end
 	for i, f in ipairs(FACES) do
 		if solid(vector.add(pos, f)) then
+			return i
+		end
+	end
+	for i, f in ipairs(waiting and FACES or {}) do
+		if core.get_node(vector.add(pos, f)).name == "ignore" then
 			return i
 		end
 	end
@@ -152,7 +158,7 @@ core.register_entity(N, {
 		self._think, self._fire, self._peeking = math.random() * THINK, 0, 0
 		local pos = vector.round(self.object:get_pos())
 		self.object:set_pos(pos)
-		attach(self, s.face or attachable(pos) or 1)
+		attach(self, s.face or attachable(pos, true) or 1)
 		self._peek = nil
 		lid(self, 0)
 	end,
@@ -168,8 +174,12 @@ core.register_entity(N, {
 		end
 		self._think = THINK
 		local pos = self.object:get_pos()
-		-- its block gone: another face here, else elsewhere
-		if not solid(vector.add(vector.round(pos), FACES[self._face])) then
+		-- its block gone (not just unloaded): another face here, else elsewhere
+		local held = vector.add(vector.round(pos), FACES[self._face])
+		if not solid(held) then
+			if core.get_node(held).name == "ignore" then
+				return
+			end
 			local face = attachable(vector.round(pos))
 			if face then
 				attach(self, face)
