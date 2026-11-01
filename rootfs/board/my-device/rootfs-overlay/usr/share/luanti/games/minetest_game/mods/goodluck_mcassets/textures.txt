@@ -651,11 +651,26 @@ goodluck_effects_heart_poisoned.png	{gui/sprites/hud/heart/container}^{gui/sprit
 goodluck_effects_heart_withered.png	{gui/sprites/hud/heart/container}^{gui/sprites/hud/heart/withered_full}
 goodluck_effects_particle.png	{particle/effect_4}
 
-# The inventory's tabs (goodluck_craft, 9-sliced and flipped for the lower row) and the enchanting table (x_enchanting):
-# the creative inventory's tabs, the window again, the enchantment slots and their level marks, the slots, the lapis
-# slot with its mark, the grindstone's cross, and the glyphs that fly to the table as Minecraft's
+# The inventory (goodluck_craft: its window, its 9-sliced tabs, the open ones at the window's corners as the first and
+# last places', its empty armor slots (the lists' colour and the marks) and the trash's red box) and the enchanting
+# table (x_enchanting): the creative inventory's tabs, the window again, the enchantment slots and their level marks,
+# the slots, the lapis slot with its mark, the grindstone's cross, and the glyphs that fly to the table as Minecraft's
+goodluck_craft_panel.png	{gui/container/generic_54}
 goodluck_craft_tab.png	{gui/sprites/container/creative_inventory/tab_top_unselected_2}
 goodluck_craft_tab_selected.png	{gui/sprites/container/creative_inventory/tab_top_selected_2}
+goodluck_craft_tab_selected_left.png	{gui/sprites/container/creative_inventory/tab_top_selected_1}
+goodluck_craft_tab_selected_right.png	{gui/sprites/container/creative_inventory/tab_top_selected_7}
+goodluck_craft_tab_bottom.png	{gui/sprites/container/creative_inventory/tab_bottom_unselected_2}
+goodluck_craft_tab_bottom_selected.png	{gui/sprites/container/creative_inventory/tab_bottom_selected_2}
+goodluck_craft_tab_bottom_selected_left.png	{gui/sprites/container/creative_inventory/tab_bottom_selected_1}
+goodluck_craft_tab_bottom_selected_right.png	{gui/sprites/container/creative_inventory/tab_bottom_selected_7}
+goodluck_craft_slot.png	[fill:16x16:0,0:#919191
+goodluck_craft_slot_head.png	{gui/sprites/container/slot/helmet}
+goodluck_craft_slot_torso.png	{gui/sprites/container/slot/chestplate}
+goodluck_craft_slot_legs.png	{gui/sprites/container/slot/leggings}
+goodluck_craft_slot_feet.png	{gui/sprites/container/slot/boots}
+goodluck_craft_slot_shield.png	{gui/sprites/container/slot/shield}
+creative_trash_icon.png	[combine:16x16:-173,-112={gui/container/creative_inventory/tab_inventory}
 x_enchanting_gui_formbg.png	{gui/container/generic_54}
 x_enchanting_image_button.png	{gui/sprites/container/enchanting_table/enchantment_slot}
 x_enchanting_image_button_disabled.png	{gui/sprites/container/enchanting_table/enchantment_slot_disabled}

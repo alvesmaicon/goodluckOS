@@ -9,26 +9,38 @@ function goodluck_craft.set_tab(page, icon, row, col)
 	icons[page] = {icon = icon, row = row, col = col}
 end
 
--- the selected tab is an image reaching OPEN over the panel's edge (its bottom slice opens it into the panel), under
--- a button as big as the others so the icon stays put; legacy coordinates: a w x h button = a w*5/4-1/4 x h*15/13-2/13
--- image
--- 4 px at 640x480: creative's smaller slots round differently, and the lower row's from its top
-local OPEN = {creative = 0.12, creative_up = 0.09, survival = 0.1}
-local function tab(i, title, icon, selected, x, y, row, creative)
+-- the places at 640x480 in the units of each layout's panel (survival's is the big chest's too), worked out from the
+-- engine's legacy geometry: a closed tab ends on the panel's line above it and starts under its line below it, the
+-- first place meets the panel's left corner and the last its right one; the open tab is an image as wide as the
+-- button and 4 px taller, whose end rows lie over the panel's border (the rows: dev/luanti-art/tabs.py)
+local LAYOUT = {
+	creative = {top = -0.2555, bottom = 9.3415, left = -0.2768, right = 8.869, bottom_open = 9.2526, w = 1.1923,
+		h = 1.0128},
+	survival = {top = -0.2221, left = -0.1074, w = 1.1875, h = 1.0125},
+}
+
+local function tab(i, title, icon, selected, row, col, creative)
+	local l = LAYOUT[creative and "creative" or "survival"]
+	local right = l.right and col > 5
+	local x = right and l.right - (7 - col) * PITCH or l.left + (col - 1) * PITCH
+	local y = row == 1 and l.top or l.bottom
 	local name = "goodluck_tab_" .. i
-	local flip = row == 2 and "^[transformFY" or ""
+	local closed = row == 1 and "goodluck_craft_tab.png" or "goodluck_craft_tab_bottom.png"
+	-- the slicing: the closed tab's empty rows, above it or below
+	local middle = row == 1 and "4,6,-4,-4" or "4,4,-4,-8"
 	local fs = {}
 	if selected then
-		local open = OPEN[creative and (row == 2 and "creative_up" or "creative") or "survival"]
-		fs[#fs + 1] = ("image[%g,%g;%g,%g;%s;4]"):format(x, row == 2 and y - open or y, WIDTH * 5 / 4 - 1 / 4,
-			(HEIGHT + open) * 15 / 13 - 2 / 13, core.formspec_escape("goodluck_craft_tab_selected.png" .. flip))
+		local side = col == 1 and "_left" or right and col == 7 and "_right" or ""
+		fs[#fs + 1] = ("style_type[image;noclip=true]image[%g,%g;%g,%g;%s;4]style_type[image;noclip=false]"):format(x,
+			row == 1 and y or l.bottom_open, l.w, l.h,
+			(row == 1 and "goodluck_craft_tab_selected" or "goodluck_craft_tab_bottom_selected") .. side .. ".png")
 	end
 	-- the slicing shrinks the icon's room, so the selected button gets an invisible background sliced the same way
-	fs[#fs + 1] = ("style[%s;noclip=true;border=false;bgimg=%s;bgimg_middle=4;padding=2]"):format(name,
-		core.formspec_escape("goodluck_craft_tab.png" .. flip .. (selected and "^[opacity:0" or "")))
+	fs[#fs + 1] = ("style[%s;noclip=true;border=false;bgimg=%s;bgimg_middle=%s;padding=2]"):format(name,
+		core.formspec_escape(closed .. (selected and "^[opacity:0" or "")), middle)
 	if not selected then
 		fs[#fs + 1] = ("style[%s:hovered;bgimg=%s]"):format(name,
-			core.formspec_escape("goodluck_craft_tab.png^[colorize:#ffffff:24" .. flip))
+			core.formspec_escape(closed .. "^[colorize:#ffffff:24"))
 	end
 	if not icon then
 		fs[#fs + 1] = ("button[%g,%g;%g,%g;%s;%s]"):format(x, y, WIDTH, HEIGHT, name, core.formspec_escape(title:sub(1, 1)))
@@ -42,9 +54,7 @@ local function tab(i, title, icon, selected, x, y, row, creative)
 end
 goodluck_craft.tab = tab
 
--- top and bottom: the rows' y, the upper one ending at the panel and the lower one starting there; right: the last
--- place's x
-function goodluck_craft.tabs_formspec(context, creative, top, bottom, right)
+function goodluck_craft.tabs_formspec(context, creative)
 	local nav, titles = context.nav or {}, context.nav_titles or {}
 	local shown = {}
 	for i, page in ipairs(nav) do
@@ -75,11 +85,9 @@ function goodluck_craft.tabs_formspec(context, creative, top, bottom, right)
 				end
 			end
 		end
-		local row, col = math.floor(places[i] / 10), places[i] % 10
-		local x = creative and (col <= 5 and (col - 1) * PITCH or right - (7 - col) * PITCH) or 0.25 + (col - 1) * PITCH
 		local def = icons[nav[i]]
-		fs[#fs + 1] = tab(i, titles[i] or nav[i], def and def.icon, i == context.nav_idx, x, row == 1 and top or bottom,
-			row, creative)
+		fs[#fs + 1] = tab(i, titles[i] or nav[i], def and def.icon, i == context.nav_idx, math.floor(places[i] / 10),
+			places[i] % 10, creative)
 	end
 	return table.concat(fs)
 end

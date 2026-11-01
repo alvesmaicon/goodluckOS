@@ -46,16 +46,16 @@ local function swap(s)
 end
 
 -- the inventory's window as a 9-slice in a 32x32 image: Minecraft's chest window, whose title band is flat beyond
--- the border, gives the upper corners, the top and side edges and the centre; the lower pieces are the upper ones
--- upside down
+-- the border, gives the upper corners, the top and side edges and the centre; the lower pieces are the sides and
+-- the centre with the window's bottom border (its last 7 rows) over them
 local function window(img)
-	local function piece(w, h, x, y, flip)
-		return ("[combine\\:%dx%d\\:%d,%d=%s%s"):format(w, h, -x, -y, img, flip and "\\^[transformFY" or "")
+	local function piece(w, h, x, y)
+		return ("[combine\\:%dx%d\\:%d,%d=%s"):format(w, h, -x, -y, img)
 	end
-	return ("[combine:32x32:0,0=%s:22,0=%s:0,22=%s:22,22=%s:10,0=%s:10,22=%s:0,10=%s:22,10=%s:10,10=%s"):format(
-		piece(10, 10, 0, 0), piece(10, 10, 166, 0), piece(10, 10, 0, 0, true), piece(10, 10, 166, 0, true),
-		piece(12, 10, 60, 0), piece(12, 10, 60, 0, true), piece(10, 12, 0, 4), piece(10, 12, 166, 4),
-		piece(12, 12, 60, 4))
+	return ("[combine:32x32:0,0=%s:22,0=%s:10,0=%s:0,10=%s:22,10=%s:10,10=%s:0,22=%s:22,22=%s:10,22=%s:0,25=%s:" ..
+		"22,25=%s:10,25=%s"):format(piece(10, 10, 0, 0), piece(10, 10, 166, 0), piece(12, 10, 60, 0),
+		piece(10, 12, 0, 4), piece(10, 12, 166, 4), piece(12, 12, 60, 4), piece(10, 10, 0, 4), piece(10, 10, 166, 4),
+		piece(12, 10, 60, 4), piece(10, 7, 0, 215), piece(10, 7, 166, 215), piece(12, 7, 60, 215))
 end
 
 -- Minecraft's hotbar holds 9 slots of 20 px in 182: cut to the slots the player has, the right edge kept
@@ -68,17 +68,21 @@ end
 -- every image a formspec names, the window and the slot colours with it; the window's labels dark, as Minecraft's
 local LISTCOLORS = "listcolors[#00000069;#5A5A5A;#141318;#30434C;#FFF]"
 local HEADER = {formspec_version = true, size = true, position = true, anchor = true, padding = true, no_prepend = true}
-local WINDOWS = {["gui_formbg.png"] = true, ["x_enchanting_gui_formbg.png"] = true}
+local WINDOWS = {["gui_formbg.png"] = true, ["goodluck_craft_panel.png"] = true, ["x_enchanting_gui_formbg.png"] = true}
 local function formspec(fs)
 	if type(fs) ~= "string" then return fs end
 	local windowed = false
 	-- a name with modifiers goes in as a group, whole in what surrounds it, and escaped as the formspec's own text,
 	-- so that the escaping inside [combine survives
-	fs = fs:gsub("[%w_%-%.]+%.png", function(t)
+	fs = fs:gsub("()([%w_%-%.]+%.png)", function(at, t)
 		local m = map[t]
 		if WINDOWS[t] and m then
 			m = window(m)
 			windowed = true
+		end
+		-- in a [combine (after its "x,y="), with its ":" and "^" escaped
+		if m and fs:sub(at - 1, at - 1) == "=" then
+			m = m:gsub("[%^:]", "\\%0")
 		end
 		return m and m:find("[%^%[]") and core.formspec_escape("(" .. m .. ")") or m
 	end)
@@ -92,13 +96,6 @@ local function formspec(fs)
 			at = fs:find("]", first, true) + 1
 		end
 		fs = fs:sub(1, at - 1) .. "style_type[label;textcolor=#404040]" .. fs:sub(at)
-		-- the selected tab's bottom rows are the window's top border: 2 px less into the window than the game's own
-		-- tab; its top reaches over the formspec's edge, where the console's engine clips an image
-		fs = fs:gsub("image%[([%d%.%-]+),([%d%.%-]+);([%d%.]+),([%d%.]+);([^;]*tab_top_selected[^;]*);4%]", function(x, y, w, h, img)
-			local flipped = img:find("transformFY", 1, true)
-			return ("style_type[image;noclip=true]image[%s,%g;%s,%g;%s;4]style_type[image;noclip=false]"):format(
-				x, tonumber(y) + (flipped and 0.04 or 0), w, tonumber(h) - 0.04, img)
-		end)
 	end
 	return fs
 end
