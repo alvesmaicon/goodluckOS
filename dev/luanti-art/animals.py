@@ -625,6 +625,32 @@ def wriggle(t):
 
 SILVERFISH = [(0, 1, wriggle), (1, 1.0, wriggle), (4, 1, both(die, wriggle))]
 
+ENDERMITE_SIZES = [(4, 3, 2), (6, 4, 5), (3, 3, 1), (1, 2, 1)]
+ENDERMITE_UV = [(0, 0), (0, 5), (0, 14), (0, 18)]
+
+
+def endermite():
+    # Minecraft's endermite: four segments from the head (-z) on the ground
+    z, parts = -3.5, []
+    for i, ((w, h, d), (u, v)) in enumerate(zip(ENDERMITE_SIZES, ENDERMITE_UV)):
+        parts.append(part("segment%d" % i, (0, 24 - h, z), box(u, v, -w * 0.5, 0, -d * 0.5, w, h, d)))
+        if i < 3:
+            z += (d + ENDERMITE_SIZES[i + 1][2]) * 0.5
+    return parts
+
+
+def mite_wriggle(t):
+    # as the silverfish's, a fifth of the turn and half the sway: cos(age * 0.9 + i * 0.15 pi) * pi * 0.01 *
+    # (1 + |i - 2|), sin(...) * pi * 0.1 * |i - 2|
+    pose = {}
+    for i in range(4):
+        a = 2 * PI * 3 * t + i * 0.15 * PI
+        pose["segment%d" % i] = (mc_y(math.cos(a) * PI * 0.01 * (1 + abs(i - 2))), (math.sin(a) * PI * 0.1 * abs(i - 2), 0, 0))
+    return pose
+
+
+ENDERMITE = [(0, 1, mite_wriggle), (1, 1.0, mite_wriggle), (4, 1, both(die, mite_wriggle))]
+
 
 def axis_quat(axis, a):
     s = math.sin(a / 2)
@@ -798,7 +824,7 @@ def slide(t):
     return pose
 
 
-ANIMALS.update({"enderman": ((64, 32), enderman(), ENDERMAN), "silverfish": ((64, 32), silverfish(), SILVERFISH),
+ANIMALS.update({"enderman": ((64, 32), enderman(), ENDERMAN), "silverfish": ((64, 32), silverfish(), SILVERFISH), "endermite": ((64, 32), endermite(), ENDERMITE),
                 "end_crystal": ((64, 32), end_crystal(), [(0, 6, spin)]),
                 "ender_dragon": ((256, 256), ender_dragon(), DRAGON),
                 "crystal_beam": ((16, 32), crystal_beam(), [(0, BEAM_LOOP, slide)])})

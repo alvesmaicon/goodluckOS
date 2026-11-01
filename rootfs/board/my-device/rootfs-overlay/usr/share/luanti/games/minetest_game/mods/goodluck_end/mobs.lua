@@ -402,7 +402,43 @@ mobs:register_mob(N .. "silverfish", {
 })
 AMBIENT[N .. "silverfish"] = "goodluck_end_silverfish"
 
-for name, xp in pairs({enderman = 5, silverfish = 5}) do
+-- The endermite: 8 of health, bites for 2, slower than the silverfish; out of one ender pearl in twenty where it
+-- lands, gone after two minutes (Minecraft's lifeTime of 2400 ticks)
+mobs:register_mob(N .. "endermite", {
+	type = "monster",
+	description = S("Endermite"),
+	passive = false,
+	attack_type = "dogfight",
+	pathfinding = 1,
+	reach = 1,
+	damage = 2,
+	hp_min = 8, hp_max = 8,
+	armor = 100,
+	collisionbox = {-0.2, 0, -0.2, 0.2, 0.3, 0.2},
+	visual = "mesh",
+	mesh = "goodluck_models_endermite.glb",
+	textures = {{"goodluck_end_endermite.png"}},
+	sounds = {damage = "goodluck_end_silverfish_hurt", death = "goodluck_end_silverfish_death", distance = 16},
+	walk_velocity = 1, run_velocity = 2,
+	view_range = 16,
+	jump = true,
+	floats = 1,
+	fear_height = 3,
+	water_damage = 0, lava_damage = 4, light_damage = 0,
+	animation = {speed_normal = 1, stand_start = 0, stand_end = 1, walk_start = 1, walk_end = 2, run_start = 1,
+		run_end = 2, punch_start = 1, punch_end = 2, die_start = 4, die_end = 5, die_loop = false},
+	do_custom = function(self, dtime)
+		self._life = (self._life or 0) + dtime
+		if self._life > 120 and not self.nametag then
+			self.object:remove()
+			return false
+		end
+		ambient(self, dtime)
+	end,
+})
+AMBIENT[N .. "endermite"] = "goodluck_end_silverfish"
+
+for name, xp in pairs({enderman = 5, silverfish = 5, endermite = 3}) do
 	local def = core.registered_entities[N .. name]
 	def._goodluck_xp = xp
 	mobs:register_egg(N .. name, def.description, "goodluck_end_" .. name .. "_egg.png", 0)

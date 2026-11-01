@@ -2,7 +2,8 @@
 -- leads to the nearest stronghold, and the silverfish of the strongholds' spawners (items.lua, mobs.lua); where the
 -- strongholds are and how they are laid out (strongholds.lua, stronghold.lua, drawn in the map generator's threads),
 -- their blocks, the end portal frame and the portal (portal.lua). The End itself, its island, pillars and crystals,
--- far over the world (realm.lua, endgen.lua in the map generator's threads), and its dragon (dragon.lua)
+-- far over the world (realm.lua, endgen.lua in the map generator's threads), its outer islands (islands.lua) with
+-- chorus (chorus.lua) and gateways (gateway.lua), purpur and end rods (purpur.lua), and its dragon (dragon.lua)
 goodluck_end = {}
 local E = goodluck_end
 local path = core.get_modpath("goodluck_end")
@@ -13,6 +14,11 @@ function E.overworld(pos)
 end
 
 dofile(path .. "/realm.lua")
+dofile(path .. "/purpur.lua")
+dofile(path .. "/chorus.lua")
+dofile(path .. "/gateway.lua")
+E.islands = dofile(path .. "/islands.lua")
+core.register_mapgen_script(path .. "/islands.lua")
 core.register_mapgen_script(path .. "/endgen.lua")
 E.strongholds = dofile(path .. "/strongholds.lua")
 core.ipc_set("goodluck_end:rings", E.strongholds.rings)
@@ -20,7 +26,9 @@ core.register_mapgen_script(path .. "/stronghold.lua")
 E.stronghold = dofile(path .. "/stronghold.lua")
 E.strongholds.locator = E.stronghold.locator
 dofile(path .. "/items.lua")
+dofile(path .. "/enderchest.lua")
 dofile(path .. "/mobs.lua")
 E.spawn_endermen()
 dofile(path .. "/portal.lua")
 dofile(path .. "/dragon.lua")
+dofile(path .. "/respawn.lua")

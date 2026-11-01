@@ -164,19 +164,26 @@ core.register_entity("goodluck_end:dragon_head", {
 
 -- The healing beam, Minecraft's crystal beam: a tube in the crystal's glass, its rings sliding toward it, turned and
 -- stretched to the dragon on the steps the server sends objects on, which the client eases between; gone with the
--- crystal, with the dragon (or its dying) and when the dragon is out of reach
+-- crystal, with the dragon (or its dying) and when the dragon is out of reach. Or to a place (_target), as the
+-- crystals that call the dragon back aim theirs (respawn.lua)
 local STEP = tonumber(core.settings:get("dedicated_server_step")) or 0.09
 local send_timer, sending = 0, false
 local function aim(beam, interval)
-	local dragon, crystal = beam._dragon, beam._crystal
-	local e = dragon:get_luaentity()
+	local crystal = beam._crystal
 	local cp = crystal:get_pos()
-	local dp = dragon:get_pos()
-	if not e or e._beam ~= beam or e._phase == "dying" or not cp or vector.distance(dp, cp) > 32 then
+	local dp = beam._target
+	if not dp then
+		local e = beam._dragon:get_luaentity()
+		dp = beam._dragon:get_pos()
+		if not e or e._beam ~= beam or e._phase == "dying" or not cp or vector.distance(dp, cp) > 32 then
+			return false
+		end
+		dp = vector.offset(dp, 0, 2, 0)
+	elseif not cp then
 		return false
 	end
 	local from = beam._from
-	local dx, dy, dz = dp.x - from.x, dp.y + 2 - from.y, dp.z - from.z
+	local dx, dy, dz = dp.x - from.x, dp.y - from.y, dp.z - from.z
 	-- (nothing sent while the dragon sits)
 	local last = beam._d
 	if last and math.abs(last[1] - dx) + math.abs(last[2] - dy) + math.abs(last[3] - dz) < 0.05 then
@@ -203,12 +210,23 @@ core.register_entity("goodluck_end:crystal_beam", {
 		if sending then
 			local interval = self._t
 			self._t = 0
-			if not (self._dragon and aim(self, interval)) then
+			if not ((self._dragon or self._target) and aim(self, interval)) then
 				self.object:remove()
 			end
 		end
 	end,
 })
+
+-- a crystal's beam to a place, until removed
+function E.beam_to(crystal, target)
+	local obj = core.add_entity(vector.offset(crystal:get_pos(), 0, 1, 0), "goodluck_end:crystal_beam")
+	local beam = obj and obj:get_luaentity()
+	if beam then
+		beam._crystal, beam._target = crystal, target
+		aim(beam, 0)
+	end
+	return beam
+end
 
 -- the beam to the crystal that heals it, kept while it is the same one
 local function show_beam(e, crystal)
@@ -251,7 +269,7 @@ local IMMUNE = {["air"] = true, ["ignore"] = true, ["goodluck_end:end_stone"] = 
 	["goodluck_nether:bedrock"] = true, ["goodluck_nether:crying_obsidian"] = true, ["xpanes:bar"] = true,
 	["xpanes:bar_flat"] = true, ["goodluck_end:portal"] = true, ["goodluck_end:exit_portal"] = true,
 	["goodluck_end:frame"] = true, ["goodluck_end:frame_eye"] = true, ["fire:permanent_flame"] = true,
-	["goodluck_end:dragon_egg"] = true, ["default:torch_wall"] = true}
+	["goodluck_end:dragon_egg"] = true, ["default:torch_wall"] = true, ["goodluck_end:gateway"] = true}
 
 local function boss_bars(e)
 	e._bars = e._bars or {}
@@ -785,8 +803,8 @@ core.register_node("goodluck_end:dragon_egg", {
 	end,
 })
 
--- its death: experience, the exit portal lit, the egg the first time; ready for a next one never (respawning it
--- with four crystals is not here)
+-- its death: experience, the exit portal lit, a gateway (gateway.lua), the egg the first time; four crystals call it
+-- back (respawn.lua)
 function E.dragon_died(e, pos)
 	local first = storage:get_string("killed") ~= "1"
 	storage:set_string("killed", "1")
@@ -796,6 +814,7 @@ function E.dragon_died(e, pos)
 	end
 	e.object:remove()
 	E.exit_portal(true)
+	E.spawn_gateway()
 	local top = podium_top()
 	if first and top then
 		core.set_node(top, {name = "goodluck_end:dragon_egg"})

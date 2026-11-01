@@ -35,6 +35,14 @@ core.register_entity("goodluck_end:thrown_pearl", {
 			self._ticks = (self._ticks or 0) + 1
 			local pos = self.object:get_pos()
 			local to = vector.add(pos, self._v)
+			if E.inside(pos) then
+				for k = 1, 4 do
+					local p = vector.round(vector.add(pos, vector.multiply(self._v, k / 4)))
+					if core.get_node(p).name == "goodluck_end:gateway" then
+						return self:through(p, owner)
+					end
+				end
+			end
 			for hit in core.raycast(pos, to, true, false) do
 				local obj = hit.type == "object" and hit.ref
 				local ent = obj and obj:get_luaentity()
@@ -57,12 +65,24 @@ core.register_entity("goodluck_end:thrown_pearl", {
 			end
 		end
 	end,
+	through = function(self, gate, owner)
+		self.object:remove()
+		if owner and owner:get_hp() > 0 then
+			E.enter_gateway(owner, gate)
+			if not creative(owner) then
+				owner:set_hp(owner:get_hp() - 5, {type = "set_hp", cause = "goodluck_end:ender_pearl"})
+			end
+		end
+	end,
 	land = function(self, at, owner, obj)
 		self.object:remove()
 		if obj and obj ~= owner then
 			obj:punch(self.object, 1, {full_punch_interval = 1, damage_groups = {fleshy = 0}})
 		end
 		E.specks(at, 32, 0.3)
+		if math.random() < 0.05 then
+			core.add_entity(at, "goodluck_end:endermite")
+		end
 		if not owner or owner:get_hp() <= 0 then
 			return
 		end

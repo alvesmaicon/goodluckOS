@@ -163,7 +163,7 @@ goodluck_monsters_witch_drink	entity/witch/drink1 entity/witch/drink2 entity/wit
 goodluck_monsters_witch_throw	entity/witch/throw1 entity/witch/throw2 entity/witch/throw3
 
 # The End (goodluck_end): the enderman, its teleports and stare, the silverfish, the pearl and the eye, the portal,
-# the dragon
+# the dragon, the chorus flower
 goodluck_end_enderman	mob/endermen/idle1 mob/endermen/idle2 mob/endermen/idle3 mob/endermen/idle4 mob/endermen/idle5
 goodluck_end_enderman_scream	mob/endermen/scream1 mob/endermen/scream2 mob/endermen/scream3 mob/endermen/scream4
 goodluck_end_enderman_stare	mob/endermen/stare
@@ -173,6 +173,10 @@ goodluck_end_teleport	mob/endermen/portal mob/endermen/portal2
 goodluck_end_silverfish	mob/silverfish/say1 mob/silverfish/say2 mob/silverfish/say3 mob/silverfish/say4
 goodluck_end_silverfish_hurt	mob/silverfish/hit1 mob/silverfish/hit2 mob/silverfish/hit3
 goodluck_end_silverfish_death	mob/silverfish/kill
+goodluck_end_chorus_grow	block/chorus_flower/grow1 block/chorus_flower/grow2 block/chorus_flower/grow3 block/chorus_flower/grow4
+goodluck_end_ender_chest_open	block/enderchest/open
+goodluck_end_ender_chest_close	block/enderchest/close
+goodluck_end_chorus_death	block/chorus_flower/death1 block/chorus_flower/death2 block/chorus_flower/death3
 goodluck_end_pearl_throw	random/bow
 goodluck_end_eye_launch	entity/endereye/endereye_launch1 entity/endereye/endereye_launch2
 goodluck_end_eye_death	entity/endereye/dead1 entity/endereye/dead2

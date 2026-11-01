@@ -170,4 +170,10 @@ frame = [("top", element((0, 0, 0), (16, 13, 16), {"up": (0, 0, 16, 16)})),
 write("goodluck_models_end_portal_frame.obj", None, (16, 16), lift=-0.5, groups=frame)
 write("goodluck_models_end_portal_frame_eye.obj", None, (16, 16), lift=-0.5,
       groups=frame + [("eye", element((4, 13, 4), (12, 16, 12), EYE))])
+
+# the end rod (goodluck_end), its base and its rod as its block model has them, standing on the face it is put on
+ROD_SIDE = {f: (0, 0, 2, 15) for f in ("north", "south", "west", "east")}
+write("goodluck_models_end_rod.obj", element((6, 0, 6), (10, 1, 10), {"down": (6, 6, 2, 2), "up": (2, 2, 6, 6),
+      **{f: (2, 6, 6, 7) for f in ("north", "south", "west", "east")}}) +
+      element((7, 1, 7), (9, 16, 9), {"up": (2, 0, 4, 2), **ROD_SIDE}), (16, 16), lift=-0.5)
 print("meshes in", os.path.relpath(OUT, ROOT))
