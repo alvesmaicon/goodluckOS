@@ -35,7 +35,7 @@ TERMINAL=1
 |---|---|---|
 | `NAME` | required | Shown in the launcher and the installer. |
 | `COMMAND` | required | Run with the app's folder as the working directory, as the user `player`, through `sh -c`. |
-| `DESCRIPTION` | | One line, shown under the launcher tile. |
+| `DESCRIPTION` | | One line, shown under the launcher tile. `DESCRIPTION_pt-BR=` (or `DESCRIPTION_pt=`) is shown instead when the interface is in that language. |
 | `ICON` | | A PNG in the app's folder, at most 1024 × 1024. Up to 192 × 128 it is drawn at its own size in the middle of the tile (48 × 48 matches the system icons); bigger pictures are scaled to cover the tile, like box art. |
 | `VERSION` | | Shown by the installer. |
 | `TERMINAL` | | Any value: a text program, run on the console instead of the screen. |

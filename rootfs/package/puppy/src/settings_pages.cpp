@@ -784,7 +784,7 @@ void SettingsScreen::reloadApps() {
 std::vector<Row> SettingsScreen::appsPage() {
     std::vector<Row> rows;
     rows.push_back(Row::section("To install"));
-    if (appZipList.empty()) rows.push_back(Row::info("No app zips in the apps folder", ""));
+    if (appZipList.empty()) rows.push_back(Row::info("No zips to install", ""));
     for (const AppItem& z : appZipList) {
         Row r = Row::action(z.name, [this, z] { askInstall(z); },
                             z.error.empty() ? humanSize(z.bytes >> 10) : tr("Can't install"));

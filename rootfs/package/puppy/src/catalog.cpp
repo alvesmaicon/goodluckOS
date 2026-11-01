@@ -55,6 +55,16 @@ static void parseAppsFile(const std::string& path, std::vector<Record>& records,
         auto it = kv.find(key);
         return it == kv.end() ? std::string() : it->second;
     };
+    // DESCRIPTION_PT-BR, then DESCRIPTION_PT, then DESCRIPTION: an app brings its own translations
+    auto localized = [&](const std::string& key) {
+        const std::string code = upper(i18n::current());
+        if (!code.empty())
+            for (const std::string& k : {key + "_" + code, key + "_" + code.substr(0, code.find('-'))}) {
+                auto it = kv.find(k);
+                if (it != kv.end()) return it->second;
+            }
+        return get(key.c_str());
+    };
 
     auto flush = [&]() {
         if (section == "ENTRY") {
@@ -62,7 +72,7 @@ static void parseAppsFile(const std::string& path, std::vector<Record>& records,
             rec.entry.category    = get("CATEGORY").empty() ? defaultCategory : get("CATEGORY");
             rec.entry.name        = get("NAME");
             rec.entry.id          = rec.entry.name;
-            rec.entry.description = get("DESCRIPTION");
+            rec.entry.description = localized("DESCRIPTION");
             rec.entry.command     = get("COMMAND");
             rec.entry.terminal    = !get("TERMINAL").empty();
             rec.entry.iconPath    = get("ICON");

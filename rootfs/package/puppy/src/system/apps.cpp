@@ -31,6 +31,8 @@ struct Manifest {
 static Manifest parseManifest(const std::string& text) {
     Manifest m;
     std::string section;
+    const std::string code = upper(i18n::current()), lang = code.substr(0, code.find('-'));
+    int match = 0;      // how closely the description found fits the interface's language
     size_t pos = 0;
     while (pos <= text.size()) {
         size_t end = text.find('\n', pos);
@@ -47,7 +49,9 @@ static Manifest parseManifest(const std::string& text) {
         if (section != "ENTRY" || eq == std::string::npos) continue;
         const std::string key = upper(trim(line.substr(0, eq))), v = trim(line.substr(eq + 1));
         if (key == "NAME") m.name = v;
-        else if (key == "DESCRIPTION") m.description = v;
+        else if (key == "DESCRIPTION" && match < 1) { m.description = v; match = 1; }
+        else if (!code.empty() && key == "DESCRIPTION_" + lang && match < 2) { m.description = v; match = 2; }
+        else if (!code.empty() && key == "DESCRIPTION_" + code) { m.description = v; match = 3; }
         else if (key == "COMMAND") m.command = v;
         else if (key == "ICON") m.icon = v;
         else if (key == "VERSION") m.version = v;
