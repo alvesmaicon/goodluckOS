@@ -33,7 +33,7 @@ Clicking a text field (a world's name, a setting, a sign, a book, the creative i
 | X / Y | Inventory | Y: half a stack, X: the stack straight to the other side |
 | R1 / L1 | Dig, eat, look through the spyglass (held) / place, draw a bow (held; let go to shoot; with a shield on and no block in hand, L1 holds it up), get on a horse (with A held: its inventory) | Scroll |
 | R2 / L2 | Next / previous item | |
-| L3 | Run | |
+| L3 | Run, until the stick is let go | |
 | D-pad | Up: camera view (seen from outside, the player holds what's in hand), down: drop the item, left: fly (Creative mode), right: screenshot | Move the cursor slowly |
 | START | Pause menu (Exit to OS goes back to the launcher) | Close |
 
@@ -318,7 +318,7 @@ The 45 `goodluck_*` mods and `invisibility` are goodluckOS's, under its license 
 | goodluck_redstone | Redstone in mese's place: the ore, the dust, its block and the lamp, no circuits yet |
 | goodluck_shield | The shield, held up with L1 or by sneaking, blocks hits and arrows from the front |
 | goodluck_solid_leaves | Opaque leaves that don't wave drawn as plain cubes |
-| goodluck_sprint | L3 runs, with a slightly wider view |
+| goodluck_sprint | L3 runs until the stick is let go, as in Minecraft, with a slightly wider view |
 | goodluck_spyglass | Minetest Game's binoculars become Minecraft's spyglass, made with an amethyst shard and copper |
 | goodluck_swamp | Swamps: dark grass and water, swamp oaks with vines, lily pads and blue orchids, and the witch's hut with her cat and her cauldron |
 | goodluck_swim | Swimming and breath as in Minecraft: running with the head under water swims where the player looks; 15 s of breath |
