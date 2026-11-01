@@ -1,4 +1,5 @@
-// gl-scrape's pieces on their own: JSON, the cached record, regions, gamelist edits, CRC and zip
+// gl-scrape's pieces on their own: JSON, the cached record, regions, gamelist edits, CRC and zip, the
+// tabs' folders and ScreenScraper's systems
 #include <cassert>
 #include <cstdio>
 #include <fstream>
@@ -7,6 +8,7 @@
 #include "gamelist.h"
 #include "roms.h"
 #include "screenscraper.h"
+#include "systems.h"
 int main() {
     // JSON
     Json j;
@@ -55,5 +57,26 @@ int main() {
     { std::ofstream f("c.bin", std::ios::binary); f << "123456789"; }   // run.sh also zips it as c.zip
     RomId id = identify("c.bin"); assert(id.crc == "CBF43926" && id.size == 9);
     RomId z = identify("c.zip"); std::cout << "zip " << z.crc << " " << z.size << "\n"; assert(z.crc == "CBF43926" && z.size == 9);
+    // the tabs' folders: Puppy's keys in any case, a NAME= again replaces, music is no ROM folder
+    { std::ofstream f("t.puppy"); f << "[ENTRY]\nNAME=x\nCOMMAND=y\n[ARCHIVE]\nNAME=Super Nintendo\nTAB=SNES\nENTRY_DIRECTORIES=/r/snes;/r/sfc/\n"
+                                     "ENTRY_EXTENSIONS=SFC;smc;\n[archive]\nname = Arcade\nentry_directories = /r/mame\n[ARCHIVE]\nNAME=Music\nMEDIA=1\n"
+                                     "ENTRY_DIRECTORIES=/m\n[ARCHIVE]\nNAME=Arcade\nENTRY_DIRECTORIES=/r/fbneo;/r/snes\n"; }
+    std::vector<RomDir> dirs = romDirs({"t.puppy", "missing.puppy"});
+    assert(dirs.size() == 3 && dirs[0].folder == "snes" && dirs[1].dir == "/r/sfc" && dirs[1].folder == "sfc" && dirs[1].tab == "SNES");
+    assert(dirs[0].exts == std::vector<std::string>({"sfc", "smc"}) && dirs[2].folder == "fbneo" && dirs[2].tab == "Arcade");
+    // ScreenScraper's systems: own names first, then Recalbox/RetroPie folders, then the tab; the lowest id on a tie
+    assert(Json::parse(R"J({"header":{"commandRequested":"x?devpassword=SECRET"},"response":{"systemes":[
+      {"id":203,"noms":{"nom_eu":"Megadrive - Sonic Hacks","nom_recalbox":"megadrive","nom_retropie":"genesis,megadrive"}},
+      {"id":1,"noms":{"nom_eu":"Megadrive","nom_us":"Genesis","nom_recalbox":"megadrive","nom_retropie":"genesis,megadrive","noms_commun":"Sega Megadrive,Sega Genesis,Megadrive,Genesis"}},
+      {"id":6,"noms":{"nom_eu":"Capcom Play System","nom_recalbox":"arcade,mame","noms_commun":"Capcom Play System,CPS 1"}},
+      {"id":75,"noms":{"nom_eu":"Mame","nom_recalbox":"arcade,mame,fbneo","noms_commun":"MAME,Arcade"}},
+      {"id":4,"noms":{"nom_eu":"Super Nintendo","nom_recalbox":"snes","noms_commun":"SNES,Super Nintendo,Super Famicom"}}]}})J", j));
+    Systems sys; assert(sys.empty() && sys.fromList(j) && !sys.empty());
+    auto at = [](const char* folder, std::vector<std::string> names = {}) { RomDir d; d.folder = folder; d.names = names; return d; };
+    assert(sys.find(at("genesis")) == 1 && sys.find(at("Mega-Drive")) == 1 && sys.find(at("cps1")) == 6 && sys.find(at("mame")) == 75);
+    assert(sys.find(at("fbneo")) == 75 && sys.find(at("sfc", {"Super Nintendo", "SNES"})) == 4 && sys.find(at("doom", {"Doom"})) == 0);
+    { std::ofstream f("systems"); f << sys.dump(); }
+    assert(sys.dump().find("SECRET") == std::string::npos);
+    Systems back2; assert(back2.load("systems") && back2.dump() == sys.dump() && !Systems().load("missing"));
     std::cout << "ALL OK\n";
 }

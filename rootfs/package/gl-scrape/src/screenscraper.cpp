@@ -57,10 +57,10 @@ std::string ScreenScraper::credentials() const {
     return q;
 }
 
-Answer ScreenScraper::request(const std::string& url, Json& out) {
+Answer ScreenScraper::request(const std::string& url, Json& out, int timeout) {
     const long long wait = nextAt - nowMs();
     if (wait > 0) usleep((useconds_t)wait * 1000);
-    const Fetched r = fetch(url, 60);
+    const Fetched r = fetch(url, timeout);
     nextAt = nowMs() + gapMs;
     detail = r.status ? r.body.substr(0, r.body.find('\n')).substr(0, 160) : r.error;
     detail.erase(detail.find_last_not_of(" \t\r") + 1);
@@ -98,6 +98,10 @@ Answer ScreenScraper::userInfo(Quota& q) {
     q.unknownPerDay = number(u["maxrequestskoperday"]);
     if (q.perMinute > 0) gapMs = 60000 / q.perMinute + 100;
     return Answer::Ok;
+}
+
+Answer ScreenScraper::systemList(Json& answer) {
+    return request(api() + "systemesListe.php?output=json&" + credentials(), answer, 300);
 }
 
 // A disc image is an "iso" to ScreenScraper, a cartridge a "rom"

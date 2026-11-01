@@ -1,9 +1,13 @@
-# A fake ScreenScraper for dev/scrape-test/run.sh: ssuserInfos, jeuInfos (by romnom: three known games,
-# 404 for the rest) and the media, with gl-scrape's test credentials (DEV / DPW)
+# A fake ScreenScraper for dev/scrape-test/run.sh: ssuserInfos, systemesListe (a few systems), jeuInfos
+# (by romnom: four known games, 404 for the rest) and the media, with gl-scrape's test credentials (DEV / DPW)
 import json, sys, urllib.parse
 from http.server import BaseHTTPRequestHandler, HTTPServer
 calls = {"jeuInfos": 0}
-GAMES = {"Advance Wars (USA).gba": "1", "Golden Sun (USA).gba": "2", "Final Fantasy VII (USA) (Disc 1).chd": "3"}
+GAMES = {"Advance Wars (USA).gba": "1", "Golden Sun (USA).gba": "2", "Final Fantasy VII (USA) (Disc 1).chd": "3", "sf2.zip": "4"}
+SYSTEMS = [{"id": "12", "noms": {"nom_eu": "Game Boy Advance", "nom_recalbox": "gba", "nom_retropie": "gba", "noms_commun": "Nintendo Game Boy Advance,Game Boy Advance,GBA"}},
+           {"id": "57", "noms": {"nom_eu": "Playstation", "nom_recalbox": "psx", "nom_retropie": "psx", "noms_commun": "Sony Playstation,PSX,PS1"}},
+           {"id": "6", "noms": {"nom_eu": "Capcom Play System", "nom_recalbox": "arcade,mame,fba,fba_libretro", "noms_commun": "Capcom Play System,CPS 1"}},
+           {"id": "75", "noms": {"nom_eu": "Mame", "nom_recalbox": "arcade,mame,fba,fba_libretro,fbneo", "noms_commun": "MAME,Arcade,FBA"}}]
 PNG = bytes.fromhex("89504e470d0a1a0a0000000d4948445200000001000000010806000000")
 class H(BaseHTTPRequestHandler):
     def log_message(self, *a): pass
@@ -16,9 +20,12 @@ class H(BaseHTTPRequestHandler):
             return self.send(403, "Erreur de login : Vérifier vos identifiants développeur !", "text/plain")
         if u.path.endswith("ssuserInfos.php"):
             return self.send(200, json.dumps({"response": {"ssuser": {"id": q.get("ssid"), "niveau": "1", "maxthreads": "1", "maxrequestsperdmin": "600", "requeststoday": str(calls["jeuInfos"]), "maxrequestsperday": "20000", "requestskotoday": "0", "maxrequestskoperday": "2000"}}}))
+        if u.path.endswith("systemesListe.php"):
+            print("systemesListe", file=sys.stderr, flush=True)
+            return self.send(200, json.dumps({"header": {"commandRequested": self.path}, "response": {"systemes": SYSTEMS}}))
         if u.path.endswith("jeuInfos.php"):
             calls["jeuInfos"] += 1
-            print("jeuInfos", q.get("romnom"), "crc", q.get("crc"), "romtype", q.get("romtype"), "size", q.get("romtaille"), file=sys.stderr, flush=True)
+            print("jeuInfos", q.get("romnom"), "crc", q.get("crc"), "romtype", q.get("romtype"), "size", q.get("romtaille"), "system", q.get("systemeid"), file=sys.stderr, flush=True)
             gid = GAMES.get(q.get("romnom"))
             if not gid: return self.send(404, "Erreur : Rom/Iso/Dossier non trouvée !  ", "text/plain")
             base = f"http://localhost:8765/api2/mediaJeu.php?devid=DEV&devpassword=DPW&softname=goodluckOS&ssid={q.get('ssid')}&sspassword=X&systemeid={q.get('systemeid')}&jeuid={gid}"
