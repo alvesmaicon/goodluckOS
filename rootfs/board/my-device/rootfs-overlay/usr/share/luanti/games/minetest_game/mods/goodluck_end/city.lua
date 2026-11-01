@@ -240,7 +240,7 @@ local function ids()
 		id("goodluck_end:end_rod")
 	c.stair, c.outer = id("stairs:stair_purpur_block"), id("stairs:stair_outer_purpur_block")
 	c.slab, c.ladder, c.obsidian = id("stairs:slab_purpur_block"), id("default:ladder_wood"), id("default:obsidian")
-	c.head = id("goodluck_end:dragon_head_wall")
+	c.head, c.ender = id("goodluck_end:dragon_head_wall"), id("goodluck_end:ender_chest")
 	c.name = {}
 	for _, v in pairs(c) do
 		if type(v) == "number" then
@@ -578,6 +578,8 @@ function DRAW.third_floor_2()
 	ROD(7, 4, 4, "S")
 	steps({{3, 9}, {4, 9}, {5, 9}, {6, 9}, {7, 9}, {8, 9}, {9, 9}}, 1)
 	mark("chests", 6, 5, 2, "S")
+	local sx, sz = world_dir(FACE.S[1], FACE.S[2])
+	P(7, 5, 2, c.ender, facedir(-sx, -sz))
 	mark("shulkers", 2, 5, 2)
 	mark("shulkers", 11, 5, 2)
 end
