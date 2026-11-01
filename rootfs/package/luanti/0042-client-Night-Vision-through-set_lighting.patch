@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Thu, 29 Oct 2026 20:17:58 -0300
-Subject: [PATCH 42/46] client: Night Vision through set_lighting
+Subject: [PATCH 42/47] client: Night Vision through set_lighting
 
 A player's lighting gets night_vision, from 0 (off) to 1: everything they see
 is as lit as its brightest light, Minecraft's Night Vision. Minecraft scales

@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Mon, 26 Oct 2026 00:55:40 -0300
-Subject: [PATCH 37/46] Camera: the item's change and the walking bob as in
+Subject: [PATCH 37/47] Camera: the item's change and the walking bob as in
  Minecraft
 
 A new wielded item came in with Luanti's animation: the old one dropped

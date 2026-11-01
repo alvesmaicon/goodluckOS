@@ -1,4 +1,4 @@
--- Aux1 while moving forward runs at goodluck_sprint_speed times the walk; less than half forward ends it
+-- Aux1 while moving forward runs at goodluck_sprint_speed times the walk until no forward is left, as in Minecraft
 local speed = tonumber(core.settings:get("goodluck_sprint_speed") or "") or 1.5
 -- and widens the view by goodluck_sprint_fov (1 for none), so the run shows, as in Minecraft
 local fov = tonumber(core.settings:get("goodluck_sprint_fov") or "") or 1.1
@@ -54,7 +54,7 @@ core.register_globalstep(function(dtime)
 		local name = player:get_player_name()
 		local ctrl = player:get_player_control()
 		local forward = ctrl.movement_y or 0
-		if forward < 0.5 or next(stopped[name] or {}) or not fed(player, name) then
+		if forward <= 0 or next(stopped[name] or {}) or not fed(player, name) then
 			set_running(player, name, false)
 		elseif ctrl.aux1 and not held[name] then
 			set_running(player, name, true)

@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Fri, 16 Oct 2026 13:35:35 -0300
-Subject: [PATCH 22/46] Camera: the off-hand list's item held in the left hand
+Subject: [PATCH 22/47] Camera: the off-hand list's item held in the left hand
 
 A game can give a player an "offhand" inventory list; its first item is
 drawn in first person in the left hand, next to the wielded one, in the

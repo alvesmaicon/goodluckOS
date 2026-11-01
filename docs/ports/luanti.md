@@ -2,7 +2,7 @@
 
 ![Luanti on the console: a lake, with the far shore in view](luanti.png)
 
-Luanti is an open-source engine for Minecraft-like games, and Minetest Game, its classic game, is free. Here both run on a 512 MB handheld with a Mali-400: 46 patches make the engine fast enough, fit it to a gamepad and a 640x480 screen, and make it dig, swim, jump and hold things as Minecraft does, and 64 mods, 47 of them written for goodluckOS, bring the game close to Minecraft: Survival or Creative, hunger and status effects, armor and shields, Minecraft's ores, crops and foods, the classic monsters and the witch, villages with traders, horses, experience, enchanting and the anvil, a bow, a compass, maps and a spyglass, recipes learnt as you go, the Nether with its fortresses, potions and the brewing stand, swamps with witch huts, the End with its strongholds, the ender dragon, its outer islands, gateways and cities with their ships and shulkers, and the elytra with firework rockets. At 640x480: 20 FPS in a forest, 10 to 11 looking across a lake, capped at 30. It comes with free textures and sounds, or takes the textures, sounds and music of your own Minecraft: Java Edition, which Update Luanti imports from a copy of your `.minecraft` folder ([Updating Luanti](#updating-luanti)); nothing of Minecraft's is in this repository or in the image.
+Luanti is an open-source engine for Minecraft-like games, and Minetest Game, its classic game, is free. Here both run on a 512 MB handheld with a Mali-400: 47 patches make the engine fast enough, fit it to a gamepad and a 640x480 screen, and make it dig, swim, jump and hold things as Minecraft does, and 64 mods, 47 of them written for goodluckOS, bring the game close to Minecraft: Survival or Creative, hunger and status effects, armor and shields, Minecraft's ores, crops and foods, the classic monsters and the witch, villages with traders, horses, experience, enchanting and the anvil, a bow, a compass, maps and a spyglass, recipes learnt as you go, the Nether with its fortresses, potions and the brewing stand, swamps with witch huts, the End with its strongholds, the ender dragon, its outer islands, gateways and cities with their ships and shulkers, and the elytra with firework rockets. At 640x480: 20 FPS in a forest, 10 to 11 looking across a lake, capped at 30. It comes with free textures and sounds, or takes the textures, sounds and music of your own Minecraft: Java Edition, which Update Luanti imports from a copy of your `.minecraft` folder ([Updating Luanti](#updating-luanti)); nothing of Minecraft's is in this repository or in the image.
 
 **Install:** Luanti is part of the system image (a Buildroot package), so there is nothing to copy. Build the rootfs from `develop` and write it to the card (`dev/gl rootfs`, `dev/gl ext4`, `dev/sdcard-mac.sh`, see [dev/README.md](../../dev/README.md)), and it shows up in the Games tab. Worlds and settings are kept in `HOME/.minetest`. The controls, and how each part of the game plays, are [below](#playing).
 
@@ -33,7 +33,7 @@ Clicking a text field (a world's name, a setting, a sign, a book, the creative i
 | X / Y | Inventory | Y: half a stack, X: the stack straight to the other side |
 | R1 / L1 | Dig, eat, look through the spyglass (held) / place, draw a bow (held; let go to shoot; with a shield on and no block in hand, L1 holds it up), get on a horse (with A held: its inventory) | Scroll |
 | R2 / L2 | Next / previous item | |
-| L3 | Run | |
+| L3 | Run, until the stick is let go | |
 | D-pad | Up: camera view (seen from outside, the player holds what's in hand), down: drop the item, left: fly (Creative mode), right: screenshot | Move the cursor slowly |
 | START | Pause menu (Exit to OS goes back to the launcher) | Close |
 
@@ -43,7 +43,7 @@ What you hold is drawn and swings as in Minecraft too, with nothing in hand your
 
 Running widens the view a little, as in Minecraft. Jumps and falls are Minecraft's too: a jump goes a block and a quarter high, no higher against a block, a slab or a stair, jump held jumps again after half a second, and a fall costs half a heart for each block beyond three.
 
-Water works as in Minecraft too: under water you walk at half the speed and sink slowly, jump swims up and sneak down, and running or jumping no longer carries you over the surface; running (L3) with the head under water swims, lying face down, faster and up or down where you look, through holes one block high (out of the water you crawl until there is room to stand), and with the feet in water and the head out you can't run. Pushing on a wall at the surface lifts you out over an edge up to a slab above the water (not a whole block, as in Minecraft), flowing water carries you along, a fall into water does no damage, and the breath lasts 15 seconds under water, then costs a heart every second, and comes back in 4 seconds.
+Water works as in Minecraft too: under water you walk at half the speed and sink slowly, jump swims up and sneak down, and running or jumping no longer carries you over the surface; running (L3) with the head under water swims, lying face down, faster and up or down where you look, through holes one block high (out of the water you crawl until there is room to stand), and with the feet in water and the head out you can't run. Pushing on a wall at the surface lifts you out over an edge up to a slab above the water (not a whole block, as in Minecraft), from a stream or the foot of a waterfall jump takes you onto a bank a block high, flowing water carries you along, a fall into water does no damage, and the breath lasts 15 seconds under water, then costs a heart every second, and comes back in 4 seconds.
 
 ### Digging, items and chests
 
@@ -216,7 +216,7 @@ Update Luanti is part of the system image: a card with an older image needs a ne
 
 ## The engine: Luanti 5.18 for handhelds
 
-The engine is Luanti 5.18.0 (celeron55 and contributors; code LGPL-2.1+, media CC BY-SA 3.0) with the commits of the `handheld/5.18` branch of [alvesmaicon/luanti](https://github.com/alvesmaicon/luanti/tree/handheld/5.18), which Buildroot applies as patches (`rootfs/package/luanti/`). This tree builds 5.18.0-handheld.29. Patch 0001 is a commit of Luanti 5.19-dev taken early. The patches are under Luanti's license. They were written with AI assistance, which Luanti's AI policy doesn't accept, so they stay in that fork; fixes upstream could use are its issues labelled "upstream candidate".
+The engine is Luanti 5.18.0 (celeron55 and contributors; code LGPL-2.1+, media CC BY-SA 3.0) with the commits of the `handheld/5.18` branch of [alvesmaicon/luanti](https://github.com/alvesmaicon/luanti/tree/handheld/5.18), which Buildroot applies as patches (`rootfs/package/luanti/`). This tree builds 5.18.0-handheld.30. Patch 0001 is a commit of Luanti 5.19-dev taken early. The patches are under Luanti's license. They were written with AI assistance, which Luanti's AI policy doesn't accept, so they stay in that fork; fixes upstream could use are its issues labelled "upstream candidate".
 
 | Scene on the A33, view range 320 | Luanti 5.17.0 | With the patches and the handheld's settings |
 | --- | --- | --- |
@@ -259,6 +259,7 @@ The engine is Luanti 5.18.0 (celeron55 and contributors; code LGPL-2.1+, media C
 | 0033, 0034 | The player moves in water as in Minecraft, and a fall into water does no damage |
 | 0035 | Jumps and falls as in Minecraft: its jump, its air and its fall damage |
 | 0046 | Gliding with an elytra as in Minecraft: its flight a tick at a time, a firework rocket's boost, walls that hurt and the fall it counts |
+| 0047 | Out of flowing water as in Minecraft: a jump from a stream's bed takes you onto a bank a block high, at any frame rate |
 | 0036 | A map held in both hands, as Minecraft holds it |
 | 0037 | The item in hand changes, and walking bobs the view and the hand, as in Minecraft |
 | 0045 | The same item with other metadata, a compass's needle, is redrawn in the hand instead of lowered and raised |
@@ -331,7 +332,7 @@ The 45 `goodluck_*` mods and `invisibility` are goodluckOS's, under its license 
 | goodluck_redstone | Redstone in mese's place: the ore, the dust, its block and the lamp, no circuits yet |
 | goodluck_shield | The shield, held up with L1 or by sneaking, blocks hits and arrows from the front |
 | goodluck_solid_leaves | Opaque leaves that don't wave drawn as plain cubes |
-| goodluck_sprint | L3 runs, with a slightly wider view |
+| goodluck_sprint | L3 runs until the stick is let go, as in Minecraft, with a slightly wider view |
 | goodluck_spyglass | Minetest Game's binoculars become Minecraft's spyglass, made with an amethyst shard and copper |
 | goodluck_swamp | Swamps: dark grass and water, swamp oaks with vines, lily pads and blue orchids, and the witch's hut with her cat and her cauldron |
 | goodluck_swim | Swimming and breath as in Minecraft: running with the head under water swims where the player looks; 15 s of breath |

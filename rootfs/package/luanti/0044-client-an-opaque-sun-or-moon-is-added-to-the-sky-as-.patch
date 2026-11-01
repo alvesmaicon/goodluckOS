@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Fri, 30 Oct 2026 19:33:22 -0300
-Subject: [PATCH 44/46] client: an opaque sun or moon is added to the sky, as
+Subject: [PATCH 44/47] client: an opaque sun or moon is added to the sky, as
  Minecraft draws them
 
 Minecraft's sun and moon are drawn on black, no transparency in them, and

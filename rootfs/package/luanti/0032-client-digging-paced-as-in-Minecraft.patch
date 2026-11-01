@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Fri, 23 Oct 2026 13:18:12 -0300
-Subject: [PATCH 32/46] client: digging paced as in Minecraft
+Subject: [PATCH 32/47] client: digging paced as in Minecraft
 
 The next node could be dug after the last one's dig time divided by the
 crack animation's frames, at most 0.3 s and 0.15 s after an instant one:

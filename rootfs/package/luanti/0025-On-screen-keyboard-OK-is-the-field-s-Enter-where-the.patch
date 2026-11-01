@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Sat, 17 Oct 2026 01:20:51 -0300
-Subject: [PATCH 25/46] On-screen keyboard: OK is the field's Enter where the
+Subject: [PATCH 25/47] On-screen keyboard: OK is the field's Enter where the
  form asks for it
 
 The keyboard only set the text and closed, so a field with field_enter_after_edit (a search box that

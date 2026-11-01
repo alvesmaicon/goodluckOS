@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Sat, 31 Oct 2026 21:00:46 -0300
-Subject: [PATCH 46/46] client: gliding with an elytra as in Minecraft
+Subject: [PATCH 46/47] client: gliding with an elytra as in Minecraft
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit

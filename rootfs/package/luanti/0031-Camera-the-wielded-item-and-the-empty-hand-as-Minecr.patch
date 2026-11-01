@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Fri, 23 Oct 2026 12:22:46 -0300
-Subject: [PATCH 31/46] Camera: the wielded item and the empty hand as
+Subject: [PATCH 31/47] Camera: the wielded item and the empty hand as
  Minecraft draws them
 
 Luanti held the item at a fixed rest pose (made a setting by the

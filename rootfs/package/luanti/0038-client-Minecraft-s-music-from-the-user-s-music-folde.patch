@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Tue, 27 Oct 2026 11:29:56 -0300
-Subject: [PATCH 38/46] client: Minecraft's music from the user's music folder
+Subject: [PATCH 38/47] client: Minecraft's music from the user's music folder
 
 A MusicPlayer plays the tracks of <path_user>/music/<set>/*.ogg as
 Minecraft's MusicManager plays its music: one at a time, the first 5 s

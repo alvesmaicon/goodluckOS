@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Sat, 17 Oct 2026 01:54:12 -0300
-Subject: [PATCH 27/46] client: the loading screen can wait for the terrain
+Subject: [PATCH 27/47] client: the loading screen can wait for the terrain
  around the player
 
 In singleplayer the loading screen ended once the textures and nodes were ready, and only then did

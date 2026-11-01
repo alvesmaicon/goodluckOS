@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Fri, 16 Oct 2026 00:46:40 -0300
-Subject: [PATCH 19/46] GUI: item meshes share one depth clear per frame
+Subject: [PATCH 19/47] GUI: item meshes share one depth clear per frame
 
 drawItemStack cleared the depth buffer before every item it draws as a
 mesh (a node without an inventory image). On tiled GPUs a clear that

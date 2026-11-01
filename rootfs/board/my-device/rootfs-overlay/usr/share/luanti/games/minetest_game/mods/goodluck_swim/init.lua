@@ -62,7 +62,7 @@ local function pose(player, look)
 		position = {vec = HIPS, absolute = true, interpolation = TURN},
 		rotation = {vec = vector.new(math.pi / 2 + look, 0, 0), absolute = true, interpolation = TURN}})
 	player:set_bone_override("Head", {
-		rotation = {vec = vector.new(-math.pi / 4, 0, 0), absolute = true, interpolation = TURN}})
+		rotation = {vec = vector.new(math.pi / 4, 0, 0), absolute = true, interpolation = TURN}})
 end
 
 local function lie(player, name, on)

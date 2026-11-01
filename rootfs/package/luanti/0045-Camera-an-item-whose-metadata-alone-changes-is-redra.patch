@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Sat, 31 Oct 2026 00:19:09 -0300
-Subject: [PATCH 45/46] Camera: an item whose metadata alone changes is redrawn
+Subject: [PATCH 45/47] Camera: an item whose metadata alone changes is redrawn
  in the hand
 
 A mod that shows something on an item by changing its metadata, as goodluckOS's compass turns

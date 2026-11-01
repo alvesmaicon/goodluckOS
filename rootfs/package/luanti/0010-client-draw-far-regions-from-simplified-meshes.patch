@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Maicon Alves <alvesmaiconn@gmail.com>
 Date: Tue, 13 Oct 2026 02:49:43 -0300
-Subject: [PATCH 10/46] client: draw far regions from simplified meshes
+Subject: [PATCH 10/47] client: draw far regions from simplified meshes
 
 At range 320 on a 512 MB handheld (Mali-400), a view across a lake drew
 1.52 M vertices in ~1,300 draw calls at 3-4 FPS, and the driver's
