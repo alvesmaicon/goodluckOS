@@ -4,6 +4,8 @@
 local F = {}
 local SEED = (tonumber(core.get_mapgen_setting("seed")) or 0) % 2147483647
 local COUNT, DISTANCE, SPREAD = 128, 32, 3
+-- none in a world made without structures (the menu's "Generate structures"), so no end portal, as in Minecraft
+F.made = Settings(core.get_worldpath() .. "/world.mt"):get_bool("generate_structures", true)
 
 local function double(pr)
 	return pr:next(0, 2147483646) / 2147483647
@@ -28,8 +30,12 @@ do
 	end
 end
 
--- where the eye of ender leads from pos: the nearest one's portal room once its pieces are known, else its start
+-- where the eye of ender leads from pos: the nearest one's portal room once its pieces are known, else its start;
+-- nil without strongholds
 function F.nearest(pos)
+	if not F.made then
+		return
+	end
 	local best, near
 	for i, c in ipairs(F.rings) do
 		local x, z = c.x * 16 + 8, c.z * 16 + 8

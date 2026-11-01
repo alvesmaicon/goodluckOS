@@ -1021,8 +1021,8 @@ function T.near(lo, hi)
 	return any
 end
 
--- In the map generator's threads: the cities into the End's mapchunks they reach
-if core.save_gen_notify then
+-- In the map generator's threads: the cities into the End's mapchunks they reach, if the world has structures
+if core.save_gen_notify and Settings(core.get_worldpath() .. "/world.mt"):get_bool("generate_structures", true) then
 	local R = core.ipc_get("goodluck_end:realm")
 	local buf = {}
 	core.register_on_generated(function(vm, lo, hi)

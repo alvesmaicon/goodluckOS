@@ -815,8 +815,8 @@ function F.draw(data, area, minp, maxp)
 	return out
 end
 
--- In the map generator's threads: the strongholds into the Overworld's mapchunks they reach
-if core.save_gen_notify then
+-- In the map generator's threads: the strongholds into the Overworld's mapchunks they reach, if the world has them
+if core.save_gen_notify and Settings(core.get_worldpath() .. "/world.mt"):get_bool("generate_structures", true) then
 	local buf = {}
 	core.register_on_generated(function(vm, minp, maxp)
 		if maxp.y < FLOOR - 64 or minp.y > SEA + 20 then
