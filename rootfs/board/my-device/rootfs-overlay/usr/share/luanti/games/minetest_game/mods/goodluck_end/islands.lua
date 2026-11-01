@@ -148,7 +148,8 @@ end
 
 -- The ground's top at x, z, as endgen.lua makes it: Minecraft's density from the islands' value and the noise at the
 -- grid's corners about the column (every 8 across and 4 up from the End's floor), blended along z, then y, then x the
--- way endgen.lua adds it up; nil where the column has no end stone. For the End cities in any thread
+-- way endgen.lua adds it up; nil where the column has no end stone. For the End cities in any thread; its noise and
+-- density are endgen.lua's own, and kept in I for it
 local NOISE = {offset = 0, scale = 0.25, spread = {x = 96 / 8, y = 48 / 4, z = 96 / 8}, seed = 7480, octaves = 4,
 	persistence = 0.5, lacunarity = 2}
 local function density(island, jy, n)
@@ -158,6 +159,7 @@ local function density(island, jy, n)
 	local low = max(0, min(1, (jy - 4) / 28))
 	return (-0.234375 + low * (v + 0.234375)) * 0.64
 end
+I.NOISE, I.density = NOISE, density
 local noise, corner = nil, {}
 function I.ground(x, z, ymin)
 	local x0, z0 = floor(x / 8) * 8, floor(z / 8) * 8
