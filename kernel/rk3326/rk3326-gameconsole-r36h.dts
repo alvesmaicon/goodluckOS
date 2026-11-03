@@ -251,6 +251,28 @@
 	status = "disabled";
 };
 
+/*
+ * vdd_logic feeds the GPU and the DMC: an exact voltage per GPU OPP left the DMC no room
+ * (1.05 V at 666 MHz against the GPU's 0.95 V at 200 MHz), so each GPU OPP takes a range
+ */
+&gpu_opp_table {
+	opp-200000000 {
+		opp-microvolt = <950000 950000 1150000>;
+	};
+
+	opp-300000000 {
+		opp-microvolt = <975000 975000 1150000>;
+	};
+
+	opp-400000000 {
+		opp-microvolt = <1050000 1050000 1150000>;
+	};
+
+	opp-480000000 {
+		opp-microvolt = <1125000 1125000 1150000>;
+	};
+};
+
 &rk817_charger {
 	monitored-battery = <&battery>;
 };
