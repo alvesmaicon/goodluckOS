@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <functional>
 #include <iostream>
+#include <unordered_map>
 
 #include "config.h"
 #include "input.h"
@@ -26,13 +27,71 @@ static void drawSurface(SDL_Renderer* r, SDL_Surface* s, int x, int y, int maxW 
     SDL_DestroyTexture(t);
 }
 
+// A line of text is rendered once per font and colour and its texture kept: SDL_ttf takes
+// milliseconds per line and the upload costs more than the draw, and a screen draws the same lines
+// frame after frame.
+struct TextKey {
+    TTF_Font* font;
+    Uint32 color;
+    std::string text;
+    bool operator==(const TextKey& o) const { return font == o.font && color == o.color && text == o.text; }
+};
+struct TextKeyHash {
+    size_t operator()(const TextKey& k) const {
+        return std::hash<std::string>()(k.text) ^ (std::hash<const void*>()(k.font) << 1) ^ k.color;
+    }
+};
+struct TextTexture {
+    SDL_Texture* tex;
+    int w, h;
+    Uint32 lastUse;
+};
+static std::unordered_map<TextKey, TextTexture, TextKeyHash> textCache;
+constexpr size_t kMaxTextTextures = 256;
+
+void clearTextCache() {
+    for (auto& [key, t] : textCache) SDL_DestroyTexture(t.tex);
+    textCache.clear();
+}
+
+static const TextTexture* cachedText(SDL_Renderer* r, TTF_Font* font, const std::string& text, SDL_Color color) {
+    const Uint32 now = SDL_GetTicks();
+    TextKey key{font, (Uint32)color.r << 24 | (Uint32)color.g << 16 | (Uint32)color.b << 8 | color.a, text};
+    auto it = textCache.find(key);
+    if (it != textCache.end()) {
+        it->second.lastUse = now;
+        return &it->second;
+    }
+    if (textCache.size() >= kMaxTextTextures) {   // the lines no screen drew in the last 2 s go first
+        for (auto i = textCache.begin(); i != textCache.end();) {
+            if (now - i->second.lastUse > 2000) {
+                SDL_DestroyTexture(i->second.tex);
+                i = textCache.erase(i);
+            } else {
+                ++i;
+            }
+        }
+        if (textCache.size() >= kMaxTextTextures) clearTextCache();
+    }
+    SDL_Surface* s = TTF_RenderUTF8_Blended(font, text.c_str(), color);
+    if (!s) return nullptr;
+    TextTexture t{SDL_CreateTextureFromSurface(r, s), s->w, s->h, now};
+    SDL_FreeSurface(s);
+    if (!t.tex) return nullptr;
+    SDL_SetTextureBlendMode(t.tex, SDL_BLENDMODE_BLEND);
+    return &textCache.emplace(std::move(key), t).first->second;
+}
+
 void drawText(SDL_Renderer* r, TTF_Font* font, const std::string& text, int x, int y, SDL_Color color, int maxW,
               int scrollX) {
     if (!font || text.empty()) return;
-    SDL_Surface* s = TTF_RenderUTF8_Blended(font, text.c_str(), color);
-    if (!s) return;
-    drawSurface(r, s, x, y, maxW, scrollX);
-    SDL_FreeSurface(s);
+    const TextTexture* t = cachedText(r, font, text, color);
+    if (!t) return;
+    const int srcX = std::clamp(scrollX, 0, t->w);
+    const int w = (maxW > 0) ? std::min(t->w - srcX, maxW) : t->w - srcX;   // clip, don't squash
+    SDL_Rect src{srcX, 0, w, t->h};
+    SDL_Rect dst{x, y, w, t->h};
+    SDL_RenderCopy(r, t->tex, &src, &dst);
 }
 
 int textWidth(TTF_Font* font, const std::string& text) {
@@ -196,6 +255,7 @@ Ui::~Ui() {
     if (corner) SDL_DestroyTexture(corner);
     if (button) SDL_DestroyTexture(button);
     for (TTF_Font* f : {fonts.ui, fonts.title, fonts.desc, fonts.small, fonts.uiBold, fonts.titleBold, fonts.smallBold, fonts.keyBold}) if (f) TTF_CloseFont(f);
+    clearTextCache();
     if (renderer) SDL_DestroyRenderer(renderer);
     if (window) SDL_DestroyWindow(window);
     if (sdlUp) { TTF_Quit(); IMG_Quit(); SDL_Quit(); }
@@ -217,6 +277,7 @@ void Ui::setFont(const std::string& path, const std::string& bold, float scale) 
     if (!fonts.ui || !fonts.title || !fonts.desc || !fonts.small)
         std::cerr << "Warning: could not load font " << path << "\n";
     pillWidths.clear();
+    clearTextCache();
     if (clipTex) SDL_DestroyTexture(clipTex);
     clipTex = nullptr;
     clipText.clear();
