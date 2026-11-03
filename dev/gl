@@ -400,9 +400,10 @@ EOF
     cat > "$t/root/etc/init.d/S98r36h-log" <<'EOF'
 #!/bin/sh
 [ "$1" = start ] || exit 0
-(for t in 0 20; do sleep $t
+(for t in 0 20 40; do sleep $t
     { cat /proc/uptime /proc/cmdline; echo "udc: $(ls /sys/class/udc)"
-      ls /sys/class/drm /sys/class/leds /sys/class/backlight /sys/class/power_supply /dev/input; dmesg
+      ls /sys/class/drm /sys/class/leds /sys/class/backlight /sys/class/power_supply /dev/input /dev/dri; ps
+      tail -n 80 /dev/shm/application/launcher.log /dev/shm/application/application.log; dmesg
     } > /home/player/r36h-boot.txt 2>&1; sync; done) &
 EOF
     chmod +x "$t/root/etc/init.d/S98r36h-log"
