@@ -173,12 +173,13 @@ std::vector<Row> SettingsScreen::displayPage() {
         app.audioChanged();
         levelChanged();
     }));
-    rows.push_back(Row::toggle("Global Mute", audio.switchedOff, [this](int on) {
-        setMuted(on);
-        audio.read();
-        app.audioChanged();
-        levelChanged();
-    }));
+    if (audio.hasSwitch)
+        rows.push_back(Row::toggle("Global Mute", audio.switchedOff, [this](int on) {
+            setMuted(on);
+            audio.read();
+            app.audioChanged();
+            levelChanged();
+        }));
     rows.push_back(Row::choice("Audio output", {"Speaker", "Headphones"}, audio.headphones ? 1 : 0, [this](int i) {
         setOutput(i == 0);
         audio.read();

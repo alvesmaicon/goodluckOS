@@ -7,9 +7,18 @@
 CARD=0
 SPEAKER_HPF="500 Hz"
 
-cur=$(amixer -c "$CARD" cget name='Speaker Switch' 2>/dev/null | grep -o ': values=[a-z]*' | cut -d= -f2)
-[ -n "$cur" ] || exit 1
-[ "$cur" = on ] && cur=speaker || cur=headphones
+# The GA36-MB's codec switches the speaker next to the headphones; the R36H's RK817 has a mux, one
+# output at a time (0 = HP, 1 = SPK).
+if amixer -c "$CARD" cget name='Speaker Switch' >/dev/null 2>&1; then
+    output() { amixer -c "$CARD" cget name='Speaker Switch' | grep -q ': values=on' && echo speaker || echo headphones; }
+    set_output() { [ "$1" = headphones ] && v=off || v=on; amixer -q -c "$CARD" cset name='Speaker Switch' "$v"; }
+elif amixer -c "$CARD" cget name='Playback Mux' >/dev/null 2>&1; then
+    output() { amixer -c "$CARD" cget name='Playback Mux' | grep -q ': values=1' && echo speaker || echo headphones; }
+    set_output() { [ "$1" = headphones ] && v=HP || v=SPK; amixer -q -c "$CARD" cset name='Playback Mux' "$v"; }
+else
+    exit 1
+fi
+cur=$(output)
 
 # the jack control (on with headphones in), empty on a kernel without detection
 jack() {
@@ -32,8 +41,7 @@ case "$1" in
         j=$(jack)
         if [ -n "$j" ]; then
             [ "$j" = on ] && cur=headphones || cur=speaker
-            [ "$cur" = headphones ] && sw=off || sw=on
-            amixer -q -c "$CARD" cset name='Speaker Switch' "$sw"
+            set_output "$cur"
         fi
         filter "$cur"; exit 0 ;;
     toggle) [ "$cur" = speaker ] && new=headphones || new=speaker ;;
@@ -41,8 +49,7 @@ case "$1" in
     *)      echo "usage: $0 toggle|speaker|headphones|get|apply" >&2; exit 2 ;;
 esac
 
-[ "$new" = headphones ] && sw=off || sw=on
-amixer -q -c "$CARD" cset name='Speaker Switch' "$sw"
+set_output "$new"
 filter "$new"
 
 /usr/local/bin/osd-notify.sh output 0 "$new"
