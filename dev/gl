@@ -369,6 +369,16 @@ EOF
     # until the rootfs finds its partitions by label: this card's layout, and no HOME resize (p2 is the rootfs)
     sed -i 's#^/dev/mmcblk0p2 #/dev/mmcblk0p3 #; s#^/dev/mmcblk0p1 #/dev/mmcblk0p2 #' "$t/root/etc/fstab"
     rm -f "$t/root/etc/init.d/S01resize-home"
+    # bring-up: the kernel log and a few facts on HOME, which any card reader shows
+    cat > "$t/root/etc/init.d/S98r36h-log" <<'EOF'
+#!/bin/sh
+[ "$1" = start ] || exit 0
+(for t in 0 20; do sleep $t
+    { cat /proc/uptime /proc/cmdline; echo "udc: $(ls /sys/class/udc)"
+      ls /sys/class/drm /sys/class/leds /sys/class/backlight /sys/class/power_supply /dev/input; dmesg
+    } > /home/player/r36h-boot.txt 2>&1; sync; done) &
+EOF
+    chmod +x "$t/root/etc/init.d/S98r36h-log"
     mkfs.ext4 -q -L linux -d "$t/root" "$t/root.ext4" 384M
     dd if="$t/root.ext4" of="$img" bs=1M seek=144 conv=notrunc status=none
     mkfs.vfat -F 32 -n HOME -C "$t/home.vfat" $((496 * 1024)) >/dev/null
