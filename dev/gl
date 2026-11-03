@@ -350,8 +350,9 @@ uboot_rk3326() {
     cd "$src"
     git checkout -q -- . && git clean -qfd
     make r36s_defconfig >/dev/null
-    ./scripts/config --enable ROCKCHIP_EXTERNAL_TPL
+    echo CONFIG_ROCKCHIP_EXTERNAL_TPL=y >> .config
     make olddefconfig >/dev/null
+    grep -q '^CONFIG_ROCKCHIP_EXTERNAL_TPL=y' .config || { echo "U-Boot dropped ROCKCHIP_EXTERNAL_TPL"; exit 1; }
     make -j"$JOBS" ROCKCHIP_TPL="$rk/rk3326_ddr_333MHz_v2.12.bin" BL31="$rk/rk3326_bl31_v1.37.elf"
     cp u-boot-rockchip.bin "$o/"
     tools/mkenvimage -s 0x4000 -o "$o/uboot.env" "$REPO/kernel/rk3326/uboot-env.txt"
