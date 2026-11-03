@@ -11,7 +11,7 @@ flock -n 9 || exit 0
 MAP=
 amixer -c "$CARD" sget "$CONTROL" >/dev/null 2>&1 || { CONTROL=Master; MAP=-M; }
 
-cur=$(amixer $MAP -c "$CARD" sget "$CONTROL" | grep -m1 -oE '[0-9]+%' | tr -d '%')
+cur=$(amixer $MAP -c "$CARD" sget "$CONTROL" | grep -m1 -oE '[0-9]+%' | head -1 | tr -d '%')
 cur=$(( (cur + 2) / 5 * 5 ))   # the hardware's levels: back to the multiple of 5 that was set
 
 case "$1" in
@@ -20,10 +20,10 @@ case "$1" in
 esac
 
 if [ "$new" -eq 0 ]; then
-    amixer -q $MAP -c "$CARD" sset "$CONTROL" 0% mute
+    amixer -q $MAP -c "$CARD" sset "$CONTROL" playback 0% mute
     /usr/local/bin/osd-notify.sh volume 0 muted
 else
-    amixer -q $MAP -c "$CARD" sset "$CONTROL" "${new}%" unmute
+    amixer -q $MAP -c "$CARD" sset "$CONTROL" playback "${new}%" unmute
     /usr/local/bin/osd-notify.sh volume "$new"
 fi
 
