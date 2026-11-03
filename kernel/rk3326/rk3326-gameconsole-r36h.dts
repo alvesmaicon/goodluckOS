@@ -19,6 +19,20 @@
 		stdout-path = "serial2:115200n8";
 	};
 
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		/* the kernel log survives a warm reset: boot.ini copies it to BOOT/ramoops.bin */
+		ramoops@f000000 {
+			compatible = "ramoops";
+			reg = <0x0 0x0f000000 0x0 0x100000>;
+			console-size = <0x80000>;
+			record-size = <0x20000>;
+		};
+	};
+
 	joystick_mux_controller: mux-controller {
 		compatible = "gpio-mux";
 		pinctrl-0 = <&mux_en_pins>;
