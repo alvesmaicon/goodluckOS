@@ -91,7 +91,9 @@
 		};
 	};
 
+	/* named as the GA36-MB's card, which the launcher and the scripts look for */
 	rk817-sound {
+		simple-audio-card,name = "GA36mbAudio";
 		simple-audio-card,hp-det-gpios = <&gpio2 RK_PC6 GPIO_ACTIVE_LOW>;
 	};
 
