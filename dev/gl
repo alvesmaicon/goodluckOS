@@ -325,6 +325,8 @@ kernel_rk3326() {
     git checkout -q --detach "$ref"
     export ARCH=arm64 CROSS_COMPILE= CROSS_COMPILE_COMPAT=arm-linux-gnueabihf-
     git apply "$r"/patches/*.patch
+    # the project's boot logo instead of Tux (the u-boot draws nothing on this panel)
+    convert "$REPO/image/res/goodluck_bootlogo.bmp" -colors 224 -compress none drivers/video/logo/logo_linux_clut224.ppm
     cp "$r"/*.dts arch/arm64/boot/dts/rockchip/
     echo 'dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3326-gameconsole-r36h.dtb' >> arch/arm64/boot/dts/rockchip/Makefile
     make defconfig >/dev/null
