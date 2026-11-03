@@ -38,6 +38,12 @@ done
 
 echo "== into BOOT"
 cmds="mkdir -p /tmp/boot && mount /dev/mmcblk0p1 /tmp/boot"
-for f in "$@"; do cmds="$cmds && mv $H/${f##*/}.$$.part /tmp/boot/${f##*/}"; done
-g "$cmds && sync && ls -l /tmp/boot; umount /tmp/boot"
+for f in "$@"; do cmds="$cmds && cp $H/${f##*/}.$$.part /tmp/boot/${f##*/} && rm $H/${f##*/}.$$.part"; done
+g "$cmds && sync" >/dev/null
+for f in "$@"; do
+    [ "$(g "sha256sum /tmp/boot/${f##*/} | cut -c1-64" --timeout 60 | grep -E '^[0-9a-f]{64}$' || true)" = "$(sha "$f")" ] ||
+        { g "umount /tmp/boot" >/dev/null; die "${f##*/} on BOOT isn't the file sent"; }
+    echo "   ${f##*/} ok"
+done
+g "umount /tmp/boot" >/dev/null
 [ -z "$reboot" ] || { echo "== reboot"; g "reboot" --timeout 5 >/dev/null 2>&1 || true; }
