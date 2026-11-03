@@ -339,10 +339,12 @@ kernel_rk3326() {
 
 # R36H test card: the stock loaders (dev/out/rk3326/head-16M.img, the first 16 MiB of its stock
 # card), BOOT, the rootfs from dev/out/rootfs.tar and a small HOME. The stock u-boot only reads
-# boot.ini from partition 1, so the rootfs is partition 2 and HOME partition 3.
+# boot.ini from partition 1, so the rootfs is partition 2 and HOME partition 3. Before boot.ini it
+# loads rg351mp-kernel.dtb from there for its own display (a stock-kernel DTB, also from the stock
+# card): without it, it writes "dtb load fail" to error.log and waits for the power key.
 card_rk3326() {
     local o=$OUT/rk3326 t=$WORK/card-rk3326 img=$OUT/rk3326/r36h-card.img f
-    for f in head-16M.img Image rk3326-gameconsole-r36h.dtb boot.ini; do
+    for f in head-16M.img rg351mp-kernel.dtb Image rk3326-gameconsole-r36h.dtb boot.ini; do
         [ -f "$o/$f" ] || { echo "no dev/out/rk3326/$f"; exit 1; }
     done
     [ -f "$OUT/rootfs.tar" ] || { echo "no dev/out/rootfs.tar"; exit 1; }
@@ -362,7 +364,7 @@ with open(sys.argv[1], 'r+b') as f:
 EOF
     mkfs.vfat -F 32 -n BOOT -C "$t/boot.vfat" $((128 * 1024)) >/dev/null
     mount -o loop "$t/boot.vfat" "$t/mnt"
-    cp "$o/Image" "$o/rk3326-gameconsole-r36h.dtb" "$o/boot.ini" "$t/mnt/"
+    cp "$o/rg351mp-kernel.dtb" "$o/Image" "$o/rk3326-gameconsole-r36h.dtb" "$o/boot.ini" "$t/mnt/"
     umount "$t/mnt"
     dd if="$t/boot.vfat" of="$img" bs=1M seek=16 conv=notrunc status=none
     tar -xpf "$OUT/rootfs.tar" -C "$t/root"
