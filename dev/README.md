@@ -42,8 +42,9 @@ dev/gl rootfs                           # first time: full Buildroot (1-2 h on a
 dev/gl rootfs puppy-rebuild             # then: one package, seconds; output in the work volume
 dev/gl ext4                             # dev/out/rootfs.ext4 from dev/out/rootfs.tar
 dev/gl kernel                           # dev/out/android_boot_a33.img (panel 1; GL_PANEL=2 dev/gl kernel for panel 2)
-dev/gl kernel-rk3326                    # dev/out/rk3326: the R36H's arm64 Image, DTB and boot.ini (kernel/rk3326)
-dev/gl card-rk3326                      # dev/out/rk3326/r36h-card.img: a whole R36H card (needs dev/out/rk3326/head-16M.img)
+dev/gl kernel-rk3326                    # dev/out/rk3326: the R36H's arm64 Image and DTB (kernel/rk3326)
+dev/gl uboot-rk3326                     # dev/out/rk3326: mainline U-Boot (u-boot-r36s + rkbin) and its uboot.env
+dev/gl card-rk3326                      # dev/out/rk3326/r36h-card.img: a whole R36H card (U-Boot, kernel, dev/out/rootfs.tar)
 dev/gl shell                            # a shell in the container (/repo, /work)
 ```
 
@@ -78,7 +79,7 @@ Then reboot (`reboot`), or close and reopen the app. A new `appctl` needs the re
 
 **The whole rootfs or the kernel with the card in the reader:** `dev/sdcard-mac.sh <diskN> boot|rootfs <file>` writes only that region. It backs the region up first and checks the write by reading it back. It refuses the daily card unless you pass `--daily-card`. Before writing a new rootfs to a card with an older HOME, check what the new rootfs expects in HOME (e.g. appd needs `HOME/.local/launcher.sh`). The script only knows the A33's layout and refuses a card whose partition 2 is not HOME.
 
-**A whole card (the R36H):** `dev/card-image-mac.sh <diskN> dev/out/rk3326/r36h-card.img` writes the image 64 MiB at a time with the progress and checks it by reading it back. It refuses stock cards (`.card-name` ending in `-stock`) and the daily card. The R36H keeps its stock loaders (the first 16 MiB of its stock card, saved as `dev/out/rk3326/head-16M.img`, never in git): its u-boot reads `boot.ini`, `Image` and the DTB from partition 1 (FAT), so the rootfs is partition 2 and HOME partition 3.
+**A whole card (the R36H):** `dev/card-image-mac.sh <diskN> dev/out/rk3326/r36h-card.img` writes the image 64 MiB at a time with the progress and checks it by reading it back. It refuses stock cards (`.card-name` ending in `-stock`) and the daily card. The R36H's stock u-boot never ran our `boot.ini`, so its card gets mainline U-Boot (Andre Renaud's `u-boot-r36s`, v2024.04 with the R36S board, as `buildroot-r36s` and `nixos-handheld` use) with Rockchip's DDR init and BL31 from `rkbin`, at sector 64. It reads its environment (`uboot.env`, from `kernel/rk3326/uboot-env.txt`), the Image and the DTB from partition 1 (FAT), so the rootfs is partition 2 and HOME partition 3. The stock card's first 16 MiB stay in `dev/out/r36h-stock` to put the stock system back.
 
 ## The scraper (gl-scrape)
 

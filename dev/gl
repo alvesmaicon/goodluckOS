@@ -23,8 +23,9 @@ usage: dev/gl <command> [args]
   rootfs [make targets]     Buildroot, incremental (e.g. mesa3d-rebuild, puppy-rebuild)
   ext4                      dev/out/rootfs.ext4 from the last rootfs.tar (partition 1, 384 MiB)
   kernel                    dev/out/android_boot_a33.img (+a23) with panel 1 (GL_PANEL=2), like kernel/Dockerfile
-  kernel-rk3326             dev/out/rk3326: the R36H's arm64 kernel, DTB and boot.ini (kernel/rk3326)
-  card-rk3326               dev/out/rk3326/r36h-card.img: a whole R36H test card (stock loaders + kernel + rootfs.tar)
+  kernel-rk3326             dev/out/rk3326: the R36H's arm64 kernel and DTB (kernel/rk3326)
+  uboot-rk3326              dev/out/rk3326: mainline U-Boot for the R36H (u-boot-rockchip.bin) and its uboot.env
+  card-rk3326               dev/out/rk3326/r36h-card.img: a whole R36H test card (U-Boot + kernel + rootfs.tar)
 EOF
     exit 1
 }
@@ -332,26 +333,44 @@ kernel_rk3326() {
     make olddefconfig >/dev/null
     make -j"$JOBS" Image rockchip/rk3326-gameconsole-r36h.dtb
     mkdir -p "$OUT/rk3326"
-    cp arch/arm64/boot/Image arch/arm64/boot/dts/rockchip/rk3326-gameconsole-r36h.dtb "$r/boot.ini" "$OUT/rk3326/"
+    cp arch/arm64/boot/Image arch/arm64/boot/dts/rockchip/rk3326-gameconsole-r36h.dtb "$OUT/rk3326/"
     cp .config "$OUT/rk3326/kernel_config.txt"
-    echo "dev/out/rk3326: Image, rk3326-gameconsole-r36h.dtb, boot.ini (BOOT partition)"
+    echo "dev/out/rk3326: Image, rk3326-gameconsole-r36h.dtb (BOOT partition)"
 }
 
-# R36H test card: the stock loaders (dev/out/rk3326/head-16M.img, the first 16 MiB of its stock
-# card), BOOT, the rootfs from dev/out/rootfs.tar and a small HOME. The stock u-boot only reads
-# boot.ini from partition 1, so the rootfs is partition 2 and HOME partition 3. Before boot.ini it
-# loads rg351mp-kernel.dtb from there for its own display (a stock-kernel DTB, also from the stock
-# card): without it, it writes "dtb load fail" to error.log and waits for the power key.
+# Mainline U-Boot for the R36H, from Andre Renaud's R36S tree (buildroot-r36s; nixos-handheld boots the
+# R36H with the same kind): the stock u-boot never ran our boot.ini. DDR init and BL31 from rkbin.
+uboot_rk3326() {
+    local src=$WORK/u-boot-r36s o=$OUT/rk3326 rk=$WORK/rkbin f
+    [ -d "$src" ] || git clone -q --depth=1 -b r36s-v2024.04 https://github.com/AndreRenaud/u-boot-r36s.git "$src"
+    mkdir -p "$rk" "$o"
+    for f in rk3326_ddr_333MHz_v2.12.bin rk3326_bl31_v1.37.elf; do
+        [ -f "$rk/$f" ] || curl -sfL -o "$rk/$f" "https://github.com/rockchip-linux/rkbin/raw/master/bin/rk33/$f"
+    done
+    cd "$src"
+    git checkout -q -- . && git clean -qfd
+    make r36s_defconfig >/dev/null
+    ./scripts/config --enable ROCKCHIP_EXTERNAL_TPL
+    make olddefconfig >/dev/null
+    make -j"$JOBS" ROCKCHIP_TPL="$rk/rk3326_ddr_333MHz_v2.12.bin" BL31="$rk/rk3326_bl31_v1.37.elf"
+    cp u-boot-rockchip.bin "$o/"
+    tools/mkenvimage -s 0x4000 -o "$o/uboot.env" "$REPO/kernel/rk3326/uboot-env.txt"
+    echo "dev/out/rk3326: u-boot-rockchip.bin (sector 64), uboot.env (BOOT), u-boot $(git rev-parse --short HEAD)"
+}
+
+# R36H test card: U-Boot at sector 64, BOOT (its uboot.env, the Image and the DTB), the rootfs from
+# dev/out/rootfs.tar and a small HOME. U-Boot keeps its environment on partition 1, so the rootfs is
+# partition 2 and HOME partition 3.
 card_rk3326() {
     local o=$OUT/rk3326 t=$WORK/card-rk3326 img=$OUT/rk3326/r36h-card.img f
-    for f in head-16M.img rg351mp-kernel.dtb Image rk3326-gameconsole-r36h.dtb boot.ini; do
+    for f in u-boot-rockchip.bin uboot.env Image rk3326-gameconsole-r36h.dtb; do
         [ -f "$o/$f" ] || { echo "no dev/out/rk3326/$f"; exit 1; }
     done
     [ -f "$OUT/rootfs.tar" ] || { echo "no dev/out/rootfs.tar"; exit 1; }
     rm -rf "$t"; mkdir -p "$t/root" "$t/mnt"
     # MiB: loaders 0-16, BOOT 16-144, rootfs 144-528, HOME 528-1024
     rm -f "$img"; truncate -s 1024M "$img"
-    dd if="$o/head-16M.img" of="$img" bs=512 skip=64 seek=64 count=32704 conv=notrunc status=none
+    dd if="$o/u-boot-rockchip.bin" of="$img" bs=512 seek=64 conv=notrunc status=none
     python3 - "$img" <<'EOF'
 import struct, sys
 mbr = bytearray(512)
@@ -364,7 +383,7 @@ with open(sys.argv[1], 'r+b') as f:
 EOF
     mkfs.vfat -F 32 -n BOOT -C "$t/boot.vfat" $((128 * 1024)) >/dev/null
     mount -o loop "$t/boot.vfat" "$t/mnt"
-    cp "$o/rg351mp-kernel.dtb" "$o/Image" "$o/rk3326-gameconsole-r36h.dtb" "$o/boot.ini" "$t/mnt/"
+    cp "$o/uboot.env" "$o/Image" "$o/rk3326-gameconsole-r36h.dtb" "$t/mnt/"
     umount "$t/mnt"
     dd if="$t/boot.vfat" of="$img" bs=1M seek=16 conv=notrunc status=none
     tar -xpf "$OUT/rootfs.tar" -C "$t/root"
@@ -423,6 +442,7 @@ case $cmd in
     ext4) ext4 ;;
     kernel) kernel ;;
     kernel-rk3326) kernel_rk3326 ;;
+    uboot-rk3326) uboot_rk3326 ;;
     card-rk3326) card_rk3326 ;;
     deploy) deploy "$@" ;;
     *) usage ;;
