@@ -31,19 +31,28 @@ esac
 read -r -p "write $IMG ($((SIZE / 1048576)) MiB) over the whole of $DISK? [y/N] " ok
 [ "$ok" = y ] || exit 1
 
+# macOS mounts a partition as soon as it sees the table, and then refuses the writes: the
+# partition table (sector 0) is zeroed first and written last, after the check
+log=$(mktemp)
+put() { sudo dd of=/dev/r"$DISK" conv=notrunc "$@" 2>"$log" || { cat "$log"; exit 1; }; }
 diskutil unmountDisk "$DISK" >/dev/null
-chunks=$((SIZE / 67108864)); rest=$(( (SIZE % 67108864) / 1048576 ))
-start=$(date +%s)
-for ((i = 0; i < chunks; i++)); do
-    sudo dd if="$IMG" of=/dev/r"$DISK" bs=1m skip=$((i * 64)) seek=$((i * 64)) count=64 conv=notrunc 2>/dev/null
+put if=/dev/zero bs=512 count=1
+put if="$IMG" bs=512 skip=1 seek=1 count=2047
+MIB=$((SIZE / 1048576)); start=$(date +%s)
+for ((m = 1; m < MIB; m += 64)); do
+    n=$(( MIB - m < 64 ? MIB - m : 64 ))
+    put if="$IMG" bs=1m skip=$m seek=$m count=$n
     el=$(( $(date +%s) - start + 1 ))
-    echo "  $(( (i + 1) * 64 )) of $((SIZE / 1048576)) MiB, ~$(( el * (chunks - i - 1) / (i + 1) )) s left"
+    echo "  $((m + n)) of $MIB MiB, ~$(( el * (MIB - m - n) / (m + n) )) s left"
 done
-[ $rest -eq 0 ] || sudo dd if="$IMG" of=/dev/r"$DISK" bs=1m skip=$((chunks * 64)) seek=$((chunks * 64)) count=$rest conv=notrunc 2>/dev/null
 sync
-want=$(shasum -a 256 "$IMG" | cut -d' ' -f1)
-have=$(sudo dd if=/dev/r"$DISK" bs=1m count=$((SIZE / 1048576)) 2>/dev/null | shasum -a 256 | cut -d' ' -f1)
+echo "checking..."
+want=$(tail -c +513 "$IMG" | shasum -a 256 | cut -d' ' -f1)
+have=$(sudo dd if=/dev/r"$DISK" bs=1m count=$MIB 2>/dev/null | tail -c +513 | shasum -a 256 | cut -d' ' -f1)
 echo "image: $want"; echo "card:  $have"
 [ "$want" = "$have" ] || { echo MISMATCH; exit 1; }
+put if="$IMG" bs=512 count=1
+[ "$(sudo dd if=/dev/r"$DISK" bs=512 count=1 2>/dev/null | shasum | cut -d' ' -f1)" = "$(head -c 512 "$IMG" | shasum | cut -d' ' -f1)" ] || { echo "partition table MISMATCH"; exit 1; }
 echo MATCH
+diskutil unmountDisk "$DISK" >/dev/null 2>&1 || true
 diskutil eject "$DISK" >/dev/null && echo "$DISK ejected"
