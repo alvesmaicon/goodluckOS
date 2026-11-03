@@ -23,6 +23,8 @@ usage: dev/gl <command> [args]
   rootfs [make targets]     Buildroot, incremental (e.g. mesa3d-rebuild, puppy-rebuild)
   ext4                      dev/out/rootfs.ext4 from the last rootfs.tar (partition 1, 384 MiB)
   kernel                    dev/out/android_boot_a33.img (+a23) with panel 1 (GL_PANEL=2), like kernel/Dockerfile
+  kernel-rk3326             dev/out/rk3326: the R36H's arm64 kernel, DTB and boot.ini (kernel/rk3326)
+  card-rk3326               dev/out/rk3326/r36h-card.img: a whole R36H test card (stock loaders + kernel + rootfs.tar)
 EOF
     exit 1
 }
@@ -310,6 +312,75 @@ kernel() {
     echo "dev/out/android_boot_a33.img (sector 172032)"
 }
 
+# arm64 kernel for the R36H, from its own worktree of the same tree: the A33's build stays as it is
+kernel_rk3326() {
+    local k=$REPO/kernel src=$WORK/linux-rk3326 r=$REPO/kernel/rk3326 ref
+    ref=$(sed -n 's/.* -b \([^ ]*\) https.*/\1/p' "$k/Dockerfile")
+    [ -d "$WORK/linux" ] || git clone -q --depth=1 -b "$ref" https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git "$WORK/linux"
+    git -C "$WORK/linux" rev-parse -q --verify "$ref^{commit}" >/dev/null || git -C "$WORK/linux" fetch -q --depth=1 origin tag "$ref"
+    [ -d "$src" ] || git -C "$WORK/linux" worktree add -q --detach "$src" "$ref"
+    cd "$src"
+    git checkout -q -- . && git clean -qfd
+    git checkout -q --detach "$ref"
+    export ARCH=arm64 CROSS_COMPILE= CROSS_COMPILE_COMPAT=arm-linux-gnueabihf-
+    git apply "$r"/patches/*.patch
+    cp "$r"/*.dts arch/arm64/boot/dts/rockchip/
+    echo 'dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3326-gameconsole-r36h.dtb' >> arch/arm64/boot/dts/rockchip/Makefile
+    make defconfig >/dev/null
+    sed -n 's/^config \(ARCH_[A-Z0-9_]*\)$/\1/p' arch/arm64/Kconfig.platforms | grep -vx ARCH_ROCKCHIP | sed 's/^/--disable CONFIG_/' | xargs ./scripts/config
+    grep -v '^ *#' "$r/config" | xargs ./scripts/config
+    make olddefconfig >/dev/null
+    make -j"$JOBS" Image rockchip/rk3326-gameconsole-r36h.dtb
+    mkdir -p "$OUT/rk3326"
+    cp arch/arm64/boot/Image arch/arm64/boot/dts/rockchip/rk3326-gameconsole-r36h.dtb "$r/boot.ini" "$OUT/rk3326/"
+    cp .config "$OUT/rk3326/kernel_config.txt"
+    echo "dev/out/rk3326: Image, rk3326-gameconsole-r36h.dtb, boot.ini (BOOT partition)"
+}
+
+# R36H test card: the stock loaders (dev/out/rk3326/head-16M.img, the first 16 MiB of its stock
+# card), BOOT, the rootfs from dev/out/rootfs.tar and a small HOME. The stock u-boot only reads
+# boot.ini from partition 1, so the rootfs is partition 2 and HOME partition 3.
+card_rk3326() {
+    local o=$OUT/rk3326 t=$WORK/card-rk3326 img=$OUT/rk3326/r36h-card.img f
+    for f in head-16M.img Image rk3326-gameconsole-r36h.dtb boot.ini; do
+        [ -f "$o/$f" ] || { echo "no dev/out/rk3326/$f"; exit 1; }
+    done
+    [ -f "$OUT/rootfs.tar" ] || { echo "no dev/out/rootfs.tar"; exit 1; }
+    rm -rf "$t"; mkdir -p "$t/root" "$t/mnt"
+    # MiB: loaders 0-16, BOOT 16-144, rootfs 144-528, HOME 528-1024
+    rm -f "$img"; truncate -s 1024M "$img"
+    dd if="$o/head-16M.img" of="$img" bs=512 skip=64 seek=64 count=32704 conv=notrunc status=none
+    python3 - "$img" <<'EOF'
+import struct, sys
+mbr = bytearray(512)
+for i, (kind, start, size) in enumerate([(0x0c, 16, 128), (0x83, 144, 384), (0x0c, 528, 496)]):
+    mbr[446 + 16 * i:462 + 16 * i] = struct.pack('<B3sB3sII', 0x80 if i == 0 else 0, b'\xfe\xff\xff',
+                                                 kind, b'\xfe\xff\xff', start * 2048, size * 2048)
+mbr[510:] = b'\x55\xaa'
+with open(sys.argv[1], 'r+b') as f:
+    f.write(mbr)
+EOF
+    mkfs.vfat -F 32 -n BOOT -C "$t/boot.vfat" $((128 * 1024)) >/dev/null
+    mount -o loop "$t/boot.vfat" "$t/mnt"
+    cp "$o/Image" "$o/rk3326-gameconsole-r36h.dtb" "$o/boot.ini" "$t/mnt/"
+    umount "$t/mnt"
+    dd if="$t/boot.vfat" of="$img" bs=1M seek=16 conv=notrunc status=none
+    tar -xpf "$OUT/rootfs.tar" -C "$t/root"
+    # until the rootfs finds its partitions by label: this card's layout, and no HOME resize (p2 is the rootfs)
+    sed -i 's#^/dev/mmcblk0p2 #/dev/mmcblk0p3 #; s#^/dev/mmcblk0p1 #/dev/mmcblk0p2 #' "$t/root/etc/fstab"
+    rm -f "$t/root/etc/init.d/S01resize-home"
+    mkfs.ext4 -q -L linux -d "$t/root" "$t/root.ext4" 384M
+    dd if="$t/root.ext4" of="$img" bs=1M seek=144 conv=notrunc status=none
+    mkfs.vfat -F 32 -n HOME -C "$t/home.vfat" $((496 * 1024)) >/dev/null
+    mount -o loop "$t/home.vfat" "$t/mnt"
+    cp -r "$REPO/home/overlay/." "$t/mnt/"
+    echo r36h-dev > "$t/mnt/.card-name"
+    umount "$t/mnt"
+    dd if="$t/home.vfat" of="$img" bs=1M seek=528 conv=notrunc status=none
+    rm -rf "$t"
+    echo "dev/out/rk3326/r36h-card.img (1 GiB, the whole card)"
+}
+
 deploy() {
     local s=$WORK/deploy
     rm -rf "$s"; mkdir -p "$s/usr/bin"
@@ -339,6 +410,8 @@ case $cmd in
     rootfs) rootfs "$@" ;;
     ext4) ext4 ;;
     kernel) kernel ;;
+    kernel-rk3326) kernel_rk3326 ;;
+    card-rk3326) card_rk3326 ;;
     deploy) deploy "$@" ;;
     *) usage ;;
 esac
