@@ -324,7 +324,7 @@ kernel_rk3326() {
     git checkout -q -- . && git clean -qfd
     git checkout -q --detach "$ref"
     export ARCH=arm64 CROSS_COMPILE= CROSS_COMPILE_COMPAT=arm-linux-gnueabihf-
-    git apply "$r"/patches/*.patch
+    for p in "$r"/patches/*.patch; do git apply "$p"; done   # one by one: 0003 changes a file 0002 creates
     # the project's boot logo instead of Tux (the u-boot draws nothing on this panel)
     convert "$REPO/image/res/goodluck_bootlogo.bmp" -colors 224 -compress none drivers/video/logo/logo_linux_clut224.ppm
     cp "$r"/*.dts arch/arm64/boot/dts/rockchip/
