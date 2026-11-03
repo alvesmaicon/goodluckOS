@@ -273,6 +273,11 @@
 	};
 };
 
+/* restart and power off through the PMIC: PSCI's reset never came back (reboot and sysrq both hung) */
+&rk817 {
+	rockchip,system-power-controller;
+};
+
 &rk817_charger {
 	monitored-battery = <&battery>;
 };
