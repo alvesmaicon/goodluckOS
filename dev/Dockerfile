@@ -10,7 +10,7 @@ RUN dpkg --add-architecture armhf && apt-get update && apt-get install -y --no-i
     libncurses-dev file cpio unzip rsync bc patch perl python3 \
     bison flex libssl-dev kmod device-tree-compiler mkbootimg \
     e2fsprogs dosfstools fakeroot \
-    python3-pyelftools python3-libfdt libgnutls28-dev uuid-dev \
+    python3-pyelftools python3-libfdt python3-setuptools libgnutls28-dev uuid-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /repo
