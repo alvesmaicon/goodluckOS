@@ -349,6 +349,8 @@ uboot_rk3326() {
     done
     cd "$src"
     git checkout -q -- . && git clean -qfd
+    # binman would import a pylibfdt left in the tree before Debian's
+    git clean -qfdX scripts/dtc/pylibfdt
     make r36s_defconfig >/dev/null
     echo CONFIG_ROCKCHIP_EXTERNAL_TPL=y >> .config
     make olddefconfig >/dev/null
