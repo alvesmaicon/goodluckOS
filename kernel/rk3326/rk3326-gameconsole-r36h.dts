@@ -266,8 +266,11 @@
 	status = "okay";
 };
 
+/* as in Andre Renaud's R36S DTS: dr_mode "peripheral" alone never connects */
 &usb20_otg {
-	dr_mode = "peripheral";
+	dr_mode = "otg";
+	usb-role-switch;
+	role-switch-default-mode = "peripheral";
 };
 
 &pinctrl {
