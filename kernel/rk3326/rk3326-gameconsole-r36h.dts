@@ -202,22 +202,9 @@
 	/delete-property/ rotation;
 };
 
-/*
- * The stock DTBs disagree: the R36H's drives red (high) or blue (low) from gpio2 PB5, the R36S
- * one on its card a blue heartbeat on gpio0 PC1. Green looks wired to a rail, as on the ODROID-GO.
- */
+/* the only LED software drives: red over the green power LED, which is wired to a rail */
 &red_led {
 	gpios = <&gpio2 RK_PB5 GPIO_ACTIVE_HIGH>;
-	linux,default-trigger = "heartbeat";
-};
-
-&gpio_led {
-	pc1_led: led-pc1 {
-		color = <LED_COLOR_ID_BLUE>;
-		function = LED_FUNCTION_INDICATOR;
-		gpios = <&gpio0 RK_PC1 GPIO_ACTIVE_HIGH>;
-		linux,default-trigger = "timer";
-	};
 };
 
 &red_led_pin {
