@@ -6,13 +6,14 @@
 #   dev/sdcard-mac.sh <diskN> boot   dev/out/android_boot_a33.img    sector 172032 (84 MiB)
 #   dev/sdcard-mac.sh <diskN> rootfs dev/out/rootfs.ext4             sector 262144 (128 MiB), 384 MiB max
 #
-# diskN comes from `diskutil list external`. Refuses internal disks, disks over 70 GB and the
-# daily card (HOME/.card-name = extreme-daily) unless --daily-card is given too.
+# diskN comes from `diskutil list external`. Refuses internal disks, disks over 70 GB, cards whose
+# partition 2 is not HOME (a stock card) and the daily card (HOME/.card-name = extreme-daily)
+# unless --daily-card is given too.
 # SDCARD_BACKUP=<file> skips the backup read when the caller already holds a copy of the region.
 # SDCARD_KEEP=1 leaves the card attached, for a second write (the kernel, then the rootfs).
 set -euo pipefail
 
-[ $# -ge 3 ] || { sed -n '2,12p' "$0"; exit 1; }
+[ $# -ge 3 ] || { sed -n '2,13p' "$0"; exit 1; }
 DISK=${1#/dev/}; WHAT=$2; FILE=$3; DAILY=${4:-}
 case $WHAT in
     boot) MIB=84; MAX=$((88 * 1024 * 1024)) ;;
@@ -29,6 +30,11 @@ bytes=$(echo "$info" | sed -n 's/.*Disk Size:.*(\([0-9]*\) Bytes).*/\1/p')
 [ -n "$bytes" ] && [ "$bytes" -le $((70 * 1024 * 1024 * 1024)) ] || { echo "$DISK: unexpected size ($bytes)"; exit 1; }
 
 # Which card is it: HOME (partition 2, FAT) carries .card-name
+if ! diskutil info "${DISK}s2" 2>/dev/null | grep -qE 'Partition Type: +[A-Za-z]+_FAT_'; then
+    name=$(for p in s3 s1; do m=$(diskutil info "${DISK}$p" 2>/dev/null | sed -n 's/.*Mount Point: *//p')
+        [ -n "$m" ] && head -n 1 "$m/.card-name" 2>/dev/null && break; done)
+    echo "$DISK: partition 2 is not HOME, not a goodluckOS A33 card (card: ${name:-?}): refused"; exit 1
+fi
 home=$(diskutil info "${DISK}s2" 2>/dev/null | sed -n 's/.*Mount Point: *//p')
 if [ -z "$home" ]; then diskutil mount readOnly "${DISK}s2" >/dev/null 2>&1 || true
     home=$(diskutil info "${DISK}s2" 2>/dev/null | sed -n 's/.*Mount Point: *//p'); fi
