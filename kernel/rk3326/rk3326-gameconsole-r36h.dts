@@ -158,20 +158,21 @@
 	#address-cells = <1>;
 	#size-cells = <0>;
 
+	/* the mux's channels 1 and 3 are the left stick, upside down and mirrored; 0 and 2 the right one */
 	axis@0 {
 		reg = <0>;
 		abs-flat = <10>;
 		abs-fuzz = <10>;
 		abs-range = <180 800>;
-		linux,code = <ABS_X>;
+		linux,code = <ABS_RX>;
 	};
 
 	axis@1 {
 		reg = <1>;
 		abs-flat = <10>;
 		abs-fuzz = <10>;
-		abs-range = <180 800>;
-		linux,code = <ABS_RX>;
+		abs-range = <800 180>;
+		linux,code = <ABS_X>;
 	};
 
 	axis@2 {
@@ -179,15 +180,15 @@
 		abs-flat = <10>;
 		abs-fuzz = <10>;
 		abs-range = <180 800>;
-		linux,code = <ABS_Y>;
+		linux,code = <ABS_RY>;
 	};
 
 	axis@3 {
 		reg = <3>;
 		abs-flat = <10>;
 		abs-fuzz = <10>;
-		abs-range = <180 800>;
-		linux,code = <ABS_RY>;
+		abs-range = <800 180>;
+		linux,code = <ABS_Y>;
 	};
 
 	/* no FN on the R36H: declared only, so the button numbers stay the GA36-MB's */
