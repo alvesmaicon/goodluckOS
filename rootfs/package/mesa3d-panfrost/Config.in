@@ -1,0 +1,13 @@
+config BR2_PACKAGE_MESA3D_PANFROST
+	bool "mesa3d panfrost"
+	depends on BR2_PACKAGE_MESA3D
+	select BR2_PACKAGE_MESA3D_GALLIUM_DRIVER
+	help
+	  Mesa's panfrost driver (Mali Midgard, Bifrost and Valhall, such
+	  as the RK3326's Mali-G31) with no LLVM on the target.
+
+	  Buildroot's own option builds LLVM and clang and installs them
+	  on the target. Here Mesa's CL tools (mesa_clc, vtn_bindgen2,
+	  panfrost_compile) are built with the build machine's LLVM 19.
+	  On Debian: llvm-19-dev libclang-19-dev libclang-cpp19-dev
+	  libclc-19-dev libllvmspirvlib-19-dev spirv-tools.

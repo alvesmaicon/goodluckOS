@@ -13,4 +13,9 @@ RUN dpkg --add-architecture armhf && apt-get update && apt-get install -y --no-i
     python3-pyelftools python3-libfdt python3-setuptools libgnutls28-dev uuid-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# mesa3d-panfrost's CL tools (rootfs/package/mesa3d-panfrost): a layer of its own, so adding it kept the one above
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    llvm-19-dev libclang-19-dev libclang-cpp19-dev libclc-19-dev libllvmspirvlib-19-dev spirv-tools \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /repo

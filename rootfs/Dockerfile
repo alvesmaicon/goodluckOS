@@ -19,6 +19,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     rsync \
     bc \
+    llvm-19-dev \
+    libclang-19-dev \
+    libclang-cpp19-dev \
+    libclc-19-dev \
+    libllvmspirvlib-19-dev \
+    spirv-tools \
     && rm -rf /var/lib/apt/lists/*
 # Create external.desc
 RUN echo "name: GOODLUCKOS\n\

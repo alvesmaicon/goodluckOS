@@ -8,4 +8,5 @@ source "../package/evsieve/Config.in"
 source "../package/credits/Config.in"
 source "../package/glos-setup/Config.in"
 source "../package/gl-scrape/Config.in"
+source "../package/mesa3d-panfrost/Config.in"
 endmenu
