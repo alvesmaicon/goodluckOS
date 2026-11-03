@@ -354,7 +354,7 @@ uboot_rk3326() {
     make olddefconfig >/dev/null
     grep -q '^CONFIG_ROCKCHIP_EXTERNAL_TPL=y' .config || { echo "U-Boot dropped ROCKCHIP_EXTERNAL_TPL"; exit 1; }
     # Debian's dtc and pylibfdt: the in-tree pylibfdt of v2024.04 does not build with SWIG 4.3
-    make -j"$JOBS" DTC=dtc ROCKCHIP_TPL="$rk/rk3326_ddr_333MHz_v2.12.bin" BL31="$rk/rk3326_bl31_v1.37.elf"
+    make -j"$JOBS" DTC=/usr/bin/dtc ROCKCHIP_TPL="$rk/rk3326_ddr_333MHz_v2.12.bin" BL31="$rk/rk3326_bl31_v1.37.elf"
     cp u-boot-rockchip.bin "$o/"
     tools/mkenvimage -s 0x4000 -o "$o/uboot.env" "$REPO/kernel/rk3326/uboot-env.txt"
     echo "dev/out/rk3326: u-boot-rockchip.bin (sector 64), uboot.env (BOOT), u-boot $(git rev-parse --short HEAD)"
