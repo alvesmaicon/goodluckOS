@@ -53,49 +53,6 @@
 		channels = "0", "1", "2", "3";
 	};
 
-	analog_sticks: adc-joystick {
-		compatible = "adc-joystick";
-		io-channels = <&joystick_mux 0>,
-			      <&joystick_mux 1>,
-			      <&joystick_mux 2>,
-			      <&joystick_mux 3>;
-		poll-interval = <60>;
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		axis@0 {
-			reg = <0>;
-			abs-flat = <10>;
-			abs-fuzz = <10>;
-			abs-range = <180 800>;
-			linux,code = <ABS_X>;
-		};
-
-		axis@1 {
-			reg = <1>;
-			abs-flat = <10>;
-			abs-fuzz = <10>;
-			abs-range = <180 800>;
-			linux,code = <ABS_RX>;
-		};
-
-		axis@2 {
-			reg = <2>;
-			abs-flat = <10>;
-			abs-fuzz = <10>;
-			abs-range = <180 800>;
-			linux,code = <ABS_Y>;
-		};
-
-		axis@3 {
-			reg = <3>;
-			abs-flat = <10>;
-			abs-fuzz = <10>;
-			abs-range = <180 800>;
-			linux,code = <ABS_RY>;
-		};
-	};
-
 	battery: battery {
 		compatible = "simple-battery";
 		charge-full-design-microamp-hours = <3380000>;
@@ -191,20 +148,54 @@
 /delete-node/ &btn_f6;
 /delete-node/ &pwm_led;
 
-/* the same codes as the GA36-MB's gamepad */
+/* buttons and sticks in one device, which apps take for the GA36-MB's gamepad: same name, same codes */
 &builtin_gamepad {
-	button-sw5 {
-		linux,code = <BTN_A>;
+	compatible = "gameconsole,gpio-adc-gamepad";
+	label = "GA36-MB Gamepad";
+	io-channels = <&joystick_mux 0>, <&joystick_mux 1>,
+		      <&joystick_mux 2>, <&joystick_mux 3>;
+	poll-interval = <16>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	axis@0 {
+		reg = <0>;
+		abs-flat = <10>;
+		abs-fuzz = <10>;
+		abs-range = <180 800>;
+		linux,code = <ABS_X>;
 	};
-	button-sw6 {
-		linux,code = <BTN_B>;
+
+	axis@1 {
+		reg = <1>;
+		abs-flat = <10>;
+		abs-fuzz = <10>;
+		abs-range = <180 800>;
+		linux,code = <ABS_RX>;
 	};
-	button-sw7 {
-		linux,code = <BTN_Y>;
+
+	axis@2 {
+		reg = <2>;
+		abs-flat = <10>;
+		abs-fuzz = <10>;
+		abs-range = <180 800>;
+		linux,code = <ABS_Y>;
 	};
-	button-sw8 {
-		linux,code = <BTN_X>;
+
+	axis@3 {
+		reg = <3>;
+		abs-flat = <10>;
+		abs-fuzz = <10>;
+		abs-range = <180 800>;
+		linux,code = <ABS_RY>;
 	};
+
+	/* no FN on the R36H: declared only, so the button numbers stay the GA36-MB's */
+	button-fn {
+		label = "FN";
+		linux,code = <BTN_MODE>;
+	};
+
 	button-sw19 {
 		gpios = <&gpio3 RK_PB1 GPIO_ACTIVE_LOW>;
 		label = "SELECT";
@@ -228,13 +219,13 @@
 };
 
 &btn_f3 {
-	label = "THUMBR";
-	linux,code = <BTN_THUMBR>;
+	label = "THUMBL";
+	linux,code = <BTN_THUMBL>;
 };
 
 &btn_f4 {
-	label = "THUMBL";
-	linux,code = <BTN_THUMBL>;
+	label = "THUMBR";
+	linux,code = <BTN_THUMBR>;
 };
 
 &backlight {

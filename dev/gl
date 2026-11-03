@@ -325,6 +325,9 @@ kernel_rk3326() {
     git checkout -q --detach "$ref"
     export ARCH=arm64 CROSS_COMPILE= CROSS_COMPILE_COMPAT=arm-linux-gnueabihf-
     for p in "$r"/patches/*.patch; do git apply "$p"; done   # one by one: 0003 changes a file 0002 creates
+    cp "$r/gpio-adc-gamepad.c" drivers/input/joystick/
+    echo 'obj-$(CONFIG_GPIO_ADC_GAMEPAD) += gpio-adc-gamepad.o' >> drivers/input/joystick/Makefile
+    sed -i '/^endif/i config GPIO_ADC_GAMEPAD\n\ttristate "Gamepad from GPIO buttons and ADC sticks"\n\tdepends on GPIOLIB \&\& IIO\n' drivers/input/joystick/Kconfig
     # the project's boot logo instead of Tux (the u-boot draws nothing on this panel)
     convert "$REPO/image/res/goodluck_bootlogo.bmp" -colors 224 -compress none drivers/video/logo/logo_linux_clut224.ppm
     cp "$r"/*.dts arch/arm64/boot/dts/rockchip/
