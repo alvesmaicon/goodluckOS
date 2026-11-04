@@ -37,13 +37,15 @@ for f in "$@"; do
 done
 
 echo "== into BOOT"
-cmds="mkdir -p /tmp/boot && mount /dev/mmcblk0p1 /tmp/boot"
-for f in "$@"; do cmds="$cmds && cp $H/${f##*/}.$$.part /tmp/boot/${f##*/} && rm $H/${f##*/}.$$.part"; done
+# with the factory U-Boot's layout our files live in BOOT/gl, next to its own
+cmds="mkdir -p /tmp/boot && mount /dev/mmcblk0p1 /tmp/boot && d=/tmp/boot && { [ ! -d /tmp/boot/gl ] || d=/tmp/boot/gl; }"
+for f in "$@"; do cmds="$cmds && cp $H/${f##*/}.$$.part \$d/${f##*/} && rm $H/${f##*/}.$$.part"; done
 g "$cmds && sync" >/dev/null
+dir=$(g "[ -d /tmp/boot/gl ] && echo gl/" | grep -o 'gl/' || true)
 for f in "$@"; do
-    [ "$(g "sha256sum /tmp/boot/${f##*/} | cut -c1-64" --timeout 60 | grep -E '^[0-9a-f]{64}$' || true)" = "$(sha "$f")" ] ||
+    [ "$(g "sha256sum /tmp/boot/$dir${f##*/} | cut -c1-64" --timeout 60 | grep -E '^[0-9a-f]{64}$' || true)" = "$(sha "$f")" ] ||
         { g "umount /tmp/boot" >/dev/null; die "${f##*/} on BOOT isn't the file sent"; }
-    echo "   ${f##*/} ok"
+    echo "   $dir${f##*/} ok"
 done
 g "umount /tmp/boot" >/dev/null
 [ -z "$reboot" ] || { echo "== reboot"; g "reboot" --timeout 5 >/dev/null 2>&1 || true; }
