@@ -11,48 +11,56 @@ driver took the charge state from its own charger only: the battery read
 charging, and the capacity was never set back to 100 % at a full charge.
 
 When the battery is supplied through "power-supplies" and the RK817's
-charger is off, report it as charging, and as full once it takes less
-than 50 mA within 50 mV of the charge voltage. Full is CHARGE_FINISH,
-which also runs the existing calibration; unplugging lets the next full
-charge calibrate again. The driver announces a change of the reported
-state (power_supply_changed), which LED triggers and uevents need, and
-a change of the supply re-reads the state at once instead of at the next
-8 s poll.
+charger is off, report it as charging, and as full once it has taken
+between 0 and 50 mA within 50 mV of the charge voltage for two minutes:
+a load spike that starves the battery for a moment is not a full charge
+(one set the capacity to 100 % at 95 % while testing). It then stays
+full until the battery takes over 100 mA again or sags 150 mV, so
+readings around 50 mA do not flip it back and forth. Full is
+CHARGE_FINISH, which also runs the existing calibration; unplugging
+lets the next full charge calibrate again. The driver announces a
+change of the reported state (power_supply_changed), which LED
+triggers and uevents need, and a change of the supply re-reads the
+state at once instead of at the next 8 s poll.
 
 Signed-off-by: Maicon Alves <alvesmaiconn@gmail.com>
 ---
 --- a/drivers/power/supply/rk817_charger.c
 +++ b/drivers/power/supply/rk817_charger.c
-@@ -45,6 +45,10 @@
+@@ -45,6 +45,12 @@
  	CHG_0_5A,
  };
  
 +/* An external charger ("power-supplies"): full under this current, this close to the charge voltage */
 +#define RK817_EXT_FULL_UA		50000
 +#define RK817_EXT_FULL_MARGIN_UV	50000
++/* ... for this long: a load spike that starves the battery is not a full charge */
++#define RK817_EXT_FULL_HOLD		(120 * HZ)
 +
  struct rk817_charger {
  	struct device *dev;
  	struct rk808 *rk808;
-@@ -86,6 +90,8 @@
+@@ -86,6 +92,10 @@
  	 * the calibrated SOC value to correct for columb counter drift.
  	 */
  	bool soc_cal;
 +	bool ext_supplied;
 +	bool monitoring;
++	unsigned long ext_full_since;
++	bool ext_full;
  
  	/* Implementation specific immutable properties from device tree */
  	int res_div;
-@@ -334,6 +340,8 @@
+@@ -334,6 +344,8 @@
  
  static void rk817_read_props(struct rk817_charger *charger)
  {
-+	bool old_ext;
++	bool old_ext, topped;
 +	int old_status;
  	int tmp, reg;
  	u8 bulk_reg[4];
  
-@@ -404,10 +412,34 @@
+@@ -404,10 +416,48 @@
  	charger->battery_present = (reg & RK817_BAT_EXS);
  
  	/* Get which type of charge we are using (if any). */
@@ -65,18 +73,32 @@ Signed-off-by: Maicon Alves <alvesmaiconn@gmail.com>
 +	 * A board can charge through a chip of its own and leave this charger
 +	 * off (the R36H): with that supply in ("power-supplies" in the device
 +	 * tree), report the battery as charging, and as full once it takes
-+	 * almost no current near the charge voltage, which also calibrates
-+	 * the capacity below.
++	 * almost no current near the charge voltage for two minutes, which
++	 * also calibrates the capacity below.
 +	 */
 +	charger->ext_supplied = charger->charge_status == CHRG_OFF &&
 +				charger->bat_ps &&
 +				power_supply_am_i_supplied(charger->bat_ps) > 0;
++	topped = charger->ext_supplied && charger->cur_avg_ua >= 0 &&
++		 charger->cur_avg_ua < RK817_EXT_FULL_UA &&
++		 charger->volt_avg_uv >= charger->max_chg_volt_uv -
++					   RK817_EXT_FULL_MARGIN_UV;
++	if (!topped)
++		charger->ext_full_since = 0;
++	else if (!charger->ext_full_since)
++		charger->ext_full_since = jiffies ?: 1;
++	/* full until the battery takes current again or sags: no flapping at the threshold */
++	if (!charger->ext_supplied ||
++	    charger->cur_avg_ua > 2 * RK817_EXT_FULL_UA ||
++	    charger->volt_avg_uv < charger->max_chg_volt_uv -
++				   3 * RK817_EXT_FULL_MARGIN_UV)
++		charger->ext_full = false;
++	else if (topped && time_after(jiffies, charger->ext_full_since +
++					   RK817_EXT_FULL_HOLD))
++		charger->ext_full = true;
 +	if (charger->ext_supplied)
-+		charger->charge_status =
-+			charger->cur_avg_ua < RK817_EXT_FULL_UA &&
-+			charger->volt_avg_uv >= charger->max_chg_volt_uv -
-+						RK817_EXT_FULL_MARGIN_UV ?
-+			CHARGE_FINISH : CC_OR_CV_CHRG;
++		charger->charge_status = charger->ext_full ? CHARGE_FINISH :
++							  CC_OR_CV_CHRG;
 +
 +	/* LED triggers and uevents follow the status only through this */
 +	if (charger->bat_ps && (charger->charge_status != old_status ||
@@ -87,7 +109,7 @@ Signed-off-by: Maicon Alves <alvesmaiconn@gmail.com>
  	 * Get charger input voltage. Note that on my example hardware (an
  	 * Odroid Go Advance) the voltage of the power connector is measured
  	 * on the register labelled USB in the datasheet; I don't know if this
-@@ -445,7 +477,7 @@
+@@ -445,7 +495,7 @@
  		val->intval = charger->battery_present;
  		break;
  	case POWER_SUPPLY_PROP_STATUS:
@@ -96,7 +118,7 @@ Signed-off-by: Maicon Alves <alvesmaiconn@gmail.com>
  			val->intval = POWER_SUPPLY_STATUS_DISCHARGING;
  			break;
  		}
-@@ -680,6 +712,18 @@
+@@ -680,6 +730,18 @@
  	}
  }
  
@@ -115,7 +137,7 @@ Signed-off-by: Maicon Alves <alvesmaiconn@gmail.com>
  static const struct power_supply_desc rk817_bat_desc = {
  	.name = "rk817-battery",
  	.type = POWER_SUPPLY_TYPE_BATTERY,
-@@ -688,6 +732,7 @@
+@@ -688,6 +750,7 @@
  	.num_properties = ARRAY_SIZE(rk817_bat_props),
  	.get_property = rk817_bat_get_prop,
  	.set_property = rk817_bat_set_prop,
@@ -123,7 +145,7 @@ Signed-off-by: Maicon Alves <alvesmaiconn@gmail.com>
  };
  
  static const struct power_supply_desc rk817_chg_desc = {
-@@ -1214,6 +1259,8 @@
+@@ -1214,6 +1277,8 @@
  	if (ret)
  		return ret;
  
