@@ -86,7 +86,7 @@ bind() {
             sleep 15
             state=$(cat /sys/class/udc/$UDC_NAME/state)
             echo "state after 15s: $state" >> $LOG
-            if [ "$(cat $(ls -d /sys/class/power_supply/*/type | xargs grep -l '^USB$' 2>/dev/null | head -n 1 | sed 's#/type$##')/online 2>/dev/null)" = "1" ] && [ "$state" != "configured" ]; then
+            if [ "$(cat /sys/class/power_supply/axp20x-usb/online 2>/dev/null)" = "1" ] && [ "$state" != "configured" ]; then
                 serial_only "not enumerated"
             fi
         ) &
@@ -168,7 +168,7 @@ case "$1" in
 
     # With no USB cable the unbind below never returns, which hung every shutdown and reboot
     # (rcK stops here). There is nothing to tear down before the power goes off anyway.
-    if [ "$(cat $(ls -d /sys/class/power_supply/*/type | xargs grep -l '^USB$' 2>/dev/null | head -n 1 | sed 's#/type$##')/online 2>/dev/null)" != "1" ]; then
+    if [ "$(cat /sys/class/power_supply/axp20x-usb/online 2>/dev/null)" != "1" ]; then
         exit 0
     fi
 
