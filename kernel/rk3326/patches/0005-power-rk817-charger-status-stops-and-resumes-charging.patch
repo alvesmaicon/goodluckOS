@@ -1,0 +1,32 @@
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Subject: [PATCH] power: supply: rk817-charger: writing status stops and resumes charging
+
+goodluckOS keeps the battery at 90 % while the console sits on a
+computer's USB (battery-care.sh), by writing "Not charging" or "Charging"
+to the battery's status, as the axp20x driver allows. Let the RK817 do the
+same with the charger enable bit; reading status back still reports what
+the PMIC is doing.
+
+--- a/drivers/power/supply/rk817_charger.c
++++ b/drivers/power/supply/rk817_charger.c
+@@ -636,6 +636,12 @@ static int rk817_bat_set_prop(struct power_supply *ps,
+ 			return -EINVAL;
+ 		charger->fcc_mah = val->intval / 1000;
+ 		return rk817_bat_calib_cap(charger);
++	case POWER_SUPPLY_PROP_STATUS:
++		/* Charging turns the charger on, anything else holds it off */
++		return regmap_write_bits(charger->rk808->regmap,
++					 RK817_PMIC_CHRG_TERM, RK817_CHRG_EN,
++					 val->intval == POWER_SUPPLY_STATUS_CHARGING ?
++					 RK817_CHRG_EN : 0);
+ 	default:
+ 		return -EINVAL;
+ 	}
+@@ -679,6 +685,7 @@ static int rk817_bat_prop_writeable(struct power_supply *psy,
+ {
+ 	switch (psp) {
+ 	case POWER_SUPPLY_PROP_CHARGE_FULL:
++	case POWER_SUPPLY_PROP_STATUS:
+ 		return 1;
+ 	default:
+ 		return 0;
