@@ -1,0 +1,74 @@
+From: Maicon Alves <alvesmaiconn@gmail.com>
+Date: Wed, 4 Nov 2026 01:30:00 -0300
+Subject: [PATCH] panfrost: grow the BO when a tiled image converts to linear
+
+A 2D image overwritten whole a few times is switched from tiled to linear
+in panfrost_ptr_unmap, into the BO it already had, on the assumption that
+the linear layout is never bigger. Linear rows are padded to 64 bytes and
+tiled images to 16 pixels, so a narrow 8-bit image can need more: a 400x300
+R8 texture goes from 121,600 to 134,400 bytes. The copy then runs past the
+BO (the assert is compiled out), and the next upload faults at the end of
+the mapping. SDL's IYUV streaming textures (three 8-bit planes updated every
+frame) hit this on a Mali-G31.
+
+Allocate a BO of the linear size when the old one is too small, as the
+shadow path of panfrost_ptr_map does; if that fails, keep the image tiled.
+
+Signed-off-by: Maicon Alves <alvesmaiconn@gmail.com>
+---
+--- a/src/gallium/drivers/panfrost/pan_resource.c
++++ b/src/gallium/drivers/panfrost/pan_resource.c
+@@ -2366,17 +2366,43 @@
+                panfrost_resource_setup(screen, prsrc, DRM_FORMAT_MOD_LINEAR,
+                                        prsrc->image.props.format, 0);
+ 
+-               /* converting the resource from tiled to linear and back
+-                * shouldn't increase memory usage...
+-                */
+-               assert(prsrc->plane.layout.data_size_B <= panfrost_bo_size(bo));
++               /* Linear rows are padded to 64 bytes and tiled images to 16
++                * pixels: a narrow 8-bit image can outgrow its BO */
++               bool fits =
++                  prsrc->plane.layout.data_size_B <= panfrost_bo_size(bo);
+ 
+-               util_copy_rect(
+-                  bo->ptr.cpu + prsrc->plane.layout.slices[0].offset_B,
+-                  prsrc->base.format,
+-                  prsrc->plane.layout.slices[0].tiled_or_linear.row_stride_B, 0,
+-                  0, transfer->box.width, transfer->box.height, trans->map,
+-                  transfer->stride, 0, 0);
++               if (!fits) {
++                  struct panfrost_bo *newbo = panfrost_bo_create(
++                     dev, prsrc->plane.layout.data_size_B,
++                     bo->flags & ~PAN_BO_DELAY_MMAP, bo->label);
++
++                  if (newbo && !panfrost_bo_mmap(newbo)) {
++                     panfrost_dirty_state_all(ctx);
++                     panfrost_bo_unreference(prsrc->bo);
++                     prsrc->bo = bo = newbo;
++                     prsrc->plane.base = newbo->ptr.gpu;
++                     fits = true;
++                  } else {
++                     if (newbo)
++                        panfrost_bo_unreference(newbo);
++                     panfrost_resource_setup(
++                        screen, prsrc,
++                        DRM_FORMAT_MOD_ARM_16X16_BLOCK_U_INTERLEAVED,
++                        prsrc->image.props.format, 0);
++                     prsrc->modifier_constant = true;
++                  }
++               }
++
++               if (fits) {
++                  util_copy_rect(
++                     bo->ptr.cpu + prsrc->plane.layout.slices[0].offset_B,
++                     prsrc->base.format,
++                     prsrc->plane.layout.slices[0].tiled_or_linear.row_stride_B,
++                     0, 0, transfer->box.width, transfer->box.height,
++                     trans->map, transfer->stride, 0, 0);
++               } else {
++                  panfrost_store_tiled_images(trans, prsrc);
++               }
+             } else {
+                panfrost_store_tiled_images(trans, prsrc);
+             }
