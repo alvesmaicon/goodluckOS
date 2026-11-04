@@ -4,10 +4,13 @@ if [ "$1" = "stop" ]; then
     exit 0
 fi
 
-DISK=/dev/mmcblk0
-PART=/dev/mmcblk0p2
-PART_NUM=2
 MOUNT_POINT=/home/player
+# HOME is partition 2 on the A33 cards and 3 on the RK3326 ones: take it from the mount
+PART=$(awk -v m="$MOUNT_POINT" '$2 == m { print $1; exit }' /proc/mounts)
+[ -n "$PART" ] || PART=/dev/mmcblk0p2
+DISK=${PART%p[0-9]*}
+PART_NUM=${PART##*p}
+PART_NAME=${PART##*/}
 REQUEST_FLAG=/etc/player-flags/.home_resize_requested
 STATUS_FILE=/etc/player-flags/.home_resize_status
 HOME_BACKUP=/tmp/home_backup.tar
@@ -74,9 +77,9 @@ log "request flag file deleted."
 
 echo "1" > "$LED_PATH" 2>/dev/null
 
-DISK_SECTORS=$(cat /sys/class/block/mmcblk0/size 2>/dev/null)
-PART_START=$(cat /sys/class/block/mmcblk0p2/start 2>/dev/null)
-PART_SIZE=$(cat /sys/class/block/mmcblk0p2/size 2>/dev/null)
+DISK_SECTORS=$(cat /sys/class/block/${DISK##*/}/size 2>/dev/null)
+PART_START=$(cat /sys/class/block/$PART_NAME/start 2>/dev/null)
+PART_SIZE=$(cat /sys/class/block/$PART_NAME/size 2>/dev/null)
 
 log "raw reads: disk_sectors=$DISK_SECTORS part_start=$PART_START part_size=$PART_SIZE"
 
@@ -85,7 +88,7 @@ if ! is_number "$DISK_SECTORS" || ! is_number "$PART_START" || ! is_number "$PAR
     exit 1
 fi
 
-SECTOR_SIZE=$(cat /sys/block/mmcblk0/queue/hw_sector_size 2>/dev/null)
+SECTOR_SIZE=$(cat /sys/block/${DISK##*/}/queue/hw_sector_size 2>/dev/null)
 is_number "$SECTOR_SIZE" || SECTOR_SIZE=512
 
 PART_END=$((PART_START + PART_SIZE - 1))
@@ -133,7 +136,7 @@ sync
 partx -u --nr "$PART_NUM" "$DISK" >>"$LOG" 2>&1
 log "partx update exit code: $?"
 
-NEW_PART_SIZE=$(cat /sys/class/block/mmcblk0p2/size 2>/dev/null)
+NEW_PART_SIZE=$(cat /sys/class/block/$PART_NAME/size 2>/dev/null)
 log "current partition size: $NEW_PART_SIZE sectors (was $PART_SIZE before this run)"
 
 if ! is_number "$NEW_PART_SIZE"; then
