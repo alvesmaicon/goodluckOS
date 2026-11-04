@@ -196,12 +196,6 @@
 		linux,code = <ABS_RY>;
 	};
 
-	/* no FN on the R36H: declared only, so the button numbers stay the GA36-MB's */
-	button-fn {
-		label = "FN";
-		linux,code = <BTN_MODE>;
-	};
-
 	button-sw19 {
 		gpios = <&gpio3 RK_PB1 GPIO_ACTIVE_LOW>;
 		label = "SELECT";
@@ -229,9 +223,10 @@
 	linux,code = <BTN_THUMBL>;
 };
 
+/* no FN on the R36H: the right stick's click takes its place (FN+UP, FN+DOWN, FN+START+SELECT) */
 &btn_f4 {
-	label = "THUMBR";
-	linux,code = <BTN_THUMBR>;
+	label = "FN";
+	linux,code = <BTN_MODE>;
 };
 
 /* ten levels, as the GA36-MB's: the launcher and the scripts write 1 to 10 */
