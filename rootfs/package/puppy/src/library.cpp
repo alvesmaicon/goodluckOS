@@ -153,8 +153,7 @@ static int tabIndex(const Model& m, const std::string& name) {
     return -1;
 }
 
-// Fills My List with the favourite entries of every tab (except the mixed ones), the most played first,
-// then by name.
+// Fills My List with the favourite entries of every tab (except the mixed ones), by name.
 static void rebuildMyList(Model& m) {
     int t = tabIndex(m, kMyListName);
     if (t < 0) return;
@@ -167,9 +166,8 @@ static void rebuildMyList(Model& m) {
             list.push_back(std::move(e));
         }
     }
-    std::stable_sort(list.begin(), list.end(), [&m](const Entry& l, const Entry& r) {
-        const long long a = m.secondsPlayed(l), b = m.secondsPlayed(r);
-        return a != b ? a > b : l.searchKey < r.searchKey;
+    std::stable_sort(list.begin(), list.end(), [](const Entry& l, const Entry& r) {
+        return l.searchKey < r.searchKey;
     });
     m.categories[t].entries = std::move(list);
     m.categories[t].tagColumn = -1;
