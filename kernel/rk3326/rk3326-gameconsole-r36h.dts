@@ -54,6 +54,14 @@
 		settle-time-us = <100>;
 	};
 
+	dc_charger: dc-charger {
+		compatible = "gpio-charger";
+		charger-type = "mains";
+		gpios = <&gpio0 RK_PB3 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&dc_det_pin>;
+	};
+
 	battery: battery {
 		compatible = "simple-battery";
 		charge-full-design-microamp-hours = <3380000>;
@@ -301,8 +309,11 @@
 	rockchip,system-power-controller;
 };
 
+/* the charge port feeds a charger chip of its own, not the RK817's USB input: this pin says a supply
+ * is in (the factory's dc_det_gpio), and the RK817's gauge takes the battery's state from it */
 &rk817_charger {
 	monitored-battery = <&battery>;
+	power-supplies = <&dc_charger>;
 };
 
 /* both slots signal at 1.8 V, as on the RG351 */
@@ -347,6 +358,11 @@
 };
 
 &pinctrl {
+	charger {
+		dc_det_pin: dc-det-pin {
+			rockchip,pins = <0 RK_PB3 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
 	btns {
 		btn_pins: btn-pins {
 			rockchip,pins = <1 RK_PA2 RK_FUNC_GPIO &pcfg_pull_up>,
