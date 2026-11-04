@@ -227,6 +227,12 @@
 		label = "START";
 		linux,code = <BTN_START>;
 	};
+
+	/* R3 is FN below: declared only, so the D-pad keeps the GA36-MB's button numbers (SDL's map) */
+	button-thumbr {
+		label = "THUMBR";
+		linux,code = <BTN_THUMBR>;
+	};
 };
 
 &btn_f3 {
