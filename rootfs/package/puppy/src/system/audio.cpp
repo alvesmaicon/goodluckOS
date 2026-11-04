@@ -5,6 +5,7 @@
 
 #include "config.h"
 #include "system/device.h"
+#include "system/jack.h"
 
 Mixer::Mixer() {
     if (snd_mixer_open(&handle, 0) < 0) {
@@ -89,12 +90,8 @@ void Audio::read() {
         int on = 1;
         if (snd_mixer_selem_has_playback_switch(e)) snd_mixer_selem_get_playback_switch(e, SND_MIXER_SCHN_FRONT_LEFT, &on);
         headphones = !on;
-    } else if (snd_mixer_elem_t* e = mixer.find("Playback Mux")) {
-        unsigned idx = 0;
-        char item[16] = "";
-        if (snd_mixer_selem_get_enum_item(e, SND_MIXER_SCHN_MONO, &idx) == 0 &&
-            snd_mixer_selem_get_enum_item_name(e, idx, sizeof item, item) == 0)
-            headphones = strcmp(item, "HP") == 0;
+    } else if (mixer.find("Playback Mux")) {
+        headphones = jack::plugged();   // the RK817's speakers hang on its headphone output: the jack decides
     }
 }
 

@@ -9,4 +9,7 @@ namespace jack {
 // type on every plug or unplug. 0 when the kernel has no jack (nothing runs then).
 uint32_t watch();
 
+// Whether headphones are in right now: false without a jack
+bool plugged();
+
 }  // namespace jack

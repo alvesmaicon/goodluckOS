@@ -7,24 +7,27 @@
 CARD=0
 SPEAKER_HPF="500 Hz"
 
-# The GA36-MB's codec switches the speaker next to the headphones; the R36H's RK817 has a mux, one
-# output at a time (0 = HP, 1 = SPK).
-if amixer -c "$CARD" cget name='Speaker Switch' >/dev/null 2>&1; then
-    output() { amixer -c "$CARD" cget name='Speaker Switch' | grep -q ': values=on' && echo speaker || echo headphones; }
-    set_output() { [ "$1" = headphones ] && v=off || v=on; amixer -q -c "$CARD" cset name='Speaker Switch' "$v"; }
-elif amixer -c "$CARD" cget name='Playback Mux' >/dev/null 2>&1; then
-    output() { amixer -c "$CARD" cget name='Playback Mux' | grep -q ': values=1' && echo speaker || echo headphones; }
-    set_output() { [ "$1" = headphones ] && v=HP || v=SPK; amixer -q -c "$CARD" cset name='Playback Mux' "$v"; }
-else
-    exit 1
-fi
-cur=$(output)
-
 # the jack control (on with headphones in), empty on a kernel without detection
 jack() {
     id=$(amixer -c "$CARD" controls | grep -i "jack'" | head -1 | cut -d, -f1)
     [ -n "$id" ] && amixer -c "$CARD" cget "$id" | grep -o ': values=[a-z]*' | cut -d= -f2
 }
+
+# The GA36-MB's codec switches the speaker next to the headphones. The R36H's speakers hang on the
+# RK817's headphone output through an amplifier, and the jack itself switches between them: the mux
+# stays on HP (its SPK output drives nothing) and the output is whatever the jack says.
+fixed=0
+if amixer -c "$CARD" cget name='Speaker Switch' >/dev/null 2>&1; then
+    output() { amixer -c "$CARD" cget name='Speaker Switch' | grep -q ': values=on' && echo speaker || echo headphones; }
+    set_output() { [ "$1" = headphones ] && v=off || v=on; amixer -q -c "$CARD" cset name='Speaker Switch' "$v"; }
+elif amixer -c "$CARD" cget name='Playback Mux' >/dev/null 2>&1; then
+    fixed=1
+    output() { [ "$(jack)" = on ] && echo headphones || echo speaker; }
+    set_output() { amixer -q -c "$CARD" cset name='Playback Mux' HP; }
+else
+    exit 1
+fi
+cur=$(output)
 
 filter() {
     if [ "$1" = speaker ]; then
@@ -44,7 +47,7 @@ case "$1" in
             set_output "$cur"
         fi
         filter "$cur"; exit 0 ;;
-    toggle) [ "$cur" = speaker ] && new=headphones || new=speaker ;;
+    toggle) [ "$cur" = speaker ] && new=headphones || new=speaker; [ $fixed = 1 ] && new=$cur ;;   # nothing to override: shows it
     speaker|headphones) new=$1 ;;
     *)      echo "usage: $0 toggle|speaker|headphones|get|apply" >&2; exit 2 ;;
 esac

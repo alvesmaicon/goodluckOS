@@ -37,6 +37,16 @@ static int openJack() {
     return fd;
 }
 
+bool plugged() {
+    int fd = openJack();
+    if (fd < 0) return false;
+    unsigned long bits[SW_MAX / (8 * sizeof(long)) + 1] = {};
+    const bool in = ioctl(fd, EVIOCGSW(sizeof(bits)), bits) >= 0 &&
+                    (bits[SW_HEADPHONE_INSERT / (8 * sizeof(long))] >> (SW_HEADPHONE_INSERT % (8 * sizeof(long))) & 1);
+    close(fd);
+    return in;
+}
+
 uint32_t watch() {
     int fd = openJack();
     if (fd < 0) return 0;

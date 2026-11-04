@@ -95,7 +95,17 @@
 	/* named as the GA36-MB's card, which the launcher and the scripts look for */
 	rk817-sound {
 		simple-audio-card,name = "GA36mbAudio";
-		simple-audio-card,hp-det-gpios = <&gpio2 RK_PC6 GPIO_ACTIVE_LOW>;
+		/* the jack grounds gpio0 PC4 (the odroid-go's PC6 reads high with or without a plug here) */
+		simple-audio-card,hp-det-gpios = <&gpio0 RK_PC4 GPIO_ACTIVE_LOW>;
+		/* the speakers hang on the headphone output through an amplifier, and the jack switches
+		 * between them (the vendor tree's use-ext-amplifier): SPKO drives nothing */
+		simple-audio-card,widgets =
+			"Microphone", "Mic Jack",
+			"Headphone", "Headphones";
+		simple-audio-card,routing =
+			"MICL", "Mic Jack",
+			"Headphones", "HPOL",
+			"Headphones", "HPOR";
 	};
 
 	/* from ROCKNIX's rk3326.dtsi: BL31 changes the DDR rate (0002, 0003) */
