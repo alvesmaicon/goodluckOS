@@ -51,6 +51,7 @@
 
 		mux-controls = <&joystick_mux_controller>;
 		channels = "0", "1", "2", "3";
+		settle-time-us = <100>;
 	};
 
 	battery: battery {
@@ -160,37 +161,39 @@
 	#address-cells = <1>;
 	#size-cells = <0>;
 
-	/* the mux's channels 1 and 3 are the left stick, upside down and mirrored; 0 and 2 the right one */
+	/* measured on the console: the mux's channels 0 and 2 are the left stick, 1 and 3 the right
+	 * one, each wired the other way round: a push right or up on the left stick lowers or raises
+	 * the reading, the right stick does the opposite. The ADC spans about 50 to 900. */
 	axis@0 {
 		reg = <0>;
 		abs-flat = <10>;
 		abs-fuzz = <10>;
-		abs-range = <180 800>;
-		linux,code = <ABS_RX>;
+		abs-range = <930 30>;
+		linux,code = <ABS_X>;
 	};
 
 	axis@1 {
 		reg = <1>;
 		abs-flat = <10>;
 		abs-fuzz = <10>;
-		abs-range = <800 180>;
-		linux,code = <ABS_X>;
+		abs-range = <30 930>;
+		linux,code = <ABS_RX>;
 	};
 
 	axis@2 {
 		reg = <2>;
 		abs-flat = <10>;
 		abs-fuzz = <10>;
-		abs-range = <180 800>;
-		linux,code = <ABS_RY>;
+		abs-range = <930 30>;
+		linux,code = <ABS_Y>;
 	};
 
 	axis@3 {
 		reg = <3>;
 		abs-flat = <10>;
 		abs-fuzz = <10>;
-		abs-range = <800 180>;
-		linux,code = <ABS_Y>;
+		abs-range = <30 930>;
+		linux,code = <ABS_RY>;
 	};
 
 	/* no FN on the R36H: declared only, so the button numbers stay the GA36-MB's */
