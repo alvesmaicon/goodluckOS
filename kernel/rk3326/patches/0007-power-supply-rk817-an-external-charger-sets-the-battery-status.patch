@@ -14,7 +14,10 @@ When the battery is supplied through "power-supplies" and the RK817's
 charger is off, report it as charging, and as full once it takes less
 than 50 mA within 50 mV of the charge voltage. Full is CHARGE_FINISH,
 which also runs the existing calibration; unplugging lets the next full
-charge calibrate again.
+charge calibrate again. The driver announces a change of the reported
+state (power_supply_changed), which LED triggers and uevents need, and
+a change of the supply re-reads the state at once instead of at the next
+8 s poll.
 
 Signed-off-by: Maicon Alves <alvesmaiconn@gmail.com>
 ---
@@ -31,15 +34,31 @@ Signed-off-by: Maicon Alves <alvesmaiconn@gmail.com>
  struct rk817_charger {
  	struct device *dev;
  	struct rk808 *rk808;
-@@ -86,6 +90,7 @@
+@@ -86,6 +90,8 @@
  	 * the calibrated SOC value to correct for columb counter drift.
  	 */
  	bool soc_cal;
 +	bool ext_supplied;
++	bool monitoring;
  
  	/* Implementation specific immutable properties from device tree */
  	int res_div;
-@@ -408,6 +413,23 @@
+@@ -334,6 +340,8 @@
+ 
+ static void rk817_read_props(struct rk817_charger *charger)
+ {
++	bool old_ext;
++	int old_status;
+ 	int tmp, reg;
+ 	u8 bulk_reg[4];
+ 
+@@ -404,10 +412,34 @@
+ 	charger->battery_present = (reg & RK817_BAT_EXS);
+ 
+ 	/* Get which type of charge we are using (if any). */
++	old_status = charger->charge_status;
++	old_ext = charger->ext_supplied;
+ 	regmap_read(charger->rk808->regmap, RK817_PMIC_CHRG_STS, &reg);
  	charger->charge_status = (reg >> 4) & 0x07;
  
  	/*
@@ -59,11 +78,16 @@ Signed-off-by: Maicon Alves <alvesmaiconn@gmail.com>
 +						RK817_EXT_FULL_MARGIN_UV ?
 +			CHARGE_FINISH : CC_OR_CV_CHRG;
 +
++	/* LED triggers and uevents follow the status only through this */
++	if (charger->bat_ps && (charger->charge_status != old_status ||
++				 charger->ext_supplied != old_ext))
++		power_supply_changed(charger->bat_ps);
++
 +	/*
  	 * Get charger input voltage. Note that on my example hardware (an
  	 * Odroid Go Advance) the voltage of the power connector is measured
  	 * on the register labelled USB in the datasheet; I don't know if this
-@@ -445,7 +467,7 @@
+@@ -445,7 +477,7 @@
  		val->intval = charger->battery_present;
  		break;
  	case POWER_SUPPLY_PROP_STATUS:
@@ -72,23 +96,26 @@ Signed-off-by: Maicon Alves <alvesmaiconn@gmail.com>
  			val->intval = POWER_SUPPLY_STATUS_DISCHARGING;
  			break;
  		}
-@@ -680,6 +702,15 @@
+@@ -680,6 +712,18 @@
  	}
  }
  
-+/* Unplugged: the next full charge calibrates the capacity again */
++/* Unplugged, the next full charge calibrates the capacity again */
 +static void rk817_bat_external_power_changed(struct power_supply *ps)
 +{
 +	struct rk817_charger *charger = power_supply_get_drvdata(ps);
 +
 +	if (power_supply_am_i_supplied(ps) <= 0)
 +		charger->soc_cal = 0;
++	/* follow the supply at once rather than at the next poll */
++	if (charger->monitoring)
++		mod_delayed_work(system_percpu_wq, &charger->work, 0);
 +}
 +
  static const struct power_supply_desc rk817_bat_desc = {
  	.name = "rk817-battery",
  	.type = POWER_SUPPLY_TYPE_BATTERY,
-@@ -688,6 +719,7 @@
+@@ -688,6 +732,7 @@
  	.num_properties = ARRAY_SIZE(rk817_bat_props),
  	.get_property = rk817_bat_get_prop,
  	.set_property = rk817_bat_set_prop,
@@ -96,3 +123,12 @@ Signed-off-by: Maicon Alves <alvesmaiconn@gmail.com>
  };
  
  static const struct power_supply_desc rk817_chg_desc = {
+@@ -1214,6 +1259,8 @@
+ 	if (ret)
+ 		return ret;
+ 
++	charger->monitoring = true;
++
+ 	/* Force the first update immediately. */
+ 	mod_delayed_work(system_percpu_wq, &charger->work, 0);
+ 
