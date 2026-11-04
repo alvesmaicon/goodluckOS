@@ -244,11 +244,11 @@
 	/delete-property/ rotation;
 };
 
-/* the only LED software drives: red over the green power LED, which is wired to a rail.
- * It beats while the kernel runs: the one sign of life on a boot with no screen and no serial. */
+/* the only LED software drives: red over the green power LED, which is wired to a rail
+ * (the pin left floating still shows green). Red while the battery charges, green the rest. */
 &red_led {
 	gpios = <&gpio2 RK_PB5 GPIO_ACTIVE_HIGH>;
-	linux,default-trigger = "heartbeat";
+	linux,default-trigger = "rk817-battery-charging";
 };
 
 &red_led_pin {
