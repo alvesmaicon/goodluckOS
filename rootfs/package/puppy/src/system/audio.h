@@ -26,6 +26,7 @@ struct Audio {
     bool muted = false;       // switched off, or at 0
     bool switchedOff = false; // Global Mute
     bool hasSwitch = true;    // the RK817 has none: no Global Mute
+    bool outputSwitch = true; // the R36H's jack switches the sound itself: no Audio output
     bool headphones = false;
 
     bool operator!=(const Audio& o) const {

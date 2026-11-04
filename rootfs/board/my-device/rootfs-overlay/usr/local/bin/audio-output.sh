@@ -1,7 +1,8 @@
 #!/bin/sh
 # audio-output.sh toggle|speaker|headphones|get|apply
 # headphones = speaker off. Plugging headphones in or out runs headphones|speaker (triggerhappy,
-# on the jack's input switch); apply, at boot, follows the jack too. FN+DOWN overrides it.
+# on the jack's input switch); apply, at boot, follows the jack too. FN+DOWN overrides it
+# (not on the R36H, whose jack switches the sound by itself).
 # The speaker gets a high-pass filter: it can't play bass and distorts on it.
 
 CARD=0
@@ -47,11 +48,12 @@ case "$1" in
             set_output "$cur"
         fi
         filter "$cur"; exit 0 ;;
-    toggle) [ "$cur" = speaker ] && new=headphones || new=speaker; [ $fixed = 1 ] && new=$cur ;;   # nothing to override: shows it
+    toggle) [ "$cur" = speaker ] && new=headphones || new=speaker ;;
     speaker|headphones) new=$1 ;;
     *)      echo "usage: $0 toggle|speaker|headphones|get|apply" >&2; exit 2 ;;
 esac
 
+[ $fixed = 1 ] && exit 0     # nothing to choose: the jack switches the sound by itself
 set_output "$new"
 filter "$new"
 

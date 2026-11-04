@@ -86,6 +86,7 @@ void Audio::read() {
         switchedOff = !on;
     }
     headphones = false;
+    outputSwitch = mixer.find("Speaker") != nullptr;
     if (snd_mixer_elem_t* e = mixer.find("Speaker")) {
         int on = 1;
         if (snd_mixer_selem_has_playback_switch(e)) snd_mixer_selem_get_playback_switch(e, SND_MIXER_SCHN_FRONT_LEFT, &on);
