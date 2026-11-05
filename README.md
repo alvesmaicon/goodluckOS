@@ -6,7 +6,7 @@ An uncompromisingly fast, small, modern, and feature-rich custom firmware for A2
 > [!IMPORTANT]
 > **This is not a goodluckOS distribution.** For goodluckOS, use the official project: [CodeZombie/goodluckOS](https://github.com/CodeZombie/goodluckOS).
 >
-> This fork is my personal workspace. I use it to improve my own console (a GA36-MB v1.1, A33) and to prepare contributions, which I offer upstream as small pull requests, only the ones Jeremy wants. It is not meant to compete with goodluckOS or to be installed by anyone else: there are no releases or images here, and none are planned. Everything in it was written with an AI coding assistant (Claude Code), has only run on my device, and is still being reviewed. What it changes, and where each change stands, is in the [fork status](https://github.com/alvesmaicon/goodluckOS/discussions/3) discussion.
+> This fork is my personal workspace. I use it to improve my own consoles (a GA36-MB v1.1 with an Allwinner A33, and an R36H with a Rockchip RK3326) and to prepare contributions, which I offer upstream as small pull requests, only the ones Jeremy wants. It is not meant to compete with goodluckOS or to be installed by anyone else: there are no releases or images here, and none are planned. Everything in it was written with an AI coding assistant (Claude Code), has only run on my devices, and is still being reviewed. What it changes, and where each change stands, is in the [fork status](https://github.com/alvesmaicon/goodluckOS/discussions/3) discussion.
 
 > [!IMPORTANT]
 > **goodluckOS is BETA software. You will run into bugs!**
@@ -34,8 +34,9 @@ An uncompromisingly fast, small, modern, and feature-rich custom firmware for A2
 - SELECT+START closes the active application cleanly (RetroArch saves first), bringing you right back to the launcher
 - FN+START+SELECT force-kills the active application
 - FN+DPAD_UP toggles a live FPS/CPU graph for monitoring in-game performance. What it shows, its style and its corner are set in System Settings -> Overlay.
-- The sound goes to the headphones when they're plugged in and back to the speaker when they come out (A33), and FN+DPAD_DOWN switches it by hand
-- If the screen is on, the LEDs are off. Nothing blinding you while you're playing in the dark
+- The sound goes to the headphones when they're plugged in and back to the speaker when they come out (A33; on the R36H the jack does it by itself), and FN+DPAD_DOWN switches it by hand
+- If the screen is on, the LEDs are off. Nothing blinding you while you're playing in the dark (on the R36H the green LED can't be turned off, and the red one shows the battery charging)
+- In this fork, also the R36H (Rockchip RK3326, 1 GB of RAM), with the same system and HOME as the GA36-MB: see [R36H](#r36h-rk3326-this-fork-only)
 - Comes stock with Chocolate Doom, ready to play
 - Luanti, a block-building game in the style of Minecraft, as an app for the App Installer: Minetest Game with mods that bring it close to Minecraft, from its monsters, villages and horses to the Nether and the End, played with the console's buttons (see [Luanti for goodluckOS](https://github.com/alvesmaicon/luanti/blob/handheld/5.18/goodluckos/README.md))
 - Second SD card (TF-2 slot) for more games, with its own launcher tab
@@ -77,6 +78,7 @@ Once it's installed, System Settings -> Storage -> `Resize Home` expands your HO
 - USB Networking
 - CPU Overclocking
 - Portable Puppy for other firmwares (see below; config file, es_systems.cfg support and runner done)
+- R36H: a card image (its card is put together by hand for now)
 
 ### Portable Puppy (in development)
 Puppy can also run as an optional frontend on other handheld firmwares that use EmulationStation (e.g. dArkOS on the original R36S, ROCKNIX, Knulli), next to the existing frontends rather than replacing them. Progress:
@@ -105,6 +107,18 @@ Know of another Allwinner-based handheld not listed on this page? Open a new [Is
 If you have one such device, and some spare time, leave an issue on Github and we'll work with you to build support for it, and get it running on your hardware.
 
 Alternatively, consider contributing to the [Device Fund](https://ko-fi.com/jeremyclark) so we can purchase new consoles and port goodluckOS to them.
+
+### R36H (RK3326), this fork only
+The R36H is the R36S's Rockchip board without the FN button: an RK3326 (4x Cortex-A35), 1 GB of RAM and a Mali-G31 GPU. This fork runs on it with an arm64 kernel of its own (`kernel/rk3326`: the DTS, the panel's init table from the stock DTB, the RAM at 666 MHz) and Mesa's panfrost driver (GLES 3.1), and with the same 32-bit system and HOME as on the GA36-MB: the cores, apps, ports, saves and settings move between the two consoles with a copy of HOME. It boots through the loader and U-Boot of the card that came with the console, which run goodluckOS's `boot.ini` and kernel from `BOOT/gl`. The stock card's files are not in this repository.
+
+Where it differs from the GA36-MB:
+- No FN button: R3, the right stick's click, is FN, so games get no R3.
+- No headphone detection: the jack itself moves the sound between the speakers and the headphones, so Audio output is off and FN + D-pad down does nothing.
+- The charge port goes to a charger chip of its own, not to the power chip: the OTG port doesn't charge, and plugging the charger in doesn't turn the console on or show a charge screen.
+- The green LED is wired to a power rail and stays on; the red one shows the battery charging.
+- No power chip temperature: Linux reads none from the R36H's RK817, so that status bar item shows ??.
+
+It has not run on the original R36S, also an RK3326, whose board needs its own DTS.
 
 ## Puppy
 Puppy is goodluckOS' application launcher. It's what you see when you start goodluckOS. It was designed to be simple, flexible, and most importantly: fast.
@@ -154,6 +168,8 @@ With System Settings -> Input Settings -> Confirm button on B, A and B swap.
 Grid or list view, whether the tabs are shown and which ones are set in System Settings. In list view, a selected name that doesn't fit scrolls to show the rest.
 
 ### Shortcuts that work everywhere
+On the R36H, which has no FN button, FN is R3 (the right stick's click).
+
 | Buttons | Action |
 |---|---|
 | VOL+ / VOL- | Volume, with an on-screen level bar |
@@ -162,10 +178,10 @@ Grid or list view, whether the tabs are shown and which ones are set in System S
 | SELECT + START | Close the active app cleanly (RetroArch saves first) and go back to the launcher |
 | FN + SELECT + START | Force close the active app |
 | FN + D-pad up | Show / hide a live FPS and CPU overlay |
-| FN + D-pad down | Sound on the speaker or on the headphones only (on the A33, plugging headphones in or out also switches it) |
+| FN + D-pad down | Sound on the speaker or on the headphones only (on the A33, plugging headphones in or out also switches it; on the R36H the jack does it by itself, and this does nothing) |
 
 ### RetroArch
-FN is the hotkey:
+FN is the hotkey (R3 on the R36H):
 
 | Buttons | Action |
 |---|---|
@@ -253,7 +269,7 @@ System Settings
 - **Font**: Default (Inter, or Atkinson Hyperlegible in the Showcase style), VT323, Pixelify Sans or ProggyClean.
 - **Accent color**: the colour of the selection, the buttons in the hints and the bars, and of the volume and brightness feedback in games (from the next game on): yellow (the default), orange, red, pink, purple, blue, cyan, green or white.
 - **Style**: Retro, Puppy's own look, or Showcase, after the Vitrine launcher by Jeferson Lopes: a dark blue screen, bold titles, the selection as a rounded pill in the accent color, the face buttons in the hints as their letter in its colour on a grey button, and that launcher's layouts. Its list is Shelf: a narrower list, the picture with rounded corners over the game's data, play time and description, and an A-Z rail lighting the selected game's letter. Its grid is Streaming: the selected game's picture fills the top right under a see-through top bar, its base down beside the row's name and its top cut when it doesn't fit, its left and bottom edges fading into the screen next to the game's name and data, with a row of covers per tab under it. Left/right move along the row and L1/R1 skip 10 games along it; up/down go to the previous/next tab's row and stop at the first and the last. The next tab's row shows under the current one. When the selected game has a video in its gamelist.xml (Skraper's videos), or a `VIDEO=` line with a clip in its `apps.puppy` entry (a port's trailer), or is itself a video of the Videos tab (30 s of it), it plays once in place of the picture after 2 s without a button, in both layouts, muted unless Interface's Trailer sound is on; any button stops it.
-- **Status bar**: the CPU temperature, the power chip (AXP223) temperature, the date, the time, the battery and the volume and audio output, each one on or off. In game puts them in the top right corner of every game, over a background whose opacity you set; it is off by default, so nothing covers the game. In the launcher puts the same items in the launcher's top bar (on by default). The time, the battery and the audio are on by default. A temperature turns yellow from 75 °C, where the A33 starts to slow down, and red from 90 °C.
+- **Status bar**: the CPU temperature, the power chip (AXP223) temperature (not on the R36H), the date, the time, the battery and the volume and audio output, each one on or off. In game puts them in the top right corner of every game, over a background whose opacity you set; it is off by default, so nothing covers the game. In the launcher puts the same items in the launcher's top bar (on by default). The time, the battery and the audio are on by default. A temperature turns yellow from 75 °C, where the A33 starts to slow down, and red from 90 °C.
 - **Performance**: the Gallium HUD graphs that FN + D-pad up shows in game. Text only goes at the top.
 - Overlay changes apply from the next game on.
 - **Date & Time**: the date format and 12/24 hours (12-hour by default) of the status bar's clock, in the launcher and in games. The clock chip keeps the time while the console is off, so it only needs setting once; the time zone applies to the launcher right away and to the apps opened afterwards.
@@ -315,6 +331,8 @@ The data port can be an Ethernet adapter named goodluckOS instead of the MTP dri
 
 ## Which chip does my console have?
 GA36-MB consoles (sold as R36S) come with an Allwinner A23 or A33, and goodluckOS builds for one don't boot on the other. The stock menu reports a 64-bit CPU and 1 GB of RAM on both, and the marking on the chip can't be trusted either. On Windows, [chip-version](chip-version/README.md) reads the microSD card that came with the console and tells which chip it has.
+
+The R36H and the original R36S have a Rockchip RK3326 instead: another board, which the GA36-MB's images don't boot on. This fork runs on the R36H, see [R36H](#r36h-rk3326-this-fork-only).
 
 ## How do I add games?
 Plug the console into your PC with a USB cable and open `goodluckOS -> HOME` (Windows: This PC; Linux: your file manager; macOS needs an MTP app such as [OpenMTP](https://openmtp.ganeshrvel.com/)). Or plug the SD card into your PC and open up the HOME partition. In there you'll find a `roms` folder with a few subfolders for each system. Add your roms to those.
@@ -380,6 +398,8 @@ goodluckOS will never be distributed with unauthorized copyright-protected mater
 ## About Ports
 Some subset of portmaster games could theoretically work, however I want to tamper your expectations a little bit before we all start getting too excited.
 The Allwinner A23/A33 is a 32-bit SoC. This means that 64-bit software simply _cannot_ run on it. There are a number of popular android ports that exist only as aarch64 (64-bit) distributions. Those will never work. Additionally, even with ZRAM there, the device is still heavily RAM-limited, so unoptimized games (I'm looking at you, Balatro) will struggle to run without patching.
+
+The R36H's RK3326 is 64-bit, but this fork runs the same 32-bit system on it, so the same ports apply there, with twice the RAM.
 
 With that said, most of the games people actually care about (Stardew Valley, Half-Life 1, n64 re-comps, Android GameMaker games, OpenMW, OpenRCT2, + more) are 32-bit games, and therefore should theoretically work if anyone cares to create 32-bit ports.
 
