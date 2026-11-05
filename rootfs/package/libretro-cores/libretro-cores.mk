@@ -70,6 +70,7 @@ define LIBRETRO_CORES_BUILD_CMDS
 			-DUSE_FFMPEG=OFF \
 			-DUSE_SQLITE3=OFF \
 			-DUSE_MINIZIP=OFF \
+			-DUSE_LIBZIP=OFF \
 			-DUSE_EDITLINE=OFF \
 			-DUSE_DISCORD_RPC=OFF
 	$(MAKE) -C $(@D)/libretro-mgba/build mgba_libretro
