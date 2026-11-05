@@ -23,6 +23,16 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Some runners have a 72 GB disk, most of it preinstalled tools this build never uses
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/hostedtoolcache /opt/ghc \
+            /usr/local/.ghcup /usr/share/swift /usr/lib/jvm /usr/local/share/boost \
+            /usr/local/share/powershell /usr/local/share/chromium /opt/microsoft /opt/google /opt/az
+          docker image prune -af
+          df -h /
+
       - name: Restore downloads
         id: dl
         uses: actions/cache/restore@v6
@@ -82,6 +92,11 @@ jobs:
           name: build-log
           path: rootfs/build.log
           retention-days: 14
+
+      # The caches are packed on the same disk, which the build tree fills
+      - name: Delete the build tree
+        if: always()
+        run: sudo rm -rf rootfs/out
 
       # Only pushes save, so pull requests don't evict the main branch's cache
       - name: Save downloads
