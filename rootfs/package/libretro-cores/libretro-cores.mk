@@ -10,7 +10,7 @@ LIBRETRO_CORES_SITE_METHOD = git
 LIBRETRO_CORES_LICENSE = Various (GPL-2.0+, MIT, Non-Commercial)
 LIBRETRO_CORES_LICENSE_FILES = COPYING
 
-LIBRETRO_CORES_DEPENDENCIES = zlib host-cmake
+LIBRETRO_CORES_DEPENDENCIES = zlib $(BR2_CMAKE_HOST_DEPENDENCY)
 
 LIBRETRO_MAJOR_CORES_LIST = \
 	fceumm \
@@ -61,7 +61,7 @@ define LIBRETRO_CORES_BUILD_CMDS
 	rm -rf $(@D)/libretro-mgba/build
 	mkdir -p $(@D)/libretro-mgba/build
 	cd $(@D)/libretro-mgba/build && \
-		$(HOST_DIR)/bin/cmake .. \
+		$(BR2_CMAKE) .. \
 			-DCMAKE_TOOLCHAIN_FILE=$(HOST_DIR)/share/buildroot/toolchainfile.cmake \
 			-DCMAKE_BUILD_TYPE=Release \
 			-DBUILD_LIBRETRO=ON \
