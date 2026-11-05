@@ -191,8 +191,8 @@ System Settings
 ├── Display & Audio
 │   ├── Brightness
 │   ├── Master Volume
-│   ├── Global Mute
-│   └── Audio output: Speaker / Headphones
+│   ├── Global Mute (GA36-MB)
+│   └── Audio output: Speaker / Headphones (on the R36H, off: its jack switches by itself)
 ├── Interface
 │   ├── Language
 │   ├── Look: Style: Retro / Showcase

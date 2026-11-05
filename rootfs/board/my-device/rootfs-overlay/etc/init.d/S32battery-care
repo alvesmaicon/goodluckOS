@@ -8,7 +8,7 @@ case "$1" in
     stop)
         kill $(ps | grep '[b]attery-care.sh' | awk '{ print $1 }') 2>/dev/null
         # the PMIC keeps the setting while off: leave the charger on for the next charge
-        echo Charging > /sys/class/power_supply/axp20x-battery/status
+        for b in /sys/class/power_supply/*; do [ "$(cat $b/type 2>/dev/null)" = Battery ] && echo Charging > $b/status; done
         ;;
 esac
 exit 0

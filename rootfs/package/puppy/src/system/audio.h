@@ -1,7 +1,8 @@
 #pragma once
-// The console's mixer: the ALSA card of puppy.conf's alsa_card. Headphone is the volume of both
-// outputs; switching Speaker off leaves the sound on the headphones only (FN + DOWN, or the jack
-// through triggerhappy: see system/jack.h).
+// The console's mixer: the ALSA card of puppy.conf's alsa_card. On the GA36-MB, Headphone is the
+// volume of both outputs and switching Speaker off leaves the sound on the headphones only (FN + DOWN,
+// or the jack through triggerhappy: see system/jack.h). On the R36H the RK817's Master is the volume
+// and its Playback Mux plays on one output at a time.
 #include <alsa/asoundlib.h>
 
 // The card, open and loaded for as long as the object lives.
@@ -24,6 +25,8 @@ struct Audio {
     int volume = -1;          // -1: no mixer
     bool muted = false;       // switched off, or at 0
     bool switchedOff = false; // Global Mute
+    bool hasSwitch = true;    // the RK817 has none: no Global Mute
+    bool outputSwitch = true; // the R36H's jack switches the sound itself: no Audio output
     bool headphones = false;
 
     bool operator!=(const Audio& o) const {

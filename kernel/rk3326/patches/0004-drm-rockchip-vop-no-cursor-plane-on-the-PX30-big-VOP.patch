@@ -1,0 +1,22 @@
+From: alvesmaicon <alvesmaiconn@gmail.com>
+Subject: [PATCH] drm/rockchip: vop: no cursor plane on the PX30's big VOP
+
+SDL's KMSDRM backend draws its default cursor on a CRTC's cursor plane
+at start, mouse or not, so every SDL app on the R36H showed an arrow in
+the top left corner. A handheld has no use for it, and the Allwinner
+consoles this rootfs also runs on have no cursor plane either: the
+window is offered as an overlay instead.
+---
+diff --git a/drivers/gpu/drm/rockchip/rockchip_vop_reg.c b/drivers/gpu/drm/rockchip/rockchip_vop_reg.c
+index 72301e0a3..4eec4292e 100644
+--- a/drivers/gpu/drm/rockchip/rockchip_vop_reg.c
++++ b/drivers/gpu/drm/rockchip/rockchip_vop_reg.c
+@@ -360,7 +360,7 @@ static const struct vop_win_data px30_vop_big_win_data[] = {
+ 	{ .base = 0x00, .phy = &px30_win1_data,
+ 	  .type = DRM_PLANE_TYPE_OVERLAY },
+ 	{ .base = 0x00, .phy = &px30_win2_data,
+-	  .type = DRM_PLANE_TYPE_CURSOR },
++	  .type = DRM_PLANE_TYPE_OVERLAY },
+ };
+ 
+ static const struct vop_data px30_vop_big = {

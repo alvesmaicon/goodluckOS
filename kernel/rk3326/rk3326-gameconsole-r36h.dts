@@ -1,0 +1,396 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * R36H (HL-R36H board): the ODROID-GO Super's layout without the FN button,
+ * a 640x480 NV3051D panel and a second SD slot. Values from its stock DTB.
+ */
+
+/dts-v1/;
+#include "rk3326-odroid-go.dtsi"
+
+/ {
+	model = "R36H";
+	compatible = "gameconsole,r36h", "rockchip,rk3326";
+
+	aliases {
+		mmc1 = &sdio;
+	};
+
+	chosen {
+		stdout-path = "serial2:115200n8";
+	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		/* the kernel log survives a warm reset: boot.ini copies it to BOOT/ramoops.bin */
+		ramoops@f000000 {
+			compatible = "ramoops";
+			reg = <0x0 0x0f000000 0x0 0x100000>;
+			console-size = <0x80000>;
+			record-size = <0x20000>;
+		};
+	};
+
+	joystick_mux_controller: mux-controller {
+		compatible = "gpio-mux";
+		pinctrl-0 = <&mux_en_pins>;
+		pinctrl-names = "default";
+		#mux-control-cells = <0>;
+
+		mux-gpios = <&gpio3 RK_PB3 GPIO_ACTIVE_LOW>,
+			    <&gpio3 RK_PB0 GPIO_ACTIVE_LOW>;
+	};
+
+	joystick_mux: adc-mux {
+		compatible = "io-channel-mux";
+		io-channels = <&saradc 1>;
+		io-channel-names = "parent";
+		#io-channel-cells = <1>;
+
+		mux-controls = <&joystick_mux_controller>;
+		channels = "0", "1", "2", "3";
+		settle-time-us = <100>;
+	};
+
+	dc_charger: dc-charger {
+		compatible = "gpio-charger";
+		charger-type = "mains";
+		gpios = <&gpio0 RK_PB3 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&dc_det_pin>;
+	};
+
+	battery: battery {
+		compatible = "simple-battery";
+		charge-full-design-microamp-hours = <3380000>;
+		charge-term-current-microamp = <300000>;
+		constant-charge-current-max-microamp = <2000000>;
+		constant-charge-voltage-max-microvolt = <4200000>;
+		factory-internal-resistance-micro-ohms = <100000>;
+		voltage-max-design-microvolt = <4200000>;
+		voltage-min-design-microvolt = <3500000>;
+
+		ocv-capacity-celsius = <20>;
+		ocv-capacity-table-0 =  <4000000 100>, <3995000 95>, <3990000 90>, <3950000 85>,
+					<3910000 80>, <3870000 75>, <3830000 70>, <3790000 65>,
+					<3750000 60>, <3710000 55>, <3670000 50>, <3630000 45>,
+					<3580000 40>, <3530000 35>, <3480000 30>, <3430000 25>,
+					<3380000 20>, <3330000 15>, <3280000 10>, <3220000 5>,
+					<3165000 0>;
+	};
+
+	gpio-keys-vol {
+		compatible = "gpio-keys";
+		autorepeat;
+		pinctrl-0 = <&btn_pins_vol>;
+		pinctrl-names = "default";
+
+		button-vol-down {
+			gpios = <&gpio2 RK_PA1 GPIO_ACTIVE_LOW>;
+			label = "VOLUMEDOWN";
+			linux,code = <KEY_VOLUMEDOWN>;
+		};
+
+		button-volume-up {
+			gpios = <&gpio2 RK_PA0 GPIO_ACTIVE_LOW>;
+			label = "VOLUMEUP";
+			linux,code = <KEY_VOLUMEUP>;
+		};
+	};
+
+	/* named as the GA36-MB's card, which the launcher and the scripts look for */
+	rk817-sound {
+		simple-audio-card,name = "GA36mbAudio";
+		/* the vendor trees' detect pin, which this board holds high with or without a plug (the only
+		 * pins that move, gpio0 PC4 and gpio2 PC2, are the audio lines at the jack): no detection yet */
+		simple-audio-card,hp-det-gpios = <&gpio2 RK_PC6 GPIO_ACTIVE_LOW>;
+		/* the speakers hang on the headphone output through an amplifier, and the jack switches
+		 * between them (the vendor tree's use-ext-amplifier): SPKO drives nothing */
+		simple-audio-card,widgets =
+			"Microphone", "Mic Jack",
+			"Headphone", "Headphones";
+		simple-audio-card,routing =
+			"MICL", "Mic Jack",
+			"Headphones", "HPOL",
+			"Headphones", "HPOR";
+	};
+
+	/* from ROCKNIX's rk3326.dtsi: BL31 changes the DDR rate (0002, 0003) */
+	dfi: dfi@ff610000 {
+		compatible = "rockchip,px30-dfi";
+		reg = <0x0 0xff610000 0x0 0x400>;
+		rockchip,pmu = <&pmugrf>;
+	};
+
+	dmc: dmc {
+		compatible = "rockchip,px30-dmc";
+		interrupts = <GIC_SPI 105 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "complete";
+		devfreq-events = <&dfi>;
+		operating-points-v2 = <&dmc_opp_table>;
+		center-supply = <&vdd_logic>;
+	};
+
+	dmc_opp_table: opp-table-dmc {
+		compatible = "operating-points-v2";
+
+		opp-194000000 {
+			opp-hz = /bits/ 64 <194000000>;
+			opp-microvolt = <950000>;
+		};
+
+		opp-328000000 {
+			opp-hz = /bits/ 64 <328000000>;
+			opp-microvolt = <950000>;
+		};
+
+		opp-450000000 {
+			opp-hz = /bits/ 64 <450000000>;
+			opp-microvolt = <950000>;
+		};
+
+		opp-528000000 {
+			opp-hz = /bits/ 64 <528000000>;
+			opp-microvolt = <975000>;
+		};
+
+		opp-666000000 {
+			opp-hz = /bits/ 64 <666000000>;
+			opp-microvolt = <1050000>;
+		};
+	};
+};
+
+/* f1 and f2 are the volume buttons, f5 and f6 are not wired (no FN) */
+/delete-node/ &btn_f1;
+/delete-node/ &btn_f2;
+/delete-node/ &btn_f5;
+/delete-node/ &btn_f6;
+/delete-node/ &pwm_led;
+
+/* buttons and sticks in one device, which apps take for the GA36-MB's gamepad: same name, same codes */
+&builtin_gamepad {
+	compatible = "gameconsole,gpio-adc-gamepad";
+	label = "GA36-MB Gamepad";
+	io-channels = <&joystick_mux 0>, <&joystick_mux 1>,
+		      <&joystick_mux 2>, <&joystick_mux 3>;
+	poll-interval = <16>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	/* measured on the console: the mux's channels 0 and 2 are the left stick, 1 and 3 the right
+	 * one, each wired the other way round: a push right or up on the left stick lowers or raises
+	 * the reading, the right stick does the opposite. The ADC spans about 50 to 900. */
+	axis@0 {
+		reg = <0>;
+		abs-flat = <10>;
+		abs-fuzz = <10>;
+		abs-range = <930 30>;
+		linux,code = <ABS_X>;
+	};
+
+	axis@1 {
+		reg = <1>;
+		abs-flat = <10>;
+		abs-fuzz = <10>;
+		abs-range = <30 930>;
+		linux,code = <ABS_RX>;
+	};
+
+	axis@2 {
+		reg = <2>;
+		abs-flat = <10>;
+		abs-fuzz = <10>;
+		abs-range = <930 30>;
+		linux,code = <ABS_Y>;
+	};
+
+	axis@3 {
+		reg = <3>;
+		abs-flat = <10>;
+		abs-fuzz = <10>;
+		abs-range = <30 930>;
+		linux,code = <ABS_RY>;
+	};
+
+	button-sw19 {
+		gpios = <&gpio3 RK_PB1 GPIO_ACTIVE_LOW>;
+		label = "SELECT";
+		linux,code = <BTN_SELECT>;
+	};
+	button-sw20 {
+		gpios = <&gpio3 RK_PB7 GPIO_ACTIVE_LOW>;
+		label = "TOP-RIGHT 2";
+		linux,code = <BTN_TR2>;
+	};
+	button-sw21 {
+		gpios = <&gpio3 RK_PB2 GPIO_ACTIVE_LOW>;
+		label = "TOP-LEFT 2";
+		linux,code = <BTN_TL2>;
+	};
+	button-sw22 {
+		gpios = <&gpio3 RK_PB4 GPIO_ACTIVE_LOW>;
+		label = "START";
+		linux,code = <BTN_START>;
+	};
+
+	/* R3 is FN below: declared only, so the D-pad keeps the GA36-MB's button numbers (SDL's map) */
+	button-thumbr {
+		label = "THUMBR";
+		linux,code = <BTN_THUMBR>;
+	};
+};
+
+&btn_f3 {
+	label = "THUMBL";
+	linux,code = <BTN_THUMBL>;
+};
+
+/* no FN on the R36H: the right stick's click takes its place (FN+UP, FN+DOWN, FN+START+SELECT) */
+&btn_f4 {
+	label = "FN";
+	linux,code = <BTN_MODE>;
+};
+
+/* ten levels, as the GA36-MB's: the launcher and the scripts write 1 to 10 */
+&backlight {
+	pwms = <&pwm1 0 62745 0>;
+	brightness-levels = <0 10 20 30 40 50 60 70 80 90 100>;
+	default-brightness-level = <5>;
+};
+
+&internal_display {
+	compatible = "gameconsole,r36h-panel", "newvision,nv3051d";
+	vdd-supply = <&vcc_lcd>;
+	/delete-property/ rotation;
+};
+
+/* the only LED software drives: red over the green power LED, which is wired to a rail
+ * (the pin left floating still shows green). Red while the battery charges, green the rest. */
+&red_led {
+	gpios = <&gpio2 RK_PB5 GPIO_ACTIVE_HIGH>;
+	linux,default-trigger = "rk817-battery-charging";
+};
+
+&red_led_pin {
+	rockchip,pins = <2 RK_PB5 RK_FUNC_GPIO &pcfg_pull_none>;
+};
+
+&pwm3 {
+	status = "disabled";
+};
+
+/*
+ * vdd_logic feeds the GPU and the DMC: an exact voltage per GPU OPP left the DMC no room
+ * (1.05 V at 666 MHz against the GPU's 0.95 V at 200 MHz), so each GPU OPP takes a range
+ */
+&gpu_opp_table {
+	opp-200000000 {
+		opp-microvolt = <950000 950000 1150000>;
+	};
+
+	opp-300000000 {
+		opp-microvolt = <975000 975000 1150000>;
+	};
+
+	opp-400000000 {
+		opp-microvolt = <1050000 1050000 1150000>;
+	};
+
+	opp-480000000 {
+		opp-microvolt = <1125000 1125000 1150000>;
+	};
+};
+
+/* restart and power off through the PMIC: PSCI's reset never came back (reboot and sysrq both hung) */
+&rk817 {
+	rockchip,system-power-controller;
+};
+
+/* the charge port feeds a charger chip of its own, not the RK817's USB input: this pin says a supply
+ * is in (the factory's dc_det_gpio), and the RK817's gauge takes the battery's state from it */
+&rk817_charger {
+	monitored-battery = <&battery>;
+	power-supplies = <&dc_charger>;
+};
+
+/* both slots signal at 1.8 V, as on the RG351 */
+&io_domains {
+	vccio1-supply = <&vccio_sd>;
+};
+
+&vcc_sd {
+	regulator-max-microvolt = <3300000>;
+	regulator-min-microvolt = <1800000>;
+};
+
+&vccio_sd {
+	regulator-max-microvolt = <1800000>;
+};
+
+&sdio {
+	bus-width = <4>;
+	cap-sd-highspeed;
+	card-detect-delay = <200>;
+	cd-gpios = <&gpio3 RK_PB6 GPIO_ACTIVE_LOW>;
+	sd-uhs-sdr12;
+	sd-uhs-sdr25;
+	vmmc-supply = <&vcc_sd>;
+	vqmmc-supply = <&vccio_sd>;
+	status = "okay";
+};
+
+&sfc {
+	status = "disabled";
+};
+
+&u2phy_otg {
+	status = "okay";
+};
+
+/* as in Andre Renaud's R36S DTS: dr_mode "peripheral" alone never connects */
+&usb20_otg {
+	dr_mode = "otg";
+	usb-role-switch;
+	role-switch-default-mode = "peripheral";
+};
+
+&pinctrl {
+	charger {
+		dc_det_pin: dc-det-pin {
+			rockchip,pins = <0 RK_PB3 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+	btns {
+		btn_pins: btn-pins {
+			rockchip,pins = <1 RK_PA2 RK_FUNC_GPIO &pcfg_pull_up>,
+					<1 RK_PA5 RK_FUNC_GPIO &pcfg_pull_up>,
+					<1 RK_PA6 RK_FUNC_GPIO &pcfg_pull_up>,
+					<1 RK_PA7 RK_FUNC_GPIO &pcfg_pull_up>,
+					<1 RK_PB4 RK_FUNC_GPIO &pcfg_pull_up>,
+					<1 RK_PB5 RK_FUNC_GPIO &pcfg_pull_up>,
+					<1 RK_PB6 RK_FUNC_GPIO &pcfg_pull_up>,
+					<1 RK_PB7 RK_FUNC_GPIO &pcfg_pull_up>,
+					<2 RK_PA2 RK_FUNC_GPIO &pcfg_pull_up>,
+					<2 RK_PA3 RK_FUNC_GPIO &pcfg_pull_up>,
+					<2 RK_PA6 RK_FUNC_GPIO &pcfg_pull_up>,
+					<2 RK_PA7 RK_FUNC_GPIO &pcfg_pull_up>,
+					<3 RK_PB1 RK_FUNC_GPIO &pcfg_pull_up>,
+					<3 RK_PB2 RK_FUNC_GPIO &pcfg_pull_up>,
+					<3 RK_PB4 RK_FUNC_GPIO &pcfg_pull_up>,
+					<3 RK_PB7 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+		btn_pins_vol: btn-pins-vol {
+			rockchip,pins = <2 RK_PA0 RK_FUNC_GPIO &pcfg_pull_up>,
+					<2 RK_PA1 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+	};
+
+	joystick {
+		mux_en_pins: mux-pins {
+			rockchip,pins = <3 RK_PB5 RK_FUNC_GPIO &pcfg_output_low>;
+		};
+	};
+};

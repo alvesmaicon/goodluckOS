@@ -10,8 +10,11 @@ FLOOR=${2:-50}
 LOW=${3:-15}
 CRITICAL=${4:-5}
 OFF=${5:-2}
-B=/sys/class/power_supply/axp20x-battery
-U=/sys/class/power_supply/axp20x-usb
+# the battery and the USB input by type: axp20x-battery and axp20x-usb on the A33, rk817-battery and
+# rk817-charger on the RK3326
+supply() { for p in /sys/class/power_supply/*; do [ "$(cat $p/type 2>/dev/null)" = "$1" ] && { echo $p; return; }; done; }
+B=$(supply Battery)
+U=$(supply USB)
 UDC=/sys/class/udc/$(ls /sys/class/udc 2>/dev/null | head -n 1)/state
 SAVED=/var/lib/battery-care/resistance
 

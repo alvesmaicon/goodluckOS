@@ -1,0 +1,12 @@
+#!/bin/sh
+# mpv needs the DRM device that drives the panel: card1 on the A33 (card0 is lima), card0 on the RK3326
+
+[ "$1" = "stop" ] && exit 0
+
+for c in /sys/class/drm/card*-*; do
+    [ -e "$c" ] || break
+    d=${c##*/}
+    echo "drm-device=/dev/dri/${d%%-*}" > /run/mpv-drm.conf
+    exit 0
+done
+echo "drm-device=/dev/dri/card1" > /run/mpv-drm.conf

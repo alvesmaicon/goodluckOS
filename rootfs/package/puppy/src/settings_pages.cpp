@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <memory>
 
 #include "accents.h"
@@ -173,18 +174,22 @@ std::vector<Row> SettingsScreen::displayPage() {
         app.audioChanged();
         levelChanged();
     }));
-    rows.push_back(Row::toggle("Global Mute", audio.switchedOff, [this](int on) {
-        setMuted(on);
-        audio.read();
-        app.audioChanged();
-        levelChanged();
-    }));
-    rows.push_back(Row::choice("Audio output", {"Speaker", "Headphones"}, audio.headphones ? 1 : 0, [this](int i) {
+    if (audio.hasSwitch)
+        rows.push_back(Row::toggle("Global Mute", audio.switchedOff, [this](int on) {
+            setMuted(on);
+            audio.read();
+            app.audioChanged();
+            levelChanged();
+        }));
+    Row output = Row::choice("Audio output", {"Speaker", "Headphones"}, audio.headphones ? 1 : 0, [this](int i) {
         setOutput(i == 0);
         audio.read();
         app.audioChanged();
         levelChanged();
-    }));
+    });
+    output.enabled = audio.outputSwitch;
+    if (!output.enabled) output.hint = "Automatic: plugging headphones in moves the sound from the speakers to them.";
+    rows.push_back(std::move(output));
     return rows;
 }
 
@@ -876,6 +881,7 @@ std::vector<Row> SettingsScreen::inputPage() {
 std::vector<Row> SettingsScreen::shortcutsPage() {
     std::vector<Row> rows;
     for (const auto& s : kShortcuts) {
+        if (!audio.outputSwitch && std::strcmp(s[0], "FN + DOWN") == 0) continue;
         if (!s[1]) rows.push_back(Row::section(s[0]));
         else rows.push_back(Row::info(buttonLabel(s[0]), tr(s[1])));
     }
