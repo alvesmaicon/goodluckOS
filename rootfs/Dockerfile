@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     rsync \
     bc \
+    cmake \
     llvm-19-dev \
     libclang-19-dev \
     libclang-cpp19-dev \
