@@ -115,6 +115,7 @@ Where it differs from the GA36-MB:
 - No FN button: R3, the right stick's click, is FN, so games get no R3.
 - No headphone detection: the jack itself moves the sound between the speakers and the headphones, so Audio output is off and FN + D-pad down does nothing.
 - The charge port goes to a charger chip of its own, not to the power chip: the OTG port doesn't charge, and plugging the charger in doesn't turn the console on or show a charge screen.
+- On battery, the card's own U-Boot won't boot below 3.53 V, about a fifth of the R36H's 2.9 Ah left, and says so in text cut in two. `kernel/rk3326/uboot-patch.py` lowers that to 3.3 V in the first of its four copies and makes the text whole, over a low battery screen that `kernel/rk3326/charge-bmps.py` draws for BOOT. With the charger in, it boots at any level.
 - The green LED is wired to a power rail and stays on; the red one shows the battery charging.
 - No power chip temperature: Linux reads none from the R36H's RK817, so that status bar item shows ??.
 

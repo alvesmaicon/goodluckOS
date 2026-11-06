@@ -64,21 +64,23 @@
 
 	battery: battery {
 		compatible = "simple-battery";
-		charge-full-design-microamp-hours = <3380000>;
+		/* measured: 2.9 Ah from the cut (2.9 V under load) to full, resistance from load steps */
+		charge-full-design-microamp-hours = <2900000>;
 		charge-term-current-microamp = <300000>;
 		constant-charge-current-max-microamp = <2000000>;
 		constant-charge-voltage-max-microvolt = <4200000>;
-		factory-internal-resistance-micro-ohms = <100000>;
+		factory-internal-resistance-micro-ohms = <145000>;
 		voltage-max-design-microvolt = <4200000>;
-		voltage-min-design-microvolt = <3500000>;
+		voltage-min-design-microvolt = <3000000>;
 
+		/* from that charge and discharge, corrected for the resistance (the stock table ends at 4.0 V) */
 		ocv-capacity-celsius = <20>;
-		ocv-capacity-table-0 =  <4000000 100>, <3995000 95>, <3990000 90>, <3950000 85>,
-					<3910000 80>, <3870000 75>, <3830000 70>, <3790000 65>,
-					<3750000 60>, <3710000 55>, <3670000 50>, <3630000 45>,
-					<3580000 40>, <3530000 35>, <3480000 30>, <3430000 25>,
-					<3380000 20>, <3330000 15>, <3280000 10>, <3220000 5>,
-					<3165000 0>;
+		ocv-capacity-table-0 =  <4185000 100>, <4115000 95>, <4065000 90>, <4005000 85>,
+					<3945000 80>, <3895000 75>, <3840000 70>, <3790000 65>,
+					<3740000 60>, <3700000 55>, <3670000 50>, <3650000 45>,
+					<3625000 40>, <3605000 35>, <3585000 30>, <3570000 25>,
+					<3550000 20>, <3500000 15>, <3450000 10>, <3400000 5>,
+					<3200000 0>;
 	};
 
 	gpio-keys-vol {
