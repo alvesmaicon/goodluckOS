@@ -20,7 +20,7 @@ PNG = bytes.fromhex("89504e470d0a1a0a0000000d4948445200000001000000010806000000"
 def jeu(gid, name, date, q):
     base = f"http://localhost:8765/api2/mediaJeu.php?devid=DEV&devpassword=DPW&softname=goodluckOS&ssid={q.get('ssid')}&sspassword=X&systemeid={q.get('systemeid')}&jeuid={gid}"
     return {"id": gid, "noms": [{"region": "jp", "text": "アドバンス"}, {"region": "us", "text": name + " US"}, {"region": "ss", "text": name}],
-            "synopsis": [{"langue": "en", "text": "English story of " + name + " & co."}, {"langue": "pt", "text": "História de " + name}],
+            "synopsis": [{"langue": "en", "text": "English story of " + name + " & co."}, {"langue": "pt", "text": "História de &quot;" + name + "&quot; &#039;e&#x27; &copy;"}],
             "dates": [{"region": "us", "text": date}, {"region": "jp", "text": "2004"}],
             "genres": [{"id": "1", "principale": "0", "noms": [{"langue": "en", "text": "Other"}]}, {"id": "2", "principale": "1", "noms": [{"langue": "en", "text": "Strategy"}, {"langue": "pt", "text": "Estratégia"}]}],
             "joueurs": {"text": "1-4"}, "developpeur": {"text": "Intelligent Systems"}, "editeur": {"text": "Nintendo"}, "note": {"text": "17"},

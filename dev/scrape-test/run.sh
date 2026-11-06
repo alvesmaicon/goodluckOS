@@ -41,7 +41,7 @@ grep -q "sf2.zip crc None romtype rom size .* system 75" server.log || fail "an 
 grep -q "Advance Wars (USA).gba .* system 12" server.log || fail "gba as Game Boy Advance"
 ! grep -q doom.wad server.log || fail "doom has no system but was asked"
 grep -q "<name>My Own Name</name>" roms/gba/gamelist.xml || fail "Missing only replaced the player's name"
-grep -q "<desc>História de Advance Wars</desc>" roms/gba/gamelist.pt.xml || fail "no Portuguese description"
+grep -q "<desc>História de &quot;Advance Wars&quot; &apos;e&apos; &amp;copy;</desc>" roms/gba/gamelist.pt.xml || fail "no Portuguese description, or ScreenScraper's HTML entities kept: $(grep desc roms/gba/gamelist.pt.xml)"
 [ -s "roms/gba/media/images/Advance Wars (USA).png" ] && [ -s "roms/gba/media/videos/Advance Wars (USA).mp4" ] || fail "media"
 grep -q "crc 06B9DF6F romtype iso" server.log || fail "a disc image goes as iso, with its CRC"
 grep -q "Golden Sun (USA).zip crc A269CF19 romtype rom size 2" server.log || fail "a zip goes by the file inside"
@@ -51,7 +51,7 @@ grep -q "^jeuRecherche Cave Story system 0" server.log && grep -q "^jeuRecherche
 ! grep -q -e "jeuRecherche Top" -e "romnom Top" server.log || fail "an entry of another tab was scraped"
 grep -A1 "<path>./Ocarina of Time</path>" ports/gamelist.xml | grep -q "Ocarina of Time US" && grep -A6 "<path>./Ocarina of Time</path>" ports/gamelist.xml | grep -q "<releasedate>19981121" || fail "the oldest game of that name: $(cat ports/gamelist.xml)"
 grep -q "<image>./media/images/Half-Life.png</image>" ports/gamelist.xml && [ -s "ports/media/images/Half-Life.png" ] && [ -s "ports/media/videos/Cave Story.mp4" ] || fail "the Games tab's media"
-grep -q "<desc>História de DOOM</desc>" ports/gamelist.pt.xml && ! grep -q Luanti ports/gamelist.xml || fail "the Games tab's gamelists"
+grep -q "<desc>História de &quot;DOOM&quot;" ports/gamelist.pt.xml && ! grep -q Luanti ports/gamelist.xml || fail "the Games tab's gamelists"
 calls=$(grep -c -e ^jeuInfos -e ^jeuRecherche server.log)
 run --all --image box-2D --status st2
 [ "$(grep -c -e ^jeuInfos -e ^jeuRecherche server.log)" = "$calls" ] || fail "All asked again instead of using the cache"

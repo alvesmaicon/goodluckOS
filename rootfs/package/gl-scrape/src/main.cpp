@@ -194,6 +194,32 @@ static std::vector<std::string> imageTypes(const std::string& image) {
     return {"mixrbv2", "mixrbv1", "box-2D", "ss"};
 }
 
+// ScreenScraper's texts keep some HTML entities (&quot;, &#039;): as plain text, which the gamelist escapes
+static std::string plain(const std::string& s) {
+    static const std::pair<const char*, unsigned> kNamed[] = {{"quot", '"'}, {"amp", '&'}, {"lt", '<'}, {"gt", '>'}, {"apos", '\''}, {"nbsp", 0xA0}};
+    std::string out;
+    for (size_t i = 0; i < s.size();) {
+        const size_t semi = s[i] == '&' ? s.find(';', i) : std::string::npos;
+        unsigned cp = 0;
+        if (semi != std::string::npos && semi - i <= 8) {
+            const std::string e = s.substr(i + 1, semi - i - 1);
+            if (e.size() > 1 && e[0] == '#') cp = (unsigned)strtoul(e.c_str() + 1 + (e[1] == 'x'), nullptr, e[1] == 'x' ? 16 : 10);
+            for (const auto& [name, c] : kNamed)
+                if (e == name) cp = c;
+        }
+        if (!cp || cp > 0x10FFFF) {
+            out += s[i++];
+            continue;
+        }
+        if (cp < 0x80) out += (char)cp;
+        else if (cp < 0x800) out += {(char)(0xC0 | cp >> 6), (char)(0x80 | (cp & 0x3F))};
+        else if (cp < 0x10000) out += {(char)(0xE0 | cp >> 12), (char)(0x80 | (cp >> 6 & 0x3F)), (char)(0x80 | (cp & 0x3F))};
+        else out += {(char)(0xF0 | cp >> 18), (char)(0x80 | (cp >> 12 & 0x3F)), (char)(0x80 | (cp >> 6 & 0x3F)), (char)(0x80 | (cp & 0x3F))};
+        i = semi + 1;
+    }
+    return out;
+}
+
 // The language's region, for names (pt -> br)
 static std::string langRegion(const std::string& lang) {
     if (lang == "pt") return "br";
@@ -364,15 +390,15 @@ static void fill(ScreenScraper& ss, const Options& o, const Folder& f, Gamelist&
     std::string genre = rec["genre"]["en"].text;
     if (genre.empty()) genre = pick(rec["genre"], {o.lang});
     const std::string players = rec["players"].text;
-    main.set(key, {{"name", pick(rec["names"], regions, true)}, {"desc", desc}, {"image", image}, {"video", video},
-                   {"releasedate", date}, {"developer", rec["developer"].text}, {"publisher", rec["publisher"].text},
-                   {"genre", genre}, {"players", players}, {"rating", esRating(rec["rating"].text)}},
+    main.set(key, {{"name", plain(pick(rec["names"], regions, true))}, {"desc", plain(desc)}, {"image", image}, {"video", video},
+                   {"releasedate", date}, {"developer", plain(rec["developer"].text)}, {"publisher", plain(rec["publisher"].text)},
+                   {"genre", plain(genre)}, {"players", players}, {"rating", esRating(rec["rating"].text)}},
              o.all);
     if (o.lang != "en") {
-        const std::string ownDesc = rec["synopsis"][o.lang].text, ownGenre = rec["genre"][o.lang].text;
-        const std::string ownName = rec["names"][langRegion(o.lang)].text;
+        const std::string ownDesc = plain(rec["synopsis"][o.lang].text), ownGenre = plain(rec["genre"][o.lang].text);
+        const std::string ownName = plain(rec["names"][langRegion(o.lang)].text);
         if (!ownDesc.empty() || !ownGenre.empty() || !ownName.empty())
-            local.set(key, {{"name", ownName}, {"desc", ownDesc}, {"genre", ownGenre.empty() ? genre : ownGenre},
+            local.set(key, {{"name", ownName}, {"desc", ownDesc}, {"genre", ownGenre.empty() ? plain(genre) : ownGenre},
                             {"releasedate", date}, {"players", players}},
                       o.all);
     }
