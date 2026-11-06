@@ -1,11 +1,13 @@
 // gl-scrape's pieces on their own: JSON, the cached record, regions, gamelist edits, CRC and zip, the
-// tabs' folders and ScreenScraper's systems
+// tabs' folders, ScreenScraper's systems and the Games tab's entries and names
 #include <cassert>
 #include <cstdio>
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include "json.h"
 #include "gamelist.h"
+#include "games.h"
 #include "roms.h"
 #include "screenscraper.h"
 #include "systems.h"
@@ -78,5 +80,22 @@ int main() {
     { std::ofstream f("systems"); f << sys.dump(); }
     assert(sys.dump().find("SECRET") == std::string::npos);
     Systems back2; assert(back2.load("systems") && back2.dump() == sys.dump() && !Systems().load("missing"));
+    // the Games tab: Games entries only, a NAME= again replaces, hidden ones out; then the installed apps'
+    { std::ofstream f("g.puppy"); f << "[ENTRY]\nCATEGORY=Games\nNAME=Doom\nSCREENSCRAPER=489155\nCOMMAND=d\n[ENTRY]\nCATEGORY=Games\nNAME=Gone\n"
+                                     "HIDE_IF_EXISTS=g.puppy\nCOMMAND=x\n[ENTRY]\nCATEGORY=Terminal\nNAME=Top\nCOMMAND=top\n[ENTRY]\nCATEGORY=Games\n"
+                                     "NAME=No command\n[entry]\ncategory = Games\nname = Doom\ncommand = d2\n"; }
+    system("mkdir -p inst/b inst/a && printf '[ENTRY]\\nCATEGORY=Games\\nNAME=Luanti\\nCOMMAND=./l\\n' > inst/b/app.puppy"
+           " && printf '[ENTRY]\\nNAME=Tool\\nCOMMAND=./t\\n' > inst/a/app.puppy");
+    std::vector<NativeGame> native = nativeGames({"g.puppy"}, "inst");
+    assert(native.size() == 2 && native[0].name == "Doom" && native[0].id.empty() && native[1].name == "Luanti");
+    assert(sameName("The Legend of Zelda : Ocarina of Time", "Ocarina of Time") && sameName("Half-life", "Half-Life"));
+    assert(sameName("DOOM", "Doom") && sameName("Zelda - Majora's Mask", "Majoras Mask") && !sameName("Half-Life 2", "Half-Life"));
+    assert(!sameName("Half-Life - Blue Shift", "Half-Life") && !sameName("Ocarina of Time 3D", "Ocarina of Time") && !sameName("x", ""));
+    std::vector<Json> found(4);
+    assert(Json::parse(R"J({"id":"1","names":{"ss":"Half-Life 2"},"dates":{"us":"1990"},"medias":[]})J", found[0]));
+    assert(Json::parse(R"J({"id":"2","names":{"ss":"Half-life"},"dates":{"us":"2000-09-01"},"medias":[{"type":"video-normalized"}]})J", found[1]));
+    assert(Json::parse(R"J({"id":"3","names":{"us":"Half-Life"},"dates":{"us":"1998-11-19","jp":"1999"},"medias":[]})J", found[2]));
+    assert(Json::parse(R"J({"id":"4","names":{"us":"Half-Life"},"dates":{},"medias":[]})J", found[3]));
+    assert(chooseGame(found, "Half-Life") && (*chooseGame(found, "Half-Life"))["id"].text == "3" && !chooseGame(found, "Quake"));
     std::cout << "ALL OK\n";
 }

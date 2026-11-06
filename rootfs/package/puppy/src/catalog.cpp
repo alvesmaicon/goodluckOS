@@ -529,6 +529,22 @@ std::vector<Category> loadCatalog() {
             addToCategory(cats, rec.entry);
         }
     }
+    // The Games tab's gamelist, keyed by the entries' names, which stay: its picture replaces the entry's
+    // icon, and its clip plays unless the entry has a VIDEO of its own
+    const auto native = loadGamelist(cfg.portsDir);
+    for (auto& c : cats) {
+        if (c.name != kGamesCategory) continue;
+        for (Entry& e : c.entries) {
+            auto info = native.find(e.id);
+            if (info == native.end()) continue;
+            const GameInfo& g = info->second;
+            e.synopsis = g.synopsis;
+            e.meta = g.meta;
+            if (e.video.empty()) e.video = g.video;
+            std::error_code ec;
+            if (!g.image.empty() && fs::is_regular_file(g.image, ec)) e.iconPath = g.image;
+        }
+    }
     for (auto& c : cats) {
         auto it = archiveTabs.find(c.name);
         c.isArchive = it != archiveTabs.end();

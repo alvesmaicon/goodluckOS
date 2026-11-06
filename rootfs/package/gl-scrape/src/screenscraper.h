@@ -1,6 +1,7 @@
 #pragma once
 // ScreenScraper's API (api2): the account's quota and a game's data, at the pace the quota allows.
 #include <string>
+#include <vector>
 
 #include "json.h"
 #include "roms.h"
@@ -27,9 +28,13 @@ public:
     Answer systemList(Json& answer);    // systemesListe, as it comes (~4 MB)
     // jeuInfos, reduced to what gl-scrape keeps (see record())
     Answer gameInfo(int systemId, const std::string& file, const RomId& id, Json& game);
+    Answer gameById(const std::string& id, Json& game);     // jeuInfos by ScreenScraper's id
+    // jeuRecherche: the games whose names have these words, on one system (0: all), at most 30
+    Answer search(const std::string& name, int systemId, std::vector<Json>& games);
     // A media URL from a record, with the credentials and, for a picture, the size
     std::string mediaUrl(const std::string& url, int maxWidth, int maxHeight) const;
     std::string detail;     // the server's words on the last failure
+    int counted = 0;        // requests ScreenScraper answered with a game or a 404, which its quota counts
 
 private:
     Account account;

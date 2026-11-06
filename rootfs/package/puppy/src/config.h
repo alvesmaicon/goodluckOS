@@ -11,6 +11,7 @@ struct Config {
     std::vector<std::string> appsDirs = {"/home/player/.local/share/applications"};   // *.puppy files
     std::vector<std::string> esSystems;     // EmulationStation es_systems.cfg files to take systems from
     std::string installedApps = "/home/player/apps";  // App Installer's apps: a folder each, with an app.puppy
+    std::string portsDir = "/home/player/ports";       // its gamelist.xml (the scraper's) is the Games tab's, by name
     // goodluckOS's appd runs the picked app and closes Puppy meanwhile; with launch_command empty
     // (puppy.conf), Puppy writes the command to launch_file and quits, for a script that runs it
     std::string launchCommand = "doas appctl launch-application";

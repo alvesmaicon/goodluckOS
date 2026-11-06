@@ -36,21 +36,13 @@ struct Archive {
     bool media;
 };
 
-static void parseApps(const std::string& path, std::vector<Archive>& out) {
+static void parseFile(const std::string& path, const AppsSection& each) {
     std::ifstream in(path);
     if (!in) return;
     std::string section;
     std::map<std::string, std::string> kv;
     auto flush = [&] {
-        Archive a{kv["NAME"], kv["TAB"], splitList(kv["ENTRY_DIRECTORIES"], ';'), splitList(kv["ENTRY_EXTENSIONS"], ';'),
-                  !kv["MEDIA"].empty() && kv["MEDIA"] != "0"};
-        if (section == "ARCHIVE" && !a.name.empty() && !a.dirs.empty()) {
-            for (std::string& e : a.exts)
-                for (char& c : e) c = (char)tolower((unsigned char)c);
-            auto same = std::find_if(out.begin(), out.end(), [&](const Archive& b) { return b.name == a.name; });
-            if (same != out.end()) *same = a;
-            else out.push_back(a);
-        }
+        if (!section.empty()) each(section, kv);
         kv.clear();
     };
     for (std::string line; std::getline(in, line);) {
@@ -67,13 +59,12 @@ static void parseApps(const std::string& path, std::vector<Archive>& out) {
     flush();
 }
 
-std::vector<RomDir> romDirs(const std::vector<std::string>& appsFiles) {
-    std::vector<Archive> archives;
+void appsSections(const std::vector<std::string>& appsFiles, const AppsSection& each) {
     for (const std::string& path : appsFiles) {
         struct stat st;
         if (stat(path.c_str(), &st) != 0) continue;
         if (!S_ISDIR(st.st_mode)) {
-            parseApps(path, archives);
+            parseFile(path, each);
             continue;
         }
         std::vector<std::string> files;
@@ -85,8 +76,22 @@ std::vector<RomDir> romDirs(const std::vector<std::string>& appsFiles) {
             closedir(d);
         }
         std::sort(files.begin(), files.end());
-        for (const std::string& f : files) parseApps(f, archives);
+        for (const std::string& f : files) parseFile(f, each);
     }
+}
+
+std::vector<RomDir> romDirs(const std::vector<std::string>& appsFiles) {
+    std::vector<Archive> archives;
+    appsSections(appsFiles, [&](const std::string& section, std::map<std::string, std::string> kv) {
+        Archive a{kv["NAME"], kv["TAB"], splitList(kv["ENTRY_DIRECTORIES"], ';'), splitList(kv["ENTRY_EXTENSIONS"], ';'),
+                  !kv["MEDIA"].empty() && kv["MEDIA"] != "0"};
+        if (section != "ARCHIVE" || a.name.empty() || a.dirs.empty()) return;
+        for (std::string& e : a.exts)
+            for (char& c : e) c = (char)tolower((unsigned char)c);
+        auto same = std::find_if(archives.begin(), archives.end(), [&](const Archive& b) { return b.name == a.name; });
+        if (same != archives.end()) *same = a;
+        else archives.push_back(a);
+    });
     std::vector<RomDir> out;
     for (const Archive& a : archives)
         for (std::string dir : a.media ? std::vector<std::string>() : a.dirs) {

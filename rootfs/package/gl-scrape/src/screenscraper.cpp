@@ -62,6 +62,7 @@ Answer ScreenScraper::request(const std::string& url, Json& out, int timeout) {
     if (wait > 0) usleep((useconds_t)wait * 1000);
     const Fetched r = fetch(url, timeout);
     nextAt = nowMs() + gapMs;
+    if (r.status == 200 || r.status == 404) ++counted;
     detail = r.status ? r.body.substr(0, r.body.find('\n')).substr(0, 160) : r.error;
     detail.erase(detail.find_last_not_of(" \t\r") + 1);
     switch (r.status) {
@@ -124,6 +125,28 @@ Answer ScreenScraper::gameInfo(int systemId, const std::string& file, const RomI
     const Json& jeu = j["response"]["jeu"];
     if (jeu.isNull() || jeu["id"].text.empty()) return Answer::NotFound;
     game = record(jeu);
+    return Answer::Ok;
+}
+
+Answer ScreenScraper::gameById(const std::string& id, Json& game) {
+    Json j;
+    const Answer a = request(api() + "jeuInfos.php?output=json&" + credentials() + "&gameid=" + urlEncode(id), j);
+    if (a != Answer::Ok) return a;
+    const Json& jeu = j["response"]["jeu"];
+    if (jeu.isNull() || jeu["id"].text.empty()) return Answer::NotFound;
+    game = record(jeu);
+    return Answer::Ok;
+}
+
+Answer ScreenScraper::search(const std::string& name, int systemId, std::vector<Json>& games) {
+    std::string url = api() + "jeuRecherche.php?output=json&" + credentials() + "&recherche=" + urlEncode(name);
+    if (systemId) url += "&systemeid=" + std::to_string(systemId);
+    Json j;
+    const Answer a = request(url, j);
+    games.clear();
+    if (a != Answer::Ok) return a;
+    for (const Json& jeu : j["response"]["jeux"].items)
+        if (!jeu["id"].text.empty()) games.push_back(record(jeu));
     return Answer::Ok;
 }
 

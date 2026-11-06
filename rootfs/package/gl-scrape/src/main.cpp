@@ -1,6 +1,7 @@
 // gl-scrape: names, descriptions, pictures and videos of the games in the ROM folders, from
 // ScreenScraper, written to each folder's gamelist.xml (and gamelist.<language>.xml), which the
-// launcher reads. System Settings -> System -> Scraper runs it; it also runs from a shell.
+// launcher reads; those of the Games tab go to the ports folder's. System Settings -> System -> Scraper
+// runs it; it also runs from a shell.
 #include <algorithm>
 #include <csignal>
 #include <cstdio>
@@ -8,6 +9,7 @@
 #include <cstring>
 #include <ctime>
 #include <fstream>
+#include <functional>
 #include <map>
 #include <set>
 #include <string>
@@ -19,6 +21,7 @@
 #include "credentials.h"   // written at build time by credentials.sh
 #include "fetch.h"
 #include "gamelist.h"
+#include "games.h"
 #include "json.h"
 #include "roms.h"
 #include "screenscraper.h"
@@ -50,6 +53,8 @@ struct Options {
     // Puppy's apps files: their tabs' folders are the ones scraped
     std::vector<std::string> apps = {"/usr/share/puppy/apps.puppy", std::string(kHome) + "/apps.puppy",
                                      std::string(kHome) + "/.local/share/applications"};
+    std::string installed = std::string(kHome) + "/apps";      // the App Installer's apps, with Games entries
+    std::string ports = std::string(kHome) + "/ports";         // the Games tab's gamelist and media
     std::vector<std::string> folders;   // only these (default: all but skip)
     std::set<std::string> skip;
     std::string lang = "en";
@@ -240,6 +245,18 @@ static std::vector<Folder> folders(const Options& o, const Systems& systems, boo
     return out;
 }
 
+// The Games tab, as a folder whose "ROMs" are the entries' names; "games" in the settings' skip
+static const char* kGames = "games";
+
+static Folder gamesFolder(const Options& o, std::map<std::string, std::string>& ids) {
+    Folder f{RomDir{o.ports, kGames, "Games", {}, {}}, 0, {}};
+    for (const NativeGame& g : nativeGames(o.apps, o.installed)) {
+        f.roms.push_back(g.name);
+        ids[g.name] = g.id;
+    }
+    return f;
+}
+
 static bool fileThere(const std::string& dir, const std::string& rel) {
     if (rel.empty()) return false;
     const std::string p = rel.compare(0, 2, "./") == 0 ? rel.substr(2) : rel;
@@ -255,12 +272,16 @@ static bool needed(const Options& o, const Folder& f, const Gamelist& main, cons
     return o.lang != "en" && local.get(rom, "desc").empty();
 }
 
+// A name as a file name on HOME's FAT
+static std::string fileName(std::string name) {
+    for (char& c : name)
+        if (strchr("\\/:*?\"<>|", c)) c = '_';
+    return name;
+}
+
 // By name and size, so a disc image is only read through (its CRC) the first time
 static std::string cacheKey(const std::string& rom, uint64_t size) {
-    std::string key = stem(rom);
-    for (char& c : key)
-        if (strchr("\\/:*?\"<>|", c)) c = '_';
-    return key + "-" + std::to_string(size) + ".json";
+    return fileName(stem(rom)) + "-" + std::to_string(size) + ".json";
 }
 
 static bool readFile(const std::string& path, std::string& out) {
@@ -281,11 +302,11 @@ static void writeFile(const std::string& path, const std::string& text) {
 
 // Downloads a media file next to the ROMs unless it's there; the gamelist's path for it
 static std::string fetchMedia(ScreenScraper& ss, const Options& o, const Folder& f, const Json* m, const char* sub,
-                              const std::string& rom, const std::string& now, bool picture, Progress& p) {
+                              const std::string& base, const std::string& now, bool picture, Progress& p) {
     if (!m) return "";
     std::string ext = (*m)["format"].text;
     if (ext.empty()) ext = picture ? "png" : "mp4";
-    const std::string rel = std::string("./media/") + sub + "/" + stem(rom) + "." + ext;
+    const std::string rel = std::string("./media/") + sub + "/" + base + "." + ext;
     const std::string path = f.dir + "/" + rel.substr(2);
     if (!o.all && exists(path)) return rel;
     if (!o.all && fileThere(f.dir, now)) return now;
@@ -301,13 +322,88 @@ static std::string fetchMedia(ScreenScraper& ss, const Options& o, const Folder&
     return "";
 }
 
+// A game's record: from the cache, unless it says unknown and is a week old, else from ask (again while
+// ScreenScraper is busy or the network fails, three times), then cached. Ok, NotFound or why not
+static Answer lookUp(const std::string& cached, const std::function<Answer(Json&)>& ask, Json& rec, Progress& p,
+                     ScreenScraper& ss) {
+    std::string text;
+    struct stat st;
+    if (readFile(cached, text) && Json::parse(text, rec) &&
+        !(rec["notfound"].text == "true" && stat(cached.c_str(), &st) == 0 && time(nullptr) - st.st_mtime > 7 * 86400))
+        return rec["notfound"].text == "true" ? Answer::NotFound : Answer::Ok;
+    rec = Json();
+    Answer a = Answer::Busy;
+    for (int attempt = 0; attempt < 3 && (a == Answer::Busy || a == Answer::Network) && !stopping; ++attempt) {
+        if (attempt) sleep(a == Answer::Busy ? 10 : 5);
+        a = ask(rec);
+    }
+    p.detail = ss.detail;
+    if (a == Answer::NotFound) writeFile(cached, "{\"notfound\":true}");
+    if (a == Answer::Ok) writeFile(cached, rec.dump());
+    return a;
+}
+
+// The record into the gamelists (main, and local in the interface's language), with the media named base
+static void fill(ScreenScraper& ss, const Options& o, const Folder& f, Gamelist& main, Gamelist& local,
+                 const std::string& key, const std::string& base, const std::string& region, const Json& rec, Progress& p) {
+    // the regions to prefer for names, dates and pictures
+    std::vector<std::string> regions;
+    if (!region.empty()) regions.push_back(region);
+    if (o.region == "auto" && o.lang == "pt") regions.push_back("br");
+    for (const char* r : {"wor", "us", "eu", "ss", "jp"}) regions.push_back(r);
+
+    std::string image, video;
+    if (o.image != "none")
+        image = fetchMedia(ss, o, f, media(rec, imageTypes(o.image), regions), "images", base, main.get(key, "image"), true, p);
+    if (o.video)
+        video = fetchMedia(ss, o, f, media(rec, {"video-normalized", "video"}, regions), "videos", base, main.get(key, "video"), false, p);
+
+    const std::string date = esDate(pick(rec["dates"], regions));
+    std::string desc = rec["synopsis"]["en"].text;
+    if (desc.empty()) desc = pick(rec["synopsis"], {o.lang});
+    std::string genre = rec["genre"]["en"].text;
+    if (genre.empty()) genre = pick(rec["genre"], {o.lang});
+    const std::string players = rec["players"].text;
+    main.set(key, {{"name", pick(rec["names"], regions, true)}, {"desc", desc}, {"image", image}, {"video", video},
+                   {"releasedate", date}, {"developer", rec["developer"].text}, {"publisher", rec["publisher"].text},
+                   {"genre", genre}, {"players", players}, {"rating", esRating(rec["rating"].text)}},
+             o.all);
+    if (o.lang != "en") {
+        const std::string ownDesc = rec["synopsis"][o.lang].text, ownGenre = rec["genre"][o.lang].text;
+        const std::string ownName = rec["names"][langRegion(o.lang)].text;
+        if (!ownDesc.empty() || !ownGenre.empty() || !ownName.empty())
+            local.set(key, {{"name", ownName}, {"desc", ownDesc}, {"genre", ownGenre.empty() ? genre : ownGenre},
+                            {"releasedate", date}, {"players", players}},
+                      o.all);
+    }
+}
+
+// A native game: by its id, else by name on the systems ports come from (PC Windows, PC DOS, Nintendo 64),
+// then on all of them
+static Answer findGame(ScreenScraper& ss, const NativeGame& g, Json& rec) {
+    if (!g.id.empty()) return ss.gameById(g.id, rec);
+    std::vector<Json> all, found;
+    const Json* best = nullptr;
+    for (int system : {138, 135, 14, 0}) {
+        if (system == 0 && best) break;
+        const Answer a = ss.search(g.name, system, found);
+        if (a != Answer::Ok && a != Answer::NotFound) return a;
+        all.insert(all.end(), found.begin(), found.end());
+        best = chooseGame(all, g.name);
+    }
+    if (!best) return Answer::NotFound;
+    rec = *best;
+    return Answer::Ok;
+}
+
 // --- main -----------------------------------------------------------------------------------------
 
 static void usage() {
     puts("usage: gl-scrape [options] [folder...]\n"
          "  Scrapes the ROM folders of the launcher's tabs from ScreenScraper into their gamelist.xml, each\n"
-         "  folder as the system its name gives (gba, megadrive, mame, fbneo...). Options default to the\n"
-         "  settings file.\n"
+         "  folder as the system its name gives (gba, megadrive, mame, fbneo...), and the Games tab (the\n"
+         "  folder \"games\") into the ports folder's, each entry by its SCREENSCRAPER= id or its name.\n"
+         "  Options default to the settings file.\n"
          "  --check          the account's quota, nothing scraped\n"
          "  --systems        the folders with games: folder, name, games, complete\n"
          "  --all            every game, not only what's missing\n"
@@ -319,6 +415,8 @@ static void usage() {
          "  --status FILE    progress as key=value lines, for System Settings\n"
          "  --config FILE    settings (/home/player/.config/gl-scrape/settings)\n"
          "  --apps A:B       Puppy's apps files or folders of them, whose tabs give the ROM folders\n"
+         "  --installed DIR  the App Installer's apps, whose Games entries are scraped too (/home/player/apps)\n"
+         "  --ports DIR      where the Games tab's gamelist and media go (/home/player/ports)\n"
          "  --cache DIR      answers already received, the systems too (/home/player/.cache/gl-scrape)\n"
          "SS_DEVID, SS_DEVPASSWORD, SS_USER and SS_PASSWORD in the environment replace the credentials.");
 }
@@ -344,6 +442,8 @@ int main(int argc, char** argv) {
         else if (a == "--config" && more) ++i;
         else if (a == "--cache" && more) o.cache = argv[++i];
         else if (a == "--apps" && more) o.apps = split(argv[++i], ':');
+        else if (a == "--installed" && more) o.installed = argv[++i];
+        else if (a == "--ports" && more) o.ports = argv[++i];
         else if (a == "--size" && more) sscanf(argv[++i], "%dx%d", &o.width, &o.height);
         else if (a == "-h" || a == "--help") { usage(); return 0; }
         else if (!a.empty() && a[0] != '-') o.folders.push_back(a);
@@ -356,8 +456,13 @@ int main(int argc, char** argv) {
     Systems systems;
     systems.load(systemsPath);
 
+    std::map<std::string, std::string> gameIds;
+    const Folder games = gamesFolder(o, gameIds);
+    const bool wanted = (o.folders.empty() || std::find(o.folders.begin(), o.folders.end(), kGames) != o.folders.end());
     if (list) {
-        for (const Folder& f : folders(o, systems, true)) {
+        std::vector<Folder> all = folders(o, systems, true);
+        if (wanted && !games.roms.empty()) all.push_back(games);
+        for (const Folder& f : all) {
             Gamelist main, local;
             main.load(f.dir + "/gamelist.xml");
             if (o.lang != "en") local.load(f.dir + "/gamelist." + o.lang + ".xml");
@@ -410,22 +515,26 @@ int main(int argc, char** argv) {
         }
     }
 
-    const std::vector<Folder> work = folders(o, systems);
+    std::vector<Folder> work = folders(o, systems);
+    if (wanted && !games.roms.empty() && !o.skip.count(kGames)) work.push_back(games);
     p.steps = (int)work.size();
     for (const Folder& f : work) p.games += (int)f.roms.size();
+    ss.counted = 0;     // ScreenScraper counts the games' requests, found or not
     int offline = 0;
     for (const Folder& f : work) {
         ++p.step;
         p.system = f.tab;
         p.total = (int)f.roms.size();
         p.index = 0;
+        const bool native = f.folder == kGames && f.dir == o.ports;
         const std::string mainPath = f.dir + "/gamelist.xml", localPath = f.dir + "/gamelist." + o.lang + ".xml";
         Gamelist main, local;
         main.load(mainPath);
         if (o.lang != "en") local.load(localPath);
-        const std::string cacheDir = o.cache + "/" + std::to_string(f.system);
+        const std::string cacheDir = o.cache + "/" + (native ? kGames : std::to_string(f.system));
         makeDirs(cacheDir);
         auto save = [&] {
+            if (native) makeDirs(f.dir);
             main.save(mainPath);
             if (o.lang != "en") local.save(localPath);
         };
@@ -434,93 +543,47 @@ int main(int argc, char** argv) {
             if (stopping) break;
             ++p.index;
             ++p.done;
-            p.game = stem(rom);
+            p.game = native ? rom : stem(rom);
             if (!needed(o, f, main, local, rom)) {
                 ++p.skipped;
                 continue;
             }
             report(o, p);
 
-            struct stat st;
-            const std::string path = f.dir + "/" + rom;
-            const std::string cached = cacheDir + "/" + cacheKey(rom, stat(path.c_str(), &st) == 0 ? (uint64_t)st.st_size : 0);
             Json rec;
-            std::string text;
-            if (readFile(cached, text) && Json::parse(text, rec)) {
-                // an unknown game is asked again after a week
-                if (rec["notfound"].text == "true" && stat(cached.c_str(), &st) == 0 && time(nullptr) - st.st_mtime > 7 * 86400)
-                    rec = Json();
+            Answer a;
+            if (native) {
+                const NativeGame g{rom, gameIds[rom]};
+                a = lookUp(cacheDir + "/" + fileName(rom) + (g.id.empty() ? "" : "-" + fileName(g.id)) + ".json",
+                           [&](Json& r) { return findGame(ss, g, r); }, rec, p, ss);
             } else {
-                rec = Json();
+                struct stat st;
+                const std::string path = f.dir + "/" + rom;
+                RomId id;
+                bool read = false;
+                a = lookUp(cacheDir + "/" + cacheKey(rom, stat(path.c_str(), &st) == 0 ? (uint64_t)st.st_size : 0),
+                           [&](Json& r) {
+                               if (!read) id = identify(path), read = true;
+                               return ss.gameInfo(f.system, rom, id, r);
+                           },
+                           rec, p, ss);
             }
-            if (rec.isNull()) {
-                const RomId id = identify(path);
-                a = Answer::Busy;
-                for (int attempt = 0; attempt < 3 && (a == Answer::Busy || a == Answer::Network) && !stopping; ++attempt) {
-                    if (attempt) sleep(a == Answer::Busy ? 10 : 5);
-                    a = ss.gameInfo(f.system, rom, id, rec);
-                }
-                p.detail = ss.detail;
-                if (a == Answer::Ok || a == Answer::NotFound) {
-                    ++q.today;      // ScreenScraper counts both
-                    p.requests = std::to_string(q.today) + "/" + std::to_string(q.perDay);
-                }
-                if (fatal(a)) {
-                    save();
-                    return finish(o, p, "error", describe(a), 1);
-                }
-                if (a == Answer::Network && ++offline >= 3) {
-                    save();
-                    return finish(o, p, "error", describe(a), 1);
-                }
-                if (a == Answer::NotFound) {
-                    writeFile(cached, "{\"notfound\":true}");
-                    ++p.notFound;
-                    continue;
-                }
-                if (a != Answer::Ok) {
-                    ++p.failed;
-                    continue;
-                }
-                offline = 0;
-                writeFile(cached, rec.dump());
+            p.requests = std::to_string(q.today + ss.counted) + "/" + std::to_string(q.perDay);
+            if (fatal(a) || (a == Answer::Network && ++offline >= 3)) {
+                save();
+                return finish(o, p, "error", describe(a), 1);
             }
-            if (rec["notfound"].text == "true") {
+            if (a == Answer::NotFound) {
                 ++p.notFound;
                 continue;
             }
-
-            // the regions to prefer for names, dates and pictures
-            std::vector<std::string> regions;
-            const std::string own = o.region == "auto" ? fileRegion(rom) : o.region;
-            if (!own.empty()) regions.push_back(own);
-            if (o.region == "auto" && o.lang == "pt") regions.push_back("br");
-            for (const char* r : {"wor", "us", "eu", "ss", "jp"}) regions.push_back(r);
-
-            std::string image, video;
-            if (o.image != "none")
-                image = fetchMedia(ss, o, f, media(rec, imageTypes(o.image), regions), "images", rom, main.get(rom, "image"), true, p);
-            if (o.video)
-                video = fetchMedia(ss, o, f, media(rec, {"video-normalized", "video"}, regions), "videos", rom, main.get(rom, "video"), false, p);
-
-            const std::string date = esDate(pick(rec["dates"], regions));
-            std::string desc = rec["synopsis"]["en"].text;
-            if (desc.empty()) desc = pick(rec["synopsis"], {o.lang});
-            std::string genre = rec["genre"]["en"].text;
-            if (genre.empty()) genre = pick(rec["genre"], {o.lang});
-            const std::string players = rec["players"].text;
-            main.set(rom, {{"name", pick(rec["names"], regions, true)}, {"desc", desc}, {"image", image}, {"video", video},
-                           {"releasedate", date}, {"developer", rec["developer"].text}, {"publisher", rec["publisher"].text},
-                           {"genre", genre}, {"players", players}, {"rating", esRating(rec["rating"].text)}},
-                     o.all);
-            if (o.lang != "en") {
-                const std::string ownDesc = rec["synopsis"][o.lang].text, ownGenre = rec["genre"][o.lang].text;
-                const std::string ownName = rec["names"][langRegion(o.lang)].text;
-                if (!ownDesc.empty() || !ownGenre.empty() || !ownName.empty())
-                    local.set(rom, {{"name", ownName}, {"desc", ownDesc}, {"genre", ownGenre.empty() ? genre : ownGenre},
-                                    {"releasedate", date}, {"players", players}},
-                              o.all);
+            if (a != Answer::Ok) {
+                ++p.failed;
+                continue;
             }
+            offline = 0;
+            fill(ss, o, f, main, local, rom, fileName(native ? rom : stem(rom)),
+                 o.region == "auto" ? (native ? "" : fileRegion(rom)) : o.region, rec, p);
             ++p.found;
             if (p.found % 10 == 0) save();
         }
