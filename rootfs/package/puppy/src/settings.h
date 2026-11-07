@@ -57,6 +57,7 @@ public:
         std::function<void()> powerMenu;            // POWER, as in the launcher
         std::function<void()> fontChanged;          // what the launcher measured with the old font
         std::function<void(bool)> closed;           // back to the launcher; true: the language or the games' data changed
+        std::function<void(const std::string&)> run;   // starts an app, as the launcher starts a game
     };
     SettingsScreen(App& app, Model& launcher, Hooks hooks);
 
@@ -107,7 +108,7 @@ private:
     bool appsChanged = false;       // an app was installed or uninstalled: the launcher loads its tabs again
     Keyboard kb;                    // typing the ScreenScraper account
     std::string typed;
-    std::vector<std::pair<std::string, std::string>> credits;   // the Credits section only shows when there are some
+    bool credits = false;           // upstream's credits app is there: the Credits section shows
     std::string startLanguage;
     Uint32 saveAt = 0;              // the brightness or volume changed: saved then (0: nothing to save)
     Uint32 watchUntil = 0, nextWatch = 0;   // a card is being detected or ejected: re-read it until then

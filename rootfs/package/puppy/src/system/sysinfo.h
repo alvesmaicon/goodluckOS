@@ -14,5 +14,5 @@ struct SystemInfo {
     static SystemInfo read();
 };
 
-// The [credits] section of upstream's credits app (/usr/share/credits/credits.ini): name and role
-std::vector<std::pair<std::string, std::string>> readCredits();
+// Upstream's credits app, which plays /usr/share/credits/credits.ini
+bool hasCreditsApp();
