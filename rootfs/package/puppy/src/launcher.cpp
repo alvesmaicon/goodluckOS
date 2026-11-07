@@ -199,6 +199,13 @@ void LauncherScreen::openSettings() {
     hooks.fontChanged = [this] {
         for (Category& c : model.categories) c.tagColumn = -1;
     };
+    hooks.run = [this](const std::string& command) {
+        Entry e;
+        if (const Entry* sel = model.selected()) e = *sel;   // the cursor comes back to the selected game
+        e.command = command;
+        e.terminal = false;
+        if (!launch(model, e)) app.quit();
+    };
     hooks.closed = [this](bool languageChanged) {
         if (languageChanged) reloadGames();
         dateFmt = dateFormat();
