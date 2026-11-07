@@ -37,6 +37,7 @@ ICON=/usr/share/icons/retroarch.png
 CATEGORY=Games
 NAME=Chocolate Doom
 DESCRIPTION=It's Doom.
+SCREENSCRAPER=489155
 ICON=/usr/share/icons/chocolate-doom.png
 COMMAND=chocolate-doom
 

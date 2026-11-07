@@ -751,8 +751,8 @@ std::vector<Row> SettingsScreen::scraperRunPage() {
     }
     const std::string state = run.state == "done" ? tr("Done") : run.state == "stopped" ? tr("Stopped")
                             : run.state == "error" ? tr(run.message)
-                            : run.steps > 1 ? run.system + " (" + fill2("%s of %s", std::to_string(run.step), std::to_string(run.steps)) + ")"
-                            : run.system;
+                            : run.steps > 1 ? tr(run.system) + " (" + fill2("%s of %s", std::to_string(run.step), std::to_string(run.steps)) + ")"
+                            : tr(run.system);
     rows.push_back(Row::info("Status", state));
     if (run.games > 0) {
         Row all = Row::info("Total", fill2("%s of %s", std::to_string(run.done), std::to_string(run.games)) + " (" +
@@ -855,7 +855,9 @@ std::vector<Row> SettingsScreen::scraperSystemsPage() {
     if (scrapeFolders.empty()) rows.push_back(Row::info("No games in the ROM folders", ""));
     for (const ScraperFolder& f : scrapeFolders) {
         const bool on = std::find(scraper.skip.begin(), scraper.skip.end(), f.folder) == scraper.skip.end();
-        Row t = Row::toggle(f.name + "  (" + f.folder + ")", on, [this, folder = f.folder](int v) {
+        // gl-scrape's "games" is the Games tab, whose gamelist is in the ports folder
+        const std::string label = f.folder == "games" ? tr(f.name) : f.name + "  (" + f.folder + ")";
+        Row t = Row::toggle(label, on, [this, folder = f.folder](int v) {
             auto& skip = scraper.skip;
             skip.erase(std::remove(skip.begin(), skip.end(), folder), skip.end());
             if (!v) skip.push_back(folder);

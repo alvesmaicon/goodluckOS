@@ -13,7 +13,7 @@ All four are work in progress and have only run on my console (GA36-MB, A33, 512
 
 ## Installing a port
 
-A port is a folder in `HOME/ports/` and an entry in `HOME/apps.puppy`, which puts it in the launcher's Games tab and, tagged "Ports", in All Games. The launcher reads `apps.puppy` when it starts, so restart the console after editing it.
+A port is a folder in `HOME/ports/` and an entry in `HOME/apps.puppy`, which puts it in the launcher's Games tab and, tagged "Ports", in All Games. The launcher reads `apps.puppy` when it starts, so restart the console after editing it. The entry's `SCREENSCRAPER=` line is the game's id on [ScreenScraper](https://www.screenscraper.fr), for the scraper (System Settings -> System -> Scraper), which finds the game by its name without it.
 
 There are no downloads: the games can't be shared, and this fork has no releases. Each port is built on a PC, in the dev container of [dev/README.md](../../dev/README.md) (Docker, on Intel or Apple Silicon; `dev/gl image` once). The result holds your game's files, so it is for your own console only.
 
@@ -49,6 +49,7 @@ Add to `HOME/apps.puppy`:
 CATEGORY=Games
 NAME=Stardew Valley
 DESCRIPTION=Your own game files, compatibility branch
+SCREENSCRAPER=341554
 COMMAND=sh /home/player/ports/stardewvalley/stardew.sh
 ICON=/home/player/ports/stardewvalley/icon.png
 ```
@@ -83,6 +84,7 @@ Add to `HOME/apps.puppy`:
 CATEGORY=Games
 NAME=Ocarina of Time
 DESCRIPTION=Ship of Harkinian, from your own rom
+SCREENSCRAPER=5395
 COMMAND=sh /home/player/ports/soh/soh.sh
 ICON=/home/player/ports/soh/icon.png
 ```
@@ -115,6 +117,7 @@ Add to `HOME/apps.puppy`:
 CATEGORY=Games
 NAME=Majora's Mask
 DESCRIPTION=2 Ship 2 Harkinian, from your own rom
+SCREENSCRAPER=5394
 COMMAND=sh /home/player/ports/2ship/2ship.sh
 ICON=/home/player/ports/2ship/icon.png
 ```

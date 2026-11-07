@@ -1,5 +1,6 @@
 #pragma once
 // The ROM folders of the launcher's tabs (Puppy's apps files) and the ScreenScraper system each one is.
+#include <functional>
 #include <map>
 #include <string>
 #include <vector>
@@ -12,6 +13,10 @@ struct RomDir {
     std::vector<std::string> names;     // NAME= and TAB=
     std::vector<std::string> exts;      // lower case
 };
+
+// Each section of Puppy's apps files (a directory: its *.puppy files, by name): its name and keys in upper case
+using AppsSection = std::function<void(const std::string& section, const std::map<std::string, std::string>& kv)>;
+void appsSections(const std::vector<std::string>& appsFiles, const AppsSection& each);
 
 // The [ARCHIVE]s of these files (a directory: its *.puppy files) but music and videos. A NAME= that
 // comes again replaces the earlier archive, as in Puppy; a directory counts once.
