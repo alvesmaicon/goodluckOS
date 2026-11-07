@@ -24,7 +24,7 @@ struct Row {
     Kind kind = Kind::Info;
     std::string label;          // English, translated when drawn, unless rawLabel
     bool rawLabel = false;
-    std::string value;          // shown as it is: an Info's value, a Number's, a Link's or an Action's status
+    std::string value;          // shown as it is: an Info's value, a Number's, a Level's, a Link's or an Action's status
     std::string hint;           // English: under the page while the row is selected
     bool enabled = true;
     bool on = false;                            // Toggle
@@ -32,7 +32,7 @@ struct Row {
     bool rawChoices = false;
     std::vector<SDL_Color> swatches;            // Choice: a colour block for each, shown instead of its text
     int index = 0;                              // Choice: the current one
-    int current = 0, min = 0, max = 0, step = 1;    // Level (shown as a percentage of max), Number (wraps around),
+    int current = 0, min = 0, max = 0, step = 1;    // Level (a percentage of max, or its value from min to max), Number (wraps around),
                                                     // Info (a bar, when max is set)
     std::function<void(int)> set;               // Toggle (0 or 1), Choice (index), Level and Number (value)
     std::function<void()> run;                  // Link, Action

@@ -10,6 +10,7 @@ struct HudSettings {
     bool statusDate = false, statusTime = false, statusBattery = false, statusAudio = false;
     bool statusCpuTemp = false, statusPmicTemp = false;
     int statusOpacity = 50;             // in games
+    int statusScale = 100;              // in games, a percentage of the default size: 60 to 140
     bool visible = false;               // the performance overlay, from the game's start
     bool cpu = true;                    // FPS and CPU; else FPS only
     bool text = false;                  // as text; else graphs

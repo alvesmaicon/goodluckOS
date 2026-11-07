@@ -28,6 +28,7 @@ static bool readHudFile(const char* path, HudSettings& h) {
         else if (key == "HUD_STATUS_CPU_TEMP") h.statusCpuTemp = value == "true";
         else if (key == "HUD_STATUS_PMIC_TEMP") h.statusPmicTemp = value == "true";
         else if (key == "HUD_STATUS_OPACITY") h.statusOpacity = std::clamp(atoi(value.c_str()), 0, 100);
+        else if (key == "HUD_STATUS_SCALE") h.statusScale = std::clamp(atoi(value.c_str()), 60, 140);
         else if (key == "HUD_VISIBLE") h.visible = value == "true";
         else if (key == "HUD_ITEMS") h.cpu = value == "fps,cpu";
         else if (key == "HUD_STYLE") h.text = value == "text";
@@ -71,6 +72,7 @@ void HudSettings::save() const {
             << "HUD_STATUS_CPU_TEMP=" << flag(statusCpuTemp) << "\n"
             << "HUD_STATUS_PMIC_TEMP=" << flag(statusPmicTemp) << "\n"
             << "HUD_STATUS_OPACITY=" << statusOpacity << "\n"
+            << "HUD_STATUS_SCALE=" << statusScale << "\n"
             << "HUD_VISIBLE=" << flag(visible) << "\n"
             << "HUD_ITEMS=" << (cpu ? "fps,cpu" : "fps") << "\n"
             << "HUD_STYLE=" << (text ? "text" : "graph") << "\n"
