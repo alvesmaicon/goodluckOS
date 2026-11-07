@@ -132,7 +132,7 @@ Puppy is goodluckOS' application launcher. It's what you see when you start good
 | Search (X): the on-screen keyboard filters every tab as you type | |
 | ![Search with the on-screen keyboard](docs/screenshots/puppy-search.png) | |
 
-The top bar shows the time, the volume (a headphones icon when the sound goes to the headphones only) and the battery, whose level turns yellow while charging, green when full and red at 10% or less. System Settings -> Overlay can add the date and the CPU and power chip temperatures, or take any of them out.
+The top bar shows the time, the volume (a headphones icon when the sound goes to the headphones only) and the battery, whose level turns yellow while charging, green when full and red at 10% or less. System Settings -> Overlay can add the date and the CPU and power chip temperatures, or take any of them out, and sets the bar's opacity and size over games.
 
 Changing the brightness (FN+Vol) or the volume shows a level bar for a moment, and FN + D-pad down shows the audio output. It is drawn by the graphics driver (a patch to Mesa's Gallium HUD), so it looks the same over the launcher, the settings and every game:
 
@@ -229,6 +229,7 @@ System Settings
 │   ├── Show CPU temperature
 │   ├── Show power chip temperature
 │   ├── Opacity in game
+│   ├── Size in game ─ 0.6x to 1.4x
 │   ├── Performance (FN + UP): Show on game start
 │   ├── Content: FPS / FPS + CPU
 │   ├── Style: Graph / Text

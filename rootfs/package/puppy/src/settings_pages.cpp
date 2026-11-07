@@ -328,6 +328,12 @@ std::vector<Row> SettingsScreen::overlayPage() {
         hud.statusOpacity = v;
         hud.save();
     }));
+    Row size = Row::level("Size in game", hud.statusScale, 60, 140, 10, [this](int v) {
+        hud.statusScale = v;
+        hud.save();
+    });
+    size.value = std::to_string(hud.statusScale / 100) + "." + std::to_string(hud.statusScale / 10 % 10) + "x";
+    rows.push_back(size);
 
     rows.push_back(Row::section("Performance (FN + UP)"));
     rows.push_back(flag("Show on game start", &HudSettings::visible));
