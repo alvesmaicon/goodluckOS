@@ -515,8 +515,11 @@ void LauncherScreen::renderShelf(Ui& ui) {
 
     const int x = kShelfCardX, w = kPreviewW;
     const SDL_Rect box = trailerBox();
-    ui.roundRect(box, 10, theme().tile);
-    if (!ui.drawFrame(trailer.frame(), box)) ui.drawIcon(ui.previewIcons(), e->iconPath, box);
+    if (!ui.drawFrame(trailer.frame(), box)) {
+        // a picture's transparent parts show the screen; only a game without one gets a tile
+        if (!ui.previewIcons().get(e->iconPath, false).tex) ui.roundRect(box, 10, theme().tile);
+        ui.drawIcon(ui.previewIcons(), e->iconPath, box);
+    }
     ui.roundCorners(box, 10, theme().bg);
     int y = box.y + box.h + 10;
     if (!e->meta.empty()) {
@@ -596,9 +599,11 @@ void LauncherScreen::renderRow(Ui& ui, int tab, int y, bool current) {
         SDL_Rect card{kMargin + (k - c.scroll) * pitch, y + kRowLabelH, kCardW, kCardH};
         if (card.x >= kScreenW) break;
         const bool sel = current && k == c.sel;
-        if (sel) ui.roundRect({card.x - 3, card.y - 3, card.w + 6, card.h + 6}, 11, accent());
-        ui.roundRect(card, 8, theme().tile);
         const Entry& entry = c.entries[c.visible[k]];
+        if (sel) ui.roundRect({card.x - 3, card.y - 3, card.w + 6, card.h + 6}, 11, accent());
+        // as in the list: the screen behind a picture, a tile behind a game without one
+        const bool picture = ui.cardIcons().get(entry.iconPath, false).tex;
+        if (sel || !picture) ui.roundRect(card, 8, picture ? theme().bg : theme().tile);
         ui.drawIcon(ui.cardIcons(), entry.iconPath, card);
         ui.roundCorners(card, 8, sel ? accent() : theme().bg);
         int pillX = card.x + 4;
