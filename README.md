@@ -406,12 +406,12 @@ The R36H's RK3326 is 64-bit, but this fork runs the same 32-bit system on it, so
 With that said, most of the games people actually care about (Stardew Valley, Half-Life 1, n64 re-comps, Android GameMaker games, OpenMW, OpenRCT2, + more) are 32-bit games, and therefore should theoretically work if anyone cares to create 32-bit ports.
 
 ### Ports in this fork
-Four ports are in progress here. Luanti is an app from its own repository; the others need your own copy of the game, so each one is built on a PC from your files: [Ports](docs/ports/README.md) says how, and how each one runs.
+Four ports are in progress here. Luanti and Stardew Valley are apps from their own repositories, for the App Installer; Stardew Valley brings in your own copy of the game on its first start. The Zeldas need your ROM, so each one is built on a PC from it: [Ports](docs/ports/README.md) says how, and how each one runs.
 
-| [Luanti](https://github.com/alvesmaicon/luanti/blob/handheld/5.18/goodluckos/README.md) | [Stardew Valley](docs/ports/README.md#stardew-valley) | [Ocarina of Time](docs/ports/README.md#ocarina-of-time) | [Majora's Mask](docs/ports/README.md#majoras-mask) |
+| [Luanti](https://github.com/alvesmaicon/luanti/blob/handheld/5.18/goodluckos/README.md) | [Stardew Valley](https://github.com/alvesmaicon/glOSports-stardew#readme) | [Ocarina of Time](docs/ports/README.md#ocarina-of-time) | [Majora's Mask](docs/ports/README.md#majoras-mask) |
 | --- | --- | --- | --- |
-| ![Luanti](https://raw.githubusercontent.com/alvesmaicon/luanti/handheld/5.18/goodluckos/luanti.png) | ![Stardew Valley](docs/ports/stardew-valley.png) | ![Ocarina of Time](docs/ports/ocarina-of-time.png) | ![Majora's Mask](docs/ports/majoras-mask.png) |
-| Free, an app (one zip) | The game from Steam | Your ROM | Your ROM |
+| ![Luanti](https://raw.githubusercontent.com/alvesmaicon/luanti/handheld/5.18/goodluckos/luanti.png) | ![Stardew Valley](https://raw.githubusercontent.com/alvesmaicon/glOSports-stardew/main/docs/stardew-valley.png) | ![Ocarina of Time](docs/ports/ocarina-of-time.png) | ![Majora's Mask](docs/ports/majoras-mask.png) |
+| Free, an app (one zip) | An app, with your game from Steam | Your ROM | Your ROM |
 
 # Development
 

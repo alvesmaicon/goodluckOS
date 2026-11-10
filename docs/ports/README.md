@@ -7,15 +7,15 @@ All four are work in progress and have only run on my console (GA36-MB, A33, 512
 | Game | Built on | You supply | On the A33 | Where |
 | --- | --- | --- | --- | --- |
 | [Luanti](https://github.com/alvesmaicon/luanti/blob/handheld/5.18/goodluckos/README.md) | Luanti 5.18 with 51 patches, Minetest Game, 63 mods | nothing (an app) | 20 FPS in a forest, 10 over a lake | [alvesmaicon/luanti](https://github.com/alvesmaicon/luanti) |
-| [Stardew Valley](#stardew-valley) | Mono, MonoGame, gl4es | the game, from Steam | about 19 FPS on the farm | `dev/stardew` |
+| [Stardew Valley](https://github.com/alvesmaicon/glOSports-stardew#readme) | Mono, MonoGame, gl4es | the game, from Steam (macOS or Linux version) | about 19 FPS on the farm | [alvesmaicon/glOSports-stardew](https://github.com/alvesmaicon/glOSports-stardew) |
 | [Ocarina of Time](#ocarina-of-time) | Ship of Harkinian 9.3.0 | your ROM | 20 FPS, as on the N64 | `dev/zelda` |
 | [Majora's Mask](#majoras-mask) | 2 Ship 2 Harkinian 5.0.1 | your ROM | not measured yet | `dev/zelda` |
 
 ## Installing a port
 
-A port is a folder in `HOME/ports/` and an entry in `HOME/apps.puppy`, which puts it in the launcher's Games tab and, tagged "Ports", in All Games. The launcher reads `apps.puppy` when it starts, so restart the console after editing it. The entry's `SCREENSCRAPER=` line is the game's id on [ScreenScraper](https://www.screenscraper.fr), for the scraper (System Settings -> System -> Scraper), which finds the game by its name without it.
+Luanti and Stardew Valley are apps: their zips install in System Settings -> System -> App Installer. The Zeldas are each a folder in `HOME/ports/` and an entry in `HOME/apps.puppy`, which puts it in the launcher's Games tab and, tagged "Ports", in All Games. The launcher reads `apps.puppy` when it starts, so restart the console after editing it. The entry's `SCREENSCRAPER=` line is the game's id on [ScreenScraper](https://www.screenscraper.fr), for the scraper (System Settings -> System -> Scraper), which finds the game by its name without it.
 
-There are no downloads: the games can't be shared, and this fork has no releases. Each port is built on a PC, in the dev container of [dev/README.md](../../dev/README.md) (Docker, on Intel or Apple Silicon; `dev/gl image` once). The result holds your game's files, so it is for your own console only.
+The Zeldas have no downloads: the games can't be shared, so each one is built on a PC, in the dev container of [dev/README.md](../../dev/README.md) (Docker, on Intel or Apple Silicon; `dev/gl image` once). The result holds your game's files, so it is for your own console only.
 
 The examples copy to the card in a card reader on a Mac (`/Volumes/HOME`). MTP works too, at ~10 MB/s. Before ejecting, `dot_clean /Volumes/HOME` removes the `._` files macOS leaves on FAT.
 
@@ -25,38 +25,7 @@ Luanti is a block-building engine, here with Minetest Game and 63 mods that brin
 
 ## Stardew Valley
 
-![Stardew Valley on the console: the farm on a rainy morning](stardew-valley.png)
-
-The PC build from Steam's "compatibility" branch (1.6.15) is a .NET Framework program, so it runs on Mono, built here for 32-bit ARM. PortMaster's port supplies the rest: JohnnyonFlame's MonoGame, which streams the music from the card instead of RAM, and gl4es, which turns the game's OpenGL into OpenGL ES 2. Our patches cut work the game repeats every frame, and the save serializers are generated ahead of time. About 19 FPS on the farm, the title screen in ~20 s, a save loaded in ~55 s.
-
-**You supply:** Stardew Valley on Steam, switched to the compatibility branch (Properties > Betas > compatibility), in its macOS or Linux version (the one with `StardewValley.exe`). Tested with the macOS one.
-
-**Build and install** (`SDV_GAME` is the game's folder; Steam's on a Mac is the default):
-
-```sh
-dev/stardew/build.sh          # the port in dev/out/stardew/stardewvalley, its patches built against your game
-dev/stardew/build.sh game     # your game's files in dev/out/stardew/gamedata, the .xnb ones recompressed as LZ4
-dev/stardew/build.sh xmlgen   # the save serializers, into gamedata
-mkdir -p /Volumes/HOME/ports
-cp -R dev/out/stardew/stardewvalley /Volumes/HOME/ports/
-cp -R dev/out/stardew/gamedata/. /Volumes/HOME/ports/stardewvalley/gamedata/
-```
-
-Add to `HOME/apps.puppy`:
-
-```ini
-[ENTRY]
-CATEGORY=Games
-NAME=Stardew Valley
-DESCRIPTION=Your own game files, compatibility branch
-SCREENSCRAPER=341554
-COMMAND=sh /home/player/ports/stardewvalley/stardew.sh
-ICON=/home/player/ports/stardewvalley/icon.png
-```
-
-The icon comes from your game's title logo, and the game follows the launcher's language. Log: `HOME/logs/stardew.log`.
-
-**Credits:** Stardew Valley is ConcernedApe's, and the copy is yours. The port is built on [PortMaster's](https://github.com/PortsMaster/PortMaster-New) port of the game: JohnnyonFlame's MonoGame with streamed audio (the MonoGame Team, Ms-PL) and his loader and game patches (BSD), [gl4es](https://github.com/ptitSeb/gl4es) by ptitSeb and Ryan Hileman (MIT), [Mono](https://www.mono-project.com/) (MIT, some parts BSD-3-Clause), [OpenAL Soft](https://github.com/kcat/openal-soft) (LGPL 2) and [lz4](https://github.com/lz4/lz4) (BSD-2-Clause). PortMaster's license files stay in the port's folder.
+Stardew Valley's PC build, from Steam's compatibility branch, runs on Mono, MonoGame and gl4es, with patches that cut the work it repeats every frame. It is an app now, built and documented in [its own repository](https://github.com/alvesmaicon/glOSports-stardew#readme): install its zip from [Releases](https://github.com/alvesmaicon/glOSports-stardew/releases) with the App Installer, copy your own game to `HOME` (its folder or a zip of it, the macOS or Linux version) and open Stardew Valley. Its first start brings your game into the app, about 15 minutes on the A33. About 19 FPS on the farm.
 
 ## Ocarina of Time
 
