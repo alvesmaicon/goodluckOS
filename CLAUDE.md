@@ -72,6 +72,7 @@ Card layout (A33):
 - Buildroot doesn't rebuild local packages on its own: use `<pkg>-rebuild` (or `-dirclean`). `mesa3d-rebuild` doesn't reapply the patch.
 - Puppy compiles as C++17 (`puppy.mk`), and `dev/gl app` the same way. Its code: `src/` has the screens (`app` runs a stack of them: launcher, keyboard, dialogs, System Settings, the button tester) and `src/system/` the device and its files, one owner each (mixer, prefs file, HUD file, clock, storage...). Settings code goes through `src/system/`, never straight to a file or a sysfs node.
 - `<pkg>-rebuild` doesn't delete a file removed from a local package's source: after deleting or moving sources, run `puppy-dirclean puppy`.
+- Colima's disk has 60 GB and the Mac has no room to grow it. `dev/gl slim` empties the build directories of Buildroot packages we never rebuild by hand (stamps kept, ~15 GB): `<pkg>-rebuild` on one of those fails, so use `<pkg>-dirclean <pkg>`.
 - What Puppy starts in the background dies with it when appd starts an app (cgroup kill): anything that must finish (saving the mixer, a reboot request) runs in the foreground (`runScript(..., true)`).
 - `post-build.sh` must stay re-runnable (upstream #60).
 - gl-scrape hands curl the URL on its standard input: credentials never go in arguments (ps) or in its cache (`record()` strips them from the media URLs). ScreenScraper's `ssuserInfos` refuses a call without the player's account.

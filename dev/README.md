@@ -25,7 +25,7 @@ dev/gl image          # the dev container, ~10 min once
 
 - `--arch aarch64` keeps everything native. Never use `--platform linux/amd64` or an x86 Colima: under emulation Buildroot takes many hours.
 - 8 GB of RAM: give Colima 5 GB, and if Buildroot gets killed (OOM) run it with `GL_JOBS=2`.
-- Colima's disk holds the `goodluck-work` volume (Buildroot ~15 GB, the kernel tree ~3 GB, downloads). After a restart, `colima start` brings the volume back.
+- Colima's disk holds the `goodluck-work` volume (Buildroot ~25 GB after a full build, ~10 GB after `dev/gl slim`; the kernel trees ~6 GB; downloads ~3 GB). After a restart, `colima start` brings the volume back. The disk is a sparse file on the Mac: what gets deleted inside only comes back to macOS after a trim (`dev/gl slim` runs one).
 
 ## Commands
 
@@ -40,6 +40,7 @@ dev/gl scenes-diff dev/out/scenes-before dev/out/scenes-after
                                         # the scenes that changed, pixel by pixel
 dev/gl rootfs                           # first time: full Buildroot (1-2 h on an M1)
 dev/gl rootfs puppy-rebuild             # then: one package, seconds; output in the work volume
+dev/gl slim -n                          # the build dirs slim would empty, and how much it frees (dev/gl slim to do it)
 dev/gl ext4                             # dev/out/rootfs.ext4 from dev/out/rootfs.tar
 dev/gl kernel                           # dev/out/android_boot_a33.img (panel 1; GL_PANEL=2 dev/gl kernel for panel 2)
 dev/gl kernel-rk3326                    # dev/out/rk3326: the R36H's arm64 Image and DTB (kernel/rk3326)
@@ -55,6 +56,7 @@ Buildroot runs with its tree in the `goodluck-work` volume, not in the repo. A m
 - Buildroot does not notice changes in local packages (`puppy`). Pass `<pkg>-rebuild`, then `all` (or nothing) to remake `rootfs.tar`. A source file deleted or moved stays in the build directory: use `<pkg>-dirclean` then.
 - Mesa: `mesa3d-rebuild` does not apply the patch again. To change the patch, either `mesa3d-dirclean mesa3d` (slow) or edit `out/build/mesa3d-*/src/gallium/auxiliary/hud/hud_context.c` in `dev/gl shell`, `make mesa3d-rebuild`, and regenerate the patch with `diff -u` against a copy you reverted with `patch -R`. The library to copy is `/work/br/out/target/usr/lib/libgallium-<version>.so` (16 MB).
 - The defconfig is only applied again when `rootfs/configs/goodluck_defconfig` changed.
+- `dev/gl slim` keeps only the `.stamp_*` files in the build directories of packages over 50 MB that are not ours (`rootfs/package`), not patched (`board/my-device/patches`) and not busybox: the toolchain, the host tools, ffmpeg, SDL... Buildroot goes by those stamps alone, so incremental builds don't change. To change one of those packages (a patch, a config option), `<pkg>-dirclean <pkg>` builds it again from its tarball in `dl/`. Run it again after a full build.
 
 ## Getting files onto the console
 
