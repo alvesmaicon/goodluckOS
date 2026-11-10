@@ -56,6 +56,8 @@ to_home() {
         echo "   MTP stopped (try $try of 3), again"
     done
     rm -rf "$tmp"
+    # the console's MTP may put it in a folder of HOME (one a Mac left there, .fseventsd): back to HOME
+    g "f=\$(find $H -maxdepth 2 -name $part | head -n 1); [ -z \"\$f\" ] || [ \"\$f\" = $H/$part ] || mv -f \"\$f\" $H/$part" > /dev/null
     sum=$(sha "$pkg")
     have=$(g "sha256sum $H/$part | cut -c1-64" --timeout 60 | grep -E '^[0-9a-f]{64}$' || true)
     [ "$have" = "$sum" ] || die "the copy in HOME isn't the file sent: nothing was installed"
