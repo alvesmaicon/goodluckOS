@@ -771,6 +771,7 @@ static int watchOsd(void*) {
 }
 
 int main() {
+    unsetenv("GALLIUM_HUD_STATUS");     // the header already shows the battery
     Model model;
     model.categories = loadCatalog();
     if (model.categories.empty()) {

@@ -123,9 +123,10 @@ bool get_hud_setting(const char* key, bool fallback) {
     }
     return fallback;
 }
-void set_hud_settings(bool feedback) {
+void set_hud_settings(bool battery, bool feedback) {
     std::ofstream file(HUD_CONF);
     if (file.is_open()) {
+        file << "HUD_STATUS_BATTERY=" << (battery ? "true" : "false") << "\n";
         file << "HUD_FEEDBACK=" << (feedback ? "true" : "false") << "\n";
     }
 }
@@ -175,6 +176,7 @@ int main(int argc, char* argv[]) {
     int display_brightness = get_brightness();
     int current_volume = get_alsa_volume();
     bool current_mute = get_alsa_mute();
+    bool show_battery = get_hud_setting("HUD_STATUS_BATTERY", false);
     bool show_feedback = get_hud_setting("HUD_FEEDBACK", true);
 
 
@@ -226,8 +228,11 @@ int main(int argc, char* argv[]) {
         }
 
         section_headear("Overlay");
+        if (ImGui::Checkbox("Show battery level", &show_battery)) {
+            set_hud_settings(show_battery, show_feedback);
+        }
         if (ImGui::Checkbox("Show system feedback", &show_feedback)) {
-            set_hud_settings(show_feedback);
+            set_hud_settings(show_battery, show_feedback);
         }
 
         if (ImGui::Button("System Settings")) {
