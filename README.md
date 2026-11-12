@@ -58,6 +58,17 @@ To use it:
 2. Open a terminal and run `sudo screen /dev/ttyACM* 115200`
 3. When prompted, enter the credentials (username: `root`, password: `root`)
 
+### USB Networking
+The same USB cable can carry the internet: the console shows up as a network adapter, which Windows 10 and 11, macOS, Linux and Android use with no driver to install, and the PC or phone shares its connection with it. The A33's USB controller can't do this and MTP at once, so System Settings -> USB switches the cable between Files (MTP, the default) and Network. The PC sees the console plugged in again, and the choice is kept across reboots.
+
+To share the connection:
+- Windows: the Sharing tab of the adapter that has the internet (Control Panel -> Network Connections), shared with the console's adapter.
+- macOS: System Settings -> General -> Sharing -> Internet Sharing, to the console's adapter. A Mac only sets up a new adapter while its screen is unlocked.
+- Linux: "Shared to other computers" in the IPv4 settings of the console's connection (NetworkManager).
+- Android 11 or newer: Ethernet tethering, with the console on the phone's OTG adapter and an A-to-C cable.
+
+System Settings shows the address once the console gets one. From the serial shell, `usb-mode.sh network` and `usb-mode.sh files` switch, and `ip addr show usb0` shows the address.
+
 ## Ports / Software
 Visit the [Ports/Software page](SOFTWARE.md) for a growing list of ports and software made for goodluckOS
 
@@ -73,7 +84,6 @@ Don't have the original microSD card? Open an issue here on github, we have micr
 - More LibRetro cores
 - Fine tune existing LibRetro cores for best performance.
 - EmulationStation (as an optional replacement for Puppy)
-- USB Networking
 - CPU Overclocking
 
 ## Supported Devices
