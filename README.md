@@ -21,6 +21,7 @@ Latest release: **0.1.0** - Oct 10, 2026
 | TF-2 Slot | No | Yes (on supported hardware) |
 | USB TTY | No | Yes |
 | USB MTP | No | Yes. Plug your console into your PC and copy games without unplugging the microSD card |
+| USB Networking | No | Yes. SSH into your console over the USB cable. See [USB Network](#usb-network) |
 | Zram | No | Yes, enabled by default |
 | Swap | Yes, which will kill your microSD card | No, Zram is used instead |
 | Accelerated Graphics | Yes, with old sunxi driver | Yes, with modern Lima driver |
@@ -58,6 +59,23 @@ To use it:
 2. Open a terminal and run `sudo screen /dev/ttyACM* 115200`
 3. When prompted, enter the credentials (username: `root`, password: `root`)
 
+### USB Network
+The USB port can also be a network adapter, so you can log in with SSH and copy files with `scp` or any SFTP client (WinSCP, FileZilla, `sftp://` in your file manager), and the console can use the PC's or a phone's internet. While it's on, MTP is off (the console's USB controller can't offer both at once); the serial console keeps working.
+
+To switch it on, pick Network under USB in System Settings, or run `usb-mode.sh network` as root (e.g. over the serial console). Files (MTP), or `usb-mode.sh mtp`, switches back, and `usb-mode.sh get` shows the current mode. The mode is kept across reboots.
+
+With the cable plugged in, your PC gets the address `192.168.36.2` from the console. Then run `ssh root@192.168.36.1` (password: `root`), or copy files with `scp game.zip root@192.168.36.1:/home/player/roms/`.
+
+To give the console internet, share the PC's connection with the console's adapter:
+- Windows: the Sharing tab of the adapter that has the internet (Control Panel -> Network Connections).
+- macOS: System Settings -> General -> Sharing -> Internet Sharing. A Mac only sets up a new adapter while its screen is unlocked.
+- Linux: "Shared to other computers" in the IPv4 settings of the console's connection (NetworkManager).
+- Android 11 or newer: Ethernet tethering, with the console on the phone's OTG adapter and an A-to-C cable.
+
+The console then also gets an address from the PC or phone, shown in System Settings, and `192.168.36.1` keeps working.
+
+Linux, macOS and Windows 10 (version 1903) or newer need no drivers.
+
 ## Ports / Software
 Visit the [Ports/Software page](SOFTWARE.md) for a growing list of ports and software made for goodluckOS
 
@@ -73,7 +91,6 @@ Don't have the original microSD card? Open an issue here on github, we have micr
 - More LibRetro cores
 - Fine tune existing LibRetro cores for best performance.
 - EmulationStation (as an optional replacement for Puppy)
-- USB Networking
 - CPU Overclocking
 
 ## Supported Devices
